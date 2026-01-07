@@ -1,0 +1,908 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>darNote - Onyx Pro</title>
+    <!-- React & ReactDOM -->
+    <script crossorigin src="https://unpkg.com/react@18/umd/react.development.js"></script>
+    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+    <!-- Babel for JSX -->
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: { onyx: '#050505', surface: '#121212', border: '#27272a', glass: 'rgba(18, 18, 18, 0.8)', 'light-bg': '#f0f2f5', 'light-surface': '#ffffff', 'task-blue': '#276ba8', 'task-bg': '#1f2a3d' },
+                    fontFamily: { sans: ['Inter', 'sans-serif'], mono: ['JetBrains Mono', 'monospace'], serif: ['Merriweather', 'serif'] },
+                    animation: { 'spin-slow': 'spin 20s linear infinite' },
+                    boxShadow: { 'page': '0 2px 4px rgba(0,0,0,0.1), 0 8px 16px rgba(0,0,0,0.1)' }
+                }
+            }
+        }
+    </script>
+    <!-- TinyMCE -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/tinymce/6.8.2/tinymce.min.js" referrerpolicy="origin"></script>
+
+    <!-- MOBILE REDIRECT LOGIC -->
+    <script>
+        if (window.innerWidth < 1024) {
+            if (!window.location.href.includes('mobile.html')) {
+                const currentPath = window.location.pathname;
+                // const newPath = currentPath.replace('index.html', 'mobile.html');
+                // window.location.href = "index.html" + window.location.search; 
+            }
+        }
+    </script>
+    <!-- Framer Motion -->
+    <script src="https://unpkg.com/framer-motion@10.16.4/dist/framer-motion.js"></script>
+    <!-- HTML2PDF & HTML2Canvas -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <!-- KaTeX & Marked -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    
+    <!-- GOOGLE DRIVE API SCRIPTS -->
+    <script src="https://apis.google.com/js/api.js" async defer></script>
+    <script src="https://accounts.google.com/gsi/client" async defer></script>
+
+    <!-- Firebase SDKs -->
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-app.js";
+        import { getAuth, signInWithPopup, GoogleAuthProvider, signOut, onAuthStateChanged, signInAnonymously } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-auth.js";
+        import { getFirestore, collection, collectionGroup, doc, addDoc, updateDoc, deleteDoc, onSnapshot, query, where, orderBy, getDocs, setDoc, arrayUnion, arrayRemove } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-firestore.js";
+        import { getAnalytics } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-analytics.js";
+        const firebaseConfig = { apiKey: "AIzaSyAvPEac-03kE4oazvaq8K3T2gxLPsnZO20", authDomain: "darnote625.firebaseapp.com", projectId: "darnote625", storageBucket: "darnote625.firebasestorage.app", messagingSenderId: "16458322562", appId: "1:16458322562:web:8894d71f3e6c326eba1a9b", measurementId: "G-NL9JX1NW80" };
+        const app = initializeApp(firebaseConfig);
+        try { const analytics = getAnalytics(app); } catch(e) {}
+        window.firebase = { app, auth: getAuth(app), db: getFirestore(app), signInWithPopup, signInAnonymously, GoogleAuthProvider, signOut, onAuthStateChanged, collection, collectionGroup, doc, addDoc, updateDoc, deleteDoc, setDoc, onSnapshot, query, where, orderBy, getDocs, arrayUnion, arrayRemove };
+    </script>
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;800&family=JetBrains+Mono:wght@400;500&family=Merriweather:wght@300;400;700&family=Roboto:wght@300;400;500;700&display=swap" rel="stylesheet">
+    <style>
+        body { @apply bg-light-bg text-zinc-900 dark:bg-onyx dark:text-zinc-100; font-family: 'Inter', sans-serif; overflow: hidden; -webkit-font-smoothing: antialiased; touch-action: manipulation; }
+        ::-webkit-scrollbar { width: 8px; height: 8px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { @apply bg-zinc-300 dark:bg-zinc-700; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { @apply bg-zinc-400 dark:bg-zinc-600; }
+        .glass-panel { @apply bg-light-surface dark:bg-surface border-r border-zinc-200 dark:border-border; }
+        ::selection { background-color: rgba(100, 116, 139, 0.2); color: inherit; }
+        .dark ::selection { background-color: rgba(255, 255, 255, 0.2); }
+        .doc-workspace { width: 100%; height: 100%; overflow-y: hidden; position: relative; display: flex; flex-direction: column; } /* Adjusted for TinyMCE */
+        
+        .mindmap-bg { background-image: radial-gradient(#3f3f46 1px, transparent 1px); background-size: 24px 24px; }
+        .task-checkbox { appearance: none; width: 20px; height: 20px; border: 2px solid #4f46e5; border-radius: 4px; cursor: pointer; position: relative; background-color: transparent; }
+        .task-checkbox:checked { background-color: #4f46e5; }
+        .task-checkbox:checked::after { content: '✓'; position: absolute; color: white; font-size: 14px; left: 3px; top: -2px; }
+        .message-content { font-size: 0.9rem; line-height: 1.5; }
+        .message-content p { margin-bottom: 0.5em; }
+        .message-content ul, .message-content ol { padding-left: 1.2em; margin-bottom: 0.5em; }
+        .message-content ul { list-style-type: disc; }
+        .message-content ol { list-style-type: decimal; }
+        .message-content pre { background: rgba(0,0,0,0.2); padding: 0.5em; border-radius: 4px; overflow-x: auto; font-family: monospace; }
+        .message-content code { background: rgba(0,0,0,0.1); padding: 0.1em 0.3em; border-radius: 3px; font-family: monospace; font-size: 0.9em; }
+
+        /* TinyMCE Overrides for Onyx Theme */
+        .tox-tinymce { border: none !important; border-top: 1px solid #27272a !important; height: 100% !important; } /* Force 100% height */
+        .tox .tox-toolbar, .tox .tox-statusbar { background-color: transparent !important; }
+        .dark .tox-tinymce { border-top: 1px solid rgba(255,255,255,0.1) !important; }
+        .tox-statusbar__path { display: none !important; } /* Hide the element path for cleaner look */
+
+        /* Mobile Specific Styles */
+        @media screen and (max-width: 850px) {
+            .doc-workspace { padding-top: 0; padding-bottom: 0; }
+            .glass-panel { width: 100%; height: auto; border-right: none; border-bottom: 1px solid #27272a; flex-direction: row; align-items: center; overflow-x: auto; }
+            .glass-panel .space-y-6 { display: flex; align-items: center; space-y: 0; gap: 1rem; width: 100%; }
+            .glass-panel nav { display: flex; gap: 0.5rem; }
+            .glass-panel .hidden-mobile { display: none; }
+        }
+    </style>
+</head>
+<body>
+    <div id="root"></div>
+    <script type="text/babel">
+        // ==========================================
+        // GOOGLE DRIVE API CONFIGURATION
+        // ==========================================
+        const GDRIVE_API_KEY = "AIzaSyCScFR_D0snZ6hrHob5fUQM7Y2NhK-kTIA"; 
+        const GDRIVE_CLIENT_ID = "256215327792-oglegui0q8qj507oao2c2733thcl9lrc.apps.googleusercontent.com"; 
+        const GDRIVE_SCOPES = 'https://www.googleapis.com/auth/drive.file';
+
+        const { useState, useEffect, useRef, useMemo, useCallback, Component } = React;
+        const { motion, AnimatePresence } = window.Motion;
+
+        // ERROR BOUNDARY COMPONENT (Prevents White Screen)
+        class ErrorBoundary extends Component {
+            constructor(props) {
+                super(props);
+                this.state = { hasError: false, error: null };
+            }
+            static getDerivedStateFromError(error) { return { hasError: true, error }; }
+            componentDidCatch(error, errorInfo) { console.error("Uncaught error:", error, errorInfo); }
+            render() {
+                if (this.state.hasError) {
+                    return (
+                        <div className="flex flex-col items-center justify-center h-full text-zinc-500 p-8 text-center">
+                            <div className="text-4xl mb-4">😵</div>
+                            <h2 className="text-xl font-bold mb-2">Something went wrong.</h2>
+                            <p className="text-sm mb-4">The editor crashed. It happens to the best of us.</p>
+                            <button onClick={() => window.location.reload()} className="bg-indigo-600 text-white px-4 py-2 rounded-lg">Reload Page</button>
+                        </div>
+                    );
+                }
+                return this.props.children;
+            }
+        }
+
+        const Icons = {
+            Plus: (props) => <svg {...props} xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12h14"/><path d="M12 5v14"/></svg>,
+            Trash: (props) => <svg {...props} xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/></svg>,
+            Star: (props) => <svg {...props} xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>,
+            Search: (props) => <svg {...props} xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>,
+            Bot: (props) => <svg {...props} xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 8V4H8"/><rect width="16" height="12" x="4" y="8" rx="2"/><path d="M2 14h2"/><path d="M20 14h2"/><path d="M15 13v2"/><path d="M9 13v2"/></svg>,
+            Folder: (props) => <svg {...props} xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M4 20h16a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-7.93a2 2 0 0 1-1.66-.9l-.82-1.2A2 2 0 0 0 7.93 3H4a2 2 0 0 0-2 2v13c0 1.1.9 2 2 2Z"/></svg>,
+            X: (props) => <svg {...props} xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M18 6 6 18"/><path d="m6 6 18 18"/></svg>,
+            Archive: (props) => <svg {...props} xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect width="20" height="5" x="2" y="3" rx="1"/><path d="M4 8v11a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8"/><path d="M10 12h4"/></svg>,
+            Pin: (props) => <svg {...props} xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="17" x2="12" y2="22"></line><path d="M5 17h14v-1.76a2 2 0 0 0-1.11-1.79l-1.78-.9A2 2 0 0 1 15 10.76V6h1a2 2 0 0 0 0-4H8a2 2 0 0 0 0 4h1v4.76a2 2 0 0 1-1.11 1.79l-1.78.9A2 2 0 0 0 5 15.24Z"></path></svg>,
+            List: (props) => <svg {...props} xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="8" y1="6" x2="21" y2="6"></line><line x1="8" y1="12" x2="21" y2="12"></line><line x1="8" y1="18" x2="21" y2="18"></line><line x1="3" y1="6" x2="3.01" y2="6"></line><line x1="3" y1="12" x2="3.01" y2="12"></line><line x1="3" y1="18" x2="3.01" y2="18"></line></svg>,
+            Grid: (props) => <svg {...props} xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="7" height="7"></rect><rect x="14" y="3" width="7" height="7"></rect><rect x="14" y="14" width="7" height="7"></rect><rect x="3" y="14" width="7" height="7"></rect></svg>,
+            SidebarOpen: (props) => <svg {...props} xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect width="18" height="18" x="3" y="3" rx="2" ry="2"/><line x1="9" x2="9" y1="3" y2="21"/></svg>,
+            SidebarClose: (props) => <svg {...props} xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect width="18" height="18" x="3" y="3" rx="2" ry="2"/><line x1="15" x2="15" y1="3" y2="21"/></svg>,
+            Network: (props) => <svg {...props} xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="9" y="9" width="6" height="6"></rect><rect x="9" y="2" width="6" height="6"></rect><rect x="9" y="16" width="6" height="6"></rect><path d="M12 8v1"></path><path d="M12 15v1"></path></svg>,
+            Sun: (props) => <svg {...props} xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="5"/><path d="M12 1v2"/><path d="M12 21v2"/><path d="M4.22 4.22l1.42 1.42"/><path d="M18.36 18.36l1.42 1.42"/><path d="M1 12h2"/><path d="M21 12h2"/><path d="M4.22 19.78l1.42-1.42"/><path d="M18.36 5.64l1.42-1.42"/></svg>,
+            Moon: (props) => <svg {...props} xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>,
+            Google: (props) => <svg {...props} xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 22C6.477 22 2 17.523 2 12S6.477 2 12 2s10 4.477 10 10-4.477 10-10 10z"/><path d="M12 11h9c.1 1.4.1 2.9-.4 4.3-1.1 3-4.1 5.3-7.6 5.6-5 .5-9.4-3.1-9.9-8.1C2.5 7.1 6 2.3 11 2c2.5-.1 4.9.9 6.7 2.6l-2.7 2.8c-1-.7-2.3-1.1-3.6-1-2.9.2-5.1 2.8-4.9 5.7.2 2.6 2.4 4.7 5 4.7 2 0 3.6-1.1 4.3-2.9H12v-3z" fill="currentColor"/></svg>,
+            Logout: (props) => <svg {...props} xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" x2="9" y1="12" y2="12"/></svg>,
+            Wand: (props) => <svg {...props} xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m12 3-1.912 5.813a2 2 0 0 1-1.275 1.275L3 12l5.813 1.912a2 2 0 0 1 1.275 1.275L12 21l1.912-5.813a2 2 0 0 1 1.275-1.275L12 3Z"/><path d="M5 3v4"/><path d="M9 3v4"/><path d="M3 5h4"/><path d="M3 9h4"/></svg>,
+            Pdf: (props) => <svg {...props} xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"/><polyline points="14 2 14 8 20 8"/></svg>,
+            ImageFile: (props) => <svg {...props} xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect width="18" height="18" x="3" y="3" rx="2" ry="2"/><circle cx="9" cy="9" r="2"/><path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21"/></svg>,
+            CheckSquare: (props) => <svg {...props} xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="9 11 12 14 22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>,
+            Calendar: (props) => <svg {...props} xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>,
+            Share: (props) => <svg {...props} xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg>,
+            Users: (props) => <svg {...props} xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>,
+            Alert: (props) => <svg {...props} xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>,
+            Drive: (props) => <svg {...props} xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 2L2 20h20L12 2z"/><path d="M7 20h10"/><path d="M17 20L7 20"/><path d="M12 2L7 11"/><path d="M12 2l5 9"/><path d="M7 11h10"/></svg>,
+            Edit: (props) => <svg {...props} xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z"/></svg>,
+            Tag: (props) => <svg {...props} xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 2H2v10l9.29 9.29c.94.94 2.48.94 3.42 0l6.58-6.58c.94-.94.94-2.48 0-3.42L12 2Z"/><circle cx="7" cy="7" r="1"/></svg>,
+        };
+
+        const callGemini = async (prompt, systemInstruction = "", imageBase64 = null) => {
+            const proxyUrl = "https://gemini-proxy-157237873670.us-central1.run.app/proxy";
+            let finalPrompt = prompt;
+            if (systemInstruction) finalPrompt = `${systemInstruction}\n\nUser: ${prompt}`;
+            let parts = [{ text: finalPrompt }];
+            if (imageBase64) {
+                const mimeType = imageBase64.match(/data:([^;]+);base64,/)?.[1] || "image/jpeg";
+                const base64Data = imageBase64.split(',')[1] || imageBase64;
+                parts.push({ inlineData: { mimeType: mimeType, data: base64Data } });
+            }
+            const payload = { contents: [{ parts: parts }] };
+            try {
+                const controller = new AbortController();
+                const timeoutId = setTimeout(() => controller.abort(), 60000);
+                const response = await fetch(proxyUrl, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload), signal: controller.signal });
+                clearTimeout(timeoutId);
+                if (!response.ok) { const errText = await response.text(); throw new Error(`AI API Error (${response.status}): ${errText.slice(0, 100)}`); }
+                const data = await response.json();
+                return data.candidates?.[0]?.content?.parts?.[0]?.text || "No response generated.";
+            } catch (error) { if (error.name === 'AbortError') return "Error: Request timed out after 30 seconds."; return `Error: ${error.message}`; }
+        };
+
+        const useGoogleDrive = () => {
+            const [tokenClient, setTokenClient] = useState(null);
+            const [isApiLoaded, setIsApiLoaded] = useState(false);
+            useEffect(() => {
+                if(!GDRIVE_API_KEY || !GDRIVE_CLIENT_ID) { console.log("Google Drive Keys Missing"); return; }
+                const checkGis = setInterval(() => {
+                   if(window.google && window.google.accounts) {
+                       clearInterval(checkGis);
+                       const client = window.google.accounts.oauth2.initTokenClient({ client_id: GDRIVE_CLIENT_ID, scope: GDRIVE_SCOPES, callback: '', });
+                       setTokenClient(client);
+                   }
+                }, 500);
+                const checkGapi = setInterval(() => {
+                    if(window.gapi) {
+                        clearInterval(checkGapi);
+                        window.gapi.load('client', async () => {
+                            await window.gapi.client.init({ apiKey: GDRIVE_API_KEY, discoveryDocs: ['https://www.googleapis.com/discovery/v1/apis/drive/v3/rest'], });
+                            setIsApiLoaded(true);
+                        });
+                    }
+                }, 500);
+                return () => { clearInterval(checkGis); clearInterval(checkGapi); }
+            }, []);
+            const saveToDrive = useCallback((content, filename, mimeType = 'text/html') => {
+                return new Promise((resolve, reject) => {
+                    if(!tokenClient) return reject("Google Drive API not initialized.");
+                    tokenClient.callback = async (resp) => {
+                        if (resp.error) return reject(resp);
+                        try {
+                            const metadata = { name: filename, mimeType: mimeType };
+                            const form = new FormData();
+                            form.append('metadata', new Blob([JSON.stringify(metadata)], { type: 'application/json' }));
+                            form.append('file', new Blob([content], { type: mimeType }));
+                            const upload = await fetch('https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart', { method: 'POST', headers: new Headers({ 'Authorization': 'Bearer ' + resp.access_token }), body: form, });
+                            const result = await upload.json();
+                            resolve(result);
+                        } catch(e) { reject(e); }
+                    };
+                    if (window.gapi.client.getToken() === null) tokenClient.requestAccessToken({prompt: 'consent'});
+                    else tokenClient.requestAccessToken({prompt: ''});
+                });
+            }, [tokenClient]);
+            return { saveToDrive, isReady: !!tokenClient && isApiLoaded };
+        };
+
+        const MessageBubble = ({ text, isUser }) => {
+            const bubbleRef = useRef(null);
+            useEffect(() => {
+                if (bubbleRef.current && !isUser) {
+                    if (window.marked) bubbleRef.current.innerHTML = window.marked.parse(text); else bubbleRef.current.textContent = text;
+                    if (window.renderMathInElement) window.renderMathInElement(bubbleRef.current, { delimiters: [{left: '$$', right: '$$', display: true}, {left: '$', right: '$', display: false}, {left: '\\(', right: '\\)', display: false}, {left: '\\[', right: '\\]', display: true}], throwOnError: false });
+                } else if (bubbleRef.current) bubbleRef.current.textContent = text;
+            }, [text, isUser]);
+            return <div ref={bubbleRef} className={`message-content ${isUser ? 'whitespace-pre-wrap' : ''} ${isUser ? 'text-white' : 'text-zinc-800 dark:text-zinc-200'}`} />;
+        };
+
+        const TaskEditor = ({ data, onChange, onSaveToDrive }) => {
+            const { tasks = [] } = data;
+            const [filter, setFilter] = useState('all'); 
+            const [newTaskText, setNewTaskText] = useState('');
+            const [newTaskDate, setNewTaskDate] = useState('');
+            const addTask = () => { if(!newTaskText.trim()) return; const newTask = { id: Date.now().toString(), text: newTaskText, completed: false, dueDate: newTaskDate || null, subtasks: [] }; onChange({ ...data, tasks: [...tasks, newTask] }); setNewTaskText(''); setNewTaskDate(''); };
+            const toggleTask = (taskId) => { const updated = tasks.map(t => t.id === taskId ? { ...t, completed: !t.completed } : t); onChange({ ...data, tasks: updated }); };
+            const deleteTask = (taskId) => { const updated = tasks.filter(t => t.id !== taskId); onChange({ ...data, tasks: updated }); };
+            const addSubtask = (taskId, text) => { const updated = tasks.map(t => { if(t.id === taskId) return { ...t, subtasks: [...(t.subtasks || []), { id: Date.now().toString(), text, completed: false }] }; return t; }); onChange({ ...data, tasks: updated }); };
+            const toggleSubtask = (taskId, subtaskId) => { const updated = tasks.map(t => { if(t.id === taskId) { const newSubs = t.subtasks.map(s => s.id === subtaskId ? { ...s, completed: !s.completed } : s); return { ...t, subtasks: newSubs }; } return t; }); onChange({ ...data, tasks: updated }); }
+            const deleteSubtask = (taskId, subtaskId) => { const updated = tasks.map(t => { if(t.id === taskId) return { ...t, subtasks: t.subtasks.filter(s => s.id !== subtaskId) }; return t; }); onChange({ ...data, tasks: updated }); }
+            const filteredTasks = tasks.filter(t => {
+                if(filter === 'all') return true; if(filter === 'completed') return t.completed; if(filter === 'active') return !t.completed;
+                if(filter === 'today') { if(!t.dueDate) return false; const today = new Date().toISOString().split('T')[0]; return t.dueDate === today && !t.completed; }
+                if(filter === 'overdue') { if(!t.dueDate) return false; const today = new Date().toISOString().split('T')[0]; return t.dueDate < today && !t.completed; }
+                return true;
+            });
+            const formatForDrive = () => {
+                const lines = tasks.map(t => `[${t.completed ? 'x' : ' '}] ${t.text} ${t.dueDate ? `(Due: ${t.dueDate})` : ''}\n${t.subtasks ? t.subtasks.map(s => `    - [${s.completed ? 'x' : ' '}] ${s.text}`).join('\n') : ''}`);
+                return lines.join('\n\n');
+            };
+            return (
+                <div className="p-8 h-full overflow-y-auto bg-[#f0f2f5] dark:bg-[#0c0c0c] flex flex-col gap-6 relative">
+                    {onSaveToDrive && <button onClick={() => onSaveToDrive(formatForDrive(), `${data.title || 'Tasks'}.txt`, 'text/plain')} className="absolute top-4 right-8 bg-zinc-200 dark:bg-zinc-800 p-2 rounded-full hover:bg-zinc-300 dark:hover:bg-zinc-700 text-zinc-600 dark:text-zinc-300" title="Save to Google Drive"><Icons.Drive className="w-5 h-5" /></button>}
+                    <div className="flex gap-2 flex-wrap">
+                        {['All', 'Active', 'Today', 'Overdue', 'Completed'].map(f => (<button key={f} onClick={() => setFilter(f.toLowerCase())} className={`px-4 py-2 rounded-lg text-sm font-bold transition-colors ${filter === f.toLowerCase() ? 'bg-indigo-600 text-white shadow-lg' : 'bg-white dark:bg-zinc-800 text-zinc-500 hover:bg-zinc-100 dark:hover:bg-zinc-700'}`}>{f}</button>))}
+                    </div>
+                    <div className="bg-white dark:bg-zinc-900 p-4 rounded-xl shadow-sm border border-zinc-200 dark:border-zinc-800 flex gap-2 flex-col sm:flex-row">
+                        <input value={newTaskText} onChange={(e) => setNewTaskText(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && addTask()} placeholder="Add a new task..." className="flex-1 bg-transparent border-none outline-none dark:text-white" />
+                        <input type="date" value={newTaskDate} onChange={(e) => setNewTaskDate(e.target.value)} className="bg-zinc-100 dark:bg-zinc-800 rounded px-2 py-1 text-xs text-zinc-500 dark:text-zinc-400 outline-none w-auto" />
+                        <button onClick={addTask} className="bg-indigo-600 text-white px-4 py-2 rounded-lg font-bold text-sm hover:bg-indigo-500">Add Task</button>
+                    </div>
+                    <div className="space-y-3">
+                        {filteredTasks.map(task => (
+                            <div key={task.id} className="bg-white dark:bg-zinc-900 p-4 rounded-xl shadow-sm border border-zinc-200 dark:border-zinc-800 group">
+                                <div className="flex items-start gap-3">
+                                    <input type="checkbox" checked={task.completed} onChange={() => toggleTask(task.id)} className="mt-1 task-checkbox" />
+                                    <div className="flex-1">
+                                        <div className={`text-sm font-medium ${task.completed ? 'line-through text-zinc-400' : 'text-zinc-900 dark:text-white'}`}>{task.text}</div>
+                                        {task.dueDate && (<div className={`text-[10px] mt-1 flex items-center gap-1 ${task.dueDate < new Date().toISOString().split('T')[0] && !task.completed ? 'text-red-500 font-bold' : 'text-zinc-400'}`}><Icons.Calendar className="w-3 h-3"/> {task.dueDate} {task.dueDate < new Date().toISOString().split('T')[0] && !task.completed ? '(Overdue)' : ''}</div>)}
+                                        <div className="mt-3 space-y-2 pl-2 border-l-2 border-zinc-100 dark:border-zinc-800">
+                                            {task.subtasks && task.subtasks.map(sub => (
+                                                <div key={sub.id} className="flex items-center gap-2 group/sub">
+                                                    <div onClick={() => toggleSubtask(task.id, sub.id)} className={`w-3 h-3 rounded-full border cursor-pointer ${sub.completed ? 'bg-indigo-500 border-indigo-500' : 'border-zinc-400'}`}></div>
+                                                    <span className={`text-xs ${sub.completed ? 'line-through text-zinc-400' : 'text-zinc-700 dark:text-zinc-300'}`}>{sub.text}</span>
+                                                    <button onClick={() => deleteSubtask(task.id, sub.id)} className="opacity-0 group-hover/sub:opacity-100 text-red-500"><Icons.X className="w-3 h-3"/></button>
+                                                </div>
+                                            ))}
+                                            <div className="flex items-center gap-2 mt-2">
+                                                <Icons.Plus className="w-3 h-3 text-zinc-400"/>
+                                                <input placeholder="Add subtask..." className="bg-transparent text-xs outline-none w-full dark:text-zinc-300" onKeyDown={(e) => { if(e.key === 'Enter' && e.target.value.trim()) { addSubtask(task.id, e.target.value); e.target.value = ''; }}} />
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <button onClick={() => deleteTask(task.id)} className="opacity-0 group-hover:opacity-100 text-red-500 p-1 hover:bg-red-50 dark:hover:bg-red-900/20 rounded"><Icons.Trash className="w-4 h-4"/></button>
+                                </div>
+                            </div>
+                        ))}
+                        {filteredTasks.length === 0 && (<div className="text-center text-zinc-400 mt-10"><div className="text-4xl mb-2">📝</div><div>No tasks found in this view.</div></div>)}
+                    </div>
+                </div>
+            )
+        };
+
+        // ==========================================
+        // TINYMCE EDITOR INTEGRATION (The Toyota)
+        // ==========================================
+        const TinyMCEEditor = ({ initialContent, noteId, noteTitle, onSave, onSaveToDrive, isDarkMode, onContextMenu }) => {
+            const editorRef = useRef(null);
+            const [wordCount, setWordCount] = useState(0);
+            const [showAiMenu, setShowAiMenu] = useState(false);
+            const [aiLoading, setAiLoading] = useState(false);
+
+            useEffect(() => {
+                // Initialize TinyMCE - RUNS ONCE PER COMPONENT MOUNT (Due to key={noteId})
+                const initEditor = () => {
+                    if (window.tinymce) {
+                        // Prevent zombie instances
+                        if (editorRef.current) {
+                            window.tinymce.remove(editorRef.current);
+                        }
+
+                        window.tinymce.init({
+                            selector: '#tinymce-editor', // Target by ID
+                            height: '100%', // FORCE FULL HEIGHT
+                            menubar: 'file edit view insert format tools table help',
+                            plugins: 'preview importcss searchreplace autolink autosave save directionality code visualblocks visualchars fullscreen image link media table charmap pagebreak nonbreaking anchor insertdatetime advlist lists wordcount help charmap quickbars emoticons',
+                            toolbar: 'undo redo | blocks | bold italic underline strikethrough | alignleft aligncenter alignright alignjustify | bullist numlist outdent indent | removeformat | help',
+                            skin: isDarkMode ? 'oxide-dark' : 'oxide',
+                            content_css: isDarkMode ? 'dark' : 'default',
+                            placeholder: "Start typing...",
+                            resize: false, // Fix layout weirdness
+                            paste_data_images: true, 
+                            contextmenu: false, // DISABLE NATIVE CONTEXT MENU TO USE CUSTOM ONE
+                            setup: (editor) => {
+                                editorRef.current = editor;
+                                editor.on('init', () => {
+                                    if (initialContent) editor.setContent(initialContent);
+                                    updateStats();
+                                });
+                                editor.on('input change keyup', () => {
+                                    onSave(editor.getContent());
+                                    updateStats();
+                                });
+                                // === CUSTOM CONTEXT MENU HOOK ===
+                                editor.on('contextmenu', (e) => {
+                                    e.preventDefault();
+                                    const rect = editor.getContainer().getBoundingClientRect();
+                                    const x = rect.left + e.clientX;
+                                    const y = rect.top + e.clientY;
+                                    
+                                    // Use getSelection().toString() as fallback if editor.selection is empty
+                                    let selection = editor.selection.getContent({ format: 'text' });
+                                    if (!selection) selection = editor.getWindow().getSelection().toString();
+
+                                    // Only trigger if we actually have text selected or the user clicked on something useful
+                                    if(selection && selection.trim().length > 0) {
+                                        // Pass the callback to replace text
+                                        onContextMenu({ clientX: x, clientY: y }, selection, (newText) => {
+                                            editor.selection.setContent(newText);
+                                            onSave(editor.getContent());
+                                        });
+                                    }
+                                });
+                            }
+                        });
+                    }
+                };
+                
+                // Small delay to ensure DOM is ready and old instances cleared
+                const timer = setTimeout(initEditor, 50);
+
+                // Cleanup on unmount (switching notes or view)
+                return () => { 
+                    clearTimeout(timer);
+                    if (window.tinymce && editorRef.current) {
+                        try {
+                            window.tinymce.remove(editorRef.current);
+                            editorRef.current = null;
+                        } catch(e) {
+                            console.warn("TinyMCE remove error:", e);
+                        }
+                    }
+                };
+            }, [noteId, isDarkMode]); // Dependencies ensuring fresh init
+
+            const updateStats = () => {
+                if(editorRef.current) {
+                    const body = editorRef.current.getBody();
+                    const text = body.innerText || "";
+                    setWordCount(text.trim().split(/\s+/).length);
+                }
+            };
+
+            const handleAiAction = async (action) => {
+                if (!editorRef.current) return;
+                const selection = editorRef.current.selection.getContent({ format: 'text' });
+                if(!selection) { alert("Please select some text in the editor first."); return; }
+                
+                setAiLoading(true); setShowAiMenu(false); let prompt = "";
+                if(action === 'grammar') prompt = `Fix grammar: "${selection}"`; if(action === 'summarize') prompt = `Summarize: "${selection}"`; if(action === 'professional') prompt = `Make professional: "${selection}"`; if(action === 'continue') prompt = `Continue writing: "${selection}"`;
+                
+                const result = await callGemini(prompt, "You are a writing assistant. Return ONLY the result text.");
+                if(result && !result.includes("Error")) {
+                    editorRef.current.selection.setContent(result);
+                    onSave(editorRef.current.getContent());
+                } else alert("AI failed."); 
+                setAiLoading(false);
+            }
+
+            const downloadPDF = () => {
+                if(!editorRef.current) return;
+                const content = editorRef.current.getContent();
+                const tempDiv = document.createElement('div');
+                tempDiv.innerHTML = content;
+                tempDiv.style.padding = "40px";
+                tempDiv.style.color = "black";
+                tempDiv.style.background = "white";
+                const opt = { margin: 0.5, filename: `darnote-${noteId}.pdf`, image: { type: 'jpeg', quality: 0.98 }, html2canvas: { scale: 2 }, jsPDF: { unit: 'in', format: 'letter', orientation: 'portrait' } };
+                html2pdf().set(opt).from(tempDiv).save();
+            };
+
+            const downloadPNG = () => {
+                if(!editorRef.current) return;
+                const content = editorRef.current.getContent();
+                const tempDiv = document.createElement('div');
+                tempDiv.innerHTML = content;
+                tempDiv.style.padding = "40px";
+                tempDiv.style.background = "white";
+                tempDiv.style.color = "black";
+                tempDiv.style.width = "800px";
+                document.body.appendChild(tempDiv);
+                html2canvas(tempDiv).then(canvas => {
+                    const link = document.createElement('a'); link.download = `darnote-${noteId}.png`; link.href = canvas.toDataURL(); link.click();
+                    document.body.removeChild(tempDiv);
+                });
+            };
+
+            const handleDriveSave = () => {
+                if(!onSaveToDrive || !editorRef.current) return;
+                const fullHtml = `<!DOCTYPE html><html><head><title>${noteTitle}</title></head><body><h1>${noteTitle}</h1>${editorRef.current.getContent()}</body></html>`;
+                onSaveToDrive(fullHtml, `${noteTitle || 'Untitled Note'}.html`, 'text/html');
+            }
+
+            return (
+                <div className="flex flex-col h-full overflow-hidden w-full">
+                    {/* Actions Toolbar (External to TinyMCE) */}
+                    <div className="bg-[#edf2fa] dark:bg-[#1e1e20] border-b border-[#c7c7c7] dark:border-white/10 p-1 flex flex-wrap gap-1 items-center sticky top-0 z-30 shadow-sm shrink-0 justify-between">
+                         <div className="flex gap-2 items-center">
+                            <span className="text-xs font-bold text-zinc-500 uppercase ml-2">Editor Actions</span>
+                             <div className="relative">
+                                <button onClick={() => setShowAiMenu(!showAiMenu)} className={`flex items-center gap-1 px-2 py-1 ml-2 rounded-full text-xs font-bold transition-all ${aiLoading ? 'bg-indigo-100 text-indigo-500 animate-pulse' : 'bg-indigo-600 text-white hover:bg-indigo-700 shadow-sm'}`}><Icons.Wand className="w-3 h-3"/> {aiLoading ? 'Generating...' : 'AI Tools'}</button>
+                                {showAiMenu && (
+                                    <div className="absolute top-full left-0 mt-2 w-48 bg-white dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-lg shadow-xl z-50 py-1">
+                                        <div className="px-3 py-1 text-[10px] text-zinc-500 font-bold uppercase">Actions</div>
+                                        <button onClick={() => handleAiAction('grammar')} className="w-full text-left px-3 py-2 text-sm hover:bg-zinc-100 dark:hover:bg-white/5 dark:text-zinc-200">✨ Fix Grammar</button>
+                                        <button onClick={() => handleAiAction('summarize')} className="w-full text-left px-3 py-2 text-sm hover:bg-zinc-100 dark:hover:bg-white/5 dark:text-zinc-200">📝 Summarize</button>
+                                        <button onClick={() => handleAiAction('professional')} className="w-full text-left px-3 py-2 text-sm hover:bg-zinc-100 dark:hover:bg-white/5 dark:text-zinc-200">👔 Make Professional</button>
+                                    </div>
+                                )}
+                             </div>
+                        </div>
+                        <div className="flex gap-0.5 border-l border-zinc-300 dark:border-white/20 pl-2 mx-1">
+                            <button onClick={downloadPDF} className="p-1 rounded hover:bg-[#dbedff] dark:hover:bg-white/10 text-zinc-700 dark:text-zinc-300" title="Export PDF"><Icons.Pdf className="w-4 h-4"/></button>
+                            <button onClick={downloadPNG} className="p-1 rounded hover:bg-[#dbedff] dark:hover:bg-white/10 text-zinc-700 dark:text-zinc-300" title="Export PNG"><Icons.ImageFile className="w-4 h-4"/></button>
+                            <button onClick={handleDriveSave} className="p-1 rounded hover:bg-[#dbedff] dark:hover:bg-white/10 text-zinc-700 dark:text-zinc-300" title="Save to Google Drive"><Icons.Drive className="w-4 h-4"/></button>
+                        </div>
+                    </div>
+                    {/* The Engine */}
+                    <div className="flex-1 overflow-hidden relative h-full w-full">
+                         <textarea id="tinymce-editor"></textarea>
+                    </div>
+                    {/* Status Bar */}
+                    <div className="bg-white dark:bg-zinc-900 border-t border-zinc-200 dark:border-white/10 px-4 py-1.5 text-xs text-zinc-500 flex justify-end items-center gap-4 z-30 shrink-0"><div>{wordCount} words</div></div>
+                </div>
+            );
+        };
+
+        const MindMapEditor = ({ data, onChange, onSaveToDrive }) => {
+            const { nodes = [], connections = [] } = data;
+            const handleAddNode = () => { const newNode = { id: Date.now().toString(), text: 'New Idea', x: 400, y: 300 }; onChange({ ...data, nodes: [...nodes, newNode] }); };
+            return (
+                <div className="w-full h-[600px] border border-zinc-200 dark:border-white/10 rounded-xl relative overflow-hidden mindmap-bg bg-zinc-50 dark:bg-zinc-900/50">
+                    {onSaveToDrive && <button onClick={() => onSaveToDrive(JSON.stringify(data, null, 2), `${data.title || 'MindMap'}.json`, 'application/json')} className="absolute top-4 right-4 z-20 bg-zinc-200 dark:bg-zinc-800 p-2 rounded-full hover:bg-zinc-300 dark:hover:bg-zinc-700 text-zinc-600 dark:text-zinc-300" title="Save JSON to Drive"><Icons.Drive className="w-5 h-5" /></button>}
+                   <div className="absolute top-4 left-4 z-10 bg-white dark:bg-zinc-900 p-2 rounded shadow text-xs">Mind Map View</div>
+                   <button onClick={handleAddNode} className="absolute bottom-4 right-4 z-10 bg-indigo-600 text-white p-2 rounded-full shadow hover:bg-indigo-500"><Icons.Plus className="w-6 h-6"/></button>
+                   <svg className="w-full h-full absolute inset-0 pointer-events-none">
+                       {connections.map((c, i) => { const from = nodes.find(n => n.id === c.from); const to = nodes.find(n => n.id === c.to); if(!from || !to) return null; return <line key={i} x1={from.x} y1={from.y} x2={to.x} y2={to.y} stroke="gray" strokeWidth="2" /> })}
+                   </svg>
+                   {nodes.map(node => (<motion.div drag dragMomentum={false} key={node.id} initial={{ x: node.x, y: node.y }} className="absolute bg-white dark:bg-zinc-800 border border-zinc-300 dark:border-zinc-700 px-4 py-2 rounded-lg shadow-sm cursor-move text-sm whitespace-nowrap">{node.text}</motion.div>))}
+                </div>
+            );
+        };
+
+        const AIChatInterface = ({ activeNote, initialQuery, onClose }) => {
+            const [messages, setMessages] = useState([{role: 'ai', text: 'Hi! Drop an image here or ask a question about your notes.', type: 'text'}]);
+            const [input, setInput] = useState(initialQuery || '');
+            const [loading, setLoading] = useState(false);
+            const [droppedImage, setDroppedImage] = useState(null);
+            const messagesEndRef = useRef(null);
+            useEffect(() => { if (initialQuery) setInput(initialQuery); }, [initialQuery]);
+            useEffect(() => { messagesEndRef.current?.scrollIntoView({ behavior: "smooth" }); }, [messages]);
+            const handleSend = async () => {
+                if(!input.trim() && !droppedImage) return;
+                const userMsg = { role: 'user', text: input, image: droppedImage, type: droppedImage ? 'mixed' : 'text' };
+                setMessages(prev => [...prev, userMsg]); setInput(''); setDroppedImage(null); setLoading(true);
+                try {
+                    const context = `Current note: ${activeNote.title || 'Untitled'}. Content: ${activeNote.content || ''}`;
+                    const systemPrompt = `You are a helpful assistant of darNote. Context: ${context}`;
+                    const response = await callGemini(userMsg.text || "Analyze this image", systemPrompt, userMsg.image);
+                    setMessages(prev => [...prev, { role: 'ai', text: response, type: 'text' }]);
+                } catch (e) { setMessages(prev => [...prev, { role: 'ai', text: "Error: Something went wrong in the UI.", type: 'text' }]); } finally { setLoading(false); }
+            };
+            const handleDrop = (e) => { e.preventDefault(); const file = e.dataTransfer.files[0]; if (file && file.type.startsWith('image/')) { const reader = new FileReader(); reader.onload = (ev) => setDroppedImage(ev.target.result); reader.readAsDataURL(file); } };
+            const handleDragOver = (e) => e.preventDefault();
+            return (
+                <div className="flex flex-col h-full bg-white dark:bg-onyx" onDrop={handleDrop} onDragOver={handleDragOver}>
+                    <div className="p-4 border-b border-zinc-200 dark:border-white/10 flex justify-between items-center bg-zinc-50 dark:bg-zinc-900"><span className="font-semibold text-sm flex items-center gap-2"><Icons.Bot className="w-4 h-4"/> AI Assistant</span><button onClick={onClose}><Icons.X className="w-4 h-4"/></button></div>
+                    <div className="flex-1 overflow-y-auto p-4 space-y-4 relative">
+                        {messages.length === 1 && !droppedImage && (<div className="absolute inset-0 flex items-center justify-center pointer-events-none opacity-10"><Icons.ImageFile className="w-32 h-32"/></div>)}
+                        {messages.map((m, i) => (
+                            <div key={i} className={`flex ${m.role === 'user' ? 'justify-end' : 'justify-start'}`}>
+                                <div className={`max-w-[85%] p-3 rounded-2xl text-sm ${m.role === 'user' ? 'bg-indigo-600 text-white rounded-br-none' : 'bg-zinc-100 dark:bg-zinc-800 rounded-bl-none'}`}>
+                                    {m.image && <img src={m.image} className="max-w-full rounded mb-2 border border-white/20"/>}
+                                    <MessageBubble text={m.text} isUser={m.role === 'user'} />
+                                </div>
+                            </div>
+                        ))}
+                        {loading && <div className="text-xs text-zinc-500 animate-pulse">Thinking...</div>}<div ref={messagesEndRef} />
+                    </div>
+                    <div className="p-4 border-t border-zinc-200 dark:border-white/10 bg-white dark:bg-zinc-900">
+                        {droppedImage && (<div className="mb-2 relative inline-block"><img src={droppedImage} className="h-16 w-auto rounded border border-indigo-500 shadow-sm"/><button onClick={()=>setDroppedImage(null)} className="absolute -top-1 -right-1 bg-red-500 text-white rounded-full p-0.5"><Icons.X className="w-3 h-3"/></button></div>)}
+                        <div className="flex gap-2"><input value={input} onChange={e=>setInput(e.target.value)} onKeyDown={e=>e.key==='Enter' && handleSend()} placeholder="Ask AI (or drop image here)..." className="w-full bg-zinc-100 dark:bg-zinc-800 rounded-full px-4 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-indigo-500"/><button onClick={handleSend} className="bg-indigo-600 text-white rounded-full p-2 hover:bg-indigo-500"><Icons.Plus className="w-4 h-4 rotate-90"/></button></div>
+                    </div>
+                </div>
+            )
+        }
+
+        const Button = ({ children, onClick, variant = 'ghost', className = '', icon: Icon, active, ...props }) => {
+            const variants = { primary: 'bg-indigo-600 text-white hover:bg-indigo-500 shadow-lg shadow-indigo-500/20', ghost: 'text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white hover:bg-zinc-200 dark:hover:bg-white/5', danger: 'text-red-500 hover:bg-red-50 hover:text-red-600 dark:text-red-400 dark:hover:bg-red-500/10', active: 'bg-zinc-200 dark:bg-white/20 text-black dark:text-white', google: 'bg-white text-black hover:bg-gray-100 shadow-md w-full justify-center py-3' };
+            return (<motion.button whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }} onClick={onClick} className={`flex items-center justify-center gap-2 px-2 py-1.5 rounded-lg text-sm font-medium transition-colors ${active ? variants.active : variants[variant]} ${className}`} {...props}>{Icon && <Icon className="w-4 h-4" />}{children}</motion.button>);
+        };
+
+        const ShareModal = ({ note, onClose, onAddEmail, onRemoveEmail }) => {
+            const [email, setEmail] = useState('');
+            const handleSubmit = () => { if(email.trim()) { onAddEmail(email.trim()); setEmail(''); } };
+            return (
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4">
+                    <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} className="bg-white dark:bg-surface w-full max-w-md rounded-2xl shadow-2xl overflow-hidden border border-zinc-200 dark:border-white/10">
+                        <div className="p-6">
+                            <div className="flex justify-between items-center mb-6"><h2 className="text-xl font-bold dark:text-white">Share Note</h2><button onClick={onClose}><Icons.X className="w-5 h-5 text-zinc-500" /></button></div>
+                            <div className="space-y-4">
+                                <div className="flex gap-2">
+                                    <input value={email} onChange={e => setEmail(e.target.value)} onKeyDown={e => e.key === 'Enter' && handleSubmit()} placeholder="Enter email to share..." className="flex-1 bg-zinc-100 dark:bg-black/50 border border-zinc-200 dark:border-white/10 rounded-lg px-3 py-2 text-sm focus:outline-none dark:text-zinc-200" />
+                                    <Button variant="primary" onClick={handleSubmit}>Share</Button>
+                                </div>
+                                <div className="mt-4">
+                                    <div className="text-xs font-semibold text-zinc-500 uppercase mb-2">Shared With</div>
+                                    <div className="space-y-2 max-h-40 overflow-y-auto">
+                                        {note.sharedWith && note.sharedWith.length > 0 ? note.sharedWith.map(e => (
+                                            <div key={e} className="flex items-center justify-between p-2 bg-zinc-50 dark:bg-white/5 rounded-lg">
+                                                <span className="text-sm dark:text-zinc-300">{e}</span>
+                                                <button onClick={() => onRemoveEmail(e)} className="text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 p-1 rounded"><Icons.Trash className="w-3 h-3"/></button>
+                                            </div>
+                                        )) : <div className="text-sm text-zinc-400 italic">No one yet.</div>}
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </motion.div>
+                </div>
+            );
+        };
+
+        const ProfileModal = ({ user, profile, onClose, onSave }) => {
+            const [data, setData] = useState({ displayName: profile?.displayName || user.displayName || '', role: profile?.role || 'Student', gender: profile?.gender || 'Prefer not to say', bio: profile?.bio || '', note: profile?.note || '', iconUrl: profile?.iconUrl || user.photoURL || '' });
+            return (
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4">
+                    <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} className="bg-white dark:bg-surface w-full max-w-md rounded-2xl shadow-2xl overflow-hidden border border-zinc-200 dark:border-white/10">
+                        <div className="p-6">
+                            <div className="flex justify-between items-center mb-6"><h2 className="text-xl font-bold dark:text-white">Edit Profile</h2><button onClick={onClose}><Icons.X className="w-5 h-5 text-zinc-500" /></button></div>
+                            <div className="space-y-4">
+                                <div className="flex justify-center mb-4"><div className="w-20 h-20 rounded-full bg-zinc-200 dark:bg-zinc-800 overflow-hidden border-2 border-indigo-500">{data.iconUrl ? <img src={data.iconUrl} className="w-full h-full object-cover" /> : <div className="w-full h-full flex items-center justify-center text-2xl">?</div>}</div></div>
+                                <div><label className="text-xs font-semibold text-zinc-500 uppercase">Icon URL</label><input value={data.iconUrl} onChange={e => setData({...data, iconUrl: e.target.value})} className="w-full mt-1 bg-zinc-100 dark:bg-black/50 border border-zinc-200 dark:border-white/10 rounded-lg px-3 py-2 text-sm focus:outline-none dark:text-zinc-200" /></div>
+                                <div><label className="text-xs font-semibold text-zinc-500 uppercase">Display Name</label><input value={data.displayName} onChange={e => setData({...data, displayName: e.target.value})} className="w-full mt-1 bg-zinc-100 dark:bg-black/50 border border-zinc-200 dark:border-white/10 rounded-lg px-3 py-2 text-sm focus:outline-none dark:text-zinc-200" /></div>
+                                <div className="mt-6 flex justify-end gap-2"><Button onClick={onClose}>Cancel</Button><Button variant="primary" onClick={() => onSave(data)}>Save Profile</Button></div>
+                            </div>
+                        </div>
+                    </motion.div>
+                </div>
+            );
+        };
+
+        const App = () => {
+            const [user, setUser] = useState(null); const [profile, setProfile] = useState(null); const [notes, setNotes] = useState([]); const [subjects, setSubjects] = useState([]);
+            const [activeNoteId, setActiveNoteId] = useState(() => { const params = new URLSearchParams(window.location.search); return params.get('note'); });
+            const [searchQuery, setSearchQuery] = useState(''); const [filter, setFilter] = useState('all'); const [viewMode, setViewMode] = useState('list');
+            const [isAiSidebarOpen, setIsAiSidebarOpen] = useState(false); const [isNoteListOpen, setIsNoteListOpen] = useState(true); const [contextMenu, setContextMenu] = useState(null);
+            const [aiQuery, setAiQuery] = useState(''); const [sortOrder, setSortOrder] = useState('date-desc'); const [isDarkMode, setIsDarkMode] = useState(true);
+            const [isAuthLoading, setIsAuthLoading] = useState(true); const [showProfileModal, setShowProfileModal] = useState(false);
+            const [showShareModal, setShowShareModal] = useState(false); const [sharedNotes, setSharedNotes] = useState([]);
+            const [sharedError, setSharedError] = useState(null);
+            
+            const { saveToDrive, isReady } = useGoogleDrive();
+
+            useEffect(() => { const handlePopState = () => { const params = new URLSearchParams(window.location.search); const noteId = params.get('note'); setActiveNoteId(noteId); }; window.addEventListener('popstate', handlePopState); return () => window.removeEventListener('popstate', handlePopState); }, []);
+            useEffect(() => { const url = new URL(window.location); const currentUrlId = url.searchParams.get('note'); if (activeNoteId && currentUrlId !== activeNoteId) { url.searchParams.set('note', activeNoteId); window.history.pushState({}, '', url); } else if (!activeNoteId && currentUrlId) { url.searchParams.delete('note'); window.history.pushState({}, '', url); } }, [activeNoteId]);
+            useEffect(() => { const unsubscribe = window.firebase.onAuthStateChanged(window.firebase.auth, (u) => { setUser(u); setIsAuthLoading(false); }); return () => unsubscribe(); }, []);
+            useEffect(() => { 
+                if (!user) { setNotes([]); setSubjects([]); setProfile(null); setSharedNotes([]); return; } 
+                const appId = "darnote-app"; const db = window.firebase.db; 
+                const profileUnsub = window.firebase.onSnapshot(window.firebase.doc(db, 'artifacts', appId, 'users', user.uid, 'profile', 'data'), (doc) => { if (doc.exists()) setProfile(doc.data()); }); 
+                const notesUnsub = window.firebase.onSnapshot(window.firebase.collection(db, 'artifacts', appId, 'users', user.uid, 'notes'), (snapshot) => { const fetchedNotes = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })); setNotes(fetchedNotes); }); 
+                const subjectsUnsub = window.firebase.onSnapshot(window.firebase.collection(db, 'artifacts', appId, 'users', user.uid, 'subjects'), (snapshot) => { const fetchedSubjects = snapshot.docs.map(doc => doc.data().name).sort(); if (fetchedSubjects.length === 0) ['Personal', 'Work', 'Ideas'].forEach(s => window.firebase.addDoc(window.firebase.collection(db, 'artifacts', appId, 'users', user.uid, 'subjects'), { name: s })); else setSubjects(fetchedSubjects); }); 
+                
+                let sharedUnsub = () => {};
+                if(user.email) {
+                    setSharedError(null);
+                    try {
+                        const myEmail = user.email.toLowerCase();
+                        const q = window.firebase.query(window.firebase.collectionGroup(db, 'notes'), window.firebase.where('sharedWith', 'array-contains', myEmail));
+                        sharedUnsub = window.firebase.onSnapshot(q, (snapshot) => {
+                             const fetchedShared = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data(), isShared: true }));
+                             setSharedNotes(fetchedShared);
+                        }, (error) => {
+                            if (error.code === 'failed-precondition') setSharedError('INDEX_MISSING');
+                            else if (error.code === 'permission-denied') setSharedError('PERMISSION_DENIED');
+                        });
+                    } catch(e) { console.error("Error setting up shared listener", e); }
+                }
+
+                return () => { notesUnsub(); subjectsUnsub(); profileUnsub(); sharedUnsub(); }; 
+            }, [user]);
+            useEffect(() => { if (isDarkMode) document.documentElement.classList.add('dark'); else document.documentElement.classList.remove('dark'); }, [isDarkMode]);
+            useEffect(() => { const closeMenu = (e) => { if (!e.target.closest('.context-menu')) setContextMenu(null); }; window.addEventListener('mousedown', closeMenu); return () => window.removeEventListener('mousedown', closeMenu); }, []);
+
+            const allVisibleNotes = useMemo(() => {
+                return filter === 'shared' ? sharedNotes : notes;
+            }, [notes, sharedNotes, filter]);
+
+            const activeNote = useMemo(() => {
+                const myNote = notes.find(n => n.id === activeNoteId);
+                if (myNote) return myNote;
+                return sharedNotes.find(n => n.id === activeNoteId);
+            }, [notes, sharedNotes, activeNoteId]);
+
+            const filteredNotes = useMemo(() => { 
+                let result = allVisibleNotes.filter(n => !n.isDeleted); 
+                if (searchQuery.trim()) { 
+                    const q = searchQuery.toLowerCase(); 
+                    result = result.filter(n => n.title.toLowerCase().includes(q) || (n.content && n.content.toLowerCase().includes(q))); 
+                } else { 
+                    if (filter === 'favorites') result = result.filter(n => n.isFavorite); 
+                    else if (filter.startsWith('subject:')) result = result.filter(n => n.subject === filter.split(':')[1]); 
+                } 
+                result.sort((a, b) => { if (a.isPinned !== b.isPinned) return a.isPinned ? -1 : 1; switch (sortOrder) { case 'date-desc': return new Date(b.updatedAt) - new Date(a.updatedAt); case 'date-asc': return new Date(a.updatedAt) - new Date(b.updatedAt); case 'name-asc': return (a.title || '').localeCompare(b.title || ''); case 'name-desc': return (b.title || '').localeCompare(a.title || ''); default: return 0; } }); 
+                return result; 
+            }, [allVisibleNotes, filter, searchQuery, sortOrder]);
+
+            const handleLogin = async () => { try { await window.firebase.signInWithPopup(window.firebase.auth, new window.firebase.GoogleAuthProvider()); } catch (error) { alert("Login failed"); } };
+            const handleGuestLogin = async () => { try { await window.firebase.signInAnonymously(window.firebase.auth); } catch (error) { alert("Guest login failed"); } }
+            const handleLogout = async () => { await window.firebase.signOut(window.firebase.auth); setNotes([]); setActiveNoteId(null); };
+            const saveProfile = async (data) => { const appId = "darnote-app"; await window.firebase.setDoc(window.firebase.doc(window.firebase.db, 'artifacts', appId, 'users', user.uid, 'profile', 'data'), data); setShowProfileModal(false); };
+            const createNote = async (type = 'text') => { if(!user) return; const currentSubject = filter.startsWith('subject:') ? filter.split(':')[1] : 'Personal'; const newNote = { type, title: '', content: type === 'text' ? '' : null, floatingImages: [], nodes: type === 'mindmap' ? [{id: 'root', text: 'Central Idea', x: 400, y: 300}] : null, connections: type === 'mindmap' ? [] : null, tasks: type === 'tasklist' ? [] : null, tags: [], subject: currentSubject, updatedAt: new Date().toISOString(), isFavorite: false, isPinned: false, ownerId: user.uid, ownerEmail: user.email ? user.email.toLowerCase() : '', sharedWith: [] }; try { const docRef = await window.firebase.addDoc(window.firebase.collection(window.firebase.db, 'artifacts', "darnote-app", 'users', user.uid, 'notes'), newNote); setActiveNoteId(docRef.id); if (!isNoteListOpen) setIsNoteListOpen(true); if(filter === 'shared') setFilter('all'); } catch(e) { console.error(e); } };
+            const updateNote = async (id, updates) => { if(!id || !user) return; 
+                 const targetNote = allVisibleNotes.find(n => n.id === id);
+                 if(!targetNote) return;
+                 const db = window.firebase.db;
+                 const ownerId = targetNote.ownerId || user.uid; 
+                 try {
+                     await window.firebase.updateDoc(window.firebase.doc(db, 'artifacts', "darnote-app", 'users', ownerId, 'notes', id), { ...updates, updatedAt: new Date().toISOString() });
+                 } catch(e) { console.error("Update failed", e); }
+            };
+            const deleteNote = async (id) => { if(!id || !user) return; await window.firebase.deleteDoc(window.firebase.doc(window.firebase.db, 'artifacts', "darnote-app", 'users', user.uid, 'notes', id)); if (activeNoteId === id) setActiveNoteId(null); };
+            const createSubject = async (name) => { if(!name || !user || subjects.includes(name)) return; await window.firebase.addDoc(window.firebase.collection(window.firebase.db, 'artifacts', "darnote-app", 'users', user.uid, 'subjects'), { name }); };
+            const renameSubject = async (oldName, newName) => { if (!newName || !user || newName === oldName || subjects.includes(newName)) return; const db = window.firebase.db; const appId = "darnote-app"; const notesToUpdate = notes.filter(n => n.subject === oldName); await Promise.all(notesToUpdate.map(note => window.firebase.updateDoc(window.firebase.doc(db, 'artifacts', appId, 'users', user.uid, 'notes', note.id), { subject: newName }))); await window.firebase.addDoc(window.firebase.collection(db, 'artifacts', appId, 'users', user.uid, 'subjects'), { name: newName }); const q = window.firebase.query(window.firebase.collection(db, 'artifacts', appId, 'users', user.uid, 'subjects'), window.firebase.where("name", "==", oldName)); (await window.firebase.getDocs(q)).forEach(async (doc) => await window.firebase.deleteDoc(doc.ref)); if (filter === `subject:${oldName}`) setFilter(`subject:${newName}`); };
+            const deleteSubject = async (subjectName) => { if(!confirm(`Delete subject "${subjectName}"? Notes in this subject will not be deleted but may be hidden until moved.`) || !user) return; const db = window.firebase.db; const appId = "darnote-app"; const q = window.firebase.query(window.firebase.collection(db, 'artifacts', appId, 'users', user.uid, 'subjects'), window.firebase.where("name", "==", subjectName)); (await window.firebase.getDocs(q)).forEach(async (doc) => await window.firebase.deleteDoc(doc.ref)); if (filter === `subject:${subjectName}`) setFilter('all'); };
+            const handleNoteDragStart = (e, noteId) => { e.dataTransfer.setData('noteId', noteId); e.dataTransfer.effectAllowed = 'move'; };
+            const handleSubjectDrop = (e, subject) => { e.preventDefault(); const noteId = e.dataTransfer.getData('noteId'); if (noteId) { updateNote(noteId, { subject }); setFilter(`subject:${subject}`); } };
+            const handleContextMenu = (e, type, data) => { e.preventDefault(); e.stopPropagation(); setContextMenu({ x: e.clientX, y: e.clientY, type, data }); };
+            const handleContextAction = async (action, payload) => {
+                if (!contextMenu) return;
+                if (contextMenu.type === 'subject') { if (action === 'rename') { const newName = prompt("Rename:", contextMenu.data); renameSubject(contextMenu.data, newName); } if (action === 'delete') deleteSubject(contextMenu.data); }
+                if (contextMenu.type === 'note') { const note = notes.find(n => n.id === contextMenu.data); if (action === 'delete') deleteNote(note.id); if (action === 'pin') updateNote(note.id, { isPinned: !note.isPinned }); if (action === 'star') updateNote(note.id, { isFavorite: !note.isFavorite }); if (action === 'move') updateNote(note.id, { subject: payload }); if (action === 'tag') { const t = prompt("Tags (comma separated):", note.tags ? note.tags.join(', ') : ""); if(t !== null) updateNote(note.id, { tags: t.split(',').map(s=>s.trim()).filter(Boolean) }); } }
+                if (contextMenu.type === 'text' && action === 'ask-ai') { setIsAiSidebarOpen(true); setAiQuery(contextMenu.data.text); } setContextMenu(null);
+            };
+
+            const addEmailShare = async (email) => { if(activeNote) { await updateNote(activeNote.id, { sharedWith: window.firebase.arrayUnion(email.toLowerCase()) }); } };
+            const removeEmailShare = async (email) => { if(activeNote) { await updateNote(activeNote.id, { sharedWith: window.firebase.arrayRemove(email.toLowerCase()) }); } };
+            
+            const handleSaveToDriveAction = async (content, filename, mimeType) => {
+                if(!isReady) { alert("Google Drive API is not configured or ready. Please check the code configuration."); return; }
+                const toast = document.createElement('div');
+                toast.className = "fixed bottom-4 right-4 bg-indigo-600 text-white px-4 py-2 rounded shadow-lg z-50 text-sm";
+                toast.innerText = "Saving to Google Drive...";
+                document.body.appendChild(toast);
+                try {
+                    const result = await saveToDrive(content, filename, mimeType);
+                    toast.innerText = "Saved to Drive! ✅";
+                    toast.className = "fixed bottom-4 right-4 bg-green-600 text-white px-4 py-2 rounded shadow-lg z-50 text-sm";
+                } catch(e) {
+                    toast.innerText = "Failed to save. Check console.";
+                    toast.className = "fixed bottom-4 right-4 bg-red-600 text-white px-4 py-2 rounded shadow-lg z-50 text-sm";
+                }
+                setTimeout(() => toast.remove(), 3000);
+            }
+
+            if (isAuthLoading) return <div className="flex h-screen w-full items-center justify-center bg-black text-white flex-col gap-6"><div className="w-12 h-12 rounded-full border-4 border-white border-t-transparent animate-spin"></div></div>;
+            if (!user) {
+                return (
+                    <div className="flex h-screen w-full items-center justify-center bg-black text-white p-4 relative overflow-hidden">
+                        <div className="absolute top-[-50%] left-[-50%] w-[200%] h-[200%] bg-[radial-gradient(circle_at_center,_var(--tw-gradient-stops))] from-zinc-800/20 via-black to-black animate-spin-slow"></div>
+                        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="max-w-md w-full bg-zinc-900/80 backdrop-blur-2xl border border-white/5 p-12 rounded-3xl shadow-2xl relative z-10 text-center ring-1 ring-white/10">
+                            <div className="w-20 h-20 rounded-full bg-white text-black flex items-center justify-center font-bold text-4xl mb-8 mx-auto shadow-[0_0_40px_-10px_rgba(255,255,255,0.3)]">d</div>
+                            <h1 className="text-4xl font-bold mb-3 tracking-tighter">darNote</h1>
+                            <p className="text-zinc-500 mb-10 font-medium">The workspace for the dark mode soul.</p>
+                            <div className="space-y-4"><Button variant="google" onClick={handleLogin} icon={Icons.Google} className="hover:scale-105 transition-transform duration-200">Sign in with Google</Button><button onClick={handleGuestLogin} className="text-xs text-zinc-600 hover:text-white transition-colors">Continue as Guest</button></div>
+                        </motion.div>
+                    </div>
+                );
+            }
+            const currentSubjectTitle = filter === 'all' ? 'All Notes' : filter === 'favorites' ? 'Favorites' : filter === 'shared' ? 'Shared with Me' : filter.replace('subject:', '');
+            return (
+                <div className={`flex h-screen w-full transition-colors duration-300 ${isDarkMode ? 'dark bg-onyx text-zinc-100' : 'bg-light-bg text-zinc-900'} overflow-hidden selection:bg-white/20 selection:text-white`}>
+                    <div className="w-[80px] lg:w-[260px] flex-shrink-0 glass-panel flex flex-col justify-between p-4 z-20">
+                        <div className="space-y-6">
+                            <div className="flex items-center gap-3 px-2 cursor-pointer hover:bg-white/5 p-2 rounded-xl transition-all" onClick={() => setShowProfileModal(true)}>
+                                {profile?.iconUrl ? <img src={profile.iconUrl} className="w-10 h-10 rounded-full object-cover border border-white/10" /> : <div className="w-10 h-10 rounded-full bg-white text-black flex items-center justify-center font-bold text-sm">{user.displayName ? user.displayName[0] : 'd'}</div>}
+                                <div className="hidden lg:block text-left"><div className="font-bold text-sm tracking-tight truncate w-32">{profile?.displayName || user.displayName || 'darNote User'}</div><div className="text-[10px] text-zinc-500 truncate">{profile?.role || 'Guest'}</div></div>
+                            </div>
+                            <nav className="space-y-1">
+                                <Button variant={filter === 'all' ? 'active' : 'ghost'} className="w-full justify-start py-2.5" icon={Icons.Archive} onClick={() => setFilter('all')}><span className="hidden lg:inline">All Notes</span></Button>
+                                <Button variant={filter === 'favorites' ? 'active' : 'ghost'} className="w-full justify-start py-2.5" icon={Icons.Star} onClick={() => setFilter('favorites')}><span className="hidden lg:inline">Favorites</span></Button>
+                                <Button variant={filter === 'shared' ? 'active' : 'ghost'} onClick={() => { if(user.isAnonymous) { alert("Guests cannot share. Sign in with Google."); return; } setFilter('shared'); }} className="w-full justify-start py-2.5" icon={Icons.Users}><span className="hidden lg:inline">Shared with Me</span></Button>
+                            </nav>
+                            <div className="space-y-1 pt-4 border-t border-zinc-200 dark:border-white/5">
+                                <div className="px-3 py-2 text-[10px] font-bold text-zinc-500 flex items-center justify-between uppercase tracking-widest"><span className="hidden lg:block">Subjects</span><button onClick={() => { const n = prompt("Name:"); if(n) createSubject(n); }} className="hover:text-zinc-900 dark:hover:text-white"><Icons.Plus className="w-3 h-3" /></button></div>
+                                <nav className="space-y-0.5 overflow-y-auto max-h-[300px]">
+                                    {subjects.map((s) => (
+                                        <div 
+                                            key={s} 
+                                            onDragOver={(e) => e.preventDefault()} 
+                                            onDrop={(e) => handleSubjectDrop(e, s)} 
+                                            className="group relative"
+                                            onTouchStart={(e) => {
+                                                if (e.touches.length === 2) {
+                                                    e.preventDefault(); e.stopPropagation();
+                                                    handleContextMenu({ clientX: (e.touches[0].clientX + e.touches[1].clientX)/2, clientY: (e.touches[0].clientY + e.touches[1].clientY)/2 }, 'subject', s);
+                                                }
+                                            }}
+                                        >
+                                            <Button variant={filter === `subject:${s}` ? 'active' : 'ghost'} className="w-full justify-start text-xs py-2" icon={Icons.Folder} onClick={() => setFilter(`subject:${s}`)} onContextMenu={(e) => handleContextMenu(e, 'subject', s)}>
+                                                <span className="hidden lg:inline truncate">{s}</span>
+                                            </Button>
+                                        </div>
+                                    ))}
+                                </nav>
+                            </div>
+                        </div>
+                        <div className="space-y-2 pt-4 border-t border-zinc-200 dark:border-white/5"><Button onClick={() => setIsDarkMode(!isDarkMode)} icon={isDarkMode ? Icons.Sun : Icons.Moon} className="w-full justify-start"><span className="hidden lg:inline">{isDarkMode ? 'Light Mode' : 'Dark Mode'}</span></Button><Button onClick={handleLogout} icon={Icons.Logout} className="w-full justify-start text-red-500 hover:bg-red-50 dark:hover:bg-red-900/10"><span className="hidden lg:inline">Sign Out</span></Button></div>
+                    </div>
+                    <AnimatePresence>
+                        {isNoteListOpen && (
+                            <motion.div initial={{ width: 0, opacity: 0 }} animate={{ width: viewMode === 'grid' ? 400 : 350, opacity: 1 }} exit={{ width: 0, opacity: 0 }} className="flex-shrink-0 border-r border-zinc-200 dark:border-white/5 bg-light-surface dark:bg-surface flex flex-col z-10 overflow-hidden shadow-xl">
+                                <div className="p-4 border-b border-zinc-200 dark:border-white/5 space-y-4 min-w-[320px]">
+                                    <h2 className="text-xl font-bold px-1 truncate">{currentSubjectTitle}</h2>
+                                    {sharedError && filter === 'shared' && (
+                                        <div className="bg-red-500/10 border border-red-500 text-red-500 p-2 rounded text-xs font-bold mb-2 flex items-center gap-2">
+                                            <Icons.Alert className="w-4 h-4"/>
+                                            {sharedError === 'INDEX_MISSING' ? "Missing DB Index! Check Console (F12)." : "Permission Denied. Check Rules."}
+                                        </div>
+                                    )}
+                                    <div className="flex gap-2">
+                                        <div className="relative flex-1"><Icons.Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-500" /><input type="text" placeholder="Search..." value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} className="w-full bg-zinc-100 dark:bg-black/20 border border-zinc-200 dark:border-white/5 rounded-lg pl-9 pr-4 py-2.5 text-sm text-zinc-800 dark:text-zinc-200 focus:outline-none focus:ring-1 focus:ring-white/20 transition-all" /></div>
+                                        <div className="relative group">
+                                            <button className="h-full px-3 bg-zinc-100 dark:bg-black/20 border border-zinc-200 dark:border-white/5 rounded-lg hover:bg-zinc-200 dark:hover:bg-white/5"><Icons.List className="w-4 h-4" /></button>
+                                            <div className="absolute right-0 top-full mt-2 w-40 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-white/10 rounded-lg shadow-xl hidden group-hover:block z-50 py-1">
+                                                <div className="px-3 py-2 text-[10px] text-zinc-500 uppercase font-bold">Sort By</div>
+                                                <button onClick={() => setSortOrder('date-desc')} className={`w-full text-left px-4 py-2 text-xs hover:bg-zinc-100 dark:hover:bg-white/10 ${sortOrder==='date-desc'?'text-indigo-500':''}`}>Date (Newest)</button>
+                                                <button onClick={() => setSortOrder('date-asc')} className={`w-full text-left px-4 py-2 text-xs hover:bg-zinc-100 dark:hover:bg-white/10 ${sortOrder==='date-asc'?'text-indigo-500':''}`}>Date (Oldest)</button>
+                                                <button onClick={() => setSortOrder('name-asc')} className={`w-full text-left px-4 py-2 text-xs hover:bg-zinc-100 dark:hover:bg-white/10 ${sortOrder==='name-asc'?'text-indigo-500':''}`}>Name (A-Z)</button>
+                                                <button onClick={() => setSortOrder('name-desc')} className={`w-full text-left px-4 py-2 text-xs hover:bg-zinc-100 dark:hover:bg-white/10 ${sortOrder==='name-desc'?'text-indigo-500':''}`}>Name (Z-A)</button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div className="flex justify-between items-center">
+                                        <div className="flex bg-zinc-100 dark:bg-black/20 rounded-lg p-0.5 border border-zinc-200 dark:border-white/5"><button onClick={() => setViewMode('list')} className={`p-1.5 rounded ${viewMode === 'list' ? 'bg-white dark:bg-white/10 shadow-sm text-black dark:text-white' : 'text-zinc-400'}`}><Icons.List className="w-4 h-4"/></button><button onClick={() => setViewMode('grid')} className={`p-1.5 rounded ${viewMode === 'grid' ? 'bg-white dark:bg-white/10 shadow-sm text-black dark:text-white' : 'text-zinc-400'}`}><Icons.Grid className="w-4 h-4"/></button></div>
+                                        <div className="flex gap-2"><button onClick={() => createNote('mindmap')} className="p-2 rounded-lg hover:bg-zinc-100 dark:hover:bg-white/10 text-zinc-400 border border-transparent hover:border-white/5" title="New Mind Map"><Icons.Network className="w-4 h-4" /></button><button onClick={() => createNote('tasklist')} className="p-2 rounded-lg hover:bg-zinc-100 dark:hover:bg-white/10 text-zinc-400 border border-transparent hover:border-white/5" title="New Task List"><Icons.CheckSquare className="w-4 h-4" /></button><button onClick={() => createNote('text')} className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-white text-black text-sm font-bold hover:bg-zinc-200 transition-colors shadow"><Icons.Plus className="w-4 h-4" /> New Page</button></div>
+                                    </div>
+                                </div>
+                                <div className={`flex-1 overflow-y-auto p-3 min-w-[320px] ${viewMode === 'grid' ? 'grid grid-cols-2 gap-2' : 'space-y-2'}`}>
+                                    {filteredNotes.map(note => (
+                                        <div 
+                                            key={note.id} 
+                                            draggable 
+                                            onDragStart={(e) => handleNoteDragStart(e, note.id)} 
+                                            onClick={() => setActiveNoteId(note.id)} 
+                                            onContextMenu={(e) => handleContextMenu(e, 'note', note.id)} 
+                                            onTouchStart={(e) => {
+                                                if (e.touches.length === 2) {
+                                                    e.preventDefault(); e.stopPropagation();
+                                                    handleContextMenu({ clientX: (e.touches[0].clientX + e.touches[1].clientX)/2, clientY: (e.touches[0].clientY + e.touches[1].clientY)/2 }, 'note', note.id);
+                                                }
+                                            }}
+                                            className={`rounded-xl cursor-pointer border transition-all relative overflow-hidden group ${activeNoteId === note.id ? 'bg-white dark:bg-white/5 border-zinc-300 dark:border-white/10 shadow-lg' : 'bg-transparent border-transparent hover:bg-zinc-50 dark:hover:bg-white/5'} ${viewMode === 'grid' ? 'p-4 aspect-square flex flex-col' : 'p-4'}`}
+                                        >
+                                            <div className="absolute top-2 right-2 flex gap-1">{note.isPinned && <Icons.Pin className="w-3 h-3 text-indigo-500" />}{note.isFavorite && <Icons.Star className="w-3 h-3 text-yellow-500 fill-yellow-500" />}</div>
+                                            <div className="font-semibold text-sm truncate mb-2 text-zinc-800 dark:text-zinc-200 pr-6">{note.title || 'Untitled'}</div>
+                                            <p className="text-xs text-zinc-500 line-clamp-3 leading-relaxed">{note.type === 'mindmap' ? 'Mind Map Node Graph' : note.type === 'tasklist' ? `${note.tasks?.filter(t=>t.completed).length || 0}/${note.tasks?.length || 0} Tasks Completed` : (note.content ? note.content.replace(/<[^>]*>/g, '') : 'No content')}</p>
+                                            {note.isShared && (<div className="flex items-center gap-1 mt-2 text-[9px] text-zinc-400"><Icons.Users className="w-3 h-3"/> From {note.ownerEmail || 'Unknown'}</div>)}
+                                            {note.tags && note.tags.length > 0 && (<div className="flex gap-1 mt-2 flex-wrap">{note.tags.map(t => <span key={t} className="text-[9px] bg-indigo-500/10 text-indigo-500 px-1.5 py-0.5 rounded">{t}</span>)}</div>)}
+                                            <div className="mt-auto pt-3 text-[10px] text-zinc-600 dark:text-zinc-500 opacity-0 group-hover:opacity-100 transition-opacity">{new Date(note.updatedAt).toLocaleDateString()}</div>
+                                        </div>
+                                    ))}
+                                </div>
+                            </motion.div>
+                        )}
+                    </AnimatePresence>
+                    <main className="flex-1 flex flex-col relative bg-light-bg dark:bg-onyx min-w-0 transition-colors duration-300">
+                        {activeNote ? (
+                            <>
+                                <header className="h-16 flex items-center justify-between px-6 border-b border-zinc-200 dark:border-white/5 bg-light-bg dark:bg-onyx z-20 shrink-0 sticky top-0">
+                                    <div className="flex items-center gap-3"><button onClick={() => setIsNoteListOpen(!isNoteListOpen)} className="text-zinc-500 hover:text-zinc-900 dark:hover:text-white">{isNoteListOpen ? <Icons.SidebarClose className="w-5 h-5" /> : <Icons.SidebarOpen className="w-5 h-5" />}</button><div className="h-4 w-px bg-zinc-300 dark:bg-white/10 mx-2"></div><input type="text" value={activeNote.title} onChange={(e) => updateNote(activeNote.id, { title: e.target.value })} placeholder="Untitled Note" className="bg-transparent text-lg font-bold text-zinc-900 dark:text-white placeholder-zinc-300 dark:placeholder-zinc-700 focus:outline-none w-full max-w-md" /></div>
+                                    <div className="flex items-center gap-2">
+                                        {!activeNote.isShared && (<Button variant="ghost" onClick={() => { if(user.isAnonymous) { alert("Guests cannot share notes. Please sign in with Google."); return; } setShowShareModal(true); }} icon={Icons.Share} className={activeNote.sharedWith && activeNote.sharedWith.length > 0 ? 'text-indigo-500' : ''} />)}
+                                        <Button variant="ghost" onClick={() => updateNote(activeNote.id, { isPinned: !activeNote.isPinned })} icon={Icons.Pin} className={activeNote.isPinned ? 'text-indigo-500' : ''} />
+                                        <Button variant="ghost" onClick={() => setIsAiSidebarOpen(!isAiSidebarOpen)} icon={Icons.Bot} className={isAiSidebarOpen ? 'text-indigo-500' : ''} />
+                                    </div>
+                                </header>
+                                <div className="flex-1 overflow-hidden relative bg-[#f0f2f5] dark:bg-[#0c0c0c] flex flex-col">
+                                    <ErrorBoundary key={activeNote.id}>
+                                        {activeNote.type === 'mindmap' ? (
+                                            <div className="p-8 h-full"><MindMapEditor key={activeNote.id} data={activeNote} onChange={(updates) => updateNote(activeNote.id, updates)} onSaveToDrive={handleSaveToDriveAction} /></div>
+                                        ) : activeNote.type === 'tasklist' ? (
+                                            <TaskEditor key={activeNote.id} data={activeNote} onChange={(updates) => updateNote(activeNote.id, updates)} onSaveToDrive={handleSaveToDriveAction} />
+                                        ) : (
+                                            <TinyMCEEditor 
+                                                key={activeNote.id} // CRITICAL FIX: FORCE REMOUNT ON NOTE SWITCH
+                                                initialContent={activeNote.content} 
+                                                noteId={activeNote.id} 
+                                                noteTitle={activeNote.title} 
+                                                onSave={(html) => updateNote(activeNote.id, { content: html })} 
+                                                onSaveToDrive={handleSaveToDriveAction} 
+                                                isDarkMode={isDarkMode} 
+                                                onContextMenu={(e, text, callback) => handleContextMenu(e, 'text', { text, callback })} 
+                                            />
+                                        )}
+                                    </ErrorBoundary>
+                                </div>
+                            </>
+                        ) : (
+                            <div className="flex-1 flex items-center justify-center text-zinc-400 flex-col"><div className="w-16 h-16 bg-zinc-200 dark:bg-white/5 rounded-2xl flex items-center justify-center mb-4"><Icons.Edit className="w-8 h-8 opacity-50"/></div><div className="text-xl font-bold mb-2 text-zinc-900 dark:text-white">No Note Selected</div><div className="text-sm mb-4">Select a note from the sidebar or create a new one.</div><Button variant="primary" onClick={() => createNote('text')}>Create New Page</Button></div>
+                        )}
+                        <AnimatePresence>
+                            {isAiSidebarOpen && (
+                                <motion.div initial={{ x: '100%' }} animate={{ x: 0 }} exit={{ x: '100%' }} className="w-[400px] bg-white dark:bg-surface border-l border-zinc-200 dark:border-white/10 absolute right-0 top-0 bottom-0 z-30 shadow-2xl">
+                                    <AIChatInterface activeNote={activeNote || {}} initialQuery={aiQuery} onClose={() => setIsAiSidebarOpen(false)} />
+                                </motion.div>
+                            )}
+                        </AnimatePresence>
+                    </main>
+                    {showShareModal && activeNote && <ShareModal note={activeNote} onClose={() => setShowShareModal(false)} onAddEmail={addEmailShare} onRemoveEmail={removeEmailShare} />}
+                    {showProfileModal && <ProfileModal user={user} profile={profile} onClose={() => setShowProfileModal(false)} onSave={saveProfile} />}
+                    {contextMenu && (
+                        <div style={{ top: contextMenu.y, left: contextMenu.x }} className="fixed z-50 w-56 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-white/10 rounded-lg shadow-2xl py-1 context-menu ring-1 ring-black/5">
+                            {contextMenu.type === 'text' ? (
+                                <>
+                                    <div className="px-4 py-2 text-xs text-zinc-500 font-semibold bg-zinc-50 dark:bg-white/5 uppercase tracking-wider">Selected Text</div>
+                                    <button onClick={() => {navigator.clipboard.writeText(contextMenu.data.text); setContextMenu(null);}} className="w-full text-left px-4 py-2.5 text-sm text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-white/10 flex items-center gap-2"><Icons.Archive className="w-3 h-3"/> Copy</button>
+                                    <button onClick={() => handleContextAction('ask-ai')} className="w-full text-left px-4 py-2.5 text-sm text-indigo-600 dark:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-500/10 flex items-center gap-2"><Icons.Bot className="w-3 h-3"/> Ask AI</button>
+                                    <button onClick={() => handleContextAction('rewrite')} className="w-full text-left px-4 py-2.5 text-sm text-indigo-600 dark:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-500/10 flex items-center gap-2"><Icons.Wand className="w-3 h-3"/> Rewrite with AI</button>
+                                </>
+                            ) : contextMenu.type === 'subject' ? (
+                                <><button onClick={() => handleContextAction('rename')} className="w-full text-left px-4 py-2.5 text-sm text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-white/10">Rename Subject</button><button onClick={() => handleContextAction('delete')} className="w-full text-left px-4 py-2.5 text-sm text-red-500 hover:bg-red-50 dark:hover:bg-red-500/10 flex items-center gap-2"><Icons.Trash className="w-3 h-3"/> Delete Subject</button></>
+                            ) : (
+                                <>
+                                    <button onClick={() => handleContextAction('pin')} className="w-full text-left px-4 py-2 text-sm text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-white/10 flex items-center gap-2"><Icons.Pin className="w-3 h-3"/> Pin Note</button>
+                                    <button onClick={() => handleContextAction('star')} className="w-full text-left px-4 py-2 text-sm text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-white/10 flex items-center gap-2"><Icons.Star className="w-3 h-3"/> Favorite</button>
+                                    <button onClick={() => handleContextAction('tag')} className="w-full text-left px-4 py-2 text-sm text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-white/10 flex items-center gap-2"><Icons.Tag className="w-3 h-3"/> Edit Tags</button>
+                                    <div className="border-t border-zinc-200 dark:border-white/10 my-1"></div>
+                                    <div className="px-4 py-1 text-[10px] text-zinc-500 font-semibold mt-1 uppercase tracking-wider">Move to...</div>
+                                    <div className="max-h-32 overflow-y-auto">{subjects.map(s => (<button key={s} onClick={() => handleContextAction('move', s)} className="w-full text-left px-4 py-2 text-sm text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-white/10 pl-6 border-l-2 border-transparent hover:border-indigo-500">{s}</button>))}</div>
+                                    <div className="border-t border-zinc-200 dark:border-white/10 my-1"></div>
+                                    <button onClick={() => handleContextAction('delete')} className="w-full text-left px-4 py-2.5 text-sm text-red-500 hover:bg-red-50 dark:hover:bg-red-500/10 flex items-center gap-2"><Icons.Trash className="w-3 h-3"/> Delete</button>
+                                </>
+                            )}
+                        </div>
+                    )}
+                </div>
+            );
+        };
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(<App />);
+    </script>
+</body>
+</html>

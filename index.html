@@ -1,0 +1,370 @@
+<!DOCTYPE html>
+<html lang="en" class="dark scroll-smooth">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>darNote - Your Second Brain</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: { 
+                        onyx: '#09090b', 
+                        accent: '#6366f1', 
+                    },
+                    fontFamily: { 
+                        sans: ['Inter', 'sans-serif'], 
+                        display: ['Outfit', 'sans-serif']
+                    },
+                    animation: {
+                        'float': 'float 6s ease-in-out infinite',
+                        'float-delayed': 'float 6s ease-in-out 3s infinite',
+                        'blob': 'blob 7s infinite',
+                        'fade-up': 'fadeUp 0.8s ease-out forwards',
+                        'ai-demo': 'aiDemo 8s infinite',
+                        'cursor-move': 'cursorMove 8s infinite',
+                        'menu-pop': 'menuPop 8s infinite',
+                    },
+                    keyframes: {
+                        float: { '0%, 100%': { transform: 'translateY(0)' }, '50%': { transform: 'translateY(-20px)' } },
+                        blob: {
+                            '0%': { transform: 'translate(0px, 0px) scale(1)' },
+                            '33%': { transform: 'translate(30px, -50px) scale(1.1)' },
+                            '66%': { transform: 'translate(-20px, 20px) scale(0.9)' },
+                            '100%': { transform: 'translate(0px, 0px) scale(1)' },
+                        },
+                        fadeUp: {
+                            '0%': { opacity: '0', transform: 'translateY(20px)' },
+                            '100%': { opacity: '1', transform: 'translateY(0)' }
+                        },
+                        // Animation for the AI Text transformation
+                        aiDemo: {
+                            '0%, 35%': { opacity: '1', content: '"cl2, toxic, yellow green"' }, // Messy state
+                            '40%, 45%': { opacity: '0.5' }, // Transition
+                            '50%, 90%': { opacity: '1' }, // Clean state
+                            '95%, 100%': { opacity: '0' } // Reset
+                        },
+                        cursorMove: {
+                            '0%': { opacity: '0', transform: 'translate(100px, 100px)' },
+                            '20%': { opacity: '1', transform: 'translate(100px, 100px)' },
+                            '30%': { transform: 'translate(40px, 10px)' }, // Move to text
+                            '35%': { transform: 'translate(40px, 10px) scale(0.9)' }, // Click
+                            '40%': { transform: 'translate(40px, 10px) scale(1)' },
+                            '50%': { opacity: '1' },
+                            '51%': { opacity: '0' }, // Hide cursor after edit
+                            '100%': { opacity: '0' }
+                        },
+                        menuPop: {
+                            '0%, 35%': { opacity: '0', transform: 'scale(0.9)' },
+                            '36%': { opacity: '1', transform: 'scale(1)' }, // Show menu
+                            '48%': { opacity: '1', transform: 'scale(1)' },
+                            '50%': { opacity: '0', transform: 'scale(0.9)' }, // Hide menu
+                            '100%': { opacity: '0' }
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600&family=Outfit:wght@500;700;800&display=swap" rel="stylesheet">
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <style>
+        body { background-color: #050505; color: white; overflow-x: hidden; }
+        
+        /* Interactive Grid Background */
+        .grid-bg {
+            background-size: 50px 50px;
+            background-image: linear-gradient(to right, rgba(255, 255, 255, 0.05) 1px, transparent 1px),
+                              linear-gradient(to bottom, rgba(255, 255, 255, 0.05) 1px, transparent 1px);
+            mask-image: radial-gradient(circle at center, black 40%, transparent 100%);
+        }
+
+        /* Glass Cards */
+        .glass-card {
+            background: rgba(255, 255, 255, 0.03);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+        .glass-card:hover {
+            transform: translateY(-5px) scale(1.02);
+            background: rgba(255, 255, 255, 0.08);
+            border-color: rgba(99, 102, 241, 0.5);
+            box-shadow: 0 20px 40px -10px rgba(99, 102, 241, 0.3);
+        }
+
+        /* Text Gradient */
+        .text-gradient {
+            background: linear-gradient(135deg, #fff 0%, #a5b4fc 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .hero-glow {
+            background: radial-gradient(circle at 50% 50%, rgba(99, 102, 241, 0.15), transparent 70%);
+        }
+
+        /* Custom AI Demo Animations */
+        .ai-text-demo::before {
+            content: "cl2, toxic, yellow green";
+            animation: textChange 8s infinite;
+        }
+        @keyframes textChange {
+            0%, 40% { content: "cl2, toxic, yellow green"; color: #a1a1aa; text-decoration: none; }
+            41%, 49% { content: "cl2, toxic, yellow green"; color: #a1a1aa; text-decoration: line-through; }
+            50%, 95% { content: "Chlorine (Cl2) is a toxic, yellow-green gas."; color: #34d399; text-decoration: none; }
+            100% { content: "cl2, toxic, yellow green"; color: #a1a1aa; }
+        }
+    </style>
+</head>
+<body class="antialiased selection:bg-indigo-500 selection:text-white">
+
+    <!-- Loading Overlay -->
+    <div id="authLoader" class="fixed inset-0 z-50 bg-black flex flex-col items-center justify-center transition-opacity duration-500">
+        <div class="w-12 h-12 border-4 border-indigo-500/30 border-t-indigo-500 rounded-full animate-spin mb-4"></div>
+        <div class="text-xs font-mono text-zinc-500">CHECKING CREDENTIALS</div>
+    </div>
+
+    <!-- Navigation -->
+    <nav class="fixed w-full z-40 top-0 start-0 border-b border-white/5 bg-black/50 backdrop-blur-md">
+        <div class="max-w-7xl mx-auto flex flex-wrap items-center justify-between px-6 py-4">
+            <a href="#" class="flex items-center space-x-3 rtl:space-x-reverse">
+                <div class="w-8 h-8 bg-white text-black rounded-lg flex items-center justify-center font-bold font-display text-xl">d</div>
+                <span class="self-center text-xl font-semibold whitespace-nowrap dark:text-white font-display tracking-tight">darNote</span>
+            </a>
+            <div class="flex md:order-2 space-x-3 md:space-x-0 rtl:space-x-reverse">
+                <button onclick="triggerLogin()" class="relative inline-flex h-10 overflow-hidden rounded-full p-[1px] focus:outline-none focus:ring-2 focus:ring-slate-400 focus:ring-offset-2 focus:ring-offset-slate-50">
+                    <span class="absolute inset-[-1000%] animate-[spin_2s_linear_infinite] bg-[conic-gradient(from_90deg_at_50%_50%,#E2E8F0_0%,#506342_50%,#E2E8F0_100%)]"></span>
+                    <span class="inline-flex h-full w-full cursor-pointer items-center justify-center rounded-full bg-slate-950 px-6 py-1 text-sm font-medium text-white backdrop-blur-3xl transition-colors hover:bg-slate-900">
+                        Sign In
+                    </span>
+                </button>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Hero Section -->
+    <section class="relative min-h-screen flex items-center justify-center overflow-hidden pt-20">
+        <!-- Background Blobs -->
+        <div class="absolute top-0 -left-4 w-72 h-72 bg-purple-500 rounded-full mix-blend-multiply filter blur-3xl opacity-20 animate-blob"></div>
+        <div class="absolute top-0 -right-4 w-72 h-72 bg-indigo-500 rounded-full mix-blend-multiply filter blur-3xl opacity-20 animate-blob animation-delay-2000"></div>
+        <div class="absolute -bottom-8 left-20 w-72 h-72 bg-pink-500 rounded-full mix-blend-multiply filter blur-3xl opacity-20 animate-blob animation-delay-4000"></div>
+        <div class="absolute inset-0 grid-bg z-0 pointer-events-none"></div>
+
+        <div class="container mx-auto px-4 z-10 grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
+            
+            <!-- Left: Text -->
+            <div class="text-center lg:text-left space-y-8">
+                <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/5 border border-white/10 text-indigo-300 text-xs font-medium uppercase tracking-widest animate-fade-up">
+                    <span class="w-2 h-2 rounded-full bg-indigo-500 animate-pulse"></span> v2.0 Now Live
+                </div>
+                <h1 class="text-5xl md:text-7xl font-bold font-display leading-tight animate-fade-up" style="animation-delay: 0.1s;">
+                    Think better.<br>
+                    <span class="text-gradient">Build faster.</span>
+                </h1>
+                <p class="text-lg text-zinc-400 max-w-xl mx-auto lg:mx-0 animate-fade-up leading-relaxed" style="animation-delay: 0.2s;">
+                    The minimalist workspace for students and creators. Capture ideas, manage tasks, and stay in the flow state without the clutter.
+                </p>
+                
+                <div class="flex flex-col sm:flex-row gap-4 justify-center lg:justify-start animate-fade-up" style="animation-delay: 0.3s;">
+                    <button onclick="triggerLogin()" class="px-8 py-4 bg-white text-black rounded-xl font-bold hover:bg-zinc-200 transition-colors flex items-center justify-center gap-2 group">
+                        Get Started Free
+                        <i data-lucide="arrow-right" class="w-4 h-4 group-hover:translate-x-1 transition-transform"></i>
+                    </button>
+                    <button class="px-8 py-4 bg-transparent border border-white/20 text-white rounded-xl font-bold hover:bg-white/5 transition-colors">
+                        View Demo
+                    </button>
+                </div>
+                
+                <div class="pt-8 flex items-center justify-center lg:justify-start gap-4 text-sm text-zinc-500 animate-fade-up" style="animation-delay: 0.4s;">
+                    <div class="flex -space-x-2">
+                        <div class="w-8 h-8 rounded-full bg-zinc-800 border-2 border-black flex items-center justify-center text-[10px]">🎓</div>
+                        <div class="w-8 h-8 rounded-full bg-zinc-700 border-2 border-black flex items-center justify-center text-[10px]">💻</div>
+                        <div class="w-8 h-8 rounded-full bg-zinc-600 border-2 border-black flex items-center justify-center text-[10px]">🚀</div>
+                    </div>
+                    <p>Try it now</p>
+                </div>
+            </div>
+
+            <!-- Right: 3D Tilt Visual -->
+            <div class="relative hidden lg:block perspective-1000 group">
+                <!-- Floating Elements (Parallax) -->
+                <div id="tiltCard" class="relative w-full aspect-square transition-transform duration-100 ease-out transform-style-3d">
+                    
+                    <!-- Main Dashboard Preview -->
+                    <div class="absolute inset-x-4 inset-y-12 bg-[#09090b] border border-white/10 rounded-2xl shadow-2xl overflow-hidden glass-card z-10 transform transition-transform group-hover:scale-[1.02]">
+                        <div class="p-4 border-b border-white/5 flex items-center gap-2">
+                            <div class="w-3 h-3 rounded-full bg-red-500/20"></div>
+                            <div class="w-3 h-3 rounded-full bg-yellow-500/20"></div>
+                            <div class="w-3 h-3 rounded-full bg-green-500/20"></div>
+                        </div>
+                        <div class="p-6 space-y-4">
+                            <div class="h-8 w-1/3 bg-white/10 rounded animate-pulse"></div>
+                            <div class="flex gap-4">
+                                <div class="h-32 w-1/2 bg-white/5 rounded-xl border border-white/5"></div>
+                                <div class="h-32 w-1/2 bg-white/5 rounded-xl border border-white/5"></div>
+                            </div>
+                            <div class="h-4 w-full bg-white/5 rounded"></div>
+                            <div class="h-4 w-2/3 bg-white/5 rounded"></div>
+                        </div>
+                    </div>
+
+                    <!-- Floating Widget 1 -->
+                    <div class="absolute top-0 right-0 p-4 bg-zinc-900 border border-white/10 rounded-xl shadow-xl z-20 animate-float w-48 text-xs">
+                        <div class="flex items-center gap-2 mb-2 text-zinc-400">
+                            <i data-lucide="clock" class="w-3 h-3"></i> Focus Timer
+                        </div>
+                        <div class="text-2xl font-mono font-bold text-white">25:00</div>
+                    </div>
+
+                    <!-- Floating Widget 2 -->
+                    <div class="absolute bottom-10 -left-8 p-4 bg-indigo-600/90 backdrop-blur-md rounded-xl shadow-xl z-20 animate-float-delayed w-48">
+                        <div class="flex items-center gap-3">
+                            <div class="w-8 h-8 rounded-full bg-white/20 flex items-center justify-center">
+                                <i data-lucide="check" class="w-4 h-4 text-white"></i>
+                            </div>
+                            <div>
+                                <div class="text-xs text-indigo-200">Task Completed</div>
+                                <div class="text-sm font-bold text-white">Physics Project</div>
+                            </div>
+                        </div>
+                    </div>
+
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Features Marquee -->
+    <div class="py-12 border-y border-white/5 bg-white/[0.02] overflow-hidden">
+        <div class="flex gap-12 animate-[marquee_20s_linear_infinite] whitespace-nowrap min-w-full">
+            <span class="text-2xl font-display font-bold text-white/20 uppercase">Focus Mode</span>
+            <span class="text-2xl font-display font-bold text-white/20 uppercase">Markdown Support</span>
+            <span class="text-2xl font-display font-bold text-white/20 uppercase">Cloud Sync</span>
+            <span class="text-2xl font-display font-bold text-white/20 uppercase">Mind Mapping</span>
+            <span class="text-2xl font-display font-bold text-white/20 uppercase">Task Tracking</span>
+            <span class="text-2xl font-display font-bold text-white/20 uppercase">Focus Mode</span>
+            <span class="text-2xl font-display font-bold text-white/20 uppercase">Markdown Support</span>
+            <span class="text-2xl font-display font-bold text-white/20 uppercase">Cloud Sync</span>
+        </div>
+    </div>
+    <style>
+        @keyframes marquee { 0% { transform: translateX(0); } 100% { transform: translateX(-50%); } }
+    </style>
+
+    <!-- Feature Grid -->
+    <section class="py-24 relative">
+        <div class="container mx-auto px-4">
+            <div class="text-center max-w-2xl mx-auto mb-16">
+                <h2 class="text-3xl md:text-4xl font-bold font-display mb-4">Everything you need.<br>Nothing you don't.</h2>
+                <p class="text-zinc-400">We stripped away the clutter to leave room for your best work.</p>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <!-- Card 1 (Changed from Lightning Fast to Study Dashboard) -->
+                <div class="glass-card p-8 rounded-3xl relative overflow-hidden group">
+                    <div class="absolute top-0 right-0 p-8 opacity-20 group-hover:opacity-40 transition-opacity">
+                        <i data-lucide="layout-dashboard" class="w-24 h-24 text-indigo-500"></i>
+                    </div>
+                    <h3 class="text-xl font-bold mb-2 relative z-10">Study Command Center</h3>
+                    <p class="text-zinc-400 text-sm relative z-10">Stop opening 50 tabs. Timer, To-Do, and Notes all in one immersive dashboard.</p>
+                </div>
+                
+                <!-- Card 2 -->
+                <div class="glass-card p-8 rounded-3xl relative overflow-hidden group">
+                    <div class="absolute top-0 right-0 p-8 opacity-20 group-hover:opacity-40 transition-opacity">
+                        <i data-lucide="brain-circuit" class="w-24 h-24 text-pink-500"></i>
+                    </div>
+                    <h3 class="text-xl font-bold mb-2 relative z-10">Mind Mapping</h3>
+                    <p class="text-zinc-400 text-sm relative z-10">Visual thinker? Switch any note to a mind map view instantly.</p>
+                </div>
+
+                <!-- Card 3: AI Transformation (New) -->
+                <div class="glass-card p-8 rounded-3xl relative overflow-hidden group flex flex-col justify-between min-h-[220px]">
+                    <div class="absolute top-0 right-0 p-8 opacity-20 group-hover:opacity-40 transition-opacity">
+                        <i data-lucide="wand-2" class="w-24 h-24 text-emerald-500"></i>
+                    </div>
+                    
+                    <div>
+                        <h3 class="text-xl font-bold mb-2 relative z-10">Smart AI Cleanup</h3>
+                        <p class="text-zinc-400 text-sm relative z-10 mb-4">Tidies up your messy notes instantly.</p>
+                    </div>
+
+                    <!-- The Animation Container -->
+                    <div class="relative z-10 bg-black/50 border border-white/5 rounded-lg p-3 font-mono text-xs shadow-inner h-20 flex items-center overflow-hidden">
+                        
+                        <!-- Text -->
+                        <span class="ai-text-demo block w-full"></span>
+
+                        <!-- Fake Cursor -->
+                        <div class="absolute w-3 h-3 bg-white rounded-full opacity-0 shadow-[0_0_10px_rgba(255,255,255,0.8)] pointer-events-none animate-cursor-move" style="top:0; left:0; margin-left: -5px; margin-top: -5px;"></div>
+                        
+                        <!-- Fake Context Menu -->
+                        <div class="absolute top-1/2 left-1/2 transform -translate-y-1/2 translate-x-[-20px] bg-zinc-800 border border-zinc-600 text-white rounded shadow-xl py-1 px-2 text-[10px] animate-menu-pop pointer-events-none flex items-center gap-1">
+                            <i data-lucide="sparkles" class="w-3 h-3 text-emerald-400"></i>
+                            Fix with AI
+                        </div>
+
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Footer -->
+    <footer class="border-t border-white/5 py-12 text-center text-zinc-600 text-sm">
+        <div class="flex flex-col items-center gap-2">
+            <p class="font-medium text-zinc-500">&copy; 2026 darNote. Designed by Darren Ng</p>
+            <a href="mailto:darren_0625@mc-zero.com" class="hover:text-indigo-400 transition-colors">darren_0625@mc-zero.com</a>
+        </div>
+    </footer>
+
+    <!-- Scripts -->
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-app.js";
+        import { getAuth, signInWithPopup, GoogleAuthProvider, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-auth.js";
+
+        const firebaseConfig = { apiKey: "AIzaSyAvPEac-03kE4oazvaq8K3T2gxLPsnZO20", authDomain: "darnote625.firebaseapp.com", projectId: "darnote625", storageBucket: "darnote625.firebasestorage.app", messagingSenderId: "16458322562", appId: "1:16458322562:web:8894d71f3e6c326eba1a9b", measurementId: "G-NL9JX1NW80" };
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
+
+        // Auth Logic
+        onAuthStateChanged(auth, (user) => {
+            const loader = document.getElementById('authLoader');
+            if (user) {
+                // User is signed in, redirect to dashboard
+                console.log("User detected, redirecting...");
+                window.location.href = 'home.html';
+            } else {
+                // No user, hide loader and show landing page
+                loader.classList.add('opacity-0', 'pointer-events-none');
+            }
+        });
+
+        window.triggerLogin = () => {
+            const provider = new GoogleAuthProvider();
+            signInWithPopup(auth, provider)
+                .then((result) => {
+                    // Successful login will trigger onAuthStateChanged above
+                }).catch((error) => {
+                    console.error(error);
+                    alert("Login failed: " + error.message);
+                });
+        };
+
+        // Icons
+        lucide.createIcons();
+
+        // Parallax Effect for Hero
+        const tiltCard = document.getElementById('tiltCard');
+        document.addEventListener('mousemove', (e) => {
+            if(window.innerWidth < 1024) return;
+            const x = (window.innerWidth - e.pageX * 2) / 100;
+            const y = (window.innerHeight - e.pageY * 2) / 100;
+            tiltCard.style.transform = `rotateY(${x}deg) rotateX(${y}deg)`;
+        });
+    </script>
+</body>
+</html>
