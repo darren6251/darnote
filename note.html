@@ -58,13 +58,13 @@
     <!-- Firebase SDKs -->
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-app.js";
-        import { getAuth, signInWithPopup, signInWithCustomToken, GoogleAuthProvider, signOut, onAuthStateChanged, signInAnonymously } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-auth.js";
+        import { getAuth, signInWithPopup, GoogleAuthProvider, signOut, onAuthStateChanged, signInAnonymously } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-auth.js";
         import { getFirestore, collection, collectionGroup, doc, addDoc, updateDoc, deleteDoc, onSnapshot, query, where, orderBy, getDocs, setDoc, arrayUnion, arrayRemove } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-firestore.js";
         import { getAnalytics } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-analytics.js";
         const firebaseConfig = { apiKey: "AIzaSyAvPEac-03kE4oazvaq8K3T2gxLPsnZO20", authDomain: "darnote625.firebaseapp.com", projectId: "darnote625", storageBucket: "darnote625.firebasestorage.app", messagingSenderId: "16458322562", appId: "1:16458322562:web:8894d71f3e6c326eba1a9b", measurementId: "G-NL9JX1NW80" };
         const app = initializeApp(firebaseConfig);
         try { const analytics = getAnalytics(app); } catch(e) {}
-        window.firebase = { app, auth: getAuth(app), db: getFirestore(app), signInWithPopup, signInWithCustomToken, signInAnonymously, GoogleAuthProvider, signOut, onAuthStateChanged, collection, collectionGroup, doc, addDoc, updateDoc, deleteDoc, setDoc, onSnapshot, query, where, orderBy, getDocs, arrayUnion, arrayRemove };
+        window.firebase = { app, auth: getAuth(app), db: getFirestore(app), signInWithPopup, signInAnonymously, GoogleAuthProvider, signOut, onAuthStateChanged, collection, collectionGroup, doc, addDoc, updateDoc, deleteDoc, setDoc, onSnapshot, query, where, orderBy, getDocs, arrayUnion, arrayRemove };
     </script>
     <!-- Google Fonts -->
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;800&family=JetBrains+Mono:wght@400;500&family=Merriweather:wght@300;400;700&family=Roboto:wght@300;400;500;700&display=swap" rel="stylesheet">
@@ -176,6 +176,7 @@
             Docs: (props) => <svg {...props} xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>,
             Check: (props) => <svg {...props} xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>,
             Loader: (props) => <svg {...props} xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="animate-spin"><path d="M21 12a9 9 0 1 1-6.219-8.56"/></svg>,
+            Brain: (props) => <svg {...props} xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M9.5 2A2.5 2.5 0 0 1 12 4.5v15a2.5 2.5 0 0 1-4.96.44 2.5 2.5 0 0 1-2.96-3.08 3 3 0 0 1-.34-5.58 2.5 2.5 0 0 1 1.32-4.24 2.5 2.5 0 0 1 1.98-3A2.5 2.5 0 0 1 9.5 2Z"/><path d="M14.5 2A2.5 2.5 0 0 0 12 4.5v15a2.5 2.5 0 0 0 4.96.44 2.5 2.5 0 0 0 2.96-3.08 3 3 0 0 0 .34-5.58 2.5 2.5 0 0 0-1.32-4.24 2.5 2.5 0 0 0-1.98-3A2.5 2.5 0 0 0 14.5 2Z"/></svg>,
         };
 
         const callGemini = async (prompt, systemInstruction = "", imageBase64 = null) => {
@@ -209,7 +210,11 @@
                 const checkGis = setInterval(() => {
                    if(window.google && window.google.accounts) {
                        clearInterval(checkGis);
-                       const client = window.google.accounts.oauth2.initTokenClient({ client_id: GDRIVE_CLIENT_ID, scope: GDRIVE_SCOPES, callback: '', });
+                       const client = window.google.accounts.oauth2.initTokenClient({ 
+                           client_id: GDRIVE_CLIENT_ID, 
+                           scope: GDRIVE_SCOPES, 
+                           callback: '', 
+                       });
                        setTokenClient(client);
                    }
                 }, 500);
@@ -265,35 +270,34 @@
                     if(!tokenClient) return reject("Google Drive API not initialized.");
                     tokenClient.callback = async (resp) => {
                         if (resp.error) return reject(resp);
+
+                        // === CRITICAL BUG FIX: SET GAPI TOKEN ===
+                        // This prevents the popup from appearing on every single request
+                        // because gapi now knows it has a token.
+                        if (window.gapi && window.gapi.client) {
+                            window.gapi.client.setToken(resp);
+                        }
                         
                         let parentId = null;
-                        // If folder name provided, find/create it first
                         if (folderName) {
                             parentId = await getOrCreateFolder(folderName, resp.access_token);
                         }
 
                         try {
-                            // Metadata construction
                             const metadata = { 
                                 name: filename, 
                                 mimeType: convertToDocs ? 'application/vnd.google-apps.document' : mimeType 
                             };
                             
-                            // Add parent folder if found
                             if (parentId) {
                                 metadata.parents = [parentId];
                             }
 
                             const form = new FormData();
                             form.append('metadata', new Blob([JSON.stringify(metadata)], { type: 'application/json' }));
-                            
-                            // Content body
-                            // IMPORTANT: If converting to Docs, we still send 'text/html' as the SOURCE body, 
-                            // but the metadata says 'vnd.google-apps.document' so Drive knows to convert.
                             const fileContent = content instanceof Blob ? content : new Blob([content], { type: mimeType });
                             form.append('file', fileContent);
                             
-                            // Upload Request
                             const upload = await fetch('https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&fields=id,thumbnailLink,webViewLink', { 
                                 method: 'POST', 
                                 headers: new Headers({ 'Authorization': 'Bearer ' + resp.access_token }), 
@@ -303,8 +307,17 @@
                             resolve(result);
                         } catch(e) { reject(e); }
                     };
-                    if (window.gapi.client.getToken() === null) tokenClient.requestAccessToken({prompt: 'consent'});
-                    else tokenClient.requestAccessToken({prompt: ''});
+
+                    // === BUG FIX: Check if we already have a valid token ===
+                    const existingToken = window.gapi && window.gapi.client ? window.gapi.client.getToken() : null;
+                    
+                    if (existingToken === null) {
+                        // No token, must prompt
+                        tokenClient.requestAccessToken({prompt: 'consent'});
+                    } else {
+                        // Have token, try silent refresh first
+                        tokenClient.requestAccessToken({prompt: ''});
+                    }
                 });
             }, [tokenClient]);
             return { saveToDrive, isReady: !!tokenClient && isApiLoaded };
@@ -312,13 +325,59 @@
 
         const MessageBubble = ({ text, isUser }) => {
             const bubbleRef = useRef(null);
+            
+            // Logic to parse <thinking> blocks
+            const parseThinking = (rawText) => {
+                const regex = /<thinking>([\s\S]*?)<\/thinking>/;
+                const match = rawText.match(regex);
+                if (match) {
+                    const thought = match[1].trim();
+                    const mainText = rawText.replace(regex, '').trim();
+                    return { thought, mainText };
+                }
+                return { thought: null, mainText: rawText };
+            };
+
+            const { thought, mainText } = parseThinking(text);
+
             useEffect(() => {
                 if (bubbleRef.current && !isUser) {
-                    if (window.marked) bubbleRef.current.innerHTML = window.marked.parse(text); else bubbleRef.current.textContent = text;
-                    if (window.renderMathInElement) window.renderMathInElement(bubbleRef.current, { delimiters: [{left: '$$', right: '$$', display: true}, {left: '$', right: '$', display: false}, {left: '\\(', right: '\\)', display: false}, {left: '\\[', right: '\\]', display: true}], throwOnError: false });
-                } else if (bubbleRef.current) bubbleRef.current.textContent = text;
-            }, [text, isUser]);
-            return <div ref={bubbleRef} className={`message-content ${isUser ? 'whitespace-pre-wrap' : ''} ${isUser ? 'text-white' : 'text-zinc-800 dark:text-zinc-200'}`} />;
+                    if (window.marked) bubbleRef.current.innerHTML = window.marked.parse(mainText); 
+                    else bubbleRef.current.textContent = mainText;
+                    
+                    if (window.renderMathInElement) {
+                        window.renderMathInElement(bubbleRef.current, { 
+                            delimiters: [
+                                {left: '$$', right: '$$', display: true}, 
+                                {left: '$', right: '$', display: false}, 
+                                {left: '\\(', right: '\\)', display: false}, 
+                                {left: '\\[', right: '\\]', display: true}
+                            ], 
+                            throwOnError: false 
+                        });
+                    }
+                } else if (bubbleRef.current) {
+                    bubbleRef.current.textContent = mainText;
+                }
+            }, [mainText, isUser]);
+
+            return (
+                <div className={`message-content ${isUser ? 'whitespace-pre-wrap text-white' : 'text-zinc-800 dark:text-zinc-200'}`}>
+                    {thought && !isUser && (
+                        <details className="mb-3 group">
+                            <summary className="cursor-pointer text-xs font-bold text-indigo-500 uppercase tracking-wide flex items-center gap-2 select-none">
+                                <span className="bg-indigo-100 dark:bg-indigo-900/30 p-1 rounded-md"><Icons.Brain className="w-3 h-3"/></span>
+                                Thinking Process
+                                <span className="text-zinc-400 text-[10px] group-open:rotate-180 transition-transform">▼</span>
+                            </summary>
+                            <div className="mt-2 pl-3 border-l-2 border-indigo-200 dark:border-indigo-900/50 text-xs text-zinc-600 dark:text-zinc-400 italic whitespace-pre-wrap leading-relaxed">
+                                {thought}
+                            </div>
+                        </details>
+                    )}
+                    <div ref={bubbleRef}></div>
+                </div>
+            );
         };
 
         const TaskEditor = ({ data, onChange, onSaveToDrive }) => {
@@ -657,32 +716,21 @@
             const messagesEndRef = useRef(null);
             useEffect(() => { if (initialQuery) setInput(initialQuery); }, [initialQuery]);
             useEffect(() => { messagesEndRef.current?.scrollIntoView({ behavior: "smooth" }); }, [messages]);
+            
             const handleSend = async () => {
                 if(!input.trim() && !droppedImage) return;
                 const userMsg = { role: 'user', text: input, image: droppedImage, type: droppedImage ? 'mixed' : 'text' };
                 setMessages(prev => [...prev, userMsg]); setInput(''); setDroppedImage(null); setLoading(true);
                 try {
                     const context = `Current note: ${activeNote.title || 'Untitled'}. Content: ${activeNote.content || ''}`;
-                    // Inject instructions to force "thinking" mode
-                    const systemPrompt = `You are a helpful assistant of darNote. Context: ${context}.\n\nIMPORTANT: Before you answer, please briefly explain your step-by-step thinking process. Wrap this thinking process in <think> and </think> tags. Example response structure: \n<think>First I will analyze X...</think>\nYour actual helpful answer here.`;
+                    // MODIFIED PROMPT: Ask for explicit reasoning
+                    const systemPrompt = `You are a helpful assistant of darNote. Context: ${context}. \nCRITICAL: Always think about your answer first. Enclose your step-by-step reasoning process inside <thinking>...</thinking> tags, then provide your final answer. The user wants to see how you think.`;
                     
-                    const rawResponse = await callGemini(userMsg.text || "Analyze this image", systemPrompt, userMsg.image);
-                    
-                    // Parse out the thinking part
-                    let thought = null;
-                    let cleanText = rawResponse;
-                    
-                    // Regex to extract <think> block
-                    const thinkMatch = rawResponse.match(/<think>([\s\S]*?)<\/think>/i);
-                    if (thinkMatch) {
-                        thought = thinkMatch[1].trim();
-                        // Remove the thought block from the main text
-                        cleanText = rawResponse.replace(/<think>[\s\S]*?<\/think>/i, '').trim();
-                    }
-                    
-                    setMessages(prev => [...prev, { role: 'ai', text: cleanText, thought: thought, type: 'text' }]);
+                    const response = await callGemini(userMsg.text || "Analyze this image", systemPrompt, userMsg.image);
+                    setMessages(prev => [...prev, { role: 'ai', text: response, type: 'text' }]);
                 } catch (e) { setMessages(prev => [...prev, { role: 'ai', text: "Error: Something went wrong in the UI.", type: 'text' }]); } finally { setLoading(false); }
             };
+            
             const handleDrop = (e) => { e.preventDefault(); const file = e.dataTransfer.files[0]; if (file && file.type.startsWith('image/')) { const reader = new FileReader(); reader.onload = (ev) => setDroppedImage(ev.target.result); reader.readAsDataURL(file); } };
             const handleDragOver = (e) => e.preventDefault();
             return (
@@ -694,16 +742,6 @@
                             <div key={i} className={`flex ${m.role === 'user' ? 'justify-end' : 'justify-start'}`}>
                                 <div className={`max-w-[85%] p-3 rounded-2xl text-sm ${m.role === 'user' ? 'bg-indigo-600 text-white rounded-br-none' : 'bg-zinc-100 dark:bg-zinc-800 rounded-bl-none'}`}>
                                     {m.image && <img src={m.image} className="max-w-full rounded mb-2 border border-white/20"/>}
-                                    {m.thought && (
-                                        <details className="mb-3 group">
-                                            <summary className="cursor-pointer text-[10px] font-bold uppercase tracking-wider text-indigo-500 dark:text-indigo-400 select-none flex items-center gap-1 hover:text-indigo-600 dark:hover:text-indigo-300">
-                                                <span className="group-open:rotate-90 transition-transform">▶</span> View Thinking Process
-                                            </summary>
-                                            <div className="mt-2 p-3 bg-white/50 dark:bg-black/20 rounded border-l-2 border-indigo-400 text-zinc-600 dark:text-zinc-400 text-xs italic leading-relaxed whitespace-pre-wrap">
-                                                {m.thought}
-                                            </div>
-                                        </details>
-                                    )}
                                     <MessageBubble text={m.text} isUser={m.role === 'user'} />
                                 </div>
                             </div>
@@ -787,33 +825,7 @@
 
             useEffect(() => { const handlePopState = () => { const params = new URLSearchParams(window.location.search); const noteId = params.get('note'); setActiveNoteId(noteId); }; window.addEventListener('popstate', handlePopState); return () => window.removeEventListener('popstate', handlePopState); }, []);
             useEffect(() => { const url = new URL(window.location); const currentUrlId = url.searchParams.get('note'); if (activeNoteId && currentUrlId !== activeNoteId) { url.searchParams.set('note', activeNoteId); window.history.pushState({}, '', url); } else if (!activeNoteId && currentUrlId) { url.searchParams.delete('note'); window.history.pushState({}, '', url); } }, [activeNoteId]);
-            
-            // ===========================================
-            // AUTH FIX: LOGIN PERSISTENCE FOR SAFARI
-            // ===========================================
-            useEffect(() => { 
-                const initAuth = async () => {
-                    // If we have a special environment token, USE IT FIRST
-                    // This bypasses the need for 3rd party cookies in iframe
-                    if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
-                        try {
-                            await window.firebase.signInWithCustomToken(window.firebase.auth, __initial_auth_token);
-                            console.log("Automatically signed in with custom token!");
-                        } catch (e) {
-                            console.error("Custom token auth failed:", e);
-                        }
-                    }
-                };
-                
-                initAuth();
-                
-                const unsubscribe = window.firebase.onAuthStateChanged(window.firebase.auth, (u) => { 
-                    setUser(u); 
-                    setIsAuthLoading(false); 
-                }); 
-                return () => unsubscribe(); 
-            }, []);
-            
+            useEffect(() => { const unsubscribe = window.firebase.onAuthStateChanged(window.firebase.auth, (u) => { setUser(u); setIsAuthLoading(false); }); return () => unsubscribe(); }, []);
             useEffect(() => { 
                 if (!user) { setNotes([]); setSubjects([]); setProfile(null); setSharedNotes([]); return; } 
                 const appId = "darnote-app"; const db = window.firebase.db; 
