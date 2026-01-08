@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>darNote - Onyx Pro (Drive Optimized)</title>
+    <title>darNote - Onyx Pro (Fixed Images)</title>
     <!-- BRANDING: Favicon -->
     <link rel="icon" type="image/png" href="https://raw.githubusercontent.com/darren6251/darnote/refs/heads/main/darNote%20logo.png">
     
@@ -291,7 +291,32 @@
                     if (upload.status === 401) throw new Error("Unauthorized"); // Trigger retry
                     throw new Error("Upload failed: " + upload.statusText);
                 }
-                return await upload.json();
+
+                // === THE BUG FIX START ===
+                // We MUST get the File ID and make it Public so <img src="..."> works without cookies
+                const fileData = await upload.json();
+                
+                if (mimeType.startsWith('image/')) {
+                    try {
+                        await fetch(`https://www.googleapis.com/drive/v3/files/${fileData.id}/permissions`, {
+                            method: 'POST',
+                            headers: {
+                                'Authorization': `Bearer ${token.access_token}`,
+                                'Content-Type': 'application/json'
+                            },
+                            body: JSON.stringify({
+                                role: 'reader',
+                                type: 'anyone'
+                            })
+                        });
+                        console.log("Image made public successfully for embedding.");
+                    } catch (permError) {
+                        console.warn("Could not make image public. Embedding might fail.", permError);
+                    }
+                }
+                // === THE BUG FIX END ===
+
+                return fileData;
             };
 
             // === OPTIMIZED SAVE (Prevents Popups) ===
