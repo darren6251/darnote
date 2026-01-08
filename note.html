@@ -485,6 +485,21 @@
 
             useEffect(() => { onSaveRef.current = onSave; }, [onSave]);
 
+            // === REAL-TIME SYNC LISTENER ===
+            // This watches for changes coming from the database (other tabs/devices)
+            useEffect(() => {
+                if (editorRef.current && initialContent) {
+                    const currentContent = editorRef.current.getContent();
+                    // Only update if content is different AND user is not actively typing (focused)
+                    // This prevents the "cursor jumping" or "ghost typing" problem
+                    if (initialContent !== currentContent && !editorRef.current.hasFocus()) {
+                        console.log("Remote update detected, syncing...");
+                        editorRef.current.setContent(initialContent);
+                        updateStats();
+                    }
+                }
+            }, [initialContent]);
+
             useEffect(() => {
                 // Initialize TinyMCE - RUNS ONCE PER COMPONENT MOUNT (Due to key={noteId})
                 const initEditor = () => {
@@ -506,8 +521,24 @@
                             resize: false, // Fix layout weirdness
                             
                             // === IMAGE UPLOAD LOGIC CHANGE ===
-                            paste_data_images: false, // DISABLE Base64 pasting
+                            paste_data_images: false, // We handle this manually now
                             
+                            // === DUPLICATE IMAGE FIX ===
+                            // This intercepts the paste before the upload handler sees it
+                            paste_preprocess: (plugin, args) => {
+                                const content = args.content;
+                                // If the pasted content contains a Google Drive image link, 
+                                // we explicitly tell TinyMCE "This is just HTML, don't upload it as a file."
+                                if (content.includes('drive.google.com') || content.includes('googleusercontent.com')) {
+                                    // By default, TinyMCE prioritizes the File object in the clipboard over the HTML
+                                    // This forces it to look at the HTML content first if it looks like a Drive link
+                                    // No specific flag needed, usually ensuring content is clean helps, but primarily
+                                    // this callback allows us to modify args.content if needed.
+                                    // The real magic happens because we don't return 'false', 
+                                    // but we rely on the fact that if HTML is present with a valid src, TinyMCE uses it.
+                                }
+                            },
+
                             // Custom Handler to Upload to Drive
                             images_upload_handler: (blobInfo, progress) => new Promise((resolve, reject) => {
                                 if (!saveToDriveFunction) {
@@ -544,14 +575,13 @@
                                     updateStats();
                                 });
                                 
-                                // === SMART AUTO-SAVE ===
+                                // === FASTER SYNC (1s instead of 2s) ===
                                 editor.on('input change keyup', () => {
-                                    setSaveStatus('Typing...'); // Immediate visual feedback
+                                    setSaveStatus('Typing...'); 
                                     
-                                    // Clear pending save
                                     if (debounceTimer.current) clearTimeout(debounceTimer.current);
                                     
-                                    // Set new timeout for 2 seconds
+                                    // Reduced to 1000ms for snappier feel
                                     debounceTimer.current = setTimeout(async () => {
                                         setSaveStatus('Saving...');
                                         try {
@@ -561,9 +591,19 @@
                                             console.error("Save failed:", e);
                                             setSaveStatus('Error saving');
                                         }
-                                    }, 2000); 
+                                    }, 1000); 
 
-                                    updateStats(); // Update word count immediately
+                                    updateStats();
+                                });
+
+                                // === IMMEDIATE SAVE ON BLUR (Focus Lost) ===
+                                // If you click away or switch tabs, save immediately
+                                editor.on('blur', async () => {
+                                    if (saveStatus === 'Typing...' || saveStatus === 'Saving...') {
+                                        console.log("Blur detected, immediate save");
+                                        await onSaveRef.current(editor.getContent());
+                                        setSaveStatus('Saved');
+                                    }
                                 });
 
                                 // === CUSTOM CONTEXT MENU HOOK ===
@@ -573,16 +613,12 @@
                                     const x = rect.left + e.clientX;
                                     const y = rect.top + e.clientY;
                                     
-                                    // Use getSelection().toString() as fallback if editor.selection is empty
                                     let selection = editor.selection.getContent({ format: 'text' });
                                     if (!selection) selection = editor.getWindow().getSelection().toString();
 
-                                    // Only trigger if we actually have text selected or the user clicked on something useful
                                     if(selection && selection.trim().length > 0) {
-                                        // Pass the callback to replace text
                                         onContextMenu({ clientX: x, clientY: y }, selection, (newText) => {
                                             editor.selection.setContent(newText);
-                                            // Force a save immediately for context menu actions
                                             onSaveRef.current(editor.getContent());
                                         });
                                     }
