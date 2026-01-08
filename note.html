@@ -479,25 +479,25 @@
             const [aiLoading, setAiLoading] = useState(false);
             
             // === AUTO-SAVE LOGIC ===
-            const [saveStatus, setSaveStatus] = useState('Saved'); // 'Saved', 'Typing...', 'Saving...', 'Error'
+            const [saveStatus, setSaveStatus] = useState('Saved'); 
             const debounceTimer = useRef(null);
-            const onSaveRef = useRef(onSave); // Keep latest onSave function without re-triggering effects
-
-            // === FIX: REF FOR DRIVE UPLOAD FUNCTION ===
-            // This ensures the uploader is always the "fresh" version, not the stale one from mount
+            const onSaveRef = useRef(onSave);
+            
+            // === DRIVE REF (From previous fix) ===
             const saveToDriveRef = useRef(saveToDriveFunction);
-            useEffect(() => {
-                saveToDriveRef.current = saveToDriveFunction;
-            }, [saveToDriveFunction]);
+            useEffect(() => { saveToDriveRef.current = saveToDriveFunction; }, [saveToDriveFunction]);
+
+            // === NEW FIX: DEDUPLICATION CACHE ===
+            // This prevents the "Double Upload" by remembering files we just sent
+            const uploadCache = useRef(new Map()); // Key: "size_type", Value: Promise
 
             useEffect(() => { onSaveRef.current = onSave; }, [onSave]);
 
-            // === REAL-TIME SYNC LISTENER ===
+            // === REAL-TIME SYNC ===
             useEffect(() => {
                 if (editorRef.current && initialContent) {
                     const currentContent = editorRef.current.getContent();
                     if (initialContent !== currentContent && !editorRef.current.hasFocus()) {
-                        console.log("Remote update detected, syncing...");
                         editorRef.current.setContent(initialContent);
                         updateStats();
                     }
@@ -505,111 +505,97 @@
             }, [initialContent]);
 
             useEffect(() => {
-                // Initialize TinyMCE
                 const initEditor = () => {
                     if (window.tinymce) {
-                        // Prevent zombie instances
-                        if (editorRef.current) {
-                            window.tinymce.remove(editorRef.current);
-                        }
+                        if (editorRef.current) window.tinymce.remove(editorRef.current);
 
                         window.tinymce.init({
-                            selector: '#tinymce-editor', // Target by ID
-                            height: '100%', // FORCE FULL HEIGHT
+                            selector: '#tinymce-editor',
+                            height: '100%',
                             menubar: 'file edit view insert format tools table help',
                             plugins: 'preview importcss searchreplace autolink autosave save directionality code visualblocks visualchars fullscreen image link media table charmap pagebreak nonbreaking anchor insertdatetime advlist lists wordcount help charmap quickbars emoticons',
                             toolbar: 'undo redo | blocks | bold italic underline strikethrough | alignleft aligncenter alignright alignjustify | bullist numlist outdent indent | removeformat | help',
                             skin: isDarkMode ? 'oxide-dark' : 'oxide',
                             content_css: isDarkMode ? 'dark' : 'default',
                             placeholder: "Start typing...",
-                            resize: false, // Fix layout weirdness
+                            resize: false,
                             
-                            // === FIX: ENABLE DATA IMAGES SO PASTE HANDLER CATCHES THEM ===
-                            paste_data_images: true, 
-                            
-                            paste_preprocess: (plugin, args) => {
-                                // Optional: Modify content before paste if needed
-                            },
+                            // === CONFIG: Stop the 'blobid' creation if possible ===
+                            paste_data_images: false, // Turn this OFF to prioritize the file handler
+                            smart_paste: false,       // Turn this OFF to stop it from trying to be too clever
 
-                            // === FIX: CUSTOM HANDLER USING REF ===
-                            images_upload_handler: (blobInfo, progress) => new Promise((resolve, reject) => {
-                                const uploader = saveToDriveRef.current; // USE THE REF
-                                if (!uploader) {
-                                    reject('Google Drive not ready. Please check connection.');
-                                    return;
+                            // === THE DEDUPLICATION HANDLER ===
+                            images_upload_handler: (blobInfo, progress) => {
+                                const uploader = saveToDriveRef.current;
+                                if (!uploader) return Promise.reject('Google Drive not ready.');
+
+                                const blob = blobInfo.blob();
+                                const filename = blobInfo.filename();
+                                
+                                // 1. Create a unique key for this file (Size + Type)
+                                // This identifies if it's the exact same image content
+                                const fileKey = `${blob.size}_${blob.type}`;
+                                const now = Date.now();
+
+                                // 2. Check if we uploaded this exact file in the last 2 seconds
+                                const cached = uploadCache.current.get(fileKey);
+                                if (cached && (now - cached.timestamp < 2000)) {
+                                    console.log("Duplicate upload detected, returning existing promise.");
+                                    return cached.promise;
                                 }
 
-                                const filename = blobInfo.filename();
-                                const blob = blobInfo.blob();
+                                // 3. If unique, proceed with upload
+                                const uploadPromise = new Promise((resolve, reject) => {
+                                    uploader(blob, filename, blob.type, 'darNote_Images')
+                                        .then((result) => {
+                                            if (result.thumbnailLink) {
+                                                const bigImage = result.thumbnailLink.replace(/=s\d+/, '=s1600'); 
+                                                resolve(bigImage);
+                                            } else {
+                                                reject('No link returned.');
+                                            }
+                                        })
+                                        .catch((err) => {
+                                            console.error("Drive Upload Error:", err);
+                                            reject(err.message || 'Unknown error');
+                                        });
+                                });
 
-                                // Upload to Drive (WITH FOLDER 'darNote_Images')
-                                uploader(blob, filename, blob.type, 'darNote_Images')
-                                    .then((result) => {
-                                        // Use the thumbnailLink if available
-                                        if (result.thumbnailLink) {
-                                            // Hack: Replace size parameter (e.g. s220) with s1600 for high-res
-                                            const bigImage = result.thumbnailLink.replace(/=s\d+/, '=s1600'); 
-                                            resolve(bigImage);
-                                        } else {
-                                            reject('Upload successful, but no link returned.');
-                                        }
-                                    })
-                                    .catch((err) => {
-                                        console.error("Drive Upload Error:", err);
-                                        reject('Upload failed: ' + (err.message || 'Unknown error'));
-                                    });
-                            }),
+                                // 4. Save this upload to cache so duplicates are blocked
+                                uploadCache.current.set(fileKey, { timestamp: now, promise: uploadPromise });
+                                
+                                return uploadPromise;
+                            },
                             
-                            contextmenu: false, // DISABLE NATIVE CONTEXT MENU TO USE CUSTOM ONE
+                            contextmenu: false,
                             setup: (editor) => {
                                 editorRef.current = editor;
                                 editor.on('init', () => {
                                     if (initialContent) editor.setContent(initialContent);
                                     updateStats();
                                 });
-                                
-                                // === FASTER SYNC (1s instead of 2s) ===
                                 editor.on('input change keyup', () => {
                                     setSaveStatus('Typing...'); 
-                                    
                                     if (debounceTimer.current) clearTimeout(debounceTimer.current);
-                                    
-                                    // Reduced to 1000ms for snappier feel
                                     debounceTimer.current = setTimeout(async () => {
                                         setSaveStatus('Saving...');
-                                        try {
-                                            await onSaveRef.current(editor.getContent());
-                                            setSaveStatus('Saved');
-                                        } catch (e) {
-                                            console.error("Save failed:", e);
-                                            setSaveStatus('Error saving');
-                                        }
+                                        try { await onSaveRef.current(editor.getContent()); setSaveStatus('Saved'); } 
+                                        catch (e) { setSaveStatus('Error saving'); }
                                     }, 1000); 
-
                                     updateStats();
                                 });
-
-                                // === IMMEDIATE SAVE ON BLUR (Focus Lost) ===
                                 editor.on('blur', async () => {
                                     if (saveStatus === 'Typing...' || saveStatus === 'Saving...') {
-                                        console.log("Blur detected, immediate save");
                                         await onSaveRef.current(editor.getContent());
                                         setSaveStatus('Saved');
                                     }
                                 });
-
-                                // === CUSTOM CONTEXT MENU HOOK ===
                                 editor.on('contextmenu', (e) => {
                                     e.preventDefault();
                                     const rect = editor.getContainer().getBoundingClientRect();
-                                    const x = rect.left + e.clientX;
-                                    const y = rect.top + e.clientY;
-                                    
-                                    let selection = editor.selection.getContent({ format: 'text' });
-                                    if (!selection) selection = editor.getWindow().getSelection().toString();
-
+                                    let selection = editor.selection.getContent({ format: 'text' }) || editor.getWindow().getSelection().toString();
                                     if(selection && selection.trim().length > 0) {
-                                        onContextMenu({ clientX: x, clientY: y }, selection, (newText) => {
+                                        onContextMenu({ clientX: rect.left + e.clientX, clientY: rect.top + e.clientY }, selection, (newText) => {
                                             editor.selection.setContent(newText);
                                             onSaveRef.current(editor.getContent());
                                         });
@@ -620,69 +606,45 @@
                     }
                 };
                 
-                // Small delay to ensure DOM is ready and old instances cleared
                 const timer = setTimeout(initEditor, 50);
-
-                // Cleanup on unmount (switching notes or view)
                 return () => { 
                     clearTimeout(timer);
                     if (debounceTimer.current) clearTimeout(debounceTimer.current);
                     if (window.tinymce && editorRef.current) {
-                        try {
-                            window.tinymce.remove(editorRef.current);
-                            editorRef.current = null;
-                        } catch(e) {
-                            console.warn("TinyMCE remove error:", e);
-                        }
+                        try { window.tinymce.remove(editorRef.current); editorRef.current = null; } catch(e) {}
                     }
                 };
-            }, [noteId, isDarkMode]); // Dependencies ensuring fresh init
+            }, [noteId, isDarkMode]);
 
             const updateStats = () => {
-                if(editorRef.current) {
-                    const body = editorRef.current.getBody();
-                    const text = body.innerText || "";
-                    setWordCount(text.trim().split(/\s+/).length);
-                }
+                if(editorRef.current) setWordCount((editorRef.current.getBody().innerText || "").trim().split(/\s+/).length);
             };
 
             const handleAiAction = async (action) => {
                 if (!editorRef.current) return;
                 const selection = editorRef.current.selection.getContent({ format: 'text' });
-                if(!selection) { alert("Please select some text in the editor first."); return; }
-                
-                setAiLoading(true); setShowAiMenu(false); let prompt = "";
-                if(action === 'grammar') prompt = `Fix grammar: "${selection}"`; if(action === 'summarize') prompt = `Summarize: "${selection}"`; if(action === 'professional') prompt = `Make professional: "${selection}"`; if(action === 'continue') prompt = `Continue writing: "${selection}"`;
-                
-                const result = await callGemini(prompt, "You are a writing assistant. Return ONLY the result text. Do NOT use thinking tags here.");
+                if(!selection) { alert("Select text first."); return; }
+                setAiLoading(true); setShowAiMenu(false); 
+                let prompt = action === 'grammar' ? `Fix grammar: "${selection}"` : action === 'summarize' ? `Summarize: "${selection}"` : action === 'professional' ? `Make professional: "${selection}"` : `Continue writing: "${selection}"`;
+                const result = await callGemini(prompt, "You are a writing assistant. Return ONLY the result text.");
                 if(result && !result.includes("Error")) {
                     editorRef.current.selection.setContent(result);
-                    onSaveRef.current(editorRef.current.getContent()); // Instant save for AI
+                    onSaveRef.current(editorRef.current.getContent());
                 } else alert("AI failed."); 
                 setAiLoading(false);
             }
 
             const downloadPDF = () => {
                 if(!editorRef.current) return;
-                const content = editorRef.current.getContent();
-                const tempDiv = document.createElement('div');
-                tempDiv.innerHTML = content;
-                tempDiv.style.padding = "40px";
-                tempDiv.style.color = "black";
-                tempDiv.style.background = "white";
                 const opt = { margin: 0.5, filename: `darnote-${noteId}.pdf`, image: { type: 'jpeg', quality: 0.98 }, html2canvas: { scale: 2 }, jsPDF: { unit: 'in', format: 'letter', orientation: 'portrait' } };
-                html2pdf().set(opt).from(tempDiv).save();
+                html2pdf().set(opt).from(editorRef.current.getBody()).save(); // Use getBody() for cleaner PDF
             };
 
             const downloadPNG = () => {
                 if(!editorRef.current) return;
-                const content = editorRef.current.getContent();
                 const tempDiv = document.createElement('div');
-                tempDiv.innerHTML = content;
-                tempDiv.style.padding = "40px";
-                tempDiv.style.background = "white";
-                tempDiv.style.color = "black";
-                tempDiv.style.width = "800px";
+                tempDiv.innerHTML = editorRef.current.getContent();
+                tempDiv.style.cssText = "padding:40px;background:white;color:black;width:800px";
                 document.body.appendChild(tempDiv);
                 html2canvas(tempDiv).then(canvas => {
                     const link = document.createElement('a'); link.download = `darnote-${noteId}.png`; link.href = canvas.toDataURL(); link.click();
@@ -693,50 +655,40 @@
             const handleDriveSave = (convertToDocs = false) => {
                 if(!onSaveToDrive || !editorRef.current) return;
                 const fullHtml = `<!DOCTYPE html><html><head><title>${noteTitle}</title></head><body><h1>${noteTitle}</h1>${editorRef.current.getContent()}</body></html>`;
-                // Pass extra param for folder and conversion
                 onSaveToDrive(fullHtml, `${noteTitle || 'Untitled Note'}${convertToDocs ? '' : '.html'}`, 'text/html', 'darNote_Exports', convertToDocs);
             }
 
             return (
                 <div className="flex flex-col h-full overflow-hidden w-full">
-                    {/* Actions Toolbar (External to TinyMCE) */}
                     <div className="bg-[#edf2fa] dark:bg-[#1e1e20] border-b border-[#c7c7c7] dark:border-white/10 p-1 flex flex-wrap gap-1 items-center sticky top-0 z-30 shadow-sm shrink-0 justify-between">
                          <div className="flex gap-2 items-center">
                             <span className="text-xs font-bold text-zinc-500 uppercase ml-2">Editor Actions</span>
                              <div className="relative">
-                                <button onClick={() => setShowAiMenu(!showAiMenu)} className={`flex items-center gap-1 px-2 py-1 ml-2 rounded-full text-xs font-bold transition-all ${aiLoading ? 'bg-indigo-100 text-indigo-500 animate-pulse' : 'bg-indigo-600 text-white hover:bg-indigo-700 shadow-sm'}`}><Icons.Wand className="w-3 h-3"/> {aiLoading ? 'Generating...' : 'AI Tools'}</button>
+                                <button onClick={() => setShowAiMenu(!showAiMenu)} className={`flex items-center gap-1 px-2 py-1 ml-2 rounded-full text-xs font-bold transition-all ${aiLoading ? 'bg-indigo-100 text-indigo-500 animate-pulse' : 'bg-indigo-600 text-white hover:bg-indigo-700 shadow-sm'}`}><Icons.Wand className="w-3 h-3"/> {aiLoading ? '...' : 'AI Tools'}</button>
                                 {showAiMenu && (
                                     <div className="absolute top-full left-0 mt-2 w-48 bg-white dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-lg shadow-xl z-50 py-1">
-                                        <div className="px-3 py-1 text-[10px] text-zinc-500 font-bold uppercase">Actions</div>
-                                        <button onClick={() => handleAiAction('grammar')} className="w-full text-left px-3 py-2 text-sm hover:bg-zinc-100 dark:hover:bg-white/5 dark:text-zinc-200">✨ Fix Grammar</button>
-                                        <button onClick={() => handleAiAction('summarize')} className="w-full text-left px-3 py-2 text-sm hover:bg-zinc-100 dark:hover:bg-white/5 dark:text-zinc-200">📝 Summarize</button>
-                                        <button onClick={() => handleAiAction('professional')} className="w-full text-left px-3 py-2 text-sm hover:bg-zinc-100 dark:hover:bg-white/5 dark:text-zinc-200">👔 Make Professional</button>
+                                        {['grammar', 'summarize', 'professional'].map(a => <button key={a} onClick={() => handleAiAction(a)} className="w-full text-left px-3 py-2 text-sm hover:bg-zinc-100 dark:hover:bg-white/5 dark:text-zinc-200 capitalize">{a}</button>)}
                                     </div>
                                 )}
                              </div>
                         </div>
                         <div className="flex gap-0.5 border-l border-zinc-300 dark:border-white/20 pl-2 mx-1">
-                            <button onClick={downloadPDF} className="p-1 rounded hover:bg-[#dbedff] dark:hover:bg-white/10 text-zinc-700 dark:text-zinc-300" title="Export PDF"><Icons.Pdf className="w-4 h-4"/></button>
-                            <button onClick={downloadPNG} className="p-1 rounded hover:bg-[#dbedff] dark:hover:bg-white/10 text-zinc-700 dark:text-zinc-300" title="Export PNG"><Icons.ImageFile className="w-4 h-4"/></button>
-                            {/* GOOGLE DRIVE BUTTONS */}
+                            <button onClick={downloadPDF} className="p-1 rounded hover:bg-[#dbedff] dark:hover:bg-white/10 text-zinc-700 dark:text-zinc-300"><Icons.Pdf className="w-4 h-4"/></button>
+                            <button onClick={downloadPNG} className="p-1 rounded hover:bg-[#dbedff] dark:hover:bg-white/10 text-zinc-700 dark:text-zinc-300"><Icons.ImageFile className="w-4 h-4"/></button>
                             <div className="flex items-center gap-1 ml-1 bg-zinc-200 dark:bg-white/5 p-0.5 rounded">
-                                <button onClick={() => handleDriveSave(false)} className="p-1 rounded hover:bg-[#dbedff] dark:hover:bg-white/10 text-zinc-700 dark:text-zinc-300" title="Backup as HTML (Keeps Style)"><Icons.Drive className="w-4 h-4"/></button>
-                                <button onClick={() => handleDriveSave(true)} className="p-1 rounded hover:bg-[#dbedff] dark:hover:bg-white/10 text-indigo-600 dark:text-indigo-400" title="Export as Editable Google Doc"><Icons.Docs className="w-4 h-4"/></button>
+                                <button onClick={() => handleDriveSave(false)} className="p-1 rounded hover:bg-[#dbedff] dark:hover:bg-white/10 text-zinc-700 dark:text-zinc-300"><Icons.Drive className="w-4 h-4"/></button>
+                                <button onClick={() => handleDriveSave(true)} className="p-1 rounded hover:bg-[#dbedff] dark:hover:bg-white/10 text-indigo-600 dark:text-indigo-400"><Icons.Docs className="w-4 h-4"/></button>
                             </div>
                         </div>
                     </div>
-                    {/* The Engine */}
                     <div className="flex-1 overflow-hidden relative h-full w-full">
                          <textarea id="tinymce-editor"></textarea>
                     </div>
-                    {/* Status Bar */}
                     <div className="bg-white dark:bg-zinc-900 border-t border-zinc-200 dark:border-white/10 px-4 py-1.5 text-xs text-zinc-500 flex justify-end items-center gap-4 z-30 shrink-0">
-                        {/* Auto-Save Status */}
                         <div className="flex items-center gap-1.5 min-w-[80px] justify-end">
-                            {saveStatus === 'Saved' && <span className="text-zinc-400 flex items-center gap-1"><Icons.Check className="w-3 h-3"/> Saved</span>}
-                            {saveStatus === 'Typing...' && <span className="text-zinc-400 flex items-center gap-1"><Icons.Edit className="w-3 h-3"/> Typing...</span>}
-                            {saveStatus === 'Saving...' && <span className="text-indigo-500 font-bold flex items-center gap-1"><Icons.Loader className="w-3 h-3"/> Saving...</span>}
-                            {saveStatus === 'Error saving' && <span className="text-red-500 font-bold flex items-center gap-1"><Icons.Alert className="w-3 h-3"/> Error</span>}
+                            {saveStatus === 'Saved' ? <span className="text-zinc-400 flex items-center gap-1"><Icons.Check className="w-3 h-3"/> Saved</span> :
+                             saveStatus === 'Saving...' ? <span className="text-indigo-500 font-bold flex items-center gap-1"><Icons.Loader className="w-3 h-3"/> Saving...</span> :
+                             <span className="text-zinc-400 flex items-center gap-1"><Icons.Edit className="w-3 h-3"/> Typing...</span>}
                         </div>
                         <div className="h-3 w-px bg-zinc-300 dark:bg-white/20"></div>
                         <div>{wordCount} words</div>
