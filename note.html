@@ -483,15 +483,19 @@
             const debounceTimer = useRef(null);
             const onSaveRef = useRef(onSave); // Keep latest onSave function without re-triggering effects
 
+            // === FIX: REF FOR DRIVE UPLOAD FUNCTION ===
+            // This ensures the uploader is always the "fresh" version, not the stale one from mount
+            const saveToDriveRef = useRef(saveToDriveFunction);
+            useEffect(() => {
+                saveToDriveRef.current = saveToDriveFunction;
+            }, [saveToDriveFunction]);
+
             useEffect(() => { onSaveRef.current = onSave; }, [onSave]);
 
             // === REAL-TIME SYNC LISTENER ===
-            // This watches for changes coming from the database (other tabs/devices)
             useEffect(() => {
                 if (editorRef.current && initialContent) {
                     const currentContent = editorRef.current.getContent();
-                    // Only update if content is different AND user is not actively typing (focused)
-                    // This prevents the "cursor jumping" or "ghost typing" problem
                     if (initialContent !== currentContent && !editorRef.current.hasFocus()) {
                         console.log("Remote update detected, syncing...");
                         editorRef.current.setContent(initialContent);
@@ -501,7 +505,7 @@
             }, [initialContent]);
 
             useEffect(() => {
-                // Initialize TinyMCE - RUNS ONCE PER COMPONENT MOUNT (Due to key={noteId})
+                // Initialize TinyMCE
                 const initEditor = () => {
                     if (window.tinymce) {
                         // Prevent zombie instances
@@ -520,28 +524,17 @@
                             placeholder: "Start typing...",
                             resize: false, // Fix layout weirdness
                             
-                            // === IMAGE UPLOAD LOGIC CHANGE ===
-                            paste_data_images: false, // We handle this manually now
+                            // === FIX: ENABLE DATA IMAGES SO PASTE HANDLER CATCHES THEM ===
+                            paste_data_images: true, 
                             
-                            // === DUPLICATE IMAGE FIX ===
-                            // This intercepts the paste before the upload handler sees it
                             paste_preprocess: (plugin, args) => {
-                                const content = args.content;
-                                // If the pasted content contains a Google Drive image link, 
-                                // we explicitly tell TinyMCE "This is just HTML, don't upload it as a file."
-                                if (content.includes('drive.google.com') || content.includes('googleusercontent.com')) {
-                                    // By default, TinyMCE prioritizes the File object in the clipboard over the HTML
-                                    // This forces it to look at the HTML content first if it looks like a Drive link
-                                    // No specific flag needed, usually ensuring content is clean helps, but primarily
-                                    // this callback allows us to modify args.content if needed.
-                                    // The real magic happens because we don't return 'false', 
-                                    // but we rely on the fact that if HTML is present with a valid src, TinyMCE uses it.
-                                }
+                                // Optional: Modify content before paste if needed
                             },
 
-                            // Custom Handler to Upload to Drive
+                            // === FIX: CUSTOM HANDLER USING REF ===
                             images_upload_handler: (blobInfo, progress) => new Promise((resolve, reject) => {
-                                if (!saveToDriveFunction) {
+                                const uploader = saveToDriveRef.current; // USE THE REF
+                                if (!uploader) {
                                     reject('Google Drive not ready. Please check connection.');
                                     return;
                                 }
@@ -550,7 +543,7 @@
                                 const blob = blobInfo.blob();
 
                                 // Upload to Drive (WITH FOLDER 'darNote_Images')
-                                saveToDriveFunction(blob, filename, blob.type, 'darNote_Images')
+                                uploader(blob, filename, blob.type, 'darNote_Images')
                                     .then((result) => {
                                         // Use the thumbnailLink if available
                                         if (result.thumbnailLink) {
@@ -597,7 +590,6 @@
                                 });
 
                                 // === IMMEDIATE SAVE ON BLUR (Focus Lost) ===
-                                // If you click away or switch tabs, save immediately
                                 editor.on('blur', async () => {
                                     if (saveStatus === 'Typing...' || saveStatus === 'Saving...') {
                                         console.log("Blur detected, immediate save");
