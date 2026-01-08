@@ -433,6 +433,7 @@
         // ==========================================
         // TINYMCE EDITOR INTEGRATION (The Toyota)
         // ==========================================
+        const globalImageCache = new Map();
         const TinyMCEEditor = ({ initialContent, noteId, noteTitle, onSave, onSaveToDrive, isDarkMode, onContextMenu, saveToDriveFunction }) => {
             const editorRef = useRef(null);
             const [wordCount, setWordCount] = useState(0);
@@ -646,6 +647,7 @@
                 </div>
             );
         };
+        
 
         const MindMapEditor = ({ data, onChange, onSaveToDrive }) => {
             const { nodes = [], connections = [] } = data;
