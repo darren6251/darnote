@@ -205,156 +205,117 @@
         const useGoogleDrive = () => {
             const [tokenClient, setTokenClient] = useState(null);
             const [isApiLoaded, setIsApiLoaded] = useState(false);
-            const [pendingRequest, setPendingRequest] = useState(null);
             
+            // Initialize the API and Token Client
             useEffect(() => {
-                if(!GDRIVE_API_KEY || !GDRIVE_CLIENT_ID) { console.log("Google Drive Keys Missing"); return; }
-                const checkGis = setInterval(() => {
-                   if(window.google && window.google.accounts) {
-                       clearInterval(checkGis);
-                       const client = window.google.accounts.oauth2.initTokenClient({ 
-                           client_id: GDRIVE_CLIENT_ID, 
-                           scope: GDRIVE_SCOPES, 
-                           callback: (response) => {
-                               // This callback is ONLY called after a popup interaction
-                               if (response.error) {
-                                   console.error("Token callback error:", response);
-                                   if (pendingRequest?.reject) pendingRequest.reject(response);
-                               } else {
-                                   // Success! Re-try the pending request
-                                   if (pendingRequest?.resolve) pendingRequest.resolve(response);
-                               }
-                               setPendingRequest(null);
-                           }, 
-                        });
-                       setTokenClient(client);
-                   }
-                }, 500);
-                const checkGapi = setInterval(() => {
-                    if(window.gapi) {
-                        clearInterval(checkGapi);
-                        window.gapi.load('client', async () => {
-                            await window.gapi.client.init({ apiKey: GDRIVE_API_KEY, discoveryDocs: ['https://www.googleapis.com/discovery/v1/apis/drive/v3/rest'], });
-                            setIsApiLoaded(true);
-                        });
-                    }
-                }, 500);
-                return () => { clearInterval(checkGis); clearInterval(checkGapi); }
-            }, [pendingRequest]); // Re-bind callback if pendingRequest changes (though state update should be enough)
-
-            // === HELPER: Find or Create Folder ===
-            const getOrCreateFolder = async (folderName, accessToken) => {
-                try {
-                    const query = `mimeType='application/vnd.google-apps.folder' and name='${folderName}' and trashed=false`;
-                    const searchRes = await fetch(`https://www.googleapis.com/drive/v3/files?q=${encodeURIComponent(query)}`, {
-                        headers: { 'Authorization': `Bearer ${accessToken}` }
-                    });
-                    const searchData = await searchRes.json();
-                    if (searchData.files && searchData.files.length > 0) return searchData.files[0].id;
-
-                    const createRes = await fetch('https://www.googleapis.com/drive/v3/files', {
-                        method: 'POST',
-                        headers: { 'Authorization': `Bearer ${accessToken}`, 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ name: folderName, mimeType: 'application/vnd.google-apps.folder' })
-                    });
-                    const createData = await createRes.json();
-                    return createData.id;
-                } catch (e) {
-                    console.error("Folder creation failed:", e);
-                    return null; 
-                }
-            };
-            
-            // === HELPER: The Actual Upload Logic ===
-            const executeUpload = async (content, filename, mimeType, folderName, convertToDocs) => {
-                const token = window.gapi.client.getToken();
-                if (!token) throw new Error("No token available.");
+                if(!GDRIVE_API_KEY || !GDRIVE_CLIENT_ID) return;
                 
-                let parentId = null;
-                if (folderName) parentId = await getOrCreateFolder(folderName, token.access_token);
+                const loadGapi = async () => {
+                    if (window.gapi) {
+                         await new Promise(r => window.gapi.load('client', r));
+                         await window.gapi.client.init({ apiKey: GDRIVE_API_KEY, discoveryDocs: ['https://www.googleapis.com/discovery/v1/apis/drive/v3/rest'] });
+                         setIsApiLoaded(true);
+                    }
+                };
+                loadGapi();
+
+                if (window.google && window.google.accounts) {
+                    const client = window.google.accounts.oauth2.initTokenClient({
+                        client_id: GDRIVE_CLIENT_ID,
+                        scope: 'https://www.googleapis.com/auth/drive.file', // Scoped to files created by app
+                        callback: () => {} // Callback handled in the promise wrapper below
+                    });
+                    setTokenClient(client);
+                }
+            }, []);
+
+            // Helper: Get a fresh Access Token (Promisified)
+            const getAccessToken = () => {
+                return new Promise((resolve, reject) => {
+                    if (!tokenClient) return reject("Auth not initialized");
+                    
+                    // Check if we have a valid token in gapi already
+                    const existing = window.gapi.client.getToken();
+                    if (existing && Date.now() < existing.expiry) return resolve(existing.access_token);
+
+                    // If not, request one (pop-up if needed, but usually silent if previously authed)
+                    tokenClient.callback = (resp) => {
+                        if (resp.error) reject(resp);
+                        resolve(resp.access_token);
+                    };
+                    // Use 'overridable' prompt to avoid forcing consent every time
+                    tokenClient.requestAccessToken({ prompt: '' });
+                });
+            };
+
+            // Helper: Find or Create Folder
+            const getOrCreateFolder = async (folderName, accessToken) => {
+                const q = `mimeType='application/vnd.google-apps.folder' and name='${folderName}' and trashed=false`;
+                const search = await fetch(`https://www.googleapis.com/drive/v3/files?q=${encodeURIComponent(q)}`, { headers: { Authorization: `Bearer ${accessToken}` }});
+                const data = await search.json();
+                if (data.files?.length > 0) return data.files[0].id;
+
+                const create = await fetch('https://www.googleapis.com/drive/v3/files', {
+                    method: 'POST',
+                    headers: { Authorization: `Bearer ${accessToken}`, 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ name: folderName, mimeType: 'application/vnd.google-apps.folder' })
+                });
+                const createdData = await create.json();
+                return createdData.id;
+            };
+
+            const saveToDrive = async (content, filename, mimeType, folderName = null, convertToDocs = false) => {
+                const token = await getAccessToken();
+                let parentId = folderName ? await getOrCreateFolder(folderName, token) : null;
 
                 const metadata = { name: filename, mimeType: convertToDocs ? 'application/vnd.google-apps.document' : mimeType };
                 if (parentId) metadata.parents = [parentId];
 
                 const form = new FormData();
                 form.append('metadata', new Blob([JSON.stringify(metadata)], { type: 'application/json' }));
+                
+                // Handle content (String vs Blob)
                 const fileContent = content instanceof Blob ? content : new Blob([content], { type: mimeType });
                 form.append('file', fileContent);
-                
-                const upload = await fetch('https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&fields=id,thumbnailLink,webViewLink', { 
-                    method: 'POST', 
-                    headers: new Headers({ 'Authorization': 'Bearer ' + token.access_token }), 
-                    body: form, 
+
+                // 1. UPLOAD
+                const uploadRes = await fetch('https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&fields=id', {
+                    method: 'POST',
+                    headers: { Authorization: `Bearer ${token}` },
+                    body: form
                 });
                 
-                if (!upload.ok) {
-                    if (upload.status === 401) throw new Error("Unauthorized"); // Trigger retry
-                    throw new Error("Upload failed: " + upload.statusText);
-                }
+                if (!uploadRes.ok) throw new Error(`Upload Failed: ${uploadRes.statusText}`);
+                const fileData = await uploadRes.json();
+                const fileId = fileData.id;
 
-                // === THE BUG FIX START ===
-                // We MUST get the File ID and make it Public so <img src="..."> works without cookies
-                const fileData = await upload.json();
-                
+                // 2. MAKE PUBLIC (Crucial for Images)
+                // If it's an image, we MUST make it public so <img> tags can read it
                 if (mimeType.startsWith('image/')) {
-                    try {
-                        await fetch(`https://www.googleapis.com/drive/v3/files/${fileData.id}/permissions`, {
-                            method: 'POST',
-                            headers: {
-                                'Authorization': `Bearer ${token.access_token}`,
-                                'Content-Type': 'application/json'
-                            },
-                            body: JSON.stringify({
-                                role: 'reader',
-                                type: 'anyone'
-                            })
-                        });
-                        console.log("Image made public successfully for embedding.");
-                    } catch (permError) {
-                        console.warn("Could not make image public. Embedding might fail.", permError);
-                    }
-                }
-                // === THE BUG FIX END ===
-
-                return fileData;
-            };
-
-            // === OPTIMIZED SAVE (Prevents Popups) ===
-            const saveToDrive = useCallback((content, filename, mimeType, folderName = null, convertToDocs = false) => {
-                return new Promise(async (resolve, reject) => {
-                    if(!tokenClient || !isApiLoaded) return reject("Google Drive API not initialized.");
-
-                    // 1. Check if we already have a token
-                    const existingToken = window.gapi.client.getToken();
-                    if (existingToken && existingToken.access_token) {
-                        try {
-                            // Try uploading immediately
-                            const result = await executeUpload(content, filename, mimeType, folderName, convertToDocs);
-                            return resolve(result);
-                        } catch (e) {
-                            if (e.message !== "Unauthorized") return reject(e);
-                            // If 401, fall through to request new token
-                            console.log("Token expired, requesting new one...");
-                        }
-                    }
-
-                    // 2. Only request token if missing or expired
-                    // Save the promise resolvers to state so the callback can find them
-                    setPendingRequest({
-                        resolve: async (resp) => {
-                            try {
-                                const result = await executeUpload(content, filename, mimeType, folderName, convertToDocs);
-                                resolve(result);
-                            } catch(e) { reject(e); }
-                        },
-                        reject
+                    const permRes = await fetch(`https://www.googleapis.com/drive/v3/files/${fileId}/permissions`, {
+                        method: 'POST',
+                        headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ role: 'reader', type: 'anyone' })
                     });
                     
-                    tokenClient.requestAccessToken({prompt: ''}); // Try silent first
-                });
-            }, [tokenClient, isApiLoaded]);
+                    if (!permRes.ok) {
+                         // Fallback for School/Enterprise accounts that block "Public" sharing
+                         console.warn("Public sharing failed. This image might not load for others.");
+                    }
+                    
+                    // 3. RETURN CDN LINK
+                    // This is the magic link format that works best
+                    return { 
+                        id: fileId, 
+                        webContentLink: `https://lh3.googleusercontent.com/d/${fileId}`, 
+                        webViewLink: `https://drive.google.com/file/d/${fileId}/view`
+                    };
+                }
 
-            return { saveToDrive, isReady: !!tokenClient && isApiLoaded };
+                return { id: fileId, webViewLink: `https://drive.google.com/file/d/${fileId}/view` };
+            };
+
+            return { saveToDrive, isReady: isApiLoaded };
         };
 
         const MessageBubble = ({ text, isUser }) => {
@@ -520,60 +481,50 @@
                             placeholder: "Start typing...",
                             resize: false,
                             
-                            // === CONFIG: Stop the 'blobid' creation if possible ===
-                            paste_data_images: false, // Turn this OFF to prioritize the file handler
-                            smart_paste: false,       // Turn this OFF to stop it from trying to be too clever
+                            // === CONFIG: Fix Copy/Paste behavior ===
+                            paste_data_images: true, // MUST be true to trigger the upload handler
+                            smart_paste: false, 
 
-                            // === THE DEDUPLICATION HANDLER ===
-                            images_upload_handler: (blobInfo, progress) => {
+                            // === THE CORRECT IMAGE UPLOADER ===
+                            images_upload_handler: (blobInfo, progress) => new Promise((resolve, reject) => {
                                 const uploader = saveToDriveRef.current;
-                                if (!uploader) return Promise.reject('Google Drive not ready.');
+                                if (!uploader) return reject('Google Drive API not ready yet. Wait a sec.');
 
                                 const blob = blobInfo.blob();
                                 const filename = blobInfo.filename();
-                                
-                                // 1. Create a unique key for this file (Size + Type)
-                                // This identifies if it's the exact same image content
+
+                                // 1. Deduplication (Optional but nice)
                                 const fileKey = `${blob.size}_${blob.type}`;
                                 const now = Date.now();
-
-                                // 2. Check if we uploaded this exact file in the last 2 seconds
                                 const cached = uploadCache.current.get(fileKey);
-                                if (cached && (now - cached.timestamp < 2000)) {
-                                    console.log("Duplicate upload detected, returning existing promise.");
-                                    return cached.promise;
+                                if (cached && (now - cached.timestamp < 5000)) {
+                                    console.log("Returning cached upload");
+                                    return cached.promise.then(resolve).catch(reject);
                                 }
 
-                                // 3. If unique, proceed with upload
-                                const uploadPromise = new Promise((resolve, reject) => {
-                                    uploader(blob, filename, blob.type, 'darNote_Images')
-                                        .then((result) => {
-                                            if (result.thumbnailLink) {
-                                                const bigImage = result.thumbnailLink.replace(/=s\d+/, '=s1600'); 
-                                                resolve(bigImage);
-                                            } else {
-                                                reject('No link returned.');
-                                            }
-                                        })
-                                        .catch((err) => {
-                                            console.error("Drive Upload Error:", err);
-                                            reject(err.message || 'Unknown error');
-                                        });
-                                });
+                                // 2. Perform Upload
+                                const uploadPromise = uploader(blob, filename, blob.type, 'darNote_Images')
+                                    .then((result) => {
+                                        // TinyMCE expects a direct string URL here
+                                        resolve(result.url);
+                                        return result.url;
+                                    })
+                                    .catch((err) => {
+                                        console.error("Upload Failed:", err);
+                                        reject("Upload failed: " + err.message);
+                                        throw err;
+                                    });
 
-                                // 4. Save this upload to cache so duplicates are blocked
                                 uploadCache.current.set(fileKey, { timestamp: now, promise: uploadPromise });
-                                
-                                return uploadPromise;
-                            },
+                            }),
                             
-                            contextmenu: false,
                             setup: (editor) => {
                                 editorRef.current = editor;
                                 editor.on('init', () => {
                                     if (initialContent) editor.setContent(initialContent);
                                     updateStats();
                                 });
+                                // ... rest of your setup logic (input change, blur, etc.) ...
                                 editor.on('input change keyup', () => {
                                     setSaveStatus('Typing...'); 
                                     if (debounceTimer.current) clearTimeout(debounceTimer.current);
@@ -609,7 +560,6 @@
                 const timer = setTimeout(initEditor, 50);
                 return () => { 
                     clearTimeout(timer);
-                    if (debounceTimer.current) clearTimeout(debounceTimer.current);
                     if (window.tinymce && editorRef.current) {
                         try { window.tinymce.remove(editorRef.current); editorRef.current = null; } catch(e) {}
                     }
