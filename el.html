@@ -450,7 +450,7 @@
                     const reader = new FileReader();
                     reader.onloadend = async () => {
                         const base64data = reader.result;
-                        const prompt = "Analyze this image. If it contains a question, identify the core concept or question text and generate a SHORT, descriptive title (max 6 words). Return ONLY the title.";
+                        const prompt = "Analyze this image. If it contains a question, identify the core concept or question text and generate a SHORT, summerized, descriptive title (6-8 words). Return ONLY the title.";
                         const title = await callGemini(prompt, "You are a concise summarizer.", base64data);
                         updateLog(activeLogId, { title: title.replace(/^["']|["']$/g, '').trim() });
                         setIsAutoTitleLoading(false);
