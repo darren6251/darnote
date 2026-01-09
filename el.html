@@ -40,11 +40,11 @@
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-app.js";
         import { getAuth, signInWithPopup, GoogleAuthProvider, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-auth.js";
-        import { getFirestore, collection, doc, addDoc, updateDoc, deleteDoc, onSnapshot, getDoc, setDoc, increment, arrayUnion } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-firestore.js";
+        import { getFirestore, collection, doc, addDoc, updateDoc, deleteDoc, onSnapshot, getDoc, setDoc, increment, arrayUnion, query, orderBy, limit } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-firestore.js";
         
         const firebaseConfig = { apiKey: "AIzaSyAvPEac-03kE4oazvaq8K3T2gxLPsnZO20", authDomain: "darnote625.firebaseapp.com", projectId: "darnote625", storageBucket: "darnote625.firebasestorage.app", messagingSenderId: "16458322562", appId: "1:16458322562:web:8894d71f3e6c326eba1a9b" };
         const app = initializeApp(firebaseConfig);
-        window.firebase = { app, auth: getAuth(app), db: getFirestore(app), signInWithPopup, GoogleAuthProvider, signOut, onAuthStateChanged, collection, doc, addDoc, updateDoc, deleteDoc, onSnapshot, getDoc, setDoc, increment, arrayUnion };
+        window.firebase = { app, auth: getAuth(app), db: getFirestore(app), signInWithPopup, GoogleAuthProvider, signOut, onAuthStateChanged, collection, doc, addDoc, updateDoc, deleteDoc, onSnapshot, getDoc, setDoc, increment, arrayUnion, query, orderBy, limit };
     </script>
     
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
@@ -352,13 +352,7 @@
             const [user, setUser] = useState(null);
             const [logs, setLogs] = useState([]);
             const [subjects, setSubjects] = useState([]);
-            
-            // 1. ROTATING LOGIC: Initialize state from URL params
-            const [activeLogId, setActiveLogId] = useState(() => {
-                const params = new URLSearchParams(window.location.search);
-                return params.get('log');
-            });
-
+            const [activeLogId, setActiveLogId] = useState(null);
             const [filter, setFilter] = useState('all');
             const [searchQuery, setSearchQuery] = useState('');
             const [isAiOpen, setIsAiOpen] = useState(false);
@@ -377,41 +371,22 @@
                 else document.documentElement.classList.remove('dark');
             }, [isDarkMode]);
 
-            // 2. ROTATING LOGIC: URL Persistence
-            useEffect(() => {
-                const url = new URL(window.location);
-                if (activeLogId) {
-                    url.searchParams.set('log', activeLogId);
-                } else {
-                    url.searchParams.delete('log');
-                }
-                
-                // Only push state if URL actually changed to prevent history spam
-                if (url.href !== window.location.href) {
-                    window.history.pushState({}, '', url);
-                }
-            }, [activeLogId]);
-
-            // 3. ROTATING LOGIC: Handle Browser Back/Forward
-            useEffect(() => {
-                const onPopState = () => {
-                    const id = new URLSearchParams(window.location.search).get('log');
-                    setActiveLogId(id);
-                };
-                window.addEventListener('popstate', onPopState);
-                return () => window.removeEventListener('popstate', onPopState);
-            }, []);
-
             useEffect(() => {
                 if (!user) return;
                 const db = window.firebase.db;
                 const appId = "darnote-app";
                 
-                const logsUnsub = window.firebase.onSnapshot(window.firebase.collection(db, 'artifacts', appId, 'users', user.uid, 'error_logs'), (snap) => {
+                // OPTIMIZATION: Limit logs to 50 to prevent massive reads
+                const logsRef = window.firebase.collection(db, 'artifacts', appId, 'users', user.uid, 'error_logs');
+                // Added limit(50) to prevent breaking firebase quotas
+                const qLogs = window.firebase.query(logsRef, window.firebase.orderBy('createdAt', 'desc'), window.firebase.limit(50));
+
+                const logsUnsub = window.firebase.onSnapshot(qLogs, (snap) => {
                     const data = snap.docs.map(d => ({id: d.id, ...d.data()})).sort((a,b) => new Date(b.createdAt) - new Date(a.createdAt));
                     setLogs(data);
                 });
-                
+
+                // MODIFIED SUBJECTS FETCH TO GET FULL DOC (INCLUDING TOPICS)
                 const subUnsub = window.firebase.onSnapshot(window.firebase.collection(db, 'artifacts', appId, 'users', user.uid, 'subjects'), (snap) => {
                     setSubjects(snap.docs.map(d => ({
                         id: d.id, 
