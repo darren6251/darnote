@@ -82,7 +82,8 @@
             Moon: (p) => <svg {...p} xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>,
             User: (p) => <svg {...p} xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>,
             Scan: (p) => <svg {...p} xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 7V5a2 2 0 0 1 2-2h2"/><path d="M17 3h2a2 2 0 0 1 2 2v2"/><path d="M21 17v2a2 2 0 0 1-2 2h-2"/><path d="M7 21H5a2 2 0 0 1-2-2v-2"/><path d="M8 12h8"/><path d="M12 8v8"/></svg>,
-            Lock: (p) => <svg {...p} xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+            Lock: (p) => <svg {...p} xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>,
+            File: (p) => <svg {...p} xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" x2="8" y1="13" y2="13"/><line x1="16" x2="8" y1="17" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
         };
 
         // --- GEMINI PROXY ---
@@ -91,10 +92,8 @@
             const parts = [{ text: `${systemInstruction}\n\nUser: ${prompt}` }];
             
             if (imageBase64) {
-                // Determine MIME type (default to png if not present in string)
                 let mimeType = "image/png";
                 let data = imageBase64;
-                
                 if (imageBase64.includes(",")) {
                    const split = imageBase64.split(",");
                    const match = split[0].match(/:(.*?);/);
@@ -161,7 +160,6 @@
                 const token = await getAccessToken();
                 const parentId = await getOrCreateFolder('darNote_Errors', token);
                 
-                // Deduplication
                 const md5Hash = await calculateMD5(blob);
                 if (md5Hash) {
                     const listQuery = `'${parentId}' in parents and trashed = false and mimeType contains 'image/'`;
@@ -179,11 +177,92 @@
                 const uploadRes = await fetch('https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&fields=id', { method: 'POST', headers: { Authorization: `Bearer ${token}` }, body: form });
                 const fileData = await uploadRes.json();
                 
-                // Permission Public
                 await fetch(`https://www.googleapis.com/drive/v3/files/${fileData.id}/permissions`, { method: 'POST', headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' }, body: JSON.stringify({ role: 'reader', type: 'anyone' }) });
                 return `https://lh3.googleusercontent.com/d/${fileData.id}`;
             };
             return { saveToDrive };
+        };
+
+        // --- IMAGE UPLOADER COMPONENT ---
+        const ImageUploader = ({ imageUrl, onUpload, label, isUploading }) => {
+            const [isDragging, setIsDragging] = useState(false);
+
+            const handleDragOver = (e) => {
+                e.preventDefault();
+                setIsDragging(true);
+            };
+
+            const handleDragLeave = (e) => {
+                e.preventDefault();
+                setIsDragging(false);
+            };
+
+            const handleDrop = async (e) => {
+                e.preventDefault();
+                setIsDragging(false);
+                const items = e.dataTransfer.items;
+                for (let i = 0; i < items.length; i++) {
+                    if (items[i].kind === 'file' && items[i].type.startsWith('image/')) {
+                        const file = items[i].getAsFile();
+                        onUpload(file);
+                        return; 
+                    }
+                }
+            };
+
+            const handlePaste = (e) => {
+                const items = (e.clipboardData || e.originalEvent.clipboardData).items;
+                for (let i = 0; i < items.length; i++) {
+                    if (items[i].type.indexOf('image') !== -1) {
+                        e.preventDefault();
+                        const blob = items[i].getAsFile();
+                        onUpload(blob);
+                        return;
+                    }
+                }
+            };
+
+            return (
+                <div className="space-y-2">
+                    <div className="flex justify-between items-end px-1">
+                        <label className="text-sm font-bold text-zinc-700 dark:text-zinc-300">{label}</label>
+                        <span className="text-[10px] text-zinc-400">Drag & Drop / Paste (Ctrl+V)</span>
+                    </div>
+                    <div 
+                        className={`w-full min-h-[350px] bg-white dark:bg-surface border-2 border-dashed rounded-2xl flex items-center justify-center relative overflow-hidden group transition-all ${isDragging || isUploading ? 'border-brand bg-brand/5' : 'border-zinc-300 dark:border-zinc-700 hover:border-brand dark:hover:border-brand'}`}
+                        onPaste={handlePaste}
+                        onDragOver={handleDragOver}
+                        onDragLeave={handleDragLeave}
+                        onDrop={handleDrop}
+                        tabIndex="0"
+                    >
+                        {isUploading && (
+                            <div className="absolute inset-0 bg-white/80 dark:bg-black/80 z-20 flex flex-col items-center justify-center backdrop-blur-sm">
+                                <div className="w-10 h-10 border-4 border-brand border-t-transparent rounded-full animate-spin mb-3"></div>
+                                <div className="text-sm font-bold text-brand animate-pulse">Uploading to Drive...</div>
+                            </div>
+                        )}
+                        
+                        {imageUrl ? (
+                            <div className="relative w-full h-full p-4 group">
+                                <img src={imageUrl} className="w-full h-full object-contain rounded-lg drop-shadow-lg" />
+                                <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col items-center justify-center backdrop-blur-[2px]">
+                                    <Icons.Image className="w-8 h-8 text-white mb-2"/>
+                                    <span className="text-white font-bold text-sm">Drag new image here to replace</span>
+                                </div>
+                            </div>
+                        ) : (
+                            <div className={`text-center p-10 pointer-events-none transition-opacity ${isDragging ? 'opacity-50' : 'opacity-60 group-hover:opacity-100'}`}>
+                                <div className="w-16 h-16 bg-zinc-100 dark:bg-zinc-800 rounded-full flex items-center justify-center mx-auto mb-4 text-zinc-400 group-hover:text-brand group-hover:scale-110 transition-all">
+                                    <Icons.Image className="w-8 h-8"/>
+                                </div>
+                                <h3 className="font-bold text-lg text-zinc-700 dark:text-zinc-200">No Image Uploaded</h3>
+                                <p className="text-sm text-zinc-500 mt-2">Drag image here or click & <kbd className="font-mono bg-zinc-200 dark:bg-zinc-700 px-1 rounded">Ctrl + V</kbd></p>
+                            </div>
+                        )}
+                    </div>
+                </div>
+            );
         };
 
         // --- AI CHAT COMPONENT ---
@@ -195,18 +274,13 @@
             const messagesEndRef = useRef(null);
 
             const QUOTA_LIMIT = 10;
-            const todayDate = new Date().toISOString().split('T')[0]; // "YYYY-MM-DD"
+            const todayDate = new Date().toISOString().split('T')[0];
 
-            // FETCH QUOTA
             useEffect(() => {
                 if(!user) return;
                 const docRef = window.firebase.doc(window.firebase.db, 'artifacts', 'darnote-app', 'users', user.uid, 'ai_usage', todayDate);
                 const unsub = window.firebase.onSnapshot(docRef, (doc) => {
-                    if (doc.exists()) {
-                        setDailyCount(doc.data().count || 0);
-                    } else {
-                        setDailyCount(0);
-                    }
+                    if (doc.exists()) { setDailyCount(doc.data().count || 0); } else { setDailyCount(0); }
                 });
                 return () => unsub();
             }, [user, todayDate]);
@@ -215,19 +289,15 @@
 
             const handleSend = async () => {
                 if(!input.trim()) return;
-                
-                // CHECK QUOTA
                 if (dailyCount >= QUOTA_LIMIT) {
                     setMessages(prev => [...prev, {role: 'ai', text: "<span class='text-red-500 font-bold'>DAILY LIMIT REACHED.</span> You have used all 10 AI requests for today. Try thinking for yourself now! 🧠"}]);
                     return;
                 }
-
                 const userMsg = input;
                 setMessages(prev => [...prev, {role: 'user', text: userMsg}]);
                 setInput("");
                 setLoading(true);
 
-                // INCREMENT QUOTA (Optimistic)
                 const docRef = window.firebase.doc(window.firebase.db, 'artifacts', 'darnote-app', 'users', user.uid, 'ai_usage', todayDate);
                 await window.firebase.setDoc(docRef, { count: window.firebase.increment(1), date: todayDate }, { merge: true });
 
@@ -240,6 +310,7 @@
                     Student's Explanation: ${activeLog.explanation}
                     Marks: ${activeLog.marks}
                     Image of Question (Url): ${activeLog.imageUrl || "No image provided"}
+                    Marking Scheme Image (Url): ${activeLog.markingSchemeUrl || "No scheme provided"}
                 `;
                 const systemPrompt = `You are a supportive but witty tutor. The student is looking at an error log. Context: ${context}. Answer their question effectively.`;
                 
@@ -256,18 +327,14 @@
                         <div className="flex flex-col">
                             <span className="font-bold text-sm flex items-center gap-2"><Icons.Bot className="w-4 h-4 text-brand"/> Tutor AI</span>
                             <span className={`text-[10px] font-mono ${remaining === 0 ? 'text-red-500 font-bold' : 'text-zinc-500'}`}>
-                                {remaining} / {QUOTA_LIMIT} requests left
+                                {remaining} / {QUOTA_LIMIT} left
                             </span>
                         </div>
                         <button onClick={onClose}><Icons.X className="w-4 h-4 hover:text-red-500 transition-colors"/></button>
                     </div>
                     
-                    {/* PROGRESS BAR */}
                     <div className="h-1 w-full bg-zinc-200 dark:bg-zinc-800">
-                        <div 
-                            className={`h-full transition-all duration-500 ${remaining === 0 ? 'bg-red-500' : 'bg-brand'}`} 
-                            style={{ width: `${(dailyCount / QUOTA_LIMIT) * 100}%` }}
-                        ></div>
+                        <div className={`h-full transition-all duration-500 ${remaining === 0 ? 'bg-red-500' : 'bg-brand'}`} style={{ width: `${(dailyCount / QUOTA_LIMIT) * 100}%` }}></div>
                     </div>
 
                     <div className="flex-1 overflow-y-auto p-4 space-y-4">
@@ -286,7 +353,7 @@
                         {remaining === 0 && (
                              <div className="absolute inset-0 bg-white/50 dark:bg-black/50 backdrop-blur-sm z-10 flex items-center justify-center">
                                  <div className="bg-white dark:bg-zinc-800 border border-red-500 text-red-500 px-4 py-2 rounded-lg text-xs font-bold shadow-lg flex items-center gap-2">
-                                     <Icons.Lock className="w-4 h-4"/> Daily Quota Exceeded
+                                     <Icons.Lock className="w-4 h-4"/> Quota Exceeded
                                  </div>
                              </div>
                         )}
@@ -306,16 +373,16 @@
             const [filter, setFilter] = useState('all');
             const [searchQuery, setSearchQuery] = useState('');
             const [isAiOpen, setIsAiOpen] = useState(false);
-            const [isDarkMode, setIsDarkMode] = useState(true); // Default Dark Mode
+            const [isDarkMode, setIsDarkMode] = useState(true);
             const [isAutoTitleLoading, setIsAutoTitleLoading] = useState(false);
             const { saveToDrive } = useGoogleDrive();
             
             // Image Upload State for Active Log
-            const [isUploading, setIsUploading] = useState(false);
+            const [isUploadingQ, setIsUploadingQ] = useState(false);
+            const [isUploadingS, setIsUploadingS] = useState(false); // For Scheme
 
             useEffect(() => { window.firebase.onAuthStateChanged(window.firebase.auth, setUser); }, []);
             
-            // THEME EFFECT
             useEffect(() => {
                 if(isDarkMode) document.documentElement.classList.add('dark');
                 else document.documentElement.classList.remove('dark');
@@ -341,7 +408,8 @@
                     subject: 'General',
                     topic: '',
                     imageUrl: '',
-                    questionType: 'MC', // MC or LQ
+                    markingSchemeUrl: '', // NEW
+                    questionType: 'MC', 
                     correctAnswer: '',
                     marks: '',
                     explanation: '',
@@ -356,22 +424,16 @@
                 await window.firebase.updateDoc(window.firebase.doc(window.firebase.db, 'artifacts', "darnote-app", 'users', user.uid, 'error_logs', id), updates);
             };
 
-            const handlePaste = async (e) => {
+            const handleUpload = async (blob, type) => {
                 if (!activeLogId) return;
-                const items = (e.clipboardData || e.originalEvent.clipboardData).items;
-                for (let i = 0; i < items.length; i++) {
-                    if (items[i].type.indexOf('image') !== -1) {
-                        e.preventDefault();
-                        const blob = items[i].getAsFile();
-                        setIsUploading(true);
-                        try {
-                            const url = await saveToDrive(blob, `ErrorLog_${Date.now()}.png`);
-                            updateLog(activeLogId, { imageUrl: url });
-                        } catch(err) { alert("Upload failed: " + err); }
-                        setIsUploading(false);
-                        return;
-                    }
-                }
+                const setUploading = type === 'question' ? setIsUploadingQ : setIsUploadingS;
+                setUploading(true);
+                try {
+                    const url = await saveToDrive(blob, `ErrorLog_${type}_${Date.now()}.png`);
+                    if (type === 'question') updateLog(activeLogId, { imageUrl: url });
+                    else updateLog(activeLogId, { markingSchemeUrl: url });
+                } catch(err) { alert("Upload failed: " + err); }
+                setUploading(false);
             };
 
             const handleAutoTitle = async () => {
@@ -381,16 +443,14 @@
                 }
                 setIsAutoTitleLoading(true);
                 try {
-                    // Fetch the image to get blob for OCR
                     const response = await fetch(activeLog.imageUrl);
                     if (!response.ok) throw new Error("Failed to fetch image for OCR.");
                     const blob = await response.blob();
                     
-                    // Convert to Base64
                     const reader = new FileReader();
                     reader.onloadend = async () => {
                         const base64data = reader.result;
-                        const prompt = "Analyze this image. If it contains a question, identify the core concept or question text and generate a SHORT, descriptive title (max 6 words). Example: 'Projectile Motion Q5' or 'Integration by Parts Error'. Return ONLY the title.";
+                        const prompt = "Analyze this image. If it contains a question, identify the core concept or question text and generate a SHORT, descriptive title (max 6 words). Return ONLY the title.";
                         const title = await callGemini(prompt, "You are a concise summarizer.", base64data);
                         updateLog(activeLogId, { title: title.replace(/^["']|["']$/g, '').trim() });
                         setIsAutoTitleLoading(false);
@@ -566,42 +626,26 @@
                                             </div>
                                         </div>
 
-                                        {/* IMAGE DROP ZONE */}
-                                        <div className="space-y-2">
-                                            <div className="flex justify-between items-end px-1">
-                                                <label className="text-sm font-bold text-zinc-700 dark:text-zinc-300">Question Image</label>
-                                                <span className="text-[10px] text-zinc-400">Click & Paste (Ctrl+V)</span>
-                                            </div>
-                                            <div 
-                                                className={`w-full min-h-[350px] bg-white dark:bg-surface border-2 border-dashed rounded-2xl flex items-center justify-center relative overflow-hidden group transition-all ${isUploading ? 'border-brand bg-brand/5' : 'border-zinc-300 dark:border-zinc-700 hover:border-brand dark:hover:border-brand'}`}
-                                                onPaste={handlePaste}
-                                                tabIndex="0"
-                                            >
-                                                {isUploading && (
-                                                    <div className="absolute inset-0 bg-white/80 dark:bg-black/80 z-20 flex flex-col items-center justify-center backdrop-blur-sm">
-                                                        <div className="w-10 h-10 border-4 border-brand border-t-transparent rounded-full animate-spin mb-3"></div>
-                                                        <div className="text-sm font-bold text-brand animate-pulse">Uploading to Drive...</div>
-                                                    </div>
-                                                )}
-                                                
-                                                {activeLog.imageUrl ? (
-                                                    <div className="relative w-full h-full p-4 group">
-                                                        <img src={activeLog.imageUrl} className="w-full h-full object-contain rounded-lg drop-shadow-lg" />
-                                                        <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col items-center justify-center backdrop-blur-[2px]">
-                                                            <Icons.Image className="w-8 h-8 text-white mb-2"/>
-                                                            <span className="text-white font-bold text-sm">Paste new image to replace</span>
-                                                        </div>
-                                                    </div>
-                                                ) : (
-                                                    <div className="text-center p-10 pointer-events-none opacity-60 group-hover:opacity-100 transition-opacity">
-                                                        <div className="w-16 h-16 bg-zinc-100 dark:bg-zinc-800 rounded-full flex items-center justify-center mx-auto mb-4 text-zinc-400 group-hover:text-brand group-hover:scale-110 transition-all">
-                                                            <Icons.Image className="w-8 h-8"/>
-                                                        </div>
-                                                        <h3 className="font-bold text-lg text-zinc-700 dark:text-zinc-200">No Image Uploaded</h3>
-                                                        <p className="text-sm text-zinc-500 mt-2">Click here and press <kbd className="font-mono bg-zinc-200 dark:bg-zinc-700 px-1 rounded">Ctrl + V</kbd></p>
-                                                    </div>
-                                                )}
-                                            </div>
+                                        {/* IMAGE UPLOADERS */}
+                                        <div className="space-y-6">
+                                            <ImageUploader 
+                                                imageUrl={activeLog.imageUrl} 
+                                                onUpload={(f) => handleUpload(f, 'question')} 
+                                                label="Question Image" 
+                                                isUploading={isUploadingQ}
+                                            />
+                                            
+                                            {/* CONDITIONAL MARKING SCHEME UPLOADER */}
+                                            {activeLog.questionType === 'LQ' && (
+                                                <motion.div initial={{opacity:0, height:0}} animate={{opacity:1, height:'auto'}}>
+                                                    <ImageUploader 
+                                                        imageUrl={activeLog.markingSchemeUrl} 
+                                                        onUpload={(f) => handleUpload(f, 'scheme')} 
+                                                        label="Marking Scheme / Answer Key" 
+                                                        isUploading={isUploadingS}
+                                                    />
+                                                </motion.div>
+                                            )}
                                         </div>
 
                                         {/* ANALYSIS GRID */}
