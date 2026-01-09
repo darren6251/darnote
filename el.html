@@ -1,0 +1,455 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>darNote - Error Log (Onyx)</title>
+    <!-- BRANDING: Favicon -->
+    <link rel="icon" type="image/png" href="https://raw.githubusercontent.com/darren6251/darnote/refs/heads/main/darNote%20logo.png">
+    
+    <!-- React & ReactDOM -->
+    <script crossorigin src="https://unpkg.com/react@18/umd/react.development.js"></script>
+    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+    <!-- Babel for JSX -->
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: { onyx: '#050505', surface: '#121212', border: '#27272a', glass: 'rgba(18, 18, 18, 0.8)', 'light-bg': '#f0f2f5', 'light-surface': '#ffffff', 'mistake-red': '#450a0a', 'mastered-green': '#052e16' },
+                    fontFamily: { sans: ['Inter', 'sans-serif'], mono: ['JetBrains Mono', 'monospace'] },
+                    animation: { 'spin-slow': 'spin 20s linear infinite' }
+                }
+            }
+        }
+    </script>
+    <!-- TinyMCE -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/tinymce/6.8.2/tinymce.min.js" referrerpolicy="origin"></script>
+    <!-- SparkMD5 for Deduplication -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/spark-md5/3.0.2/spark-md5.min.js"></script>
+
+    <!-- GOOGLE DRIVE API SCRIPTS -->
+    <script src="https://apis.google.com/js/api.js" async defer></script>
+    <script src="https://accounts.google.com/gsi/client" async defer></script>
+
+    <!-- Firebase SDKs -->
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-app.js";
+        import { getAuth, signInWithPopup, GoogleAuthProvider, signOut, onAuthStateChanged, signInAnonymously } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-auth.js";
+        import { getFirestore, collection, doc, addDoc, updateDoc, deleteDoc, onSnapshot, query, where, getDocs, setDoc, arrayUnion, arrayRemove } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-firestore.js";
+        
+        const firebaseConfig = { apiKey: "AIzaSyAvPEac-03kE4oazvaq8K3T2gxLPsnZO20", authDomain: "darnote625.firebaseapp.com", projectId: "darnote625", storageBucket: "darnote625.firebasestorage.app", messagingSenderId: "16458322562", appId: "1:16458322562:web:8894d71f3e6c326eba1a9b", measurementId: "G-NL9JX1NW80" };
+        const app = initializeApp(firebaseConfig);
+        window.firebase = { app, auth: getAuth(app), db: getFirestore(app), signInWithPopup, signInAnonymously, GoogleAuthProvider, signOut, onAuthStateChanged, collection, doc, addDoc, updateDoc, deleteDoc, setDoc, onSnapshot, query, where, getDocs, arrayUnion, arrayRemove };
+    </script>
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <style>
+        body { @apply bg-light-bg text-zinc-900 dark:bg-onyx dark:text-zinc-100; font-family: 'Inter', sans-serif; overflow: hidden; -webkit-font-smoothing: antialiased; }
+        ::-webkit-scrollbar { width: 8px; height: 8px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { @apply bg-zinc-300 dark:bg-zinc-700; border-radius: 4px; }
+        .glass-panel { @apply bg-light-surface dark:bg-surface border-r border-zinc-200 dark:border-border; }
+        
+        /* TinyMCE Overrides */
+        .tox-tinymce { border: none !important; border-top: 1px solid #27272a !important; }
+        .tox .tox-toolbar, .tox .tox-statusbar { background-color: transparent !important; }
+        .dark .tox-tinymce { border-top: 1px solid rgba(255,255,255,0.1) !important; }
+        .tox-statusbar__path { display: none !important; }
+    </style>
+</head>
+<body>
+    <div id="root"></div>
+    <script type="text/babel">
+        // ==========================================
+        // CONFIGURATION (Using same keys as note.html)
+        // ==========================================
+        const GDRIVE_API_KEY = "AIzaSyCScFR_D0snZ6hrHob5fUQM7Y2NhK-kTIA"; 
+        const GDRIVE_CLIENT_ID = "256215327792-oglegui0q8qj507oao2c2733thcl9lrc.apps.googleusercontent.com"; 
+
+        const { useState, useEffect, useRef, useMemo } = React;
+
+        const Icons = {
+            Plus: (props) => <svg {...props} xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12h14"/><path d="M12 5v14"/></svg>,
+            Trash: (props) => <svg {...props} xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/></svg>,
+            Search: (props) => <svg {...props} xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>,
+            Folder: (props) => <svg {...props} xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M4 20h16a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-7.93a2 2 0 0 1-1.66-.9l-.82-1.2A2 2 0 0 0 7.93 3H4a2 2 0 0 0-2 2v13c0 1.1.9 2 2 2Z"/></svg>,
+            Bug: (props) => <svg {...props} xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m8 2 1.88 1.88"/><path d="M14.12 3.88 16 2"/><path d="M9 7.13v-1a3.003 3.003 0 1 1 6 0v1"/><path d="M12 20c-3.3 0-6-2.7-6-6v-3a4 4 0 0 1 4-4h4a4 4 0 0 1 4 4v3c0 3.3-2.7 6-6 6"/><path d="M12 20v-9"/><path d="M6.53 9C4.6 8.8 3 7.1 3 5"/><path d="M6 13H2"/><path d="M3 21c0-2.1 1.7-3.9 3.8-4"/><path d="M20.97 5c0 2.1-1.6 3.8-3.5 4"/><path d="M22 13h-4"/><path d="M17.2 17c2.1.1 3.8 1.9 3.8 4"/></svg>,
+            Check: (props) => <svg {...props} xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>,
+            X: (props) => <svg {...props} xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M18 6 6 18"/><path d="m6 6 18 18"/></svg>,
+            Link: (props) => <svg {...props} xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>,
+            Google: (props) => <svg {...props} xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 22C6.477 22 2 17.523 2 12S6.477 2 12 2s10 4.477 10 10-4.477 10-10 10z"/><path d="M12 11h9c.1 1.4.1 2.9-.4 4.3-1.1 3-4.1 5.3-7.6 5.6-5 .5-9.4-3.1-9.9-8.1C2.5 7.1 6 2.3 11 2c2.5-.1 4.9.9 6.7 2.6l-2.7 2.8c-1-.7-2.3-1.1-3.6-1-2.9.2-5.1 2.8-4.9 5.7.2 2.6 2.4 4.7 5 4.7 2 0 3.6-1.1 4.3-2.9H12v-3z" fill="currentColor"/></svg>,
+            Logout: (props) => <svg {...props} xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" x2="9" y1="12" y2="12"/></svg>,
+            Drive: (props) => <svg {...props} xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 2L2 20h20L12 2z"/><path d="M7 20h10"/><path d="M17 20L7 20"/><path d="M12 2L7 11"/><path d="M12 2l5 9"/><path d="M7 11h10"/></svg>,
+        };
+
+        // ==========================================
+        // GOOGLE DRIVE HOOK (REUSED FROM NOTE.HTML)
+        // ==========================================
+        const useGoogleDrive = () => {
+            const [tokenClient, setTokenClient] = useState(null);
+            const [isApiLoaded, setIsApiLoaded] = useState(false);
+            
+            useEffect(() => {
+                if(!GDRIVE_API_KEY || !GDRIVE_CLIENT_ID) return;
+                const loadGapi = async () => {
+                    if (window.gapi) {
+                         await new Promise(r => window.gapi.load('client', r));
+                         await window.gapi.client.init({ apiKey: GDRIVE_API_KEY, discoveryDocs: ['https://www.googleapis.com/discovery/v1/apis/drive/v3/rest'] });
+                         setIsApiLoaded(true);
+                    }
+                };
+                loadGapi();
+                if (window.google && window.google.accounts) {
+                    const client = window.google.accounts.oauth2.initTokenClient({ client_id: GDRIVE_CLIENT_ID, scope: 'https://www.googleapis.com/auth/drive.file', callback: () => {} });
+                    setTokenClient(client);
+                }
+            }, []);
+
+            const getAccessToken = () => new Promise((resolve, reject) => {
+                if (!tokenClient) return reject("Auth not initialized");
+                const existing = window.gapi.client.getToken();
+                if (existing && Date.now() < existing.expiry) return resolve(existing.access_token);
+                tokenClient.callback = (resp) => { if (resp.error) reject(resp); resolve(resp.access_token); };
+                tokenClient.requestAccessToken({ prompt: '' });
+            });
+
+            const getOrCreateFolder = async (folderName, accessToken) => {
+                const q = `mimeType='application/vnd.google-apps.folder' and name='${folderName}' and trashed=false`;
+                const search = await fetch(`https://www.googleapis.com/drive/v3/files?q=${encodeURIComponent(q)}`, { headers: { Authorization: `Bearer ${accessToken}` }});
+                const data = await search.json();
+                if (data.files?.length > 0) return data.files[0].id;
+                const create = await fetch('https://www.googleapis.com/drive/v3/files', { method: 'POST', headers: { Authorization: `Bearer ${accessToken}`, 'Content-Type': 'application/json' }, body: JSON.stringify({ name: folderName, mimeType: 'application/vnd.google-apps.folder' }) });
+                const createdData = await create.json();
+                return createdData.id;
+            };
+
+            const calculateMD5 = (blob) => new Promise((resolve, reject) => {
+                if (!window.SparkMD5) return resolve(null);
+                const reader = new FileReader();
+                reader.onload = (e) => { const spark = new SparkMD5.ArrayBuffer(); spark.append(e.target.result); resolve(spark.end()); };
+                reader.onerror = reject;
+                reader.readAsArrayBuffer(blob);
+            });
+
+            const saveToDrive = async (content, filename, mimeType, folderName = null) => {
+                const token = await getAccessToken();
+                let parentId = folderName ? await getOrCreateFolder(folderName, token) : null;
+                const fileContent = content instanceof Blob ? content : new Blob([content], { type: mimeType });
+                
+                // Deduplication
+                if (parentId && mimeType.startsWith('image/')) {
+                    const md5Hash = await calculateMD5(fileContent);
+                    if (md5Hash) {
+                        const listQuery = `'${parentId}' in parents and trashed = false and mimeType contains 'image/'`;
+                        const listReq = await fetch(`https://www.googleapis.com/drive/v3/files?q=${encodeURIComponent(listQuery)}&orderBy=createdTime desc&pageSize=50&fields=files(id,md5Checksum,webContentLink,webViewLink)`, { headers: { Authorization: `Bearer ${token}` } });
+                        const listData = await listReq.json();
+                        const contentMatch = listData.files?.find(f => f.md5Checksum === md5Hash);
+                        if (contentMatch) return { id: contentMatch.id, webContentLink: `https://lh3.googleusercontent.com/d/${contentMatch.id}`, webViewLink: contentMatch.webViewLink };
+                    }
+                }
+
+                const metadata = { name: filename, mimeType: mimeType, parents: parentId ? [parentId] : [] };
+                const form = new FormData();
+                form.append('metadata', new Blob([JSON.stringify(metadata)], { type: 'application/json' }));
+                form.append('file', fileContent);
+
+                const uploadRes = await fetch('https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&fields=id', { method: 'POST', headers: { Authorization: `Bearer ${token}` }, body: form });
+                if (!uploadRes.ok) throw new Error(`Upload Failed: ${uploadRes.statusText}`);
+                const fileData = await uploadRes.json();
+                const fileId = fileData.id;
+
+                if (mimeType.startsWith('image/')) {
+                    await fetch(`https://www.googleapis.com/drive/v3/files/${fileId}/permissions`, { method: 'POST', headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' }, body: JSON.stringify({ role: 'reader', type: 'anyone' }) });
+                    return { id: fileId, webContentLink: `https://lh3.googleusercontent.com/d/${fileId}`, webViewLink: `https://drive.google.com/file/d/${fileId}/view` };
+                }
+                return { id: fileId, webViewLink: `https://drive.google.com/file/d/${fileId}/view` };
+            };
+            return { saveToDrive, isReady: isApiLoaded };
+        };
+
+        // ==========================================
+        // TINYMCE WRAPPER
+        // ==========================================
+        const Editor = ({ initialContent, logId, onSave, saveToDriveFunction, isDarkMode }) => {
+            const editorRef = useRef(null);
+            const uploadCache = useRef(new Map());
+
+            useEffect(() => {
+                if (window.tinymce) {
+                    window.tinymce.remove(`#editor-${logId}`);
+                    window.tinymce.init({
+                        selector: `#editor-${logId}`,
+                        height: '100%',
+                        menubar: false,
+                        plugins: 'autolink autosave image link lists quickbars',
+                        toolbar: 'bold italic underline | alignleft aligncenter | bullist numlist | image link',
+                        skin: isDarkMode ? 'oxide-dark' : 'oxide',
+                        content_css: isDarkMode ? 'dark' : 'default',
+                        placeholder: "Describe the error, paste the wrong question image, and write your solution...",
+                        resize: false,
+                        paste_data_images: true, 
+                        smart_paste: false,
+                        statusbar: false,
+                        
+                        // IMAGE UPLOAD HANDLER (The "No Base64" Magic)
+                        images_upload_handler: (blobInfo, progress) => new Promise((resolve, reject) => {
+                            const uploader = saveToDriveFunction;
+                            if (!uploader) return reject('Drive API not ready.');
+                            
+                            const blob = blobInfo.blob();
+                            const fileKey = `${blob.size}_${blob.type}`;
+                            const now = Date.now();
+                            const cached = uploadCache.current.get(fileKey);
+                            
+                            if (cached && (now - cached.timestamp < 10000)) {
+                                return cached.promise.then(resolve).catch(reject);
+                            }
+
+                            const uploadPromise = uploader(blob, `ErrorLog_${Date.now()}.png`, blob.type, 'darNote_Images')
+                                .then(res => { resolve(res.webContentLink); return res.webContentLink; })
+                                .catch(err => { reject(err.message); throw err; });
+                            
+                            uploadCache.current.set(fileKey, { timestamp: now, promise: uploadPromise });
+                        }),
+                        setup: (editor) => {
+                            editorRef.current = editor;
+                            editor.on('init', () => { if(initialContent) editor.setContent(initialContent); });
+                            editor.on('blur', () => onSave(editor.getContent()));
+                        }
+                    });
+                }
+                return () => { if(window.tinymce) window.tinymce.remove(`#editor-${logId}`); }
+            }, [logId, isDarkMode]);
+
+            return <textarea id={`editor-${logId}`} className="w-full h-full opacity-0"></textarea>;
+        };
+
+        // ==========================================
+        // MAIN APP COMPONENT
+        // ==========================================
+        const App = () => {
+            const [user, setUser] = useState(null);
+            const [logs, setLogs] = useState([]);
+            const [notes, setNotes] = useState([]); // Existing notes for linking
+            const [subjects, setSubjects] = useState([]);
+            const [activeLogId, setActiveLogId] = useState(null);
+            const [filter, setFilter] = useState('all'); // all, mastered, subject:Math
+            const [searchQuery, setSearchQuery] = useState('');
+            const [isDarkMode, setIsDarkMode] = useState(true);
+            const { saveToDrive, isReady } = useGoogleDrive();
+
+            useEffect(() => {
+                const unsub = window.firebase.onAuthStateChanged(window.firebase.auth, (u) => setUser(u));
+                return () => unsub();
+            }, []);
+
+            useEffect(() => {
+                if (!user) return;
+                const db = window.firebase.db;
+                const appId = "darnote-app";
+                
+                // Fetch Error Logs
+                const logsUnsub = window.firebase.onSnapshot(window.firebase.collection(db, 'artifacts', appId, 'users', user.uid, 'error_logs'), (snap) => {
+                    const data = snap.docs.map(d => ({id: d.id, ...d.data()})).sort((a,b) => new Date(b.createdAt) - new Date(a.createdAt));
+                    setLogs(data);
+                });
+
+                // Fetch Subjects
+                const subUnsub = window.firebase.onSnapshot(window.firebase.collection(db, 'artifacts', appId, 'users', user.uid, 'subjects'), (snap) => {
+                    setSubjects(snap.docs.map(d => d.data().name).sort());
+                });
+
+                // Fetch Notes (for linking) - Minimal fetch
+                const notesUnsub = window.firebase.onSnapshot(window.firebase.collection(db, 'artifacts', appId, 'users', user.uid, 'notes'), (snap) => {
+                    setNotes(snap.docs.map(d => ({id: d.id, title: d.title, subject: d.subject})));
+                });
+
+                return () => { logsUnsub(); subUnsub(); notesUnsub(); };
+            }, [user]);
+
+            useEffect(() => {
+                document.documentElement.classList.toggle('dark', isDarkMode);
+            }, [isDarkMode]);
+
+            const createLog = async () => {
+                if (!user) return;
+                const newLog = {
+                    title: '',
+                    content: '',
+                    subject: 'General',
+                    linkedNoteId: '',
+                    mastered: false,
+                    reviewCount: 0,
+                    createdAt: new Date().toISOString()
+                };
+                const docRef = await window.firebase.addDoc(window.firebase.collection(window.firebase.db, 'artifacts', "darnote-app", 'users', user.uid, 'error_logs'), newLog);
+                setActiveLogId(docRef.id);
+            };
+
+            const updateLog = async (id, updates) => {
+                await window.firebase.updateDoc(window.firebase.doc(window.firebase.db, 'artifacts', "darnote-app", 'users', user.uid, 'error_logs', id), updates);
+            };
+
+            const deleteLog = async (id) => {
+                if(!confirm("Delete this error log? It's okay to hide your mistakes.")) return;
+                await window.firebase.deleteDoc(window.firebase.doc(window.firebase.db, 'artifacts', "darnote-app", 'users', user.uid, 'error_logs', id));
+                if (activeLogId === id) setActiveLogId(null);
+            };
+
+            const activeLog = logs.find(l => l.id === activeLogId);
+
+            const filteredLogs = logs.filter(l => {
+                if (filter === 'mastered') return l.mastered;
+                if (filter === 'active') return !l.mastered;
+                if (filter.startsWith('subject:')) return l.subject === filter.split(':')[1];
+                return true;
+            }).filter(l => (l.title || '').toLowerCase().includes(searchQuery.toLowerCase()) || (l.content || '').toLowerCase().includes(searchQuery.toLowerCase()));
+
+            if (!user) {
+                return (
+                    <div className="flex h-screen w-full items-center justify-center bg-black text-white p-4 relative overflow-hidden">
+                        <div className="absolute top-[-50%] left-[-50%] w-[200%] h-[200%] bg-[radial-gradient(circle_at_center,_var(--tw-gradient-stops))] from-red-900/20 via-black to-black animate-spin-slow"></div>
+                        <div className="max-w-md w-full bg-zinc-900/80 backdrop-blur-2xl border border-white/5 p-12 rounded-3xl shadow-2xl relative z-10 text-center">
+                            <h1 className="text-4xl font-bold mb-3 tracking-tighter text-red-500">Error Log</h1>
+                            <p className="text-zinc-500 mb-10 font-medium">Document your failures. Learn from them. Eventually.</p>
+                            <button onClick={() => window.firebase.signInWithPopup(window.firebase.auth, new window.firebase.GoogleAuthProvider())} className="bg-white text-black px-6 py-3 rounded-full font-bold hover:scale-105 transition-transform flex items-center justify-center gap-2 mx-auto"><Icons.Google className="w-5 h-5"/> Sign in with Google</button>
+                        </div>
+                    </div>
+                );
+            }
+
+            return (
+                <div className={`flex h-screen w-full transition-colors duration-300 ${isDarkMode ? 'dark bg-onyx text-zinc-100' : 'bg-light-bg text-zinc-900'} overflow-hidden`}>
+                    {/* SIDEBAR */}
+                    <div className="w-[80px] lg:w-[260px] flex-shrink-0 glass-panel flex flex-col justify-between p-4 z-20">
+                        <div className="space-y-6">
+                            <div className="flex items-center gap-3 px-2 p-2 rounded-xl">
+                                <div className="w-10 h-10 rounded-full bg-red-600 flex items-center justify-center font-bold text-white"><Icons.Bug className="w-6 h-6"/></div>
+                                <div className="hidden lg:block text-left"><div className="font-bold text-sm tracking-tight">Error Log</div><div className="text-[10px] text-zinc-500">Track. Fix. Repeat.</div></div>
+                            </div>
+                            <nav className="space-y-1">
+                                <button onClick={() => setFilter('all')} className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${filter === 'all' ? 'bg-zinc-200 dark:bg-white/10' : 'text-zinc-500 hover:bg-zinc-100 dark:hover:bg-white/5'}`}><Icons.Folder className="w-4 h-4"/><span className="hidden lg:inline">All Errors</span></button>
+                                <button onClick={() => setFilter('active')} className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${filter === 'active' ? 'bg-red-500/10 text-red-500' : 'text-zinc-500 hover:bg-zinc-100 dark:hover:bg-white/5'}`}><Icons.Bug className="w-4 h-4"/><span className="hidden lg:inline">Needs Review</span></button>
+                                <button onClick={() => setFilter('mastered')} className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${filter === 'mastered' ? 'bg-green-500/10 text-green-500' : 'text-zinc-500 hover:bg-zinc-100 dark:hover:bg-white/5'}`}><Icons.Check className="w-4 h-4"/><span className="hidden lg:inline">Mastered</span></button>
+                            </nav>
+                            <div className="space-y-1 pt-4 border-t border-zinc-200 dark:border-white/5">
+                                <div className="px-3 py-2 text-[10px] font-bold text-zinc-500 uppercase tracking-widest"><span className="hidden lg:block">By Subject</span></div>
+                                <div className="max-h-[300px] overflow-y-auto">
+                                    {subjects.map(s => (
+                                        <button key={s} onClick={() => setFilter(`subject:${s}`)} className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors ${filter === `subject:${s}` ? 'text-indigo-500 bg-indigo-500/10' : 'text-zinc-500 hover:bg-zinc-100 dark:hover:bg-white/5'}`}>
+                                            <span className="w-1.5 h-1.5 rounded-full bg-zinc-400"></span><span className="hidden lg:inline truncate">{s}</span>
+                                        </button>
+                                    ))}
+                                </div>
+                            </div>
+                        </div>
+                        <div className="space-y-2 pt-4 border-t border-zinc-200 dark:border-white/5">
+                            <button onClick={() => window.firebase.signOut(window.firebase.auth)} className="w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium text-red-500 hover:bg-red-50 dark:hover:bg-red-900/10"><Icons.Logout className="w-4 h-4"/><span className="hidden lg:inline">Sign Out</span></button>
+                        </div>
+                    </div>
+
+                    {/* LIST PANEL */}
+                    <div className="w-[300px] flex-shrink-0 border-r border-zinc-200 dark:border-white/5 bg-light-surface dark:bg-surface flex flex-col z-10">
+                        <div className="p-4 border-b border-zinc-200 dark:border-white/5 space-y-4">
+                            <h2 className="text-xl font-bold px-1 truncate">{filter === 'all' ? 'All Errors' : filter.replace('subject:', '')}</h2>
+                            <div className="relative"><Icons.Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-500" /><input type="text" placeholder="Search errors..." value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} className="w-full bg-zinc-100 dark:bg-black/20 border border-zinc-200 dark:border-white/5 rounded-lg pl-9 pr-4 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-red-500 transition-all" /></div>
+                            <button onClick={createLog} className="w-full bg-red-600 text-white py-2 rounded-lg font-bold text-sm hover:bg-red-500 flex items-center justify-center gap-2 shadow"><Icons.Plus className="w-4 h-4"/> Log New Error</button>
+                        </div>
+                        <div className="flex-1 overflow-y-auto p-3 space-y-2">
+                            {filteredLogs.map(log => (
+                                <div key={log.id} onClick={() => setActiveLogId(log.id)} className={`p-4 rounded-xl cursor-pointer border transition-all ${activeLogId === log.id ? 'bg-white dark:bg-white/5 border-red-500/50 shadow-lg' : 'bg-transparent border-transparent hover:bg-zinc-50 dark:hover:bg-white/5'}`}>
+                                    <div className="flex justify-between items-start mb-1">
+                                        <div className="font-semibold text-sm truncate pr-2 text-zinc-800 dark:text-zinc-200 flex-1">{log.title || 'Untitled Mistake'}</div>
+                                        {log.mastered ? <Icons.Check className="w-4 h-4 text-green-500 flex-shrink-0"/> : <div className="w-2 h-2 rounded-full bg-red-500 mt-1.5 flex-shrink-0"></div>}
+                                    </div>
+                                    <div className="text-xs text-zinc-500 mb-2">{log.subject}</div>
+                                    <div className="text-[10px] text-zinc-400">{new Date(log.createdAt).toLocaleDateString()}</div>
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+
+                    {/* EDITOR MAIN */}
+                    <div className="flex-1 flex flex-col relative bg-light-bg dark:bg-onyx min-w-0">
+                        {activeLog ? (
+                            <>
+                                <header className="h-16 flex items-center justify-between px-6 border-b border-zinc-200 dark:border-white/5 bg-light-bg dark:bg-onyx z-20 shrink-0 sticky top-0">
+                                    <input type="text" value={activeLog.title} onChange={(e) => updateLog(activeLog.id, { title: e.target.value })} placeholder="What went wrong?" className="bg-transparent text-lg font-bold text-zinc-900 dark:text-white placeholder-zinc-300 dark:placeholder-zinc-700 focus:outline-none flex-1 mr-4" />
+                                    <div className="flex items-center gap-3">
+                                        {/* STATUS TOGGLE */}
+                                        <button onClick={() => updateLog(activeLog.id, { mastered: !activeLog.mastered })} className={`px-3 py-1.5 rounded-full text-xs font-bold border transition-colors flex items-center gap-2 ${activeLog.mastered ? 'bg-green-500/10 border-green-500/50 text-green-500' : 'bg-red-500/10 border-red-500/50 text-red-500'}`}>
+                                            {activeLog.mastered ? 'Mastered' : 'Needs Review'}
+                                        </button>
+                                        <div className="h-4 w-px bg-zinc-300 dark:bg-white/10"></div>
+                                        <button onClick={() => deleteLog(activeLog.id)} className="text-zinc-400 hover:text-red-500 p-2"><Icons.Trash className="w-5 h-5"/></button>
+                                    </div>
+                                </header>
+                                
+                                <div className="flex-1 overflow-hidden flex flex-col md:flex-row">
+                                    <div className="flex-1 flex flex-col h-full relative p-4 md:p-8 overflow-y-auto">
+                                        {/* METADATA BAR */}
+                                        <div className="flex flex-wrap gap-4 mb-6 bg-white dark:bg-zinc-900 p-4 rounded-xl border border-zinc-200 dark:border-white/5">
+                                            {/* SUBJECT SELECTOR */}
+                                            <div className="flex-1 min-w-[150px]">
+                                                <label className="text-[10px] uppercase font-bold text-zinc-500 mb-1 block">Subject</label>
+                                                <select value={activeLog.subject} onChange={(e) => updateLog(activeLog.id, { subject: e.target.value })} className="w-full bg-zinc-100 dark:bg-black/30 border border-zinc-200 dark:border-white/10 rounded px-2 py-1.5 text-sm dark:text-zinc-200 outline-none">
+                                                    {subjects.map(s => <option key={s} value={s}>{s}</option>)}
+                                                </select>
+                                            </div>
+                                            {/* NOTE LINKER */}
+                                            <div className="flex-[2] min-w-[200px]">
+                                                <label className="text-[10px] uppercase font-bold text-zinc-500 mb-1 block">Related Note</label>
+                                                <div className="flex gap-2">
+                                                    <select value={activeLog.linkedNoteId || ''} onChange={(e) => updateLog(activeLog.id, { linkedNoteId: e.target.value })} className="w-full bg-zinc-100 dark:bg-black/30 border border-zinc-200 dark:border-white/10 rounded px-2 py-1.5 text-sm dark:text-zinc-200 outline-none">
+                                                        <option value="">-- No Link --</option>
+                                                        {notes.filter(n => n.subject === activeLog.subject || activeLog.subject === 'General').map(n => (
+                                                            <option key={n.id} value={n.id}>{n.title || 'Untitled Note'}</option>
+                                                        ))}
+                                                    </select>
+                                                    {activeLog.linkedNoteId && (
+                                                        <a href={`note (5).html?note=${activeLog.linkedNoteId}`} target="_blank" className="p-1.5 bg-indigo-500/10 text-indigo-500 rounded border border-indigo-500/20 hover:bg-indigo-500/20" title="Open Note"><Icons.Link className="w-4 h-4"/></a>
+                                                    )}
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        {/* EDITOR AREA */}
+                                        <div className="flex-1 bg-white dark:bg-zinc-900 rounded-xl border border-zinc-200 dark:border-white/5 overflow-hidden flex flex-col shadow-sm">
+                                            <div className="bg-zinc-50 dark:bg-white/5 px-4 py-2 text-xs font-bold text-zinc-500 border-b border-zinc-200 dark:border-white/5 flex justify-between items-center">
+                                                <span>Question & Solution</span>
+                                                <span className="text-[10px] opacity-70">Paste images directly (Auto-saved to Drive)</span>
+                                            </div>
+                                            <div className="flex-1 relative">
+                                                <Editor 
+                                                    key={activeLog.id}
+                                                    logId={activeLog.id}
+                                                    initialContent={activeLog.content}
+                                                    onSave={(content) => updateLog(activeLog.id, { content })}
+                                                    saveToDriveFunction={saveToDrive}
+                                                    isDarkMode={isDarkMode}
+                                                />
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </>
+                        ) : (
+                            <div className="flex-1 flex items-center justify-center text-zinc-400 flex-col">
+                                <div className="w-16 h-16 bg-zinc-200 dark:bg-white/5 rounded-2xl flex items-center justify-center mb-4"><Icons.Bug className="w-8 h-8 opacity-50"/></div>
+                                <div className="text-xl font-bold mb-2 text-zinc-900 dark:text-white">No Mistake Selected</div>
+                                <div className="text-sm mb-4">Select an error log or create a new one.</div>
+                            </div>
+                        )}
+                    </div>
+                </div>
+            );
+        };
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(<App />);
+    </script>
+</body>
+</html>
