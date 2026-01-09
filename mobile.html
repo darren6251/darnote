@@ -3,793 +3,561 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <meta name="theme-color" content="#000000">
-    <title>darNote</title>
+    <title>darNote Ultimate</title>
+    <meta name="theme-color" content="#09090b">
     
-    <!-- DESKTOP REDIRECT LOGIC -->
-    <script>
-        if (window.innerWidth > 1024) {
-            if (!window.location.href.includes('index.html')) {
-                const currentPath = window.location.pathname;
-                const newPath = currentPath.replace('mobile.html', 'index.html');
-                // window.location.href = "index.html" + window.location.search; 
-            }
-        }
-    </script>
+    <!-- BRANDING -->
+    <link rel="icon" type="image/png" href="https://raw.githubusercontent.com/darren6251/darnote/refs/heads/main/darNote%20logo.png">
 
-    <!-- React & ReactDOM -->
+    <!-- LIBRARIES -->
     <script crossorigin src="https://unpkg.com/react@18/umd/react.development.js"></script>
     <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
-    <!-- Babel for JSX -->
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
-    <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/framer-motion@10.16.4/dist/framer-motion.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/spark-md5/3.0.2/spark-md5.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/marked/4.0.2/marked.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/tinymce/6.8.2/tinymce.min.js" referrerpolicy="origin"></script>
+
+    <!-- GOOGLE & FIREBASE -->
+    <script src="https://apis.google.com/js/api.js" async defer></script>
+    <script src="https://accounts.google.com/gsi/client" async defer></script>
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-app.js";
+        import { getAuth, signInWithPopup, GoogleAuthProvider, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-auth.js";
+        import { getFirestore, collection, doc, addDoc, updateDoc, deleteDoc, onSnapshot, getDoc, setDoc, arrayUnion, increment } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-firestore.js";
+        
+        const firebaseConfig = { apiKey: "AIzaSyAvPEac-03kE4oazvaq8K3T2gxLPsnZO20", authDomain: "darnote625.firebaseapp.com", projectId: "darnote625", storageBucket: "darnote625.firebasestorage.app", messagingSenderId: "16458322562", appId: "1:16458322562:web:8894d71f3e6c326eba1a9b" };
+        const app = initializeApp(firebaseConfig);
+        window.firebase = { app, auth: getAuth(app), db: getFirestore(app), signInWithPopup, GoogleAuthProvider, signOut, onAuthStateChanged, collection, doc, addDoc, updateDoc, deleteDoc, onSnapshot, getDoc, setDoc, arrayUnion, increment };
+    </script>
+
     <script>
         tailwind.config = {
             darkMode: 'class',
             theme: {
                 extend: {
                     colors: { 
-                        bg: '#000000', 
-                        surface: '#09090b', 
-                        surfaceHighlight: '#18181b',
+                        onyx: '#09090b', 
+                        surface: '#18181b', 
                         border: '#27272a', 
-                        accent: '#ffffff',
-                        glass: 'rgba(20, 20, 20, 0.7)' 
+                        brand: '#6366f1', // Indigo-500
+                        'brand-dark': '#4338ca',
+                        'mistake-red': '#7f1d1d'
                     },
-                    fontFamily: { sans: ['Inter', 'sans-serif'], mono: ['JetBrains Mono', 'monospace'], serif: ['Merriweather', 'serif'] },
-                    boxShadow: {
-                        'glow': '0 0 20px rgba(255, 255, 255, 0.1)',
-                        'float': '0 10px 40px -10px rgba(0,0,0,0.5)'
-                    }
+                    fontFamily: { sans: ['Inter', 'sans-serif'] },
+                    boxShadow: { 'glow': '0 0 20px rgba(99, 102, 241, 0.3)' }
                 }
             }
         }
     </script>
-    <!-- Framer Motion -->
-    <script src="https://unpkg.com/framer-motion@10.16.4/dist/framer-motion.js"></script>
-    <!-- KaTeX & Marked -->
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
-    <script src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
-    <!-- Firebase SDKs -->
-    <script type="module">
-        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-app.js";
-        import { getAuth, signInWithPopup, GoogleAuthProvider, signOut, onAuthStateChanged, signInAnonymously } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-auth.js";
-        import { getFirestore, collection, doc, addDoc, updateDoc, deleteDoc, onSnapshot, query, where, orderBy, getDocs, setDoc, arrayUnion, arrayRemove, collectionGroup } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-firestore.js";
-        
-        const firebaseConfig = { apiKey: "AIzaSyAvPEac-03kE4oazvaq8K3T2gxLPsnZO20", authDomain: "darnote625.firebaseapp.com", projectId: "darnote625", storageBucket: "darnote625.firebasestorage.app", messagingSenderId: "16458322562", appId: "1:16458322562:web:8894d71f3e6c326eba1a9b", measurementId: "G-NL9JX1NW80" };
-        const app = initializeApp(firebaseConfig);
-        window.firebase = { app, auth: getAuth(app), db: getFirestore(app), signInWithPopup, signInAnonymously, GoogleAuthProvider, signOut, onAuthStateChanged, collection, doc, addDoc, updateDoc, deleteDoc, setDoc, onSnapshot, query, where, orderBy, getDocs, arrayUnion, arrayRemove, collectionGroup };
-    </script>
-    <!-- Google Fonts -->
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500&family=Merriweather:wght@300;400;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
     <style>
-        body { background-color: #000; color: #fff; font-family: 'Inter', sans-serif; overflow: hidden; -webkit-tap-highlight-color: transparent; touch-action: pan-y; }
-        
-        /* SCROLLBAR HIDING */
-        .hide-scrollbar::-webkit-scrollbar { display: none; }
-        .hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
-
-        /* EDITOR STYLES */
-        .rich-editor-content { line-height: 1.7; font-size: 11pt; color: #e4e4e7; padding-bottom: 200px; }
-        .rich-editor-content p { margin-bottom: 0.8rem; }
-        .rich-editor-content h1 { font-size: 24pt; font-weight: 800; margin-bottom: 0.5rem; margin-top: 1.5rem; color: #fff; letter-spacing: -0.05em; }
-        .rich-editor-content h2 { font-size: 18pt; font-weight: 700; margin-bottom: 0.5rem; margin-top: 1.5rem; color: #f4f4f5; letter-spacing: -0.03em; }
-        .rich-editor-content h3 { font-size: 14pt; font-weight: 700; margin-bottom: 0.5rem; margin-top: 1rem; }
-        .rich-editor-content ul { list-style-type: disc; padding-left: 1.5rem; margin-bottom: 1rem; marker: #52525b; }
-        .rich-editor-content ol { list-style-type: decimal; padding-left: 1.5rem; margin-bottom: 1rem; color: #52525b; }
-        .rich-editor-content blockquote { border-left: 2px solid #3f3f46; padding-left: 1rem; margin: 1.5rem 0; font-style: italic; color: #a1a1aa; }
-        .rich-editor-content a { color: #fff; text-decoration: underline; text-decoration-color: #52525b; text-underline-offset: 4px; font-weight: 500; transition: all 0.2s; }
-        .rich-editor-content a:hover { text-decoration-color: #fff; }
-        .rich-editor-content code { background: #18181b; padding: 0.2em 0.4em; border-radius: 6px; font-family: 'JetBrains Mono', monospace; font-size: 0.85em; border: 1px solid #27272a; color: #e4e4e7; }
-        
-        /* Glass Effects */
-        .glass-panel { background: rgba(15, 15, 15, 0.6); backdrop-filter: blur(25px); -webkit-backdrop-filter: blur(25px); border: 1px solid rgba(255, 255, 255, 0.08); }
-        .glass-dock { background: rgba(10, 10, 10, 0.85); backdrop-filter: blur(40px); -webkit-backdrop-filter: blur(40px); border: 1px solid rgba(255, 255, 255, 0.1); box-shadow: 0 20px 50px -10px rgba(0,0,0,0.8); }
-        
-        .page-simulation {
-            min-height: 90vh;
-            /* No background for simulation to feel cleaner */
-            padding: 24px 8px;
-        }
-
-        /* Message Bubbles for AI */
-        .message-content p { margin-bottom: 0.5em; }
-        .message-content pre { background: rgba(0,0,0,0.5); padding: 0.8em; border-radius: 8px; overflow-x: auto; margin-top: 0.5em; border: 1px solid #27272a; }
-        
-        /* Gradient Text */
-        .gradient-text { background: linear-gradient(to right, #fff, #a1a1aa); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+        body { background-color: #09090b; color: #f4f4f5; font-family: 'Inter', sans-serif; overflow: hidden; -webkit-tap-highlight-color: transparent; }
+        /* Hide scrollbar for clean mobile look */
+        ::-webkit-scrollbar { width: 4px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: #27272a; border-radius: 2px; }
+        .glass { background: rgba(24, 24, 27, 0.85); backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px); border-top: 1px solid rgba(255,255,255,0.05); }
+        .tox-tinymce { border: none !important; }
+        .tox .tox-toolbar { background: #18181b !important; border-bottom: 1px solid #27272a !important; }
+        .tox .tox-edit-area__iframe { background: #09090b !important; }
+        .tox .tox-statusbar { display: none !important; }
+        .loader { width: 48px; height: 48px; border: 5px solid #FFF; border-bottom-color: #6366f1; border-radius: 50%; display: inline-block; box-sizing: border-box; animation: rotation 1s linear infinite; }
+        @keyframes rotation { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
     </style>
 </head>
 <body>
     <div id="root"></div>
+
     <script type="text/babel">
-        const { useState, useEffect, useRef, useMemo, useCallback } = React;
+        // --- CONSTANTS & CONFIG ---
+        const GDRIVE_API_KEY = "AIzaSyCScFR_D0snZ6hrHob5fUQM7Y2NhK-kTIA"; 
+        const GDRIVE_CLIENT_ID = "256215327792-oglegui0q8qj507oao2c2733thcl9lrc.apps.googleusercontent.com"; 
+
+        const { useState, useEffect, useRef, useMemo } = React;
         const { motion, AnimatePresence } = window.Motion;
 
-        // --- ICONS (Refined) ---
+        // --- ICONS (Feather Style) ---
         const Icons = {
-            Plus: (props) => <svg {...props} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12h14"/><path d="M12 5v14"/></svg>,
-            ChevronLeft: (props) => <svg {...props} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="m15 18-6-6 6-6"/></svg>,
-            Home: (props) => <svg {...props} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>,
-            Search: (props) => <svg {...props} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>,
-            Settings: (props) => <svg {...props} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>,
-            Star: (props) => <svg {...props} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>,
-            Folder: (props) => <svg {...props} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M20 20a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-7.9a2 2 0 0 1-1.69-.9L9.6 3.9A2 2 0 0 0 7.93 3H4a2 2 0 0 0-2 2v13a2 2 0 0 0 2 2Z"/></svg>,
-            Trash: (props) => <svg {...props} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/></svg>,
-            Bot: (props) => <svg {...props} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 8V4H8"/><rect width="16" height="12" x="4" y="8" rx="2"/><path d="M2 14h2"/><path d="M20 14h2"/><path d="M15 13v2"/><path d="M9 13v2"/></svg>,
-            Sparkles: (props) => <svg {...props} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m12 3-1.912 5.813a2 2 0 0 1-1.275 1.275L3 12l5.813 1.912a2 2 0 0 1 1.275 1.275L12 21l1.912-5.813a2 2 0 0 1 1.275-1.275L12 3Z"/><path d="M5 3v4"/><path d="M9 3v4"/><path d="M3 5h4"/><path d="M3 9h4"/></svg>,
-            Send: (props) => <svg {...props} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="22" y1="2" x2="11" y2="13"></line><polygon points="22 2 15 22 11 13 2 9 22 2"></polygon></svg>,
-            X: (props) => <svg {...props} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>,
-            Edit: (props) => <svg {...props} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>,
-            Check: (props) => <svg {...props} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>,
-            Save: (props) => <svg {...props} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>,
-            Users: (props) => <svg {...props} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>,
-            Share: (props) => <svg {...props} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"/><polyline points="16 6 12 2 8 6"/><line x1="12" y1="2" x2="12" y2="15"/></svg>,
+            Home: (p) => <svg {...p} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path><polyline points="9 22 9 12 15 12 15 22"></polyline></svg>,
+            Book: (p) => <svg {...p} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"></path><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"></path></svg>,
+            Bug: (p) => <svg {...p} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="1" y="1" width="22" height="22" rx="5" ry="5"></rect><path d="M12 1v22"></path><path d="M1 12h22"></path></svg>, 
+            Plus: (p) => <svg {...p} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>,
+            User: (p) => <svg {...p} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>,
+            ChevronLeft: (p) => <svg {...p} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="15 18 9 12 15 6"></polyline></svg>,
+            Check: (p) => <svg {...p} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>,
+            X: (p) => <svg {...p} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>,
+            Camera: (p) => <svg {...p} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"></path><circle cx="12" cy="13" r="4"></circle></svg>,
+            Bot: (p) => <svg {...p} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="1" y="4" width="22" height="16" rx="2" ry="2"></rect><line x1="1" y1="10" x2="23" y2="10"></line></svg>,
+            Google: (p) => <svg {...p} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 22C6.477 22 2 17.523 2 12S6.477 2 12 2s10 4.477 10 10-4.477 10-10 10z"/><path d="M12 11h9c.1 1.4.1 2.9-.4 4.3-1.1 3-4.1 5.3-7.6 5.6-5 .5-9.4-3.1-9.9-8.1C2.5 7.1 6 2.3 11 2c2.5-.1 4.9.9 6.7 2.6l-2.7 2.8c-1-.7-2.3-1.1-3.6-1-2.9.2-5.1 2.8-4.9 5.7.2 2.6 2.4 4.7 5 4.7 2 0 3.6-1.1 4.3-2.9H12v-3z" fill="currentColor"/></svg>,
+            Lock: (p) => <svg {...p} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>,
         };
 
-        // --- AI API (Kept Same) ---
+        // --- GEMINI PROXY ---
         const callGemini = async (prompt, systemInstruction = "") => {
             const proxyUrl = "https://gemini-proxy-157237873670.us-central1.run.app/proxy";
-            const payload = { contents: [{ parts: [{ text: `${systemInstruction}\n\n${prompt}` }] }] };
+            const payload = { contents: [{ parts: [{ text: `${systemInstruction}\n\nUser: ${prompt}` }] }] };
             try {
                 const res = await fetch(proxyUrl, { method: 'POST', body: JSON.stringify(payload), headers: {'Content-Type': 'application/json'} });
                 if(!res.ok) throw new Error("API Error");
                 const data = await res.json();
-                return data.candidates?.[0]?.content?.parts?.[0]?.text || "I'm drawing a blank here.";
-            } catch(e) { return "Sorry, I can't reach the cloud right now."; }
+                return data.candidates?.[0]?.content?.parts?.[0]?.text || "No response generated.";
+            } catch(e) { return "Error: " + e.message; }
+        };
+
+        // --- HOOKS ---
+        const useGoogleDrive = () => {
+            const [tokenClient, setTokenClient] = useState(null);
+            
+            useEffect(() => {
+                const loadGapi = async () => {
+                    if (window.gapi) {
+                        await new Promise(r => window.gapi.load('client', r));
+                        await window.gapi.client.init({ apiKey: GDRIVE_API_KEY, discoveryDocs: ['https://www.googleapis.com/discovery/v1/apis/drive/v3/rest'] });
+                    }
+                };
+                loadGapi();
+                if (window.google && window.google.accounts) {
+                    const client = window.google.accounts.oauth2.initTokenClient({ client_id: GDRIVE_CLIENT_ID, scope: 'https://www.googleapis.com/auth/drive.file', callback: () => {} });
+                    setTokenClient(client);
+                }
+            }, []);
+
+            const getAccessToken = () => new Promise((resolve, reject) => {
+                if (!tokenClient) return reject("Auth not initialized");
+                const existing = window.gapi.client.getToken();
+                if (existing && Date.now() < existing.expiry) return resolve(existing.access_token);
+                tokenClient.callback = (resp) => { if (resp.error) reject(resp); resolve(resp.access_token); };
+                tokenClient.requestAccessToken({ prompt: '' });
+            });
+
+            const getOrCreateFolder = async (folderName, accessToken) => {
+                const q = `mimeType='application/vnd.google-apps.folder' and name='${folderName}' and trashed=false`;
+                const search = await fetch(`https://www.googleapis.com/drive/v3/files?q=${encodeURIComponent(q)}`, { headers: { Authorization: `Bearer ${accessToken}` }});
+                const data = await search.json();
+                if (data.files?.length > 0) return data.files[0].id;
+                const create = await fetch('https://www.googleapis.com/drive/v3/files', { method: 'POST', headers: { Authorization: `Bearer ${accessToken}`, 'Content-Type': 'application/json' }, body: JSON.stringify({ name: folderName, mimeType: 'application/vnd.google-apps.folder' }) });
+                const createdData = await create.json();
+                return createdData.id;
+            };
+
+            const calculateMD5 = (blob) => new Promise((resolve, reject) => {
+                if (!window.SparkMD5) return resolve(null);
+                const reader = new FileReader();
+                reader.onload = (e) => { const spark = new SparkMD5.ArrayBuffer(); spark.append(e.target.result); resolve(spark.end()); };
+                reader.onerror = reject;
+                reader.readAsArrayBuffer(blob);
+            });
+
+            const saveToDrive = async (blob, filename) => {
+                const token = await getAccessToken();
+                const parentId = await getOrCreateFolder('darNote_Images', token);
+                
+                // Deduplication
+                const md5Hash = await calculateMD5(blob);
+                if (md5Hash) {
+                    const listQuery = `'${parentId}' in parents and trashed = false and mimeType contains 'image/'`;
+                    const listReq = await fetch(`https://www.googleapis.com/drive/v3/files?q=${encodeURIComponent(listQuery)}&orderBy=createdTime desc&pageSize=50&fields=files(id,md5Checksum,webContentLink,webViewLink)`, { headers: { Authorization: `Bearer ${token}` } });
+                    const listData = await listReq.json();
+                    const contentMatch = listData.files?.find(f => f.md5Checksum === md5Hash);
+                    if (contentMatch) return `https://lh3.googleusercontent.com/d/${contentMatch.id}`;
+                }
+
+                const metadata = { name: filename, mimeType: blob.type, parents: [parentId] };
+                const form = new FormData();
+                form.append('metadata', new Blob([JSON.stringify(metadata)], { type: 'application/json' }));
+                form.append('file', blob);
+                
+                const uploadRes = await fetch('https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&fields=id', { method: 'POST', headers: { Authorization: `Bearer ${token}` }, body: form });
+                const fileData = await uploadRes.json();
+                await fetch(`https://www.googleapis.com/drive/v3/files/${fileData.id}/permissions`, { method: 'POST', headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' }, body: JSON.stringify({ role: 'reader', type: 'anyone' }) });
+                
+                return `https://lh3.googleusercontent.com/d/${fileData.id}`;
+            };
+            return { saveToDrive };
+        };
+
+        const useData = (user, type) => {
+            const [data, setData] = useState([]);
+            const [loading, setLoading] = useState(true);
+            useEffect(() => {
+                if(!user) return;
+                const colName = type === 'notes' ? 'notes' : 'error_logs';
+                const q = window.firebase.collection(window.firebase.db, 'artifacts', 'darnote-app', 'users', user.uid, colName);
+                const unsub = window.firebase.onSnapshot(q, (snap) => {
+                    const items = snap.docs.map(d => ({id: d.id, ...d.data()})).sort((a,b) => new Date(b.createdAt || b.updatedAt || 0) - new Date(a.createdAt || a.updatedAt || 0));
+                    setData(items);
+                    setLoading(false);
+                });
+                return () => unsub();
+            }, [user, type]);
+            return { data, loading };
         };
 
         // --- COMPONENTS ---
 
-        const TypingDemo = () => {
-            const [displayText, setDisplayText] = useState("");
-            const [phase, setPhase] = useState("typing_bad"); // typing_bad, struck, ai_badge, typing_good
-            
-            const badText = "NO2 acid";
-            const goodText = "Nitrogen dioxide (NO₂) is an acidic gas that contributes significantly to acid rain formation.";
-
-            useEffect(() => {
-                let timeout;
-                
-                if (phase === "typing_bad") {
-                    if (displayText.length < badText.length) {
-                        timeout = setTimeout(() => {
-                            setDisplayText(badText.slice(0, displayText.length + 1));
-                        }, 100);
-                    } else {
-                        timeout = setTimeout(() => setPhase("struck"), 800);
-                    }
-                } else if (phase === "struck") {
-                    timeout = setTimeout(() => setPhase("ai_badge"), 1000);
-                } else if (phase === "ai_badge") {
-                    timeout = setTimeout(() => {
-                        setDisplayText("");
-                        setPhase("typing_good");
-                    }, 1500);
-                } else if (phase === "typing_good") {
-                    if (displayText.length < goodText.length) {
-                        timeout = setTimeout(() => {
-                            setDisplayText(goodText.slice(0, displayText.length + 1));
-                        }, 40);
-                    } else {
-                        // Loop back after long pause
-                        timeout = setTimeout(() => {
-                             setDisplayText("");
-                             setPhase("typing_bad");
-                        }, 5000);
-                    }
-                }
-
-                return () => clearTimeout(timeout);
-            }, [displayText, phase]);
-
-            return (
-                <div className="w-full max-w-sm bg-surfaceHighlight border border-white/10 rounded-2xl p-6 mb-8 relative overflow-hidden min-h-[140px] flex flex-col justify-center shadow-2xl">
-                    
-                    {/* Phase 1 & 2: Bad Text & Strike */}
-                    {(phase === "typing_bad" || phase === "struck" || phase === "ai_badge") && (
-                        <div className="relative self-start">
-                            <span className="text-xl text-zinc-300 font-serif relative z-10">{displayText || badText}</span>
-                            {/* Strikethrough Line */}
-                            {phase !== "typing_bad" && (
-                                <motion.div 
-                                    initial={{ width: 0 }} 
-                                    animate={{ width: "100%" }} 
-                                    transition={{ duration: 0.4, ease: "easeInOut" }}
-                                    className="absolute top-1/2 left-0 h-[2px] bg-red-500 z-20"
-                                />
-                            )}
-                        </div>
-                    )}
-
-                    {/* Phase 3: AI Badge */}
-                    <AnimatePresence>
-                        {phase === "ai_badge" && (
-                            <motion.div 
-                                initial={{ opacity: 0, scale: 0.8, y: 10 }}
-                                animate={{ opacity: 1, scale: 1, y: 0 }}
-                                exit={{ opacity: 0, scale: 0.8 }}
-                                className="absolute inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center z-30"
-                            >
-                                <div className="flex items-center gap-2 bg-white text-black px-4 py-2 rounded-full font-bold shadow-glow">
-                                    <Icons.Sparkles className="w-4 h-4 animate-spin-slow"/>
-                                    <span>AI Polish</span>
-                                </div>
-                            </motion.div>
-                        )}
-                    </AnimatePresence>
-
-                    {/* Phase 4: Good Text */}
-                    {phase === "typing_good" && (
-                        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
-                            <span className="text-sm leading-relaxed text-white font-medium font-sans">
-                                {displayText}
-                                <span className="inline-block w-1.5 h-4 bg-white ml-1 animate-pulse align-middle"/>
-                            </span>
-                        </motion.div>
-                    )}
-                </div>
-            );
-        };
-
-        const MessageBubble = ({ text, isUser }) => {
-            const bubbleRef = useRef(null);
-            useEffect(() => {
-                if (bubbleRef.current && !isUser) {
-                    if (window.marked) bubbleRef.current.innerHTML = window.marked.parse(text); else bubbleRef.current.textContent = text;
-                } else if (bubbleRef.current) bubbleRef.current.textContent = text;
-            }, [text, isUser]);
-            return (
-                <motion.div 
-                    initial={{ scale: 0.9, opacity: 0 }} 
-                    animate={{ scale: 1, opacity: 1 }} 
-                    className={`message-content text-sm p-3 rounded-2xl border ${isUser ? 'bg-white text-black border-white rounded-br-sm' : 'bg-surfaceHighlight border-white/10 text-zinc-200 rounded-bl-sm'}`}
-                >
-                    <div ref={bubbleRef} className={isUser ? "whitespace-pre-wrap font-medium" : "prose prose-invert prose-sm"} />
-                </motion.div>
-            );
-        };
-
-        const AIChatOverlay = ({ isOpen, onClose, contextNote }) => {
-             const [messages, setMessages] = useState([{role: 'ai', text: 'Ask me anything about your notes.'}]);
-             const [input, setInput] = useState('');
-             const [isTyping, setIsTyping] = useState(false);
-             const messagesEndRef = useRef(null);
-             const textareaRef = useRef(null);
-
-             useEffect(() => { if(isOpen) scrollToBottom(); }, [messages, isOpen]);
-
-             const scrollToBottom = () => {
-                 messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
-             }
-
-             // Auto-resize textarea
-             useEffect(() => {
-                 const el = textareaRef.current;
-                 if (el) {
-                     el.style.height = 'auto'; // Reset height
-                     el.style.height = Math.min(el.scrollHeight, 120) + 'px'; // Set new height, max 120px
-                 }
-             }, [input]);
-
-             const handleSend = async () => {
-                 if(!input.trim()) return;
-                 const userText = input;
-                 setMessages(prev => [...prev, { role: 'user', text: userText }]);
-                 setInput('');
-                 setIsTyping(true);
-                 
-                 // Reset height after send
-                 if(textareaRef.current) textareaRef.current.style.height = 'auto';
-
-                 const systemPrompt = `You are a helpful assistant in a dark-mode note app. Context: "${contextNote?.title || 'None'}", Content: "${contextNote?.content?.replace(/<[^>]*>/g, '').slice(0, 500) || 'None'}". Keep answers concise for mobile and as short but precise as possible (can also be one word). Use markdown.`;
-                 const response = await callGemini(userText, systemPrompt);
-                 setMessages(prev => [...prev, { role: 'ai', text: response }]);
-                 setIsTyping(false);
-             };
-
-             const handleFocus = () => {
-                 // Slight delay to allow keyboard to pop up on mobile
-                 setTimeout(scrollToBottom, 300);
-             };
-
-             return (
-                 <AnimatePresence>
-                    {isOpen && (
-                        <motion.div 
-                            initial={{ y: "100%" }} 
-                            animate={{ y: 0 }} 
-                            exit={{ y: "100%" }} 
-                            transition={{ type: "spring", damping: 25, stiffness: 200 }} 
-                            className="fixed inset-0 z-[60] bg-black/95 backdrop-blur-xl flex flex-col h-[100dvh]" /* using dvh for mobile viewports */
-                        >
-                            <div className="h-16 flex items-center justify-between px-6 shrink-0 border-b border-white/5">
-                                <div className="flex items-center gap-3">
-                                    <div className="w-8 h-8 rounded-full bg-gradient-to-tr from-indigo-500 to-purple-500 flex items-center justify-center">
-                                        <Icons.Sparkles className="text-white w-4 h-4"/>
-                                    </div>
-                                    <span className="font-bold text-lg tracking-tight">AI Assistant</span>
-                                </div>
-                                <button onClick={onClose} className="p-2 bg-white/5 rounded-full hover:bg-white/10 transition-colors"><Icons.ChevronLeft className="rotate-[-90deg]"/></button>
-                            </div>
-                            
-                            <div className="flex-1 overflow-y-auto p-4 space-y-4">
-                                {messages.map((m, i) => (
-                                    <div key={i} className={`flex ${m.role === 'user' ? 'justify-end' : 'justify-start'}`}>
-                                        <div className="max-w-[85%]">
-                                            <MessageBubble text={m.text} isUser={m.role === 'user'} />
-                                        </div>
-                                    </div>
-                                ))}
-                                {isTyping && <div className="text-xs text-zinc-500 animate-pulse ml-4 font-mono">Thinking...</div>}
-                                <div ref={messagesEndRef} className="h-4"/> 
-                            </div>
-                            
-                            <div className="p-4 border-t border-white/5 bg-black pb-[max(20px,env(safe-area-inset-bottom))]">
-                                <div className="flex gap-2 items-end relative">
-                                    <textarea 
-                                        ref={textareaRef}
-                                        value={input} 
-                                        onChange={e => setInput(e.target.value)} 
-                                        onFocus={handleFocus}
-                                        rows={1}
-                                        placeholder="Ask AI..." 
-                                        className="flex-1 bg-surfaceHighlight border border-white/10 rounded-[20px] px-5 py-3.5 text-sm focus:outline-none focus:border-white/30 transition-colors text-white placeholder-zinc-600 resize-none overflow-hidden min-h-[48px] max-h-[120px]"
-                                        style={{ lineHeight: '1.4' }}
-                                    />
-                                    <button onClick={handleSend} className="bg-white text-black w-12 h-12 rounded-full flex items-center justify-center hover:scale-105 transition-transform shrink-0 mb-[1px]"><Icons.Send className="w-5 h-5 ml-0.5"/></button>
-                                </div>
-                            </div>
-                        </motion.div>
-                    )}
-                 </AnimatePresence>
-             );
-        };
-
-        const NoteCard = ({ note, onClick, index }) => (
-            <motion.div 
-                initial={{ opacity: 0, scale: 0.95, y: 20 }} 
-                animate={{ opacity: 1, scale: 1, y: 0 }} 
-                transition={{ delay: index * 0.05, type: "spring", stiffness: 200, damping: 20 }} 
-                whileTap={{ scale: 0.97 }} 
-                onClick={onClick} 
-                className="glass-panel p-5 rounded-3xl mb-3 relative overflow-hidden group hover:border-white/20 transition-colors"
-            >
-                <div className="flex justify-between items-start mb-3">
-                    <h3 className="font-bold text-white text-lg leading-tight truncate pr-4">{note.title || 'Untitled Note'}</h3>
-                    {note.isFavorite && <Icons.Star className="w-4 h-4 text-yellow-500 fill-yellow-500 flex-shrink-0" />}
-                </div>
-                <p className="text-sm text-zinc-400 line-clamp-2 h-10 leading-relaxed font-normal">{note.content ? note.content.replace(/<[^>]*>/g, '') : 'Empty note'}</p>
-                <div className="flex justify-between items-center mt-4">
-                    <div className="flex gap-2">
-                        <span className={`text-[10px] px-2.5 py-1 rounded-full font-medium tracking-wide uppercase ${note.isShared ? 'bg-indigo-500/20 text-indigo-300 border border-indigo-500/30' : 'bg-white/5 text-zinc-500 border border-white/5'}`}>
-                            {note.isShared ? 'Shared' : note.subject || 'Personal'}
-                        </span>
-                    </div>
-                    <span className="text-[10px] text-zinc-600 font-mono">{new Date(note.updatedAt).toLocaleDateString(undefined, {month:'short', day:'numeric'})}</span>
-                </div>
-            </motion.div>
-        );
-
-        // --- EDITOR COMPONENT ---
-        const NoteEditor = ({ note, onSave, onBack, onDelete, onAiToggle, onShare }) => {
-            const editorRef = useRef(null);
-            const isComposing = useRef(false);
-            const saveTimeout = useRef(null);
-            const [saveStatus, setSaveStatus] = useState('saved');
-
-            useEffect(() => {
-                if (editorRef.current && note) {
-                    editorRef.current.innerHTML = note.content || '';
-                }
-            }, [note.id]); 
-
-            useEffect(() => {
-                const interval = setInterval(() => {
-                    if (editorRef.current && saveStatus === 'unsaved') {
-                        triggerSave(editorRef.current.innerHTML);
-                    }
-                }, 5 * 60 * 1000);
-                return () => clearInterval(interval);
-            }, [saveStatus]);
-
-            const triggerSave = (content) => {
-                setSaveStatus('saving');
-                onSave(content);
-                setTimeout(() => setSaveStatus('saved'), 800);
-            };
-
-            const handleInput = () => {
-                if (isComposing.current) return;
-                setSaveStatus('unsaved');
-                if (saveTimeout.current) clearTimeout(saveTimeout.current);
-                saveTimeout.current = setTimeout(() => {
-                    if (editorRef.current) triggerSave(editorRef.current.innerHTML);
-                }, 2000);
-            };
-
-            const handleCompositionStart = () => { isComposing.current = true; };
-            const handleCompositionEnd = (e) => { isComposing.current = false; handleInput(); };
-
-            return (
-                <motion.div 
-                    initial={{ y: "100%", borderRadius: "24px 24px 0 0" }} 
-                    animate={{ y: 0, borderRadius: "0px" }} 
-                    exit={{ y: "100%", borderRadius: "24px 24px 0 0" }} 
-                    transition={{ type: "spring", damping: 25, stiffness: 200 }} 
-                    className="fixed inset-0 z-50 bg-black flex flex-col"
-                >
-                    <div className="h-16 flex items-center justify-between px-2 shrink-0 glass-dock backdrop-blur-xl border-b border-white/5 z-50">
-                        <button onClick={onBack} className="p-3 text-zinc-400 hover:text-white transition-colors"><Icons.ChevronLeft /></button>
-                        <div className="flex-1 flex flex-col items-center justify-center overflow-hidden px-4">
-                             <input value={note.title} onChange={(e) => onSave(null, e.target.value)} placeholder="Untitled Note" className="bg-transparent font-bold text-lg w-full outline-none text-center text-white placeholder-zinc-700"/>
-                             <motion.div 
-                                key={saveStatus}
-                                initial={{ opacity: 0, y: 5 }} 
-                                animate={{ opacity: 1, y: 0 }}
-                                className={`text-[10px] font-mono flex items-center gap-1 ${saveStatus === 'unsaved' ? 'text-yellow-500' : 'text-zinc-600'}`}
-                             >
-                                {saveStatus === 'saving' ? 'Syncing...' : saveStatus === 'unsaved' ? 'Unsaved' : 'Synced'}
-                             </motion.div>
-                        </div>
-                         <div className="flex gap-1">
-                            <button onClick={onShare} className="p-2.5 text-zinc-400 hover:text-white rounded-full hover:bg-white/5"><Icons.Users /></button>
-                            <button onClick={onAiToggle} className="p-2.5 text-zinc-400 hover:text-white rounded-full hover:bg-white/5"><Icons.Sparkles /></button>
-                            <button onClick={onDelete} className="p-2.5 text-zinc-400 hover:text-red-500 rounded-full hover:bg-white/5"><Icons.Trash /></button>
-                         </div>
-                    </div>
-                    <div className="flex-1 overflow-y-auto bg-black relative">
-                         <div className="p-6 min-h-full flex justify-center">
-                            <div className="w-full max-w-lg pb-32">
-                                 <div 
-                                    ref={editorRef} 
-                                    contentEditable 
-                                    className="rich-editor-content outline-none" 
-                                    onInput={handleInput} 
-                                    onCompositionStart={handleCompositionStart}
-                                    onCompositionEnd={handleCompositionEnd}
-                                    placeholder="Start writing..."
-                                />
-                            </div>
-                         </div>
-                    </div>
-                </motion.div>
-            );
-        };
-
-        const ShareModal = ({ note, onClose, onShare, onUnshare }) => {
-            const [email, setEmail] = useState('');
-            return (
-                <div className="fixed inset-0 z-[70] flex items-center justify-center bg-black/60 backdrop-blur-sm p-6">
-                    <motion.div initial={{scale: 0.9, opacity: 0}} animate={{scale: 1, opacity: 1}} className="bg-[#09090b] w-full max-w-sm rounded-[32px] border border-white/10 p-6 shadow-2xl">
-                        <div className="flex justify-between items-center mb-6">
-                            <h2 className="text-xl font-bold text-white flex items-center gap-2">Collaborate</h2>
-                            <button onClick={onClose} className="bg-white/5 p-2 rounded-full"><Icons.X className="w-5 h-5"/></button>
-                        </div>
-                        
-                        <div className="space-y-6">
-                            <div>
-                                <label className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest mb-2 block">Invite by Email</label>
-                                <div className="flex gap-2">
-                                    <input value={email} onChange={e => setEmail(e.target.value)} placeholder="friend@gmail.com" className="flex-1 bg-black border border-white/10 rounded-xl px-4 py-3 text-white outline-none focus:border-white/50 text-sm transition-colors"/>
-                                    <button onClick={() => {if(email) {onShare(email); setEmail('');}}} className="bg-white text-black px-4 rounded-xl font-bold text-sm hover:scale-105 transition-transform"><Icons.Plus/></button>
-                                </div>
-                            </div>
-                            
-                            <div>
-                                <label className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest mb-3 block">Access List</label>
-                                <div className="space-y-2">
-                                    {(!note.sharedWith || note.sharedWith.length === 0) && <div className="text-zinc-600 text-sm italic py-2">Just you for now.</div>}
-                                    {note.sharedWith && note.sharedWith.map(e => (
-                                        <div key={e} className="flex justify-between items-center bg-white/5 p-3 rounded-xl text-sm border border-white/5">
-                                            <div className="flex items-center gap-3">
-                                                <div className="w-6 h-6 rounded-full bg-gradient-to-br from-purple-500 to-indigo-500 flex items-center justify-center text-[10px] font-bold">{e[0].toUpperCase()}</div>
-                                                <span className="text-zinc-300 truncate max-w-[160px]">{e}</span>
-                                            </div>
-                                            <button onClick={() => onUnshare(e)} className="text-zinc-500 hover:text-red-500"><Icons.X className="w-4 h-4"/></button>
-                                        </div>
-                                    ))}
-                                </div>
-                            </div>
-                        </div>
-                    </motion.div>
-                </div>
-            )
-        }
-
-        const BottomNav = ({ activeTab, onChange, onFab }) => (
-            <div className="fixed bottom-8 left-6 right-6 h-[72px] glass-dock rounded-[24px] flex items-center justify-around z-40 px-2">
-                <button onClick={() => onChange('home')} className={`relative p-3 rounded-2xl transition-all duration-300 ${activeTab === 'home' ? 'bg-white/10 text-white' : 'text-zinc-500 hover:text-zinc-300'}`}>
-                    <Icons.Home className="w-6 h-6" />
-                    {activeTab === 'home' && <motion.div layoutId="nav-glow" className="absolute inset-0 bg-white/5 blur-md rounded-2xl -z-10"/>}
-                </button>
-                <button onClick={() => onChange('search')} className={`relative p-3 rounded-2xl transition-all duration-300 ${activeTab === 'search' ? 'bg-white/10 text-white' : 'text-zinc-500 hover:text-zinc-300'}`}>
-                    <Icons.Search className="w-6 h-6" />
-                </button>
-                <div className="relative -top-8 group">
-                    <motion.button whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }} onClick={onFab} className="w-16 h-16 bg-white rounded-[20px] flex items-center justify-center text-black shadow-[0_0_30px_rgba(255,255,255,0.3)] border-4 border-black relative z-10">
-                        <Icons.Plus className="w-8 h-8" />
+        const Splash = ({ onLogin }) => (
+            <div className="h-screen w-full flex flex-col items-center justify-center bg-onyx relative overflow-hidden px-6">
+                <div className="absolute top-[-20%] right-[-20%] w-[80%] h-[80%] bg-brand/20 rounded-full blur-[100px] animate-pulse"></div>
+                <motion.div initial={{ y: 20, opacity: 0 }} animate={{ y: 0, opacity: 1 }} transition={{ duration: 0.8 }} className="z-10 text-center">
+                    <img src="https://raw.githubusercontent.com/darren6251/darnote/refs/heads/main/darNote%20logo.png" className="w-24 h-24 mx-auto mb-8 drop-shadow-glow" />
+                    <h1 className="text-4xl font-bold mb-2 tracking-tight text-white">darNote <span className="text-brand">Ultimate</span></h1>
+                    <p className="text-zinc-400 mb-10 text-lg">Your Second Brain.<br/>Now with fewer excuses.</p>
+                    <motion.button whileTap={{ scale: 0.95 }} onClick={onLogin} className="w-full bg-white text-black py-4 rounded-2xl font-bold text-lg flex items-center justify-center gap-3 shadow-xl">
+                        <Icons.Google className="w-6 h-6"/> Sign In
                     </motion.button>
-                </div>
-                <button onClick={() => onChange('ai')} className={`relative p-3 rounded-2xl transition-all duration-300 ${activeTab === 'ai' ? 'bg-white/10 text-white' : 'text-zinc-500 hover:text-zinc-300'}`}>
-                    <Icons.Bot className="w-6 h-6" />
-                </button>
-                 <button onClick={() => onChange('settings')} className={`relative p-3 rounded-2xl transition-all duration-300 ${activeTab === 'settings' ? 'bg-white/10 text-white' : 'text-zinc-500 hover:text-zinc-300'}`}>
-                    <Icons.Settings className="w-6 h-6" />
-                </button>
+                </motion.div>
             </div>
         );
 
-        const ProfileModal = ({ user, profile, onClose, onSave }) => {
-            const [data, setData] = useState({ displayName: profile?.displayName || user.displayName || '', role: profile?.role || 'Creator', bio: profile?.bio || '' });
+        // --- AI CHAT COMPONENT (The "Like EL" Version) ---
+        const AIChat = ({ activeLog, onClose, user }) => {
+            const [messages, setMessages] = useState([{role: 'ai', text: "I see your failure. How can I help you understand it?"}]);
+            const [input, setInput] = useState("");
+            const [loading, setLoading] = useState(false);
+            const [dailyCount, setDailyCount] = useState(0);
+            const messagesEndRef = useRef(null);
+            const QUOTA_LIMIT = 10;
+            const todayDate = new Date().toISOString().split('T')[0];
+
+            useEffect(() => {
+                if(!user) return;
+                const docRef = window.firebase.doc(window.firebase.db, 'artifacts', 'darnote-app', 'users', user.uid, 'ai_usage', todayDate);
+                const unsub = window.firebase.onSnapshot(docRef, (doc) => {
+                    if (doc.exists()) { setDailyCount(doc.data().count || 0); } else { setDailyCount(0); }
+                });
+                return () => unsub();
+            }, [user, todayDate]);
+
+            useEffect(() => { messagesEndRef.current?.scrollIntoView({ behavior: "smooth" }); }, [messages]);
+
+            const handleSend = async () => {
+                if(!input.trim()) return;
+                if (dailyCount >= QUOTA_LIMIT) {
+                    setMessages(prev => [...prev, {role: 'ai', text: "<span class='text-red-500 font-bold'>DAILY LIMIT REACHED.</span> Come back tomorrow!"}]);
+                    return;
+                }
+                const userMsg = input;
+                setMessages(prev => [...prev, {role: 'user', text: userMsg}]);
+                setInput("");
+                setLoading(true);
+
+                // Increment Quota
+                const docRef = window.firebase.doc(window.firebase.db, 'artifacts', 'darnote-app', 'users', user.uid, 'ai_usage', todayDate);
+                await window.firebase.setDoc(docRef, { count: window.firebase.increment(1), date: todayDate }, { merge: true });
+
+                // Construct Context
+                const context = activeLog ? `
+                    Subject: ${activeLog.subject || 'N/A'}
+                    Question Type: ${activeLog.questionType || 'N/A'}
+                    Student's Explanation: ${activeLog.explanation || 'None'}
+                    Image Url: ${activeLog.imageUrl || "No image provided"}
+                ` : 'General Chat';
+                
+                const systemPrompt = `You are a witty, slightly roast-heavy tutor. The student is looking at their mistake. Context: ${context}. Keep it short. Use markdown.`;
+                const response = await callGemini(userMsg, systemPrompt);
+                setMessages(prev => [...prev, {role: 'ai', text: response}]);
+                setLoading(false);
+            };
+
+            const remaining = Math.max(0, QUOTA_LIMIT - dailyCount);
+
             return (
-                <div className="fixed inset-0 z-[70] flex items-center justify-center bg-black/80 backdrop-blur-md p-6">
-                    <motion.div initial={{y: 50, opacity: 0}} animate={{y: 0, opacity: 1}} className="bg-surface w-full max-w-sm rounded-[32px] border border-white/10 p-8 shadow-2xl relative overflow-hidden">
-                        <div className="absolute top-0 left-0 w-full h-32 bg-gradient-to-b from-white/5 to-transparent pointer-events-none"/>
-                        <h2 className="text-2xl font-bold text-white mb-6 relative">Edit Profile</h2>
-                        <div className="space-y-5 relative">
-                            <div><label className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest ml-1">Name</label><input value={data.displayName} onChange={e => setData({...data, displayName: e.target.value})} className="w-full mt-1 bg-black border border-white/10 rounded-xl px-4 py-3 text-white outline-none focus:border-white/40 transition-colors"/></div>
-                            <div><label className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest ml-1">Role</label><input value={data.role} onChange={e => setData({...data, role: e.target.value})} className="w-full mt-1 bg-black border border-white/10 rounded-xl px-4 py-3 text-white outline-none focus:border-white/40 transition-colors"/></div>
-                            <div><label className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest ml-1">Bio</label><textarea value={data.bio} onChange={e => setData({...data, bio: e.target.value})} className="w-full mt-1 bg-black border border-white/10 rounded-xl px-4 py-3 text-white outline-none focus:border-white/40 h-24 transition-colors resize-none"/></div>
+                <div className="flex flex-col h-full bg-surface">
+                    <div className="p-4 border-b border-white/10 flex justify-between items-center bg-black/20">
+                        <div className="flex flex-col">
+                            <span className="font-bold text-sm text-white flex items-center gap-2"><Icons.Bot className="w-4 h-4 text-brand"/> AI Tutor</span>
+                            <span className={`text-[10px] font-mono ${remaining === 0 ? 'text-red-500 font-bold' : 'text-zinc-500'}`}>{remaining}/{QUOTA_LIMIT} left today</span>
                         </div>
-                        <div className="flex justify-end gap-3 mt-8">
-                            <button onClick={onClose} className="px-5 py-3 text-zinc-400 font-medium hover:text-white transition-colors">Cancel</button>
-                            <button onClick={() => onSave(data)} className="px-6 py-3 bg-white text-black rounded-xl font-bold shadow-lg hover:scale-105 transition-transform">Save Changes</button>
-                        </div>
-                    </motion.div>
+                        <button onClick={onClose}><Icons.ChevronLeft className="w-6 h-6 rotate-[-90deg] text-zinc-400"/></button>
+                    </div>
+                    
+                    <div className="h-0.5 w-full bg-zinc-800">
+                        <div className={`h-full transition-all duration-500 ${remaining === 0 ? 'bg-red-500' : 'bg-brand'}`} style={{ width: `${(dailyCount / QUOTA_LIMIT) * 100}%` }}></div>
+                    </div>
+
+                    <div className="flex-1 overflow-y-auto p-4 space-y-4">
+                        {messages.map((m, i) => (
+                            <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} key={i} className={`flex ${m.role === 'user' ? 'justify-end' : 'justify-start'}`}>
+                                <div className={`max-w-[85%] p-3 rounded-2xl text-sm ${m.role === 'user' ? 'bg-brand text-white rounded-br-none' : 'bg-zinc-800 text-zinc-200 rounded-bl-none'}`}>
+                                    <div dangerouslySetInnerHTML={{ __html: window.marked ? window.marked.parse(m.text) : m.text }} />
+                                </div>
+                            </motion.div>
+                        ))}
+                        {loading && <div className="text-xs text-zinc-500 animate-pulse pl-2">Thinking...</div>}
+                        <div ref={messagesEndRef} />
+                    </div>
+                    
+                    <div className="p-4 border-t border-white/10 bg-black flex gap-2 relative">
+                         {remaining === 0 && (
+                             <div className="absolute inset-0 bg-black/80 backdrop-blur-sm z-10 flex items-center justify-center">
+                                 <div className="border border-red-500 text-red-500 px-4 py-2 rounded-lg text-xs font-bold flex items-center gap-2">
+                                     <Icons.Lock className="w-4 h-4"/> Limit Reached
+                                 </div>
+                             </div>
+                        )}
+                        <input value={input} onChange={e=>setInput(e.target.value)} onKeyDown={e=>e.key==='Enter' && handleSend()} placeholder="Ask..." className="flex-1 bg-zinc-900 border border-white/10 rounded-full px-4 py-3 text-sm focus:outline-none focus:border-brand text-white"/>
+                        <button onClick={handleSend} disabled={remaining===0} className="bg-brand text-white rounded-full p-3 disabled:opacity-50"><Icons.Plus className="w-5 h-5 rotate-90"/></button>
+                    </div>
                 </div>
             );
         };
 
-        const App = () => {
-            const [tab, setTab] = useState('home'); 
-            const [user, setUser] = useState(null);
-            const [profile, setProfile] = useState(null);
-            const [notes, setNotes] = useState([]);
-            const [subjects, setSubjects] = useState([]);
-            const [activeNoteId, setActiveNoteId] = useState(null);
-            const [loading, setLoading] = useState(true);
-            const [isAiOpen, setIsAiOpen] = useState(false);
-            const [isProfileOpen, setIsProfileOpen] = useState(false);
-            const [isShareOpen, setIsShareOpen] = useState(false);
-            const [searchQuery, setSearchQuery] = useState('');
-            const [subjectFilter, setSubjectFilter] = useState('All');
+        const BottomNav = ({ activeTab, onChange }) => (
+            <div className="fixed bottom-0 left-0 right-0 h-[80px] glass z-50 px-6 pb-2 flex items-center justify-between">
+                {[
+                    { id: 'home', icon: Icons.Home, label: 'Home' },
+                    { id: 'errors', icon: Icons.Bug, label: 'Mistakes' },
+                    { id: 'add', icon: Icons.Plus, label: '', special: true },
+                    { id: 'notes', icon: Icons.Book, label: 'Notes' },
+                    { id: 'profile', icon: Icons.User, label: 'Profile' }
+                ].map((tab) => (
+                    tab.special ? (
+                        <motion.button key={tab.id} whileTap={{ scale: 0.9 }} onClick={() => onChange(tab.id)} className="w-14 h-14 bg-brand rounded-full flex items-center justify-center text-white shadow-glow mb-6">
+                            <tab.icon className="w-8 h-8"/>
+                        </motion.button>
+                    ) : (
+                        <button key={tab.id} onClick={() => onChange(tab.id)} className={`flex flex-col items-center gap-1 transition-colors ${activeTab === tab.id ? 'text-brand' : 'text-zinc-500'}`}>
+                            <tab.icon className="w-6 h-6"/>
+                            <span className="text-[10px] font-medium">{tab.label}</span>
+                        </button>
+                    )
+                ))}
+            </div>
+        );
 
-            useEffect(() => {
-                const unsub = window.firebase.onAuthStateChanged(window.firebase.auth, (u) => { setUser(u); setLoading(false); });
-                return () => unsub();
-            }, []);
-
-            useEffect(() => {
-                if (!user) return;
-                const db = window.firebase.db;
-                const appId = "darnote-app";
-                
-                if (subjectFilter === 'Shared') {
-                    const q = window.firebase.query(
-                        window.firebase.collectionGroup(db, 'notes'), 
-                        window.firebase.where('sharedWith', 'array-contains', user.email)
-                    );
-                    const unsubShared = window.firebase.onSnapshot(q, (snap) => {
-                        const sharedNotes = snap.docs.map(d => ({id: d.id, path: d.ref.path, ...d.data(), isShared: true, subject: 'Shared'}));
-                        setNotes(sharedNotes);
-                    }, (error) => console.error("Index Error Check Console", error));
-                    return () => unsubShared();
-                } else {
-                    const unsubNotes = window.firebase.onSnapshot(
-                        window.firebase.collection(db, 'artifacts', appId, 'users', user.uid, 'notes'), 
-                        (snap) => {
-                            const myNotes = snap.docs.map(d => ({id: d.id, path: d.ref.path, ...d.data(), isShared: false}));
-                            setNotes(myNotes.sort((a,b) => new Date(b.updatedAt) - new Date(a.updatedAt)));
-                        }
-                    );
-                    return () => unsubNotes();
-                }
-            }, [user, subjectFilter]);
-
-            useEffect(() => {
-                if(!user) return;
-                const unsubSubjects = window.firebase.onSnapshot(window.firebase.collection(window.firebase.db, 'artifacts', "darnote-app", 'users', user.uid, 'subjects'), (snap) => {
-                    const s = snap.docs.map(d => d.data().name).sort();
-                    setSubjects(s.length > 0 ? s : ['Personal', 'Work', 'Ideas']);
-                });
-                const unsubProfile = window.firebase.onSnapshot(window.firebase.doc(window.firebase.db, 'artifacts', "darnote-app", 'users', user.uid, 'profile', 'data'), (doc) => { if (doc.exists()) setProfile(doc.data()); });
-                return () => { unsubSubjects(); unsubProfile(); };
-            }, [user]);
-
-            const createNote = async () => {
-                if(!user) return;
-                const newNote = { type: 'text', title: '', content: '', subject: subjectFilter === 'All' || subjectFilter === 'Shared' ? 'Personal' : subjectFilter, updatedAt: new Date().toISOString(), ownerId: user.uid, ownerEmail: user.email, sharedWith: [] };
-                const docRef = await window.firebase.addDoc(window.firebase.collection(window.firebase.db, 'artifacts', "darnote-app", 'users', user.uid, 'notes'), newNote);
-                setActiveNoteId(docRef.id);
-            };
-            
-            const createSubject = async () => {
-                const name = prompt("New Subject Name:");
-                if (!name || subjects.includes(name)) return;
-                await window.firebase.addDoc(window.firebase.collection(window.firebase.db, 'artifacts', "darnote-app", 'users', user.uid, 'subjects'), { name });
-            };
-
-            const updateNote = async (id, content, title) => {
-                const updates = { updatedAt: new Date().toISOString() };
-                if(content !== null) updates.content = content;
-                if(title !== undefined) updates.title = title;
-                const note = notes.find(n => n.id === id);
-                if (!note) return;
-                const docRef = window.firebase.doc(window.firebase.db, note.path); 
-                await window.firebase.updateDoc(docRef, updates);
-            };
-            
-            const shareNote = async (email) => {
-                if(!activeNoteId) return;
-                const note = notes.find(n => n.id === activeNoteId);
-                if(note.isShared) { alert("Only the owner can manage sharing permissions."); return; }
-                const docRef = window.firebase.doc(window.firebase.db, note.path);
-                await window.firebase.updateDoc(docRef, { sharedWith: window.firebase.arrayUnion(email.trim()) });
-            };
-
-            const unshareNote = async (email) => {
-                if(!activeNoteId) return;
-                const note = notes.find(n => n.id === activeNoteId);
-                const docRef = window.firebase.doc(window.firebase.db, note.path);
-                await window.firebase.updateDoc(docRef, { sharedWith: window.firebase.arrayRemove(email) });
-            }
-
-            const deleteNote = async (id) => {
-                if(confirm("Delete this note?")) {
-                    const note = notes.find(n => n.id === id);
-                    if(note.isShared) { alert("Can't delete shared notes."); return; }
-                    const docRef = window.firebase.doc(window.firebase.db, note.path);
-                    await window.firebase.deleteDoc(docRef);
-                    setActiveNoteId(null);
-                }
-            };
-            
-            const saveProfile = async (data) => {
-                const appId = "darnote-app";
-                await window.firebase.setDoc(window.firebase.doc(window.firebase.db, 'artifacts', appId, 'users', user.uid, 'profile', 'data'), data);
-                setIsProfileOpen(false);
-            };
-
-            const activeNote = activeNoteId ? notes.find(n => n.id === activeNoteId) : null;
-            const displayedNotes = notes.filter(n => {
-                if(tab === 'search') return n.title?.toLowerCase().includes(searchQuery.toLowerCase()) || n.content?.toLowerCase().includes(searchQuery.toLowerCase());
-                if(subjectFilter === 'All') return !n.isShared; 
-                if(subjectFilter === 'Shared') return n.isShared;
-                return n.subject === subjectFilter;
-            });
-
-            if (loading) return <div className="h-screen w-full bg-black flex items-center justify-center"><div className="w-10 h-10 border-4 border-white border-t-transparent rounded-full animate-spin"></div></div>;
-
-            if (!user) {
-                return (
-                    <div className="h-screen w-full bg-black flex flex-col items-center justify-center p-8 relative overflow-hidden">
-                        <div className="absolute inset-0 bg-[url('https://grainy-gradients.vercel.app/noise.svg')] opacity-20 mix-blend-overlay"></div>
-                        <div className="absolute top-[-20%] right-[-20%] w-[500px] h-[500px] bg-white/5 rounded-full blur-[100px] animate-pulse"></div>
-                        
-                        <div className="w-24 h-24 bg-white rounded-[32px] flex items-center justify-center text-5xl font-black mb-6 shadow-[0_0_60px_rgba(255,255,255,0.2)] text-black z-10">d</div>
-                        <h1 className="text-5xl font-black text-white mb-2 tracking-tighter z-10">darNote</h1>
-                        <p className="text-zinc-500 mb-8 font-medium tracking-wide text-sm uppercase z-10">Liquid Obsidian Edition</p>
-                        
-                        {/* TYPING DEMO */}
-                        <div className="z-10 w-full flex justify-center">
-                            <TypingDemo />
+        const Dashboard = ({ user, errors, notes, setTab }) => {
+            const recentErrors = errors.slice(0, 3);
+            return (
+                <div className="p-6 pb-24 space-y-8">
+                    <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="flex justify-between items-center">
+                        <div>
+                            <div className="text-zinc-400 text-sm">Welcome Back,</div>
+                            <div className="text-2xl font-bold text-white">{user.displayName?.split(' ')[0] || 'Scholar'}</div>
                         </div>
+                        <img src={user.photoURL} className="w-10 h-10 rounded-full border border-zinc-700"/>
+                    </motion.div>
 
-                        <button onClick={() => window.firebase.signInWithPopup(window.firebase.auth, new window.firebase.GoogleAuthProvider())} className="w-full bg-white text-black font-bold py-5 rounded-2xl mb-4 shadow-xl active:scale-95 transition-transform flex items-center justify-center gap-2 z-10"><Icons.Plus className="rotate-45"/> Sign in with Google</button>
+                    <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} transition={{ delay: 0.1 }} className="bg-gradient-to-br from-brand to-brand-dark p-6 rounded-3xl text-white shadow-glow relative overflow-hidden">
+                        <div className="relative z-10">
+                            <div className="text-sm font-medium opacity-80 mb-1">Total Failures</div>
+                            <div className="text-4xl font-bold mb-4">{errors.length}</div>
+                            <div className="flex gap-4">
+                                <div className="bg-white/20 px-3 py-1 rounded-lg text-xs backdrop-blur-sm"><span className="font-bold">{errors.filter(e => e.mastered).length}</span> Mastered</div>
+                                <div className="bg-white/20 px-3 py-1 rounded-lg text-xs backdrop-blur-sm"><span className="font-bold">{notes.length}</span> Notes</div>
+                            </div>
+                        </div>
+                    </motion.div>
+
+                    <div className="grid grid-cols-2 gap-4">
+                        <button onClick={() => setTab('add_error')} className="bg-surface p-4 rounded-2xl border border-zinc-800 flex flex-col items-center gap-2 active:scale-95 transition-transform"><div className="w-10 h-10 bg-red-500/10 rounded-full flex items-center justify-center text-red-500"><Icons.Bug className="w-5 h-5"/></div><span className="text-sm font-bold text-zinc-300">Log Error</span></button>
+                        <button onClick={() => setTab('add_note')} className="bg-surface p-4 rounded-2xl border border-zinc-800 flex flex-col items-center gap-2 active:scale-95 transition-transform"><div className="w-10 h-10 bg-blue-500/10 rounded-full flex items-center justify-center text-blue-500"><Icons.Book className="w-5 h-5"/></div><span className="text-sm font-bold text-zinc-300">New Note</span></button>
                     </div>
-                );
-            }
+
+                    <div>
+                        <div className="flex justify-between items-end mb-4"><h3 className="font-bold text-lg text-white">Recent Failures</h3><button onClick={()=>setTab('errors')} className="text-xs text-brand">View All</button></div>
+                        <div className="space-y-3">{recentErrors.map(e => (
+                            <div key={e.id} onClick={() => setTab('edit_error', e)} className="bg-surface p-4 rounded-2xl border border-zinc-800 flex items-center gap-4 active:bg-zinc-800">
+                                <div className={`w-2 h-10 rounded-full ${e.mastered ? 'bg-green-500' : 'bg-red-500'}`}></div>
+                                <div className="flex-1 overflow-hidden"><div className="font-bold text-zinc-200 truncate">{e.title}</div><div className="text-xs text-zinc-500">{e.subject} • {new Date(e.createdAt).toLocaleDateString()}</div></div>
+                            </div>
+                        ))}</div>
+                    </div>
+                </div>
+            );
+        };
+
+        const ErrorEditor = ({ item, onSave, onBack, onDelete, user }) => {
+            const [data, setData] = useState(item || { title: '', subject: 'General', mastered: false, explanation: '', imageUrl: '', questionType: 'MC' });
+            const [isAiOpen, setIsAiOpen] = useState(false);
+            const { saveToDrive } = useGoogleDrive();
+            const [uploading, setUploading] = useState(false);
+
+            const handleImage = async (e) => {
+                const file = e.target.files[0];
+                if (!file) return;
+                setUploading(true);
+                try {
+                    const url = await saveToDrive(file, `Error_${Date.now()}.png`);
+                    setData({...data, imageUrl: url});
+                } catch(err) { alert('Upload failed: ' + err); }
+                setUploading(false);
+            };
 
             return (
-                <div className="bg-black min-h-screen text-white pb-[100px] relative overflow-x-hidden">
-                    <div className="fixed inset-0 pointer-events-none bg-[radial-gradient(circle_at_top_right,rgba(30,30,35,0.5),transparent_40%)] z-0"/>
-                    
-                    {/* --- HOME TAB --- */}
-                    {tab === 'home' && (
-                        <motion.div initial={{opacity:0}} animate={{opacity:1}} exit={{opacity:0}} className="relative z-10">
-                            <div className="h-20 flex items-end justify-between px-6 pb-2 mb-4">
-                                <h1 className="text-3xl font-bold tracking-tight">darNotes</h1>
-                                <button onClick={() => setIsProfileOpen(true)} className="w-10 h-10 rounded-full bg-surfaceHighlight border border-white/10 flex items-center justify-center font-bold text-sm text-zinc-300">
-                                    {profile?.displayName?.[0] || user.displayName?.[0] || 'U'}
-                                </button>
-                            </div>
-                            
-                            <div className="mb-6 overflow-x-auto hide-scrollbar px-6 flex gap-3 items-center">
-                                {['All', 'Shared', ...subjects].map(s => (
-                                    <button 
-                                        key={s} 
-                                        onClick={() => setSubjectFilter(s)} 
-                                        className={`px-5 py-2.5 rounded-2xl text-xs font-bold whitespace-nowrap transition-all duration-300 ${subjectFilter === s ? 'bg-white text-black shadow-glow scale-105' : 'bg-surfaceHighlight text-zinc-500 border border-white/5 hover:border-white/20'}`}
-                                    >
-                                        {s}
-                                    </button>
-                                ))}
-                                <button onClick={createSubject} className="w-9 h-9 flex items-center justify-center bg-surfaceHighlight rounded-full border border-white/5 text-zinc-500 hover:text-white hover:bg-white/10 shrink-0 transition-colors"><Icons.Plus className="w-4 h-4"/></button>
-                            </div>
-
-                            <div className="px-5 pb-20">
-                                {displayedNotes.length === 0 ? (
-                                    <div className="flex flex-col items-center justify-center h-64 text-zinc-600 gap-4">
-                                        <div className="w-20 h-20 bg-surfaceHighlight rounded-full flex items-center justify-center opacity-50"><Icons.Folder className="w-8 h-8"/></div>
-                                        <p className="text-sm font-medium">No notes in {subjectFilter}</p>
-                                    </div>
-                                ) : (
-                                    displayedNotes.map((n, i) => <NoteCard key={n.id} note={n} index={i} onClick={() => setActiveNoteId(n.id)} />)
-                                )}
-                            </div>
-                        </motion.div>
-                    )}
-
-                    {/* --- SEARCH TAB --- */}
-                    {tab === 'search' && (
-                        <motion.div initial={{opacity:0, y: 10}} animate={{opacity:1, y: 0}} className="relative z-10 px-6 pt-12">
-                            <h1 className="text-3xl font-bold mb-6">Search</h1>
-                            <div className="bg-surfaceHighlight border border-white/10 rounded-2xl flex items-center px-5 py-4 mb-6 focus-within:border-white/30 transition-colors">
-                                <Icons.Search className="text-zinc-500 w-5 h-5 mr-3"/>
-                                <input autoFocus value={searchQuery} onChange={e => setSearchQuery(e.target.value)} placeholder="Type to search..." className="bg-transparent w-full outline-none text-white placeholder-zinc-600 font-medium"/>
-                            </div>
-                            <div className="pb-20">{searchQuery && displayedNotes.map((n, i) => <NoteCard key={n.id} note={n} index={i} onClick={() => setActiveNoteId(n.id)} />)}</div>
-                        </motion.div>
-                    )}
-
-                    {/* --- AI TAB --- */}
-                    {tab === 'ai' && (
-                        <motion.div initial={{opacity:0, scale: 0.95}} animate={{opacity:1, scale: 1}} className="flex flex-col items-center justify-center h-[80vh] p-8 text-center relative z-10">
-                            <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[300px] h-[300px] bg-gradient-to-tr from-purple-500/20 to-indigo-500/20 rounded-full blur-[80px] pointer-events-none"/>
-                            <div className="w-24 h-24 bg-surfaceHighlight border border-white/10 rounded-[32px] flex items-center justify-center mb-8 shadow-2xl relative">
-                                <Icons.Sparkles className="w-10 h-10 text-white"/>
-                                <div className="absolute inset-0 border border-white/20 rounded-[32px] animate-pulse"/>
-                            </div>
-                            <h2 className="text-3xl font-bold mb-3 gradient-text">AI Companion</h2>
-                            <p className="text-zinc-500 mb-10 max-w-[260px] leading-relaxed">Your personal editor. Ask me to draft, summarize, or brainstorm.</p>
-                            <button onClick={() => setIsAiOpen(true)} className="bg-white text-black px-8 py-4 rounded-2xl font-bold shadow-glow hover:scale-105 transition-transform flex items-center gap-2"><Icons.Bot className="w-5 h-5"/> Start Chat</button>
-                        </motion.div>
-                    )}
-                    
-                     {/* --- SETTINGS TAB --- */}
-                     {tab === 'settings' && (
-                        <div className="p-6 pt-16 relative z-10">
-                             <h1 className="text-3xl font-bold mb-8">Settings</h1>
-                             <div className="bg-surfaceHighlight rounded-3xl overflow-hidden border border-white/5">
-                                 <div className="p-6 border-b border-white/5 flex items-center gap-5">
-                                     <div className="w-16 h-16 bg-black border border-white/10 rounded-full flex items-center justify-center font-bold text-2xl">{profile?.displayName?.[0] || user.displayName?.[0] || 'U'}</div>
-                                     <div>
-                                         <div className="font-bold text-lg text-white">{profile?.displayName || user.displayName || 'Guest User'}</div>
-                                         <div className="text-xs text-zinc-500 mt-1 uppercase tracking-widest">{profile?.role || 'Creator'}</div>
-                                     </div>
-                                 </div>
-                                 <button onClick={() => setIsProfileOpen(true)} className="w-full p-5 text-left text-zinc-300 font-medium hover:bg-white/5 transition-colors flex items-center justify-between border-b border-white/5">Edit Profile <Icons.Edit className="w-4 h-4 text-zinc-500"/></button>
-                                 <button onClick={() => window.firebase.signOut(window.firebase.auth)} className="w-full p-5 text-left text-red-400 font-medium hover:bg-white/5 transition-colors">Log Out</button>
-                             </div>
-                             <div className="mt-12 text-center">
-                                <div className="text-zinc-700 text-[10px] font-mono tracking-widest uppercase mb-2">darNote - Mobile.</div>
-                                <div className="text-zinc-800 text-[10px]">Designed by Darren Ng, 3-shot Limited</div>
-                             </div>
+                <motion.div initial={{ x: '100%' }} animate={{ x: 0 }} exit={{ x: '100%' }} className="fixed inset-0 bg-onyx z-[60] overflow-y-auto flex flex-col">
+                    <div className="sticky top-0 bg-onyx/90 backdrop-blur-md p-4 border-b border-zinc-800 flex justify-between items-center z-10 shrink-0">
+                        <button onClick={onBack} className="p-2 rounded-full bg-zinc-800"><Icons.ChevronLeft className="w-6 h-6"/></button>
+                        <span className="font-bold text-white">Failure Log</span>
+                        <div className="flex gap-2">
+                             {item && <button onClick={() => setIsAiOpen(true)} className="p-2 bg-brand/10 text-brand rounded-full"><Icons.Bot className="w-5 h-5"/></button>}
+                             <button onClick={() => { onSave(data); onBack(); }} className="px-4 py-2 bg-brand rounded-full text-sm font-bold text-white">Save</button>
                         </div>
-                    )}
+                    </div>
 
+                    <div className="p-6 space-y-6 flex-1 overflow-y-auto pb-20">
+                        <div className="flex gap-2 p-1 bg-zinc-900 rounded-xl">
+                            <button onClick={()=>setData({...data, mastered: false})} className={`flex-1 py-3 rounded-lg text-sm font-bold transition-all ${!data.mastered ? 'bg-red-500/20 text-red-500' : 'text-zinc-500'}`}>Review</button>
+                            <button onClick={()=>setData({...data, mastered: true})} className={`flex-1 py-3 rounded-lg text-sm font-bold transition-all ${data.mastered ? 'bg-green-500/20 text-green-500' : 'text-zinc-500'}`}>Mastered</button>
+                        </div>
+
+                        <input placeholder="What went wrong?" className="w-full bg-transparent text-2xl font-bold placeholder-zinc-600 focus:outline-none text-white" value={data.title} onChange={(e) => setData({...data, title: e.target.value})} />
+
+                        <div className="relative w-full aspect-video bg-zinc-900 rounded-2xl border border-dashed border-zinc-700 flex flex-col items-center justify-center overflow-hidden">
+                            {uploading ? <span className="loader"></span> : data.imageUrl ? <img src={data.imageUrl} className="w-full h-full object-contain"/> : (
+                                <>
+                                    <Icons.Camera className="w-8 h-8 text-zinc-600 mb-2"/>
+                                    <span className="text-xs text-zinc-500">Upload Evidence</span>
+                                    <input type="file" accept="image/*" onChange={handleImage} className="absolute inset-0 opacity-0 cursor-pointer"/>
+                                </>
+                            )}
+                        </div>
+
+                        <div className="bg-surface rounded-2xl p-4 min-h-[150px] border border-zinc-800">
+                            <textarea className="w-full h-full bg-transparent resize-none focus:outline-none text-zinc-300 leading-relaxed min-h-[150px]" placeholder="Explain why you failed..." value={data.explanation} onChange={(e) => setData({...data, explanation: e.target.value})}/>
+                        </div>
+
+                        <div className="grid grid-cols-2 gap-4">
+                            <div><label className="text-[10px] text-zinc-500 uppercase font-bold">Subject</label><input value={data.subject} onChange={e=>setData({...data, subject: e.target.value})} className="w-full bg-zinc-900 p-3 rounded-xl mt-1 focus:outline-none text-white text-sm"/></div>
+                            <div><label className="text-[10px] text-zinc-500 uppercase font-bold">Type</label><select value={data.questionType} onChange={e=>setData({...data, questionType: e.target.value})} className="w-full bg-zinc-900 p-3 rounded-xl mt-1 focus:outline-none text-white text-sm"><option value="MC">MC</option><option value="LQ">Long Question</option></select></div>
+                        </div>
+
+                        {item && <button onClick={() => { if(confirm('Delete?')) { onDelete(item.id); onBack(); }}} className="w-full py-4 text-red-500 font-bold text-sm bg-zinc-900 rounded-xl">Delete Log</button>}
+                    </div>
+
+                    {/* AI Chat Overlay */}
                     <AnimatePresence>
-                        {activeNoteId && activeNote && (
-                            <NoteEditor 
-                                note={activeNote} 
-                                onBack={() => setActiveNoteId(null)} 
-                                onSave={(content, title) => updateNote(activeNoteId, content, title)} 
-                                onDelete={() => deleteNote(activeNoteId)} 
-                                onAiToggle={() => setIsAiOpen(true)}
-                                onShare={() => setIsShareOpen(true)}
-                            />
+                        {isAiOpen && (
+                            <motion.div initial={{ y: "100%" }} animate={{ y: "20%" }} exit={{ y: "100%" }} className="fixed inset-0 z-[70] bg-surface rounded-t-3xl shadow-2xl border-t border-white/10 overflow-hidden">
+                                <AIChat activeLog={data} onClose={() => setIsAiOpen(false)} user={user} />
+                            </motion.div>
                         )}
                     </AnimatePresence>
+                </motion.div>
+            );
+        };
 
-                    <AIChatOverlay isOpen={isAiOpen} onClose={() => { setIsAiOpen(false); if(tab === 'ai') setTab('home'); }} contextNote={activeNote} />
-                    {isProfileOpen && <ProfileModal user={user} profile={profile} onClose={() => setIsProfileOpen(false)} onSave={saveProfile} />}
-                    {isShareOpen && activeNote && <ShareModal note={activeNote} onClose={() => setIsShareOpen(false)} onShare={shareNote} onUnshare={unshareNote} />}
-                    
-                    {!activeNoteId && <BottomNav activeTab={tab} onChange={setTab} onFab={createNote} />}
+        const NoteEditor = ({ item, onSave, onBack, onDelete }) => {
+            const [title, setTitle] = useState(item?.title || '');
+            const editorRef = useRef(null);
+            useEffect(() => {
+                if (!window.tinymce) return;
+                window.tinymce.init({
+                    selector: '#mobile-editor', height: '100%', menubar: false, toolbar: 'bold italic bullist | h1 h2', skin: 'oxide-dark', content_css: 'dark',
+                    setup: (editor) => { editorRef.current = editor; editor.on('init', () => { if (item?.content) editor.setContent(item.content); }); }
+                });
+                return () => window.tinymce.remove();
+            }, []);
+            return (
+                <motion.div initial={{ y: '100%' }} animate={{ y: 0 }} exit={{ y: '100%' }} className="fixed inset-0 bg-onyx z-[60] flex flex-col">
+                    <div className="p-4 flex items-center justify-between border-b border-zinc-800 bg-onyx shrink-0">
+                        <button onClick={onBack}><Icons.X className="w-6 h-6 text-zinc-400"/></button>
+                        <input value={title} onChange={e=>setTitle(e.target.value)} placeholder="Untitled Note" className="bg-transparent font-bold text-center focus:outline-none text-white w-full mx-4"/>
+                        <button onClick={() => { onSave({ ...item, title, content: editorRef.current ? editorRef.current.getContent() : '' }); onBack(); }} className="text-brand font-bold">Done</button>
+                    </div>
+                    <div className="flex-1 relative"><textarea id="mobile-editor"></textarea></div>
+                    {item && <div className="p-4 border-t border-zinc-800 bg-onyx"><button onClick={()=>{onDelete(item.id); onBack();}} className="text-red-500 w-full text-center text-sm font-bold">Delete Note</button></div>}
+                </motion.div>
+            );
+        }
+
+        const ActionSheet = ({ onClose, onSelect }) => (
+            <div className="fixed inset-0 bg-black/80 z-[70] flex items-end justify-center" onClick={onClose}>
+                <motion.div initial={{ y: 100 }} animate={{ y: 0 }} className="bg-surface w-full max-w-md rounded-t-3xl p-6 space-y-4" onClick={e => e.stopPropagation()}>
+                    <div className="w-12 h-1 bg-zinc-700 rounded-full mx-auto mb-4"></div>
+                    <button onClick={() => onSelect('error')} className="w-full p-4 bg-zinc-800 rounded-2xl flex items-center gap-4 hover:bg-zinc-700"><div className="p-2 bg-red-500/20 rounded-full text-red-500"><Icons.Bug className="w-6 h-6"/></div><div className="text-left"><div className="font-bold text-white">Log Failure</div><div className="text-xs text-zinc-500">Admit it.</div></div></button>
+                    <button onClick={() => onSelect('note')} className="w-full p-4 bg-zinc-800 rounded-2xl flex items-center gap-4 hover:bg-zinc-700"><div className="p-2 bg-blue-500/20 rounded-full text-blue-500"><Icons.Book className="w-6 h-6"/></div><div className="text-left"><div className="font-bold text-white">New Note</div><div className="text-xs text-zinc-500">Write stuff.</div></div></button>
+                </motion.div>
+            </div>
+        );
+
+        // --- MAIN APP ---
+        const App = () => {
+            const [user, setUser] = useState(null);
+            const [tab, setTab] = useState('home');
+            const [selectedItem, setSelectedItem] = useState(null);
+            const [isActionSheetOpen, setIsActionSheetOpen] = useState(false);
+
+            useEffect(() => { window.firebase.onAuthStateChanged(window.firebase.auth, setUser); }, []);
+            const { data: errorLogs } = useData(user, 'error_logs');
+            const { data: notes } = useData(user, 'notes');
+
+            const handleLogin = () => window.firebase.signInWithPopup(window.firebase.auth, new window.firebase.GoogleAuthProvider());
+            const handleTabChange = (t) => { if (t === 'add') setIsActionSheetOpen(true); else setTab(t); };
+            const handleCreate = (type) => { setIsActionSheetOpen(false); setSelectedItem(null); setTab(type === 'error' ? 'add_error' : 'add_note'); };
+            
+            const handleEdit = (mode, item) => { setSelectedItem(item); setTab(mode); }
+
+            const saveError = async (data) => {
+                const col = window.firebase.collection(window.firebase.db, 'artifacts', 'darnote-app', 'users', user.uid, 'error_logs');
+                if (data.id) await window.firebase.updateDoc(window.firebase.doc(col, data.id), data);
+                else await window.firebase.addDoc(col, { ...data, createdAt: new Date().toISOString() });
+                setTab('errors');
+            };
+
+            const saveNote = async (data) => {
+                const col = window.firebase.collection(window.firebase.db, 'artifacts', 'darnote-app', 'users', user.uid, 'notes');
+                if (data.id) await window.firebase.updateDoc(window.firebase.doc(col, data.id), data);
+                else await window.firebase.addDoc(col, { ...data, type: 'text', createdAt: new Date().toISOString() });
+                setTab('notes');
+            };
+
+            const deleteItem = async (id, collection) => { await window.firebase.deleteDoc(window.firebase.doc(window.firebase.db, 'artifacts', 'darnote-app', 'users', user.uid, collection, id)); };
+
+            if (!user) return <Splash onLogin={handleLogin} />;
+
+            return (
+                <div className="h-screen w-full bg-onyx text-zinc-100 flex flex-col overflow-hidden">
+                    <div className="flex-1 overflow-y-auto">
+                        <AnimatePresence mode="wait">
+                            {tab === 'home' && <Dashboard key="home" user={user} errors={errorLogs} notes={notes} setTab={handleEdit} />}
+                            {tab === 'errors' && (
+                                <div className="p-6 pb-24 min-h-screen">
+                                    <h2 className="text-3xl font-bold text-white mb-6">Error Logs</h2>
+                                    <div className="space-y-3">
+                                        {errorLogs.map((item, i) => (
+                                            <motion.div key={item.id} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i*0.05 }} onClick={() => handleEdit('edit_error', item)} className="bg-surface p-4 rounded-2xl border border-zinc-800 flex justify-between items-center">
+                                                <div>
+                                                    <div className="font-bold text-zinc-200 mb-1">{item.title || 'Untitled'}</div>
+                                                    <span className={`text-xs font-bold ${item.mastered ? "text-green-500" : "text-red-500"}`}>{item.mastered ? 'SOLVED' : 'REVIEW'}</span>
+                                                </div>
+                                                <Icons.ChevronLeft className="w-5 h-5 text-zinc-600 rotate-180"/>
+                                            </motion.div>
+                                        ))}
+                                    </div>
+                                </div>
+                            )}
+                            {tab === 'notes' && (
+                                <div className="p-6 pb-24 min-h-screen">
+                                    <h2 className="text-3xl font-bold text-white mb-6">Notes</h2>
+                                    <div className="space-y-3">
+                                        {notes.map((item, i) => (
+                                            <motion.div key={item.id} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i*0.05 }} onClick={() => handleEdit('edit_note', item)} className="bg-surface p-4 rounded-2xl border border-zinc-800 flex justify-between items-center">
+                                                <div><div className="font-bold text-zinc-200">{item.title || 'Untitled'}</div><div className="text-xs text-zinc-500">{new Date(item.createdAt).toLocaleDateString()}</div></div>
+                                                <Icons.ChevronLeft className="w-5 h-5 text-zinc-600 rotate-180"/>
+                                            </motion.div>
+                                        ))}
+                                    </div>
+                                </div>
+                            )}
+                            {tab === 'profile' && (
+                                <div className="p-6 flex flex-col items-center justify-center h-full space-y-6">
+                                    <img src={user.photoURL} className="w-24 h-24 rounded-full border-4 border-brand"/>
+                                    <h2 className="text-2xl font-bold">{user.displayName}</h2>
+                                    <button onClick={() => window.firebase.signOut(window.firebase.auth)} className="px-8 py-3 bg-zinc-800 rounded-xl font-bold text-red-500">Sign Out</button>
+                                </div>
+                            )}
+                        </AnimatePresence>
+                    </div>
+
+                    <BottomNav activeTab={tab} onChange={handleTabChange} />
+
+                    <AnimatePresence>
+                        {isActionSheetOpen && <ActionSheet onClose={() => setIsActionSheetOpen(false)} onSelect={handleCreate} />}
+                        {(tab === 'add_error' || tab === 'edit_error') && <ErrorEditor item={selectedItem} onSave={saveError} onBack={() => setTab('errors')} onDelete={(id) => deleteItem(id, 'error_logs')} user={user} />}
+                        {(tab === 'add_note' || tab === 'edit_note') && <NoteEditor item={selectedItem} onSave={saveNote} onBack={() => setTab('notes')} onDelete={(id) => deleteItem(id, 'notes')} />}
+                    </AnimatePresence>
                 </div>
             );
         };
