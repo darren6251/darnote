@@ -26,9 +26,8 @@
                         'fade-up': 'fadeUp 0.8s ease-out forwards',
                         'cursor-move': 'cursorMove 8s infinite',
                         'menu-pop': 'menuPop 8s infinite',
-                        // New animations for Timer
+                        // Note: timer-text is now in CSS <style> block to ensure it loads
                         'timer-cursor': 'timerCursor 6s ease-in-out infinite',
-                        'timer-text': 'timerText 6s step-end infinite',
                         'play-button': 'playButton 6s step-end infinite',
                     },
                     keyframes: {
@@ -69,10 +68,6 @@
                             '40%': { transform: 'scale(1)' }, /* Release */
                             '60%': { opacity: '1' },
                             '80%, 100%': { opacity: '0', transform: 'translate(30px, 30px)' }
-                        },
-                        timerText: {
-                            '0%, 35%': { content: '"25:00"', color: 'white' },
-                            '36%, 100%': { content: '"24:59"', color: '#6366f1' } // Switches to indigo color
                         },
                         playButton: {
                             '0%, 35%': { transform: 'scale(1)', opacity: '1' },
@@ -118,7 +113,21 @@
         /* Animated Elements using Pseudo-classes for content switching */
         .timer-display::after {
             content: "25:00";
-            animation: timerText 6s infinite;
+            animation: timerText 6s step-end infinite;
+        }
+
+        /* MOVED HERE: Timer Animation Keyframes 
+           Moving this to pure CSS ensures it works even if Tailwind doesn't 
+           detect the class usage.
+        */
+        @keyframes timerText {
+            0%, 35% { content: "25:00"; color: white; }
+            36% { content: "24:59"; color: #6366f1; }
+            45% { content: "24:58"; color: #6366f1; }
+            55% { content: "24:57"; color: #6366f1; }
+            65% { content: "24:56"; color: #6366f1; }
+            75% { content: "24:55"; color: #6366f1; }
+            90%, 100% { content: "25:00"; color: white; }
         }
 
         /* AI Demo Animation */
@@ -245,32 +254,6 @@
                         </div>
                     </div>
 
-                    <!-- Floating Widget 3: FOCUS TIMER (Middle Right - NEW - NOW OBVIOUS) -->
-                    <div class="absolute bottom-40 -right-6 p-5 bg-zinc-800 border border-indigo-500/30 rounded-2xl shadow-[0_0_40px_rgba(99,102,241,0.3)] z-30 animate-float w-64 backdrop-blur-xl">
-                        <div class="flex justify-between items-center mb-3">
-                            <div class="flex items-center gap-2 text-indigo-300">
-                                <i data-lucide="timer" class="w-4 h-4"></i>
-                                <span class="text-xs font-bold uppercase tracking-wider">Deep Focus</span>
-                            </div>
-                            <div class="flex gap-1">
-                                <div class="w-1.5 h-1.5 rounded-full bg-red-500"></div>
-                                <div class="w-1.5 h-1.5 rounded-full bg-yellow-500"></div>
-                                <div class="w-1.5 h-1.5 rounded-full bg-green-500"></div>
-                            </div>
-                        </div>
-                        <div class="flex items-center justify-between relative bg-black/20 p-3 rounded-xl border border-white/5">
-                            <!-- Animated Timer Text -->
-                            <span class="timer-display text-3xl font-mono font-bold tracking-widest"></span> 
-                            
-                            <div class="w-10 h-10 rounded-full bg-indigo-500 hover:bg-indigo-400 transition-colors flex items-center justify-center relative group cursor-pointer shadow-lg shadow-indigo-500/20">
-                                <i data-lucide="play" class="w-4 h-4 text-white fill-white animate-play-button"></i>
-                                
-                                <!-- Fake Cursor for Animation -->
-                                <div class="absolute top-2 left-2 w-3 h-3 bg-white rounded-full shadow-[0_0_10px_white] z-50 pointer-events-none animate-timer-cursor"></div>
-                            </div>
-                        </div>
-                    </div>
-
                 </div>
             </div>
         </div>
@@ -295,6 +278,33 @@
     <!-- Feature Grid -->
     <section id="features" class="py-24 relative">
         <div class="container mx-auto px-4">
+            
+            <!-- MOVED WIDGET: Focus Timer -->
+            <div class="relative mx-auto mb-12 p-5 bg-zinc-800 border border-indigo-500/30 rounded-2xl shadow-[0_0_40px_rgba(99,102,241,0.3)] z-30 animate-float w-64 backdrop-blur-xl">
+                <div class="flex justify-between items-center mb-3">
+                    <div class="flex items-center gap-2 text-indigo-300">
+                        <i data-lucide="timer" class="w-4 h-4"></i>
+                        <span class="text-xs font-bold uppercase tracking-wider">Deep Focus</span>
+                    </div>
+                    <div class="flex gap-1">
+                        <div class="w-1.5 h-1.5 rounded-full bg-red-500"></div>
+                        <div class="w-1.5 h-1.5 rounded-full bg-yellow-500"></div>
+                        <div class="w-1.5 h-1.5 rounded-full bg-green-500"></div>
+                    </div>
+                </div>
+                <div class="flex items-center justify-between relative bg-black/20 p-3 rounded-xl border border-white/5">
+                    <!-- Animated Timer Text -->
+                    <span class="timer-display text-3xl font-mono font-bold tracking-widest"></span> 
+                    
+                    <div class="w-10 h-10 rounded-full bg-indigo-500 hover:bg-indigo-400 transition-colors flex items-center justify-center relative group cursor-pointer shadow-lg shadow-indigo-500/20">
+                        <i data-lucide="play" class="w-4 h-4 text-white fill-white animate-play-button"></i>
+                        
+                        <!-- Fake Cursor for Animation -->
+                        <div class="absolute top-2 left-2 w-3 h-3 bg-white rounded-full shadow-[0_0_10px_white] z-50 pointer-events-none animate-timer-cursor"></div>
+                    </div>
+                </div>
+            </div>
+
             <div class="text-center max-w-2xl mx-auto mb-16">
                 <h2 class="text-3xl md:text-4xl font-bold font-display mb-4">Your entire workflow.<br>Uncomplicated.</h2>
                 <p class="text-zinc-400">Everything you need to study effectively, without the clutter.</p>
