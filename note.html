@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>darNote - Onyx Pro (Fixed Images)</title>
+    <title>darNote - Onyx Pro (Smart Drive)</title>
     <!-- BRANDING: Favicon -->
     <link rel="icon" type="image/png" href="https://raw.githubusercontent.com/darren6251/darnote/refs/heads/main/darNote%20logo.png">
     
@@ -29,6 +29,8 @@
     </script>
     <!-- TinyMCE -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/tinymce/6.8.2/tinymce.min.js" referrerpolicy="origin"></script>
+    <!-- SparkMD5 for Deduplication -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/spark-md5/3.0.2/spark-md5.min.js"></script>
 
     <!-- MOBILE REDIRECT LOGIC -->
     <script>
@@ -233,17 +235,9 @@
             const getAccessToken = () => {
                 return new Promise((resolve, reject) => {
                     if (!tokenClient) return reject("Auth not initialized");
-                    
-                    // Check if we have a valid token in gapi already
                     const existing = window.gapi.client.getToken();
                     if (existing && Date.now() < existing.expiry) return resolve(existing.access_token);
-
-                    // If not, request one (pop-up if needed, but usually silent if previously authed)
-                    tokenClient.callback = (resp) => {
-                        if (resp.error) reject(resp);
-                        resolve(resp.access_token);
-                    };
-                    // Use 'overridable' prompt to avoid forcing consent every time
+                    tokenClient.callback = (resp) => { if (resp.error) reject(resp); resolve(resp.access_token); };
                     tokenClient.requestAccessToken({ prompt: '' });
                 });
             };
@@ -254,28 +248,73 @@
                 const search = await fetch(`https://www.googleapis.com/drive/v3/files?q=${encodeURIComponent(q)}`, { headers: { Authorization: `Bearer ${accessToken}` }});
                 const data = await search.json();
                 if (data.files?.length > 0) return data.files[0].id;
-
-                const create = await fetch('https://www.googleapis.com/drive/v3/files', {
-                    method: 'POST',
-                    headers: { Authorization: `Bearer ${accessToken}`, 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ name: folderName, mimeType: 'application/vnd.google-apps.folder' })
-                });
+                const create = await fetch('https://www.googleapis.com/drive/v3/files', { method: 'POST', headers: { Authorization: `Bearer ${accessToken}`, 'Content-Type': 'application/json' }, body: JSON.stringify({ name: folderName, mimeType: 'application/vnd.google-apps.folder' }) });
                 const createdData = await create.json();
                 return createdData.id;
+            };
+
+            // Helper: MD5 Calculator
+            const calculateMD5 = (blob) => {
+                return new Promise((resolve, reject) => {
+                    if (!window.SparkMD5) return resolve(null); // Fallback if lib failed to load
+                    const reader = new FileReader();
+                    reader.onload = (e) => {
+                        const spark = new SparkMD5.ArrayBuffer();
+                        spark.append(e.target.result);
+                        resolve(spark.end());
+                    };
+                    reader.onerror = reject;
+                    reader.readAsArrayBuffer(blob);
+                });
             };
 
             const saveToDrive = async (content, filename, mimeType, folderName = null, convertToDocs = false) => {
                 const token = await getAccessToken();
                 let parentId = folderName ? await getOrCreateFolder(folderName, token) : null;
+                
+                // --- DEDUPLICATION LOGIC START ---
+                // Before uploading, we prepare the content blob to generate a hash
+                const fileContent = content instanceof Blob ? content : new Blob([content], { type: mimeType });
+                
+                // Only perform heavy deduplication checks for Images (to save API quota on simple text saves)
+                if (parentId && mimeType.startsWith('image/') && !convertToDocs) {
+                    const md5Hash = await calculateMD5(fileContent);
+                    if (md5Hash) {
+                        // 1. FAST CHECK: Search by Name first
+                        // Escape single quotes in filename
+                        const safeName = filename.replace(/'/g, "\\'");
+                        const nameQuery = `'${parentId}' in parents and name = '${safeName}' and trashed = false`;
+                        const nameReq = await fetch(`https://www.googleapis.com/drive/v3/files?q=${encodeURIComponent(nameQuery)}&fields=files(id,md5Checksum,webContentLink,webViewLink)`, { headers: { Authorization: `Bearer ${token}` } });
+                        const nameData = await nameReq.json();
+
+                        // If exact name AND exact content match -> Return existing
+                        const exactMatch = nameData.files?.find(f => f.md5Checksum === md5Hash);
+                        if (exactMatch) {
+                            console.log("♻️ Duplicate avoided! Found file by Name & Hash.");
+                            return { id: exactMatch.id, webContentLink: `https://lh3.googleusercontent.com/d/${exactMatch.id}`, webViewLink: exactMatch.webViewLink };
+                        }
+
+                        // 2. DEEP SCAN: Search by Content (Last 50 images)
+                        // This catches the "same image but different name" case
+                        const listQuery = `'${parentId}' in parents and trashed = false and mimeType contains 'image/'`;
+                        // Order by createdTime desc to check most recent uploads first
+                        const listReq = await fetch(`https://www.googleapis.com/drive/v3/files?q=${encodeURIComponent(listQuery)}&orderBy=createdTime desc&pageSize=50&fields=files(id,md5Checksum,webContentLink,webViewLink)`, { headers: { Authorization: `Bearer ${token}` } });
+                        const listData = await listReq.json();
+                        
+                        const contentMatch = listData.files?.find(f => f.md5Checksum === md5Hash);
+                        if (contentMatch) {
+                            console.log("♻️ Duplicate avoided! Found file by Hash (different name).");
+                            return { id: contentMatch.id, webContentLink: `https://lh3.googleusercontent.com/d/${contentMatch.id}`, webViewLink: contentMatch.webViewLink };
+                        }
+                    }
+                }
+                // --- DEDUPLICATION LOGIC END ---
 
                 const metadata = { name: filename, mimeType: convertToDocs ? 'application/vnd.google-apps.document' : mimeType };
                 if (parentId) metadata.parents = [parentId];
 
                 const form = new FormData();
                 form.append('metadata', new Blob([JSON.stringify(metadata)], { type: 'application/json' }));
-                
-                // Handle content (String vs Blob)
-                const fileContent = content instanceof Blob ? content : new Blob([content], { type: mimeType });
                 form.append('file', fileContent);
 
                 // 1. UPLOAD
@@ -290,7 +329,6 @@
                 const fileId = fileData.id;
 
                 // 2. MAKE PUBLIC (Crucial for Images)
-                // If it's an image, we MUST make it public so <img> tags can read it
                 if (mimeType.startsWith('image/')) {
                     const permRes = await fetch(`https://www.googleapis.com/drive/v3/files/${fileId}/permissions`, {
                         method: 'POST',
@@ -298,13 +336,9 @@
                         body: JSON.stringify({ role: 'reader', type: 'anyone' })
                     });
                     
-                    if (!permRes.ok) {
-                         // Fallback for School/Enterprise accounts that block "Public" sharing
-                         console.warn("Public sharing failed. This image might not load for others.");
-                    }
+                    if (!permRes.ok) { console.warn("Public sharing failed."); }
                     
                     // 3. RETURN CDN LINK
-                    // This is the magic link format that works best
                     return { 
                         id: fileId, 
                         webContentLink: `https://lh3.googleusercontent.com/d/${fileId}`, 
@@ -507,8 +541,8 @@
                                 const uploadPromise = uploader(blob, filename, blob.type, 'darNote_Images')
                                     .then((result) => {
                                         // TinyMCE expects a direct string URL here
-                                        resolve(result.url);
-                                        return result.url;
+                                        resolve(result.webContentLink || result.url);
+                                        return result.webContentLink || result.url;
                                     })
                                     .catch((err) => {
                                         console.error("Upload Failed:", err);
