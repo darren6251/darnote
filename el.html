@@ -352,7 +352,13 @@
             const [user, setUser] = useState(null);
             const [logs, setLogs] = useState([]);
             const [subjects, setSubjects] = useState([]);
-            const [activeLogId, setActiveLogId] = useState(null);
+            
+            // 1. ROTATING LOGIC: Initialize state from URL params
+            const [activeLogId, setActiveLogId] = useState(() => {
+                const params = new URLSearchParams(window.location.search);
+                return params.get('log');
+            });
+
             const [filter, setFilter] = useState('all');
             const [searchQuery, setSearchQuery] = useState('');
             const [isAiOpen, setIsAiOpen] = useState(false);
@@ -371,6 +377,31 @@
                 else document.documentElement.classList.remove('dark');
             }, [isDarkMode]);
 
+            // 2. ROTATING LOGIC: URL Persistence
+            useEffect(() => {
+                const url = new URL(window.location);
+                if (activeLogId) {
+                    url.searchParams.set('log', activeLogId);
+                } else {
+                    url.searchParams.delete('log');
+                }
+                
+                // Only push state if URL actually changed to prevent history spam
+                if (url.href !== window.location.href) {
+                    window.history.pushState({}, '', url);
+                }
+            }, [activeLogId]);
+
+            // 3. ROTATING LOGIC: Handle Browser Back/Forward
+            useEffect(() => {
+                const onPopState = () => {
+                    const id = new URLSearchParams(window.location.search).get('log');
+                    setActiveLogId(id);
+                };
+                window.addEventListener('popstate', onPopState);
+                return () => window.removeEventListener('popstate', onPopState);
+            }, []);
+
             useEffect(() => {
                 if (!user) return;
                 const db = window.firebase.db;
@@ -380,7 +411,7 @@
                     const data = snap.docs.map(d => ({id: d.id, ...d.data()})).sort((a,b) => new Date(b.createdAt) - new Date(a.createdAt));
                     setLogs(data);
                 });
-                // MODIFIED SUBJECTS FETCH TO GET FULL DOC (INCLUDING TOPICS)
+                
                 const subUnsub = window.firebase.onSnapshot(window.firebase.collection(db, 'artifacts', appId, 'users', user.uid, 'subjects'), (snap) => {
                     setSubjects(snap.docs.map(d => ({
                         id: d.id, 
