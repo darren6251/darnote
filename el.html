@@ -80,13 +80,30 @@
             Google: (p) => <svg {...p} xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 22C6.477 22 2 17.523 2 12S6.477 2 12 2s10 4.477 10 10-4.477 10-10 10z"/><path d="M12 11h9c.1 1.4.1 2.9-.4 4.3-1.1 3-4.1 5.3-7.6 5.6-5 .5-9.4-3.1-9.9-8.1C2.5 7.1 6 2.3 11 2c2.5-.1 4.9.9 6.7 2.6l-2.7 2.8c-1-.7-2.3-1.1-3.6-1-2.9.2-5.1 2.8-4.9 5.7.2 2.6 2.4 4.7 5 4.7 2 0 3.6-1.1 4.3-2.9H12v-3z" fill="currentColor"/></svg>,
             Sun: (p) => <svg {...p} xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="5"/><path d="M12 1v2"/><path d="M12 21v2"/><path d="M4.22 4.22l1.42 1.42"/><path d="M18.36 18.36l1.42 1.42"/><path d="M1 12h2"/><path d="M21 12h2"/><path d="M4.22 19.78l1.42-1.42"/><path d="M18.36 5.64l1.42-1.42"/></svg>,
             Moon: (p) => <svg {...p} xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>,
-            User: (p) => <svg {...p} xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+            User: (p) => <svg {...p} xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>,
+            Scan: (p) => <svg {...p} xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 7V5a2 2 0 0 1 2-2h2"/><path d="M17 3h2a2 2 0 0 1 2 2v2"/><path d="M21 17v2a2 2 0 0 1-2 2h-2"/><path d="M7 21H5a2 2 0 0 1-2-2v-2"/><path d="M8 12h8"/><path d="M12 8v8"/></svg>
         };
 
         // --- GEMINI PROXY ---
-        const callGemini = async (prompt, systemInstruction = "") => {
+        const callGemini = async (prompt, systemInstruction = "", imageBase64 = null) => {
             const proxyUrl = "https://gemini-proxy-157237873670.us-central1.run.app/proxy";
-            const payload = { contents: [{ parts: [{ text: `${systemInstruction}\n\nUser: ${prompt}` }] }] };
+            const parts = [{ text: `${systemInstruction}\n\nUser: ${prompt}` }];
+            
+            if (imageBase64) {
+                // Determine MIME type (default to png if not present in string)
+                let mimeType = "image/png";
+                let data = imageBase64;
+                
+                if (imageBase64.includes(",")) {
+                   const split = imageBase64.split(",");
+                   const match = split[0].match(/:(.*?);/);
+                   if (match) mimeType = match[1];
+                   data = split[1];
+                }
+                parts.push({ inlineData: { mimeType, data } });
+            }
+
+            const payload = { contents: [{ parts }] };
             try {
                 const response = await fetch(proxyUrl, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
                 const data = await response.json();
@@ -186,7 +203,8 @@
 
                 const context = `
                     Student is analyzing a mistake.
-                    Topic: ${activeLog.subject}
+                    Subject: ${activeLog.subject}
+                    Topic: ${activeLog.topic || 'N/A'}
                     Question Type: ${activeLog.questionType}
                     Student's Correct Answer: ${activeLog.correctAnswer}
                     Student's Explanation: ${activeLog.explanation}
@@ -235,6 +253,7 @@
             const [searchQuery, setSearchQuery] = useState('');
             const [isAiOpen, setIsAiOpen] = useState(false);
             const [isDarkMode, setIsDarkMode] = useState(true); // Default Dark Mode
+            const [isAutoTitleLoading, setIsAutoTitleLoading] = useState(false);
             const { saveToDrive } = useGoogleDrive();
             
             // Image Upload State for Active Log
@@ -266,6 +285,7 @@
                 const newLog = {
                     title: 'Untitled Mistake',
                     subject: 'General',
+                    topic: '',
                     imageUrl: '',
                     questionType: 'MC', // MC or LQ
                     correctAnswer: '',
@@ -299,6 +319,36 @@
                     }
                 }
             };
+
+            const handleAutoTitle = async () => {
+                if (!activeLogId || !activeLog.imageUrl) {
+                    alert("Please paste an image first!");
+                    return;
+                }
+                setIsAutoTitleLoading(true);
+                try {
+                    // Fetch the image to get blob for OCR
+                    const response = await fetch(activeLog.imageUrl);
+                    if (!response.ok) throw new Error("Failed to fetch image for OCR.");
+                    const blob = await response.blob();
+                    
+                    // Convert to Base64
+                    const reader = new FileReader();
+                    reader.onloadend = async () => {
+                        const base64data = reader.result;
+                        const prompt = "Analyze this image. If it contains a question, identify the core concept or question text and generate a SHORT, descriptive title (max 6 words). Example: 'Projectile Motion Q5' or 'Integration by Parts Error'. Return ONLY the title.";
+                        const title = await callGemini(prompt, "You are a concise summarizer.", base64data);
+                        updateLog(activeLogId, { title: title.replace(/^["']|["']$/g, '').trim() });
+                        setIsAutoTitleLoading(false);
+                    };
+                    reader.readAsDataURL(blob);
+
+                } catch(e) {
+                    console.error(e);
+                    alert("OCR Failed. Image might be restricted (CORS) or AI is busy.");
+                    setIsAutoTitleLoading(false);
+                }
+            }
 
             const activeLog = logs.find(l => l.id === activeLogId);
             const filteredLogs = logs.filter(l => {
@@ -400,7 +450,10 @@
                                             {l.mastered && <Icons.Check className="w-4 h-4 text-green-500 shrink-0"/>}
                                         </div>
                                         <div className="flex justify-between items-center mt-2">
-                                            <span className="text-[10px] font-medium px-2 py-0.5 rounded bg-zinc-200 dark:bg-white/10 text-zinc-600 dark:text-zinc-400">{l.subject}</span>
+                                            <div className="flex items-center gap-2">
+                                                <span className="text-[10px] font-medium px-2 py-0.5 rounded bg-zinc-200 dark:bg-white/10 text-zinc-600 dark:text-zinc-400">{l.subject}</span>
+                                                {l.topic && <span className="text-[10px] font-medium px-2 py-0.5 rounded border border-zinc-200 dark:border-white/10 text-zinc-500 dark:text-zinc-500 truncate max-w-[80px]">{l.topic}</span>}
+                                            </div>
                                             <span className={`text-[10px] font-bold ${l.mastered ? 'text-green-600 dark:text-green-400' : 'text-red-500'}`}>{l.mastered ? 'SOLVED' : 'REVIEW'}</span>
                                         </div>
                                         {!l.mastered && <div className="absolute left-0 top-0 bottom-0 w-1 bg-red-500"></div>}
@@ -416,8 +469,14 @@
                         {activeLog ? (
                             <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="flex flex-col h-full">
                                 <header className="h-16 flex items-center justify-between px-6 border-b border-zinc-200 dark:border-white/5 bg-white dark:bg-surface shrink-0 z-10">
-                                    <input value={activeLog.title} onChange={e=>updateLog(activeLog.id, {title:e.target.value})} className="bg-transparent text-xl font-bold outline-none w-full text-zinc-900 dark:text-white placeholder-zinc-400" placeholder="Untitled Mistake"/>
-                                    <div className="flex items-center gap-3 ml-4">
+                                    <div className="flex-1 flex items-center gap-2 mr-4">
+                                        <input value={activeLog.title} onChange={e=>updateLog(activeLog.id, {title:e.target.value})} className="bg-transparent text-xl font-bold outline-none w-full text-zinc-900 dark:text-white placeholder-zinc-400" placeholder="Untitled Mistake"/>
+                                        <button onClick={handleAutoTitle} disabled={isAutoTitleLoading || !activeLog.imageUrl} className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${isAutoTitleLoading ? 'bg-indigo-100 text-indigo-500 animate-pulse' : 'bg-zinc-100 dark:bg-white/10 text-zinc-600 dark:text-zinc-400 hover:bg-brand hover:text-white dark:hover:bg-brand'}`} title="Auto-generate title from image">
+                                            {isAutoTitleLoading ? <div className="w-3 h-3 border-2 border-current border-t-transparent rounded-full animate-spin"/> : <Icons.Scan className="w-3 h-3"/>}
+                                            <span className="hidden sm:inline">Auto-Title</span>
+                                        </button>
+                                    </div>
+                                    <div className="flex items-center gap-3">
                                         <button onClick={()=>updateLog(activeLog.id, {mastered: !activeLog.mastered})} className={`px-4 py-1.5 rounded-full text-xs font-bold border transition-all ${activeLog.mastered ? 'bg-green-500/10 border-green-500 text-green-600 dark:text-green-400' : 'bg-red-500/10 border-red-500 text-red-600 dark:text-red-400'}`}>
                                             {activeLog.mastered ? 'Mastered' : 'Needs Review'}
                                         </button>
@@ -431,13 +490,17 @@
                                     <div className="max-w-5xl mx-auto space-y-8">
                                         
                                         {/* META CARD */}
-                                        <div className="bg-white dark:bg-surface p-5 rounded-2xl shadow-sm border border-zinc-200 dark:border-white/5 grid grid-cols-2 gap-6">
+                                        <div className="bg-white dark:bg-surface p-5 rounded-2xl shadow-sm border border-zinc-200 dark:border-white/5 grid grid-cols-1 md:grid-cols-3 gap-6">
                                             <div>
                                                 <label className="text-[11px] font-bold text-zinc-400 uppercase tracking-wider mb-1 block">Subject</label>
                                                 <select value={activeLog.subject} onChange={e=>updateLog(activeLog.id, {subject:e.target.value})} className="input-field bg-zinc-50 dark:bg-black/20">
                                                     <option>General</option>
                                                     {subjects.map(s=><option key={s}>{s}</option>)}
                                                 </select>
+                                            </div>
+                                            <div>
+                                                <label className="text-[11px] font-bold text-zinc-400 uppercase tracking-wider mb-1 block">Topic / Sub-Topic</label>
+                                                <input value={activeLog.topic || ''} onChange={e=>updateLog(activeLog.id, {topic:e.target.value})} className="input-field bg-zinc-50 dark:bg-black/20" placeholder="e.g. Calculus, Acids & Bases"/>
                                             </div>
                                             <div>
                                                 <label className="text-[11px] font-bold text-zinc-400 uppercase tracking-wider mb-1 block">Question Type</label>
