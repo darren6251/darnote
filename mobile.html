@@ -265,6 +265,7 @@
             const [loading, setLoading] = useState(false);
             const [dailyCount, setDailyCount] = useState(0);
             const messagesEndRef = useRef(null);
+            const viewportRef = useRef(null);
             const QUOTA_LIMIT = 10;
             const todayDate = new Date().toISOString().split('T')[0];
 
@@ -276,6 +277,31 @@
                 });
                 return () => unsub();
             }, [user, todayDate]);
+
+            // Visual Viewport Listener for iOS Keyboard
+            useEffect(() => {
+                const handleResize = () => {
+                    if (viewportRef.current && window.visualViewport) {
+                        // Set height explicitly to visual viewport height
+                        viewportRef.current.style.height = `${window.visualViewport.height}px`;
+                        // Ensure we are at bottom
+                        messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+                    }
+                };
+
+                if (window.visualViewport) {
+                    window.visualViewport.addEventListener('resize', handleResize);
+                    window.visualViewport.addEventListener('scroll', handleResize);
+                    handleResize(); // Initial set
+                }
+                
+                return () => {
+                    if (window.visualViewport) {
+                        window.visualViewport.removeEventListener('resize', handleResize);
+                        window.visualViewport.removeEventListener('scroll', handleResize);
+                    }
+                };
+            }, []);
 
             useEffect(() => { messagesEndRef.current?.scrollIntoView({ behavior: "smooth" }); }, [messages]);
 
@@ -312,7 +338,7 @@
             const remaining = Math.max(0, QUOTA_LIMIT - dailyCount);
 
             return (
-                <div className="flex flex-col h-[100dvh] bg-zinc-50 dark:bg-surface">
+                <div ref={viewportRef} className="flex flex-col w-full bg-zinc-50 dark:bg-surface fixed inset-0 z-[80] overflow-hidden" style={{ height: '100dvh' }}>
                     <div className="p-4 border-b border-zinc-200 dark:border-white/10 flex justify-between items-center bg-zinc-100 dark:bg-black/20 shrink-0">
                         <div className="flex flex-col">
                             <span className="font-bold text-sm text-zinc-800 dark:text-white flex items-center gap-2"><Icons.Bot className="w-4 h-4 text-brand"/> AI Tutor</span>
@@ -337,8 +363,8 @@
                         <div ref={messagesEndRef} />
                     </div>
                     
-                    {/* Input Area - SafeArea for iOS handled by pb-safe or padding */}
-                    <div className="p-4 border-t border-zinc-200 dark:border-white/10 bg-white dark:bg-black flex gap-2 relative shrink-0" style={{ paddingBottom: 'calc(1rem + env(safe-area-inset-bottom))' }}>
+                    {/* Input Area */}
+                    <div className="p-4 border-t border-zinc-200 dark:border-white/10 bg-white dark:bg-black flex gap-2 relative shrink-0">
                          {remaining === 0 && (
                              <div className="absolute inset-0 bg-black/80 backdrop-blur-sm z-10 flex items-center justify-center">
                                  <div className="border border-red-500 text-red-500 px-4 py-2 rounded-lg text-xs font-bold flex items-center gap-2">
@@ -502,7 +528,7 @@
                     {/* AI Chat Overlay */}
                     <AnimatePresence>
                         {isAiOpen && (
-                            <motion.div initial={{ y: "100%" }} animate={{ y: "20%" }} exit={{ y: "100%" }} className="fixed inset-0 z-[70] bg-white dark:bg-surface rounded-t-3xl shadow-2xl border-t border-zinc-200 dark:border-white/10 overflow-hidden">
+                            <motion.div initial={{ y: "100%" }} animate={{ y: "0%" }} exit={{ y: "100%" }} className="fixed inset-0 z-[70] bg-white dark:bg-surface rounded-t-3xl shadow-2xl border-t border-zinc-200 dark:border-white/10 overflow-hidden">
                                 <AIChat activeLog={data} onClose={() => setIsAiOpen(false)} user={user} />
                             </motion.div>
                         )}
