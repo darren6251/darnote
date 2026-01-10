@@ -79,6 +79,10 @@
         
         .loader { width: 48px; height: 48px; border: 5px solid #a1a1aa; border-bottom-color: #6366f1; border-radius: 50%; display: inline-block; box-sizing: border-box; animation: rotation 1s linear infinite; }
         @keyframes rotation { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+        
+        /* Hide scrollbar but keep functionality for horizontal lists */
+        .no-scrollbar::-webkit-scrollbar { display: none; }
+        .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
     </style>
 </head>
 <body class="bg-zinc-50 text-zinc-900 dark:bg-onyx dark:text-zinc-100 transition-colors duration-300">
@@ -109,6 +113,7 @@
             Sun: (p) => <svg {...p} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="5"></circle><line x1="12" y1="1" x2="12" y2="3"></line><line x1="12" y1="21" x2="12" y2="23"></line><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line><line x1="1" y1="12" x2="3" y2="12"></line><line x1="21" y1="12" x2="23" y2="12"></line><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line></svg>,
             Moon: (p) => <svg {...p} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path></svg>,
             Filter: (p) => <svg {...p} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"></polygon></svg>,
+            Sort: (p) => <svg {...p} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><polyline points="19 12 12 19 5 12"></polyline></svg>
         };
 
         // --- GEMINI PROXY ---
@@ -220,12 +225,10 @@
                 const unsub = window.firebase.onSnapshot(docRef, (doc) => {
                     if (doc.exists()) {
                         setSettings(doc.data());
-                        // Apply theme immediately
                         const theme = doc.data().theme || 'dark';
                         if (theme === 'dark') document.documentElement.classList.add('dark');
                         else document.documentElement.classList.remove('dark');
                     } else {
-                        // Default
                         document.documentElement.classList.add('dark');
                         setSettings({ theme: 'dark', bio: '' });
                     }
@@ -258,7 +261,6 @@
             </div>
         );
 
-        // --- AI CHAT COMPONENT (Fixed for iPhone Keyboard) ---
         const AIChat = ({ activeLog, onClose, user }) => {
             const [messages, setMessages] = useState([{role: 'ai', text: "I see your failure. How can I help you understand it?"}]);
             const [input, setInput] = useState("");
@@ -278,13 +280,10 @@
                 return () => unsub();
             }, [user, todayDate]);
 
-            // Visual Viewport Listener for iOS Keyboard
             useEffect(() => {
                 const handleResize = () => {
                     if (viewportRef.current && window.visualViewport) {
-                        // Set height explicitly to visual viewport height
                         viewportRef.current.style.height = `${window.visualViewport.height}px`;
-                        // Ensure we are at bottom
                         messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
                     }
                 };
@@ -292,7 +291,7 @@
                 if (window.visualViewport) {
                     window.visualViewport.addEventListener('resize', handleResize);
                     window.visualViewport.addEventListener('scroll', handleResize);
-                    handleResize(); // Initial set
+                    handleResize(); 
                 }
                 
                 return () => {
@@ -316,14 +315,13 @@
                 setInput("");
                 setLoading(true);
 
-                // Increment Quota
                 const docRef = window.firebase.doc(window.firebase.db, 'artifacts', 'darnote-app', 'users', user.uid, 'ai_usage', todayDate);
                 await window.firebase.setDoc(docRef, { count: window.firebase.increment(1), date: todayDate }, { merge: true });
 
-                // Construct Context
                 const context = activeLog ? `
                     Subject: ${activeLog.subject || 'N/A'}
                     Question Type: ${activeLog.questionType || 'N/A'}
+                    Correct Answer: ${activeLog.correctAnswer || 'N/A'}
                     Student's Explanation: ${activeLog.explanation || 'None'}
                     Image Url: ${activeLog.imageUrl || "No image provided"}
                     Marking Scheme Url: ${activeLog.markingSchemeUrl || "No marking scheme provided"}
@@ -363,7 +361,6 @@
                         <div ref={messagesEndRef} />
                     </div>
                     
-                    {/* Input Area */}
                     <div className="p-4 border-t border-zinc-200 dark:border-white/10 bg-white dark:bg-black flex gap-2 relative shrink-0">
                          {remaining === 0 && (
                              <div className="absolute inset-0 bg-black/80 backdrop-blur-sm z-10 flex items-center justify-center">
@@ -422,7 +419,7 @@
 
                     <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} transition={{ delay: 0.1 }} className="bg-gradient-to-br from-brand to-brand-dark p-6 rounded-3xl text-white shadow-glow relative overflow-hidden">
                         <div className="relative z-10">
-                            <div className="text-sm font-medium opacity-80 mb-1">Total Wrong Questions</div>
+                            <div className="text-sm font-medium opacity-80 mb-1">Total Failures</div>
                             <div className="text-4xl font-bold mb-4">{errors.length}</div>
                             <div className="flex gap-4">
                                 <div className="bg-white/20 px-3 py-1 rounded-lg text-xs backdrop-blur-sm"><span className="font-bold">{errors.filter(e => e.mastered).length}</span> Mastered</div>
@@ -441,7 +438,7 @@
                         <div className="space-y-3">{recentErrors.map(e => (
                             <div key={e.id} onClick={() => setTab('edit_error', e)} className="bg-white dark:bg-surface p-4 rounded-2xl border border-zinc-200 dark:border-zinc-800 flex items-center gap-4 active:bg-zinc-100 dark:active:bg-zinc-800">
                                 <div className={`w-2 h-10 rounded-full ${e.mastered ? 'bg-green-500' : 'bg-red-500'}`}></div>
-                                <div className="flex-1 overflow-hidden"><div className="font-bold text-zinc-800 dark:text-zinc-200 truncate">{e.title}</div><div className="text-xs text-zinc-500">{e.subject} • {new Date(e.createdAt).toLocaleDateString()}</div></div>
+                                <div className="flex-1 overflow-hidden"><div className="font-bold text-zinc-800 dark:text-zinc-200 truncate">{e.title}</div><div className="text-xs text-zinc-500">{e.subject} • {e.createdAt ? new Date(e.createdAt).toLocaleDateString() : 'No Date'}</div></div>
                             </div>
                         ))}</div>
                     </div>
@@ -450,7 +447,17 @@
         };
 
         const ErrorEditor = ({ item, onSave, onBack, onDelete, user }) => {
-            const [data, setData] = useState(item || { title: '', subject: 'General', mastered: false, explanation: '', imageUrl: '', questionType: 'MC', markingSchemeUrl: '' });
+            const [data, setData] = useState(item || { 
+                title: '', 
+                subject: 'General', 
+                topic: '', 
+                mastered: false, 
+                explanation: '', 
+                imageUrl: '', 
+                questionType: 'MC', 
+                markingSchemeUrl: '',
+                correctAnswer: ''
+            });
             const [isAiOpen, setIsAiOpen] = useState(false);
             const { saveToDrive } = useGoogleDrive();
             const [uploading, setUploading] = useState(false);
@@ -489,6 +496,17 @@
 
                         <input placeholder="What went wrong?" className="w-full bg-transparent text-2xl font-bold placeholder-zinc-400 dark:placeholder-zinc-600 focus:outline-none text-zinc-900 dark:text-white" value={data.title} onChange={(e) => setData({...data, title: e.target.value})} />
 
+                        {/* Correct Answer Input */}
+                        <div className="bg-white dark:bg-surface rounded-2xl p-4 border border-zinc-200 dark:border-zinc-800">
+                             <label className="text-[10px] text-zinc-500 uppercase font-bold mb-2 block">Correct Answer</label>
+                             <input 
+                                placeholder="e.g. A, B, or 'The mitochondria...'" 
+                                value={data.correctAnswer || ''} 
+                                onChange={e=>setData({...data, correctAnswer: e.target.value})} 
+                                className="w-full bg-zinc-100 dark:bg-zinc-900 p-3 rounded-xl focus:outline-none text-zinc-900 dark:text-white text-sm"
+                            />
+                        </div>
+
                         {/* Evidence Image */}
                         <div className="relative w-full aspect-video bg-zinc-100 dark:bg-zinc-900 rounded-2xl border border-dashed border-zinc-300 dark:border-zinc-700 flex flex-col items-center justify-center overflow-hidden">
                             {uploading ? <span className="loader"></span> : data.imageUrl ? <img src={data.imageUrl} className="w-full h-full object-contain"/> : (
@@ -522,6 +540,16 @@
                             <div><label className="text-[10px] text-zinc-500 uppercase font-bold">Type</label><select value={data.questionType} onChange={e=>setData({...data, questionType: e.target.value})} className="w-full bg-zinc-100 dark:bg-zinc-900 p-3 rounded-xl mt-1 focus:outline-none text-zinc-900 dark:text-white text-sm"><option value="MC">MC</option><option value="LQ">Long Question</option></select></div>
                         </div>
 
+                        <div className="bg-white dark:bg-surface rounded-2xl p-4 border border-zinc-200 dark:border-zinc-800">
+                             <label className="text-[10px] text-zinc-500 uppercase font-bold mb-2 block">Topic</label>
+                             <input 
+                                placeholder="e.g. Differentiation, Algebra" 
+                                value={data.topic || ''} 
+                                onChange={e=>setData({...data, topic: e.target.value})} 
+                                className="w-full bg-zinc-100 dark:bg-zinc-900 p-3 rounded-xl focus:outline-none text-zinc-900 dark:text-white text-sm"
+                            />
+                        </div>
+
                         {item && <button onClick={() => { if(confirm('Delete?')) { onDelete(item.id); onBack(); }}} className="w-full py-4 text-red-500 font-bold text-sm bg-zinc-100 dark:bg-zinc-900 rounded-xl">Delete Log</button>}
                     </div>
 
@@ -541,7 +569,6 @@
             const [title, setTitle] = useState(item?.title || '');
             const editorRef = useRef(null);
             
-            // Re-check theme for TinyMCE when mounting
             const isDark = document.documentElement.classList.contains('dark');
 
             useEffect(() => {
@@ -620,19 +647,138 @@
             );
         };
 
+        // --- ERROR LIST COMPONENT WITH FILTERS ---
+        const ErrorList = ({ items, onEdit }) => {
+            const [mode, setMode] = useState('date'); // 'date' | 'category'
+            const [selectedSubject, setSelectedSubject] = useState(null);
+            const [selectedTopic, setSelectedTopic] = useState(null);
+
+            // Get unique subjects
+            const subjects = useMemo(() => [...new Set(items.map(i => i.subject || 'General'))].sort(), [items]);
+            
+            // Get topics for selected subject
+            const topics = useMemo(() => {
+                if (!selectedSubject) return [];
+                const subjectItems = items.filter(i => (i.subject || 'General') === selectedSubject);
+                return [...new Set(subjectItems.map(i => i.topic).filter(Boolean))].sort();
+            }, [items, selectedSubject]);
+
+            // Filter logic
+            const filteredItems = useMemo(() => {
+                let res = items;
+                if (mode === 'category') {
+                    if (selectedSubject) {
+                        res = res.filter(i => (i.subject || 'General') === selectedSubject);
+                        if (selectedTopic) {
+                            res = res.filter(i => i.topic === selectedTopic);
+                        }
+                    } else {
+                        // If in category mode but no subject selected, show nothing or prompt? 
+                        // Let's show all grouped but that's complex. Let's show nothing and wait for selection.
+                        // Or just show all sorted by Subject.
+                        return []; // Wait for selection
+                    }
+                    // Sort by Topic then Date
+                    res = [...res].sort((a,b) => (a.topic||'').localeCompare(b.topic||'') || new Date(b.createdAt) - new Date(a.createdAt));
+                }
+                return res;
+            }, [items, mode, selectedSubject, selectedTopic]);
+
+            return (
+                <div className="p-6 pb-24 min-h-screen flex flex-col">
+                    <div className="flex justify-between items-end mb-6">
+                        <h2 className="text-3xl font-bold text-zinc-900 dark:text-white">Error Logs</h2>
+                        <div className="flex bg-zinc-200 dark:bg-zinc-800 rounded-lg p-1 gap-1">
+                            <button onClick={()=>{setMode('date'); setSelectedSubject(null);}} className={`px-3 py-1 rounded-md text-[10px] font-bold transition-all ${mode==='date'?'bg-white dark:bg-zinc-600 shadow-sm text-black dark:text-white':'text-zinc-500'}`}>By Date</button>
+                            <button onClick={()=>setMode('category')} className={`px-3 py-1 rounded-md text-[10px] font-bold transition-all ${mode==='category'?'bg-white dark:bg-zinc-600 shadow-sm text-black dark:text-white':'text-zinc-500'}`}>By Category</button>
+                        </div>
+                    </div>
+
+                    {mode === 'category' && (
+                        <div className="mb-4 space-y-4">
+                            {/* Subject Chips */}
+                            <div className="overflow-x-auto no-scrollbar pb-2">
+                                <div className="flex gap-2">
+                                    {subjects.map(sub => (
+                                        <button 
+                                            key={sub}
+                                            onClick={() => { setSelectedSubject(sub === selectedSubject ? null : sub); setSelectedTopic(null); }}
+                                            className={`px-4 py-2 rounded-full text-xs font-bold whitespace-nowrap transition-colors ${selectedSubject === sub ? 'bg-brand text-white' : 'bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-400'}`}
+                                        >
+                                            {sub}
+                                        </button>
+                                    ))}
+                                </div>
+                            </div>
+                            
+                            {/* Topic Chips (Only if Subject Selected) */}
+                            <AnimatePresence>
+                                {selectedSubject && topics.length > 0 && (
+                                    <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }} className="overflow-hidden">
+                                        <div className="overflow-x-auto no-scrollbar pb-2">
+                                            <div className="flex gap-2">
+                                                <button 
+                                                    onClick={() => setSelectedTopic(null)}
+                                                    className={`px-3 py-1 rounded-lg text-[10px] font-bold border whitespace-nowrap ${!selectedTopic ? 'border-brand text-brand' : 'border-zinc-200 dark:border-zinc-700 text-zinc-500'}`}
+                                                >
+                                                    All Topics
+                                                </button>
+                                                {topics.map(t => (
+                                                    <button 
+                                                        key={t}
+                                                        onClick={() => setSelectedTopic(t === selectedTopic ? null : t)}
+                                                        className={`px-3 py-1 rounded-lg text-[10px] font-bold border whitespace-nowrap transition-colors ${selectedTopic === t ? 'bg-brand border-brand text-white' : 'border-zinc-200 dark:border-zinc-700 text-zinc-500 hover:border-zinc-400'}`}
+                                                    >
+                                                        {t}
+                                                    </button>
+                                                ))}
+                                            </div>
+                                        </div>
+                                    </motion.div>
+                                )}
+                            </AnimatePresence>
+                        </div>
+                    )}
+
+                    <div className="space-y-3 flex-1">
+                        {mode === 'category' && !selectedSubject ? (
+                            <div className="h-40 flex items-center justify-center text-zinc-400 text-sm italic">Select a Subject to view errors.</div>
+                        ) : (mode === 'category' && filteredItems.length === 0) ? (
+                            <div className="h-40 flex items-center justify-center text-zinc-400 text-sm italic">No errors found here. Good job?</div>
+                        ) : (
+                            (mode === 'category' ? filteredItems : items).map((item, i) => (
+                                <motion.div key={item.id} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i*0.05 }} onClick={() => onEdit('edit_error', item)} className="bg-white dark:bg-surface p-4 rounded-2xl border border-zinc-200 dark:border-zinc-800 flex justify-between items-center active:scale-[0.98] transition-transform">
+                                    <div>
+                                        <div className="font-bold text-zinc-800 dark:text-zinc-200 mb-1">{item.title || 'Untitled'}</div>
+                                        <div className="flex items-center gap-2">
+                                            <span className={`text-[10px] font-bold px-2 py-0.5 rounded ${item.mastered ? "bg-green-500/20 text-green-500" : "bg-red-500/20 text-red-500"}`}>{item.mastered ? 'SOLVED' : 'REVIEW'}</span>
+                                            <span className="text-[10px] text-zinc-400 uppercase tracking-wider">{item.subject}</span>
+                                            {item.topic && <span className="text-[10px] text-zinc-500 bg-zinc-100 dark:bg-zinc-800 px-2 py-0.5 rounded-md">{item.topic}</span>}
+                                        </div>
+                                    </div>
+                                    <div className="text-right">
+                                        <div className="text-[10px] text-zinc-500 mb-1">{item.createdAt ? new Date(item.createdAt).toLocaleDateString() : 'No Date'}</div>
+                                        <Icons.ChevronLeft className="w-5 h-5 text-zinc-600 rotate-180 ml-auto"/>
+                                    </div>
+                                </motion.div>
+                            ))
+                        )}
+                    </div>
+                </div>
+            );
+        };
+
         // --- MAIN APP ---
         const App = () => {
             const [user, setUser] = useState(null);
             const [tab, setTab] = useState('home');
             const [selectedItem, setSelectedItem] = useState(null);
             const [isActionSheetOpen, setIsActionSheetOpen] = useState(false);
-            const [sortBy, setSortBy] = useState('date'); // 'date' | 'subject'
 
             useEffect(() => { window.firebase.onAuthStateChanged(window.firebase.auth, setUser); }, []);
             const { data: errorLogs } = useData(user, 'error_logs');
             const { data: notes } = useData(user, 'notes');
             
-            // Initialize settings listener just to apply theme early
             useSettings(user);
 
             const handleLogin = () => window.firebase.signInWithPopup(window.firebase.auth, new window.firebase.GoogleAuthProvider());
@@ -657,12 +803,6 @@
 
             const deleteItem = async (id, collection) => { await window.firebase.deleteDoc(window.firebase.doc(window.firebase.db, 'artifacts', 'darnote-app', 'users', user.uid, collection, id)); };
 
-            // Sorting Logic
-            const sortedErrors = useMemo(() => {
-                if (sortBy === 'date') return errorLogs;
-                return [...errorLogs].sort((a,b) => (a.subject || '').localeCompare(b.subject || ''));
-            }, [errorLogs, sortBy]);
-
             if (!user) return <Splash onLogin={handleLogin} />;
 
             return (
@@ -670,29 +810,7 @@
                     <div className="flex-1 overflow-y-auto">
                         <AnimatePresence mode="wait">
                             {tab === 'home' && <Dashboard key="home" user={user} errors={errorLogs} notes={notes} setTab={handleEdit} />}
-                            {tab === 'errors' && (
-                                <div className="p-6 pb-24 min-h-screen">
-                                    <div className="flex justify-between items-end mb-6">
-                                        <h2 className="text-3xl font-bold text-zinc-900 dark:text-white">Error Logs</h2>
-                                        <div className="flex bg-zinc-200 dark:bg-zinc-800 rounded-lg p-1 gap-1">
-                                            <button onClick={()=>setSortBy('date')} className={`px-3 py-1 rounded-md text-[10px] font-bold transition-all ${sortBy==='date'?'bg-white dark:bg-zinc-600 shadow-sm text-black dark:text-white':'text-zinc-500'}`}>Date</button>
-                                            <button onClick={()=>setSortBy('subject')} className={`px-3 py-1 rounded-md text-[10px] font-bold transition-all ${sortBy==='subject'?'bg-white dark:bg-zinc-600 shadow-sm text-black dark:text-white':'text-zinc-500'}`}>Subject</button>
-                                        </div>
-                                    </div>
-                                    <div className="space-y-3">
-                                        {sortedErrors.map((item, i) => (
-                                            <motion.div key={item.id} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i*0.05 }} onClick={() => handleEdit('edit_error', item)} className="bg-white dark:bg-surface p-4 rounded-2xl border border-zinc-200 dark:border-zinc-800 flex justify-between items-center">
-                                                <div>
-                                                    <div className="font-bold text-zinc-800 dark:text-zinc-200 mb-1">{item.title || 'Untitled'}</div>
-                                                    <span className={`text-xs font-bold ${item.mastered ? "text-green-500" : "text-red-500"}`}>{item.mastered ? 'SOLVED' : 'REVIEW'}</span>
-                                                    <span className="text-[10px] text-zinc-400 ml-2 uppercase tracking-wider">{item.subject}</span>
-                                                </div>
-                                                <Icons.ChevronLeft className="w-5 h-5 text-zinc-600 rotate-180"/>
-                                            </motion.div>
-                                        ))}
-                                    </div>
-                                </div>
-                            )}
+                            {tab === 'errors' && <ErrorList items={errorLogs} onEdit={handleEdit} />}
                             {tab === 'notes' && (
                                 <div className="p-6 pb-24 min-h-screen">
                                     <h2 className="text-3xl font-bold text-zinc-900 dark:text-white mb-6">Notes</h2>
