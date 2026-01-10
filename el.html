@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>darNote - Error Log (Local First)</title>
+    <title>darNote - Error Log (Safe Mode)</title>
     <link rel="icon" type="image/png" href="https://raw.githubusercontent.com/darren6251/darnote/refs/heads/main/darNote%20logo.png">
     
     <!-- React & Tailwind -->
@@ -109,12 +109,22 @@
         });
 
         const LocalDB = {
-            async getAll() { const db = await dbPromise; return new Promise(r => { const tx = db.transaction('logs', 'readonly'); r(tx.objectStore('logs').getAll().result || new Promise(res => tx.objectStore('logs').getAll().onsuccess = e => res(e.target.result))); }); },
-            async save(log) { const db = await dbPromise; return new Promise(r => { const tx = db.transaction('logs', 'readwrite'); tx.objectStore('logs').put(log).onsuccess = () => r(); }); },
-            async delete(id) { const db = await dbPromise; return new Promise(r => { const tx = db.transaction('logs', 'readwrite'); tx.objectStore('logs').delete(id).onsuccess = () => r(); }); },
-            async clear() { const db = await dbPromise; return new Promise(r => { const tx = db.transaction('logs', 'readwrite'); tx.objectStore('logs').clear().onsuccess = () => r(); }); },
-            async getSubjects() { const s = localStorage.getItem('local_subjects'); return s ? JSON.parse(s) : [{id:'gen', name:'General', topics:[]}]; },
-            async saveSubject(s) { localStorage.setItem('local_subjects', JSON.stringify(s)); }
+            async getAll() { 
+                try {
+                    const db = await dbPromise; 
+                    return new Promise((resolve, reject) => { 
+                        const tx = db.transaction('logs', 'readonly'); 
+                        const req = tx.objectStore('logs').getAll(); 
+                        req.onsuccess = () => resolve(req.result);
+                        req.onerror = () => reject("LocalDB Read Error");
+                    }); 
+                } catch(e) { return []; }
+            },
+            async save(log) { try { const db = await dbPromise; return new Promise(r => { const tx = db.transaction('logs', 'readwrite'); tx.objectStore('logs').put(log).onsuccess = () => r(); }); } catch(e){} },
+            async delete(id) { try { const db = await dbPromise; return new Promise(r => { const tx = db.transaction('logs', 'readwrite'); tx.objectStore('logs').delete(id).onsuccess = () => r(); }); } catch(e){} },
+            async clear() { try { const db = await dbPromise; return new Promise(r => { const tx = db.transaction('logs', 'readwrite'); tx.objectStore('logs').clear().onsuccess = () => r(); }); } catch(e){} },
+            async getSubjects() { try { const s = localStorage.getItem('local_subjects'); return s ? JSON.parse(s) : [{id:'gen', name:'General', topics:[]}]; } catch(e) { return [{id:'gen', name:'General', topics:[]}]; } },
+            async saveSubject(s) { try { localStorage.setItem('local_subjects', JSON.stringify(s)); } catch(e){} }
         };
 
         // --- GEMINI PROXY ---
@@ -316,29 +326,44 @@
 
             useEffect(() => { const handleKeyDown = (e) => { if ((e.metaKey || e.ctrlKey) && e.key === 'z') { e.preventDefault(); performUndo(); } }; window.addEventListener('keydown', handleKeyDown); return () => window.removeEventListener('keydown', handleKeyDown); }, [user]);
 
-            // FETCH LOGS LOGIC (LOCAL FIRST STRATEGY)
-            const fetchLogs = async (isLoadMore = false) => {
+            // FETCH LOGS LOGIC (LOCAL FIRST STRATEGY + SAFETY TIMEOUT)
+            const fetchLogs = useCallback(async (isLoadMore = false) => {
                 // If it's the initial load (not Load More), check LocalDB first
                 if (!isLoadMore) {
                     setIsLoadingLogs(true);
-                    const localLogs = await LocalDB.getAll();
                     
-                    if (localLogs.length > 0) {
-                        // FOUND LOCAL DATA: Use it!
-                        console.log("Loaded from Local Cache");
-                        setLogs(localLogs.sort((a,b) => new Date(b.createdAt) - new Date(a.createdAt)));
+                    // SAFETY TIMEOUT: Force stop loading after 5 seconds to prevent eternal spin
+                    const safetyTimer = setTimeout(() => {
+                        console.warn("Safety Timeout Triggered");
                         setIsLoadingLogs(false);
-                        
-                        // Also load subjects from local if available
-                        const localSubjects = await LocalDB.getSubjects();
-                        setSubjects(localSubjects);
-                        return; // EXIT EARLY: Do not call Firebase
+                    }, 5000);
+
+                    try {
+                        const localLogs = await LocalDB.getAll();
+                        if (localLogs.length > 0) {
+                            // FOUND LOCAL DATA: Use it!
+                            console.log("Loaded from Local Cache");
+                            setLogs(localLogs.sort((a,b) => new Date(b.createdAt) - new Date(a.createdAt)));
+                            const localSubjects = await LocalDB.getSubjects();
+                            setSubjects(localSubjects);
+                            clearTimeout(safetyTimer);
+                            setIsLoadingLogs(false);
+                            return; // EXIT EARLY
+                        }
+                    } catch (e) {
+                        console.error("LocalDB Read Failed, falling back to network", e);
                     }
+                    // Continue to network if local failed or empty, but clear timeout first to restart logic
+                    clearTimeout(safetyTimer);
                 }
 
                 // If no local data or "Load More" clicked, THEN hit Firebase
-                if (!user) return;
+                if (!user) { setIsLoadingLogs(false); return; }
+                
+                // New Safety Timer for Network
+                const networkTimer = setTimeout(() => setIsLoadingLogs(false), 8000); // 8s for network
                 setIsLoadingLogs(true);
+
                 try {
                     const db = window.firebase.db;
                     const logsRef = window.firebase.collection(db, 'artifacts', "darnote-app", 'users', user.uid, 'error_logs');
@@ -349,6 +374,7 @@
                         q = window.firebase.query(logsRef, window.firebase.orderBy('createdAt', dir));
                     } else if (sortBy.startsWith('type')) {
                         const typeDir = sortBy === 'type-mc' ? 'desc' : 'asc';
+                        // Safety: If index missing, this might fail. We wrap in try catch.
                         q = window.firebase.query(logsRef, window.firebase.orderBy('questionType', typeDir), window.firebase.orderBy('createdAt', 'desc')); 
                     }
 
@@ -381,27 +407,41 @@
                     setLastDoc(snapshot.docs[snapshot.docs.length - 1]);
                     setHasMore(snapshot.docs.length === 10); 
 
-                } catch (e) { console.error("Fetch Error", e); }
-                setIsLoadingLogs(false);
-            };
+                } catch (e) { 
+                    console.error("Fetch Error", e);
+                    // Fallback to whatever local has if network fails
+                    const emergencyLocal = await LocalDB.getAll();
+                    if(emergencyLocal.length > 0) setLogs(emergencyLocal);
+                } finally {
+                    clearTimeout(networkTimer);
+                    setIsLoadingLogs(false);
+                }
+            }, [user, sortBy, lastDoc]);
 
             // Trigger fetch on user/sort change
             useEffect(() => {
                 if (user) {
                     fetchLogs(false); 
-                    
-                    // Fetch Subjects from Firebase and Cache locally
+                    // Fetch Subjects from Firebase and Cache locally (Fire & Forget)
                     const db = window.firebase.db;
                     window.firebase.getDocs(window.firebase.collection(db, 'artifacts', "darnote-app", 'users', user.uid, 'subjects')).then(snap => {
                         const subs = snap.docs.map(d => ({id: d.id, name: d.data().name, topics: d.data().topics || []})).sort((a,b)=>a.name.localeCompare(b.name));
                         setSubjects(subs);
                         LocalDB.saveSubject(subs);
-                    });
+                    }).catch(e => console.warn("Subject fetch failed", e));
                 }
-            }, [user, sortBy]);
+            }, [user, sortBy]); // Removed fetchLogs from dep to avoid loop
 
+            // One-time Auth Listener
             useEffect(() => {
-                const unsub = window.firebase.onAuthStateChanged(window.firebase.auth, u => { if (u) { setUser(u); setIsGuest(false); } else setUser(null); });
+                const unsub = window.firebase.onAuthStateChanged(window.firebase.auth, u => { 
+                    if (u) { 
+                        setUser(u); 
+                        setIsGuest(false); 
+                        // Do NOT call fetchLogs here to avoid double fetch. 
+                        // The user state update will trigger the effect above.
+                    } else setUser(null); 
+                });
                 return () => unsub();
             }, []);
 
@@ -416,24 +456,23 @@
                 // Force clear local DB to ensure fresh fetch
                 await LocalDB.clear(); 
                 
-                const q = window.firebase.query(
-                    window.firebase.collection(window.firebase.db, 'artifacts', "darnote-app", 'users', user.uid, 'error_logs'),
-                    window.firebase.orderBy('createdAt', 'desc'),
-                    window.firebase.limit(10) // Limit 10 on Refresh
-                );
-                const logSnap = await window.firebase.getDocs(q);
-                
-                const fetchedLogs = logSnap.docs.map(d => {
-                    const data = d.data();
-                    return { id: d.id, ...data, questionImages: data.questionImages || [], schemeImages: data.schemeImages || [] };
-                });
-
-                // Save fresh data to local
-                for(const log of fetchedLogs) await LocalDB.save(log);
-                
-                setLogs(fetchedLogs);
-                setLastDoc(logSnap.docs[logSnap.docs.length - 1]);
-                setIsLoadingLogs(false);
+                try {
+                    const q = window.firebase.query(
+                        window.firebase.collection(window.firebase.db, 'artifacts', "darnote-app", 'users', user.uid, 'error_logs'),
+                        window.firebase.orderBy('createdAt', 'desc'),
+                        window.firebase.limit(10) // Limit 10 on Refresh
+                    );
+                    const logSnap = await window.firebase.getDocs(q);
+                    const fetchedLogs = logSnap.docs.map(d => {
+                        const data = d.data();
+                        return { id: d.id, ...data, questionImages: data.questionImages || [], schemeImages: data.schemeImages || [] };
+                    });
+                    // Save fresh data to local
+                    for(const log of fetchedLogs) await LocalDB.save(log);
+                    setLogs(fetchedLogs);
+                    setLastDoc(logSnap.docs[logSnap.docs.length - 1]);
+                } catch(e) { console.error("Refresh Error", e); }
+                finally { setIsLoadingLogs(false); }
             };
 
             const createLog = async () => {
