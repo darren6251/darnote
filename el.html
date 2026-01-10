@@ -64,7 +64,7 @@
         const GDRIVE_API_KEY = "AIzaSyCScFR_D0snZ6hrHob5fUQM7Y2NhK-kTIA"; 
         const GDRIVE_CLIENT_ID = "256215327792-oglegui0q8qj507oao2c2733thcl9lrc.apps.googleusercontent.com"; 
 
-        const { useState, useEffect, useRef, useMemo } = React;
+        const { useState, useEffect, useRef, useMemo, useCallback } = React;
         const { motion, AnimatePresence } = window.Motion;
 
         // --- ICONS ---
@@ -312,12 +312,7 @@
             const todayDate = new Date().toISOString().split('T')[0];
 
             useEffect(() => {
-                if(!user) {
-                    // Guest quota logic
-                    const localUsage = JSON.parse(localStorage.getItem('guest_ai_usage') || '{}');
-                    setDailyCount(localUsage[todayDate] || 0);
-                    return;
-                }
+                if(!user) return; // Should not render in guest mode, but guard clause here
                 const docRef = window.firebase.doc(window.firebase.db, 'artifacts', 'darnote-app', 'users', user.uid, 'ai_usage', todayDate);
                 const unsub = window.firebase.onSnapshot(docRef, (doc) => {
                     if (doc.exists()) { setDailyCount(doc.data().count || 0); } else { setDailyCount(0); }
@@ -338,15 +333,8 @@
                 setInput("");
                 setLoading(true);
 
-                if (user) {
-                    const docRef = window.firebase.doc(window.firebase.db, 'artifacts', 'darnote-app', 'users', user.uid, 'ai_usage', todayDate);
-                    await window.firebase.setDoc(docRef, { count: window.firebase.increment(1), date: todayDate }, { merge: true });
-                } else {
-                    const localUsage = JSON.parse(localStorage.getItem('guest_ai_usage') || '{}');
-                    localUsage[todayDate] = (localUsage[todayDate] || 0) + 1;
-                    localStorage.setItem('guest_ai_usage', JSON.stringify(localUsage));
-                    setDailyCount(localUsage[todayDate]);
-                }
+                const docRef = window.firebase.doc(window.firebase.db, 'artifacts', 'darnote-app', 'users', user.uid, 'ai_usage', todayDate);
+                await window.firebase.setDoc(docRef, { count: window.firebase.increment(1), date: todayDate }, { merge: true });
 
                 const context = `
                     Student is analyzing a mistake.
@@ -417,6 +405,10 @@
             
             const [isUploadingQ, setIsUploadingQ] = useState(false);
             const [isUploadingS, setIsUploadingS] = useState(false); 
+            
+            // Ref for pending updates in Local Mode
+            const pendingUpdatesRef = useRef({});
+            const saveTimeoutRef = useRef(null);
 
             // AUTH & SYNC LOGIC
             useEffect(() => {
@@ -511,7 +503,7 @@
                     });
                     return () => { logsUnsub(); subUnsub(); };
                 } else if (isGuest) {
-                    // INDEXED DB POLLING (Simple approximation for reactivity)
+                    // INDEXED DB Initial Load (No Polling)
                     const loadLocal = async () => {
                         const l = await LocalDB.getAll();
                         setLogs(l.sort((a,b) => new Date(b.createdAt) - new Date(a.createdAt)));
@@ -519,8 +511,6 @@
                         setSubjects(s);
                     };
                     loadLocal();
-                    const interval = setInterval(loadLocal, 1000); // Polling for local updates
-                    return () => clearInterval(interval);
                 }
             }, [user, isGuest]);
 
@@ -545,17 +535,49 @@
                     setActiveLogId(docRef.id);
                 } else {
                     const id = 'local_' + Date.now();
-                    await LocalDB.save({ ...newLog, id });
+                    const logWithId = { ...newLog, id };
+                    setLogs(prev => [logWithId, ...prev]); // Immediate State update
+                    await LocalDB.save(logWithId);
                     setActiveLogId(id);
                 }
             };
 
-            const updateLog = async (id, updates) => {
+            const updateLog = (id, updates) => {
+                // 1. Optimistic UI Update (Immediate)
+                setLogs(prev => prev.map(l => l.id === id ? { ...l, ...updates } : l));
+
                 if (user) {
-                    await window.firebase.updateDoc(window.firebase.doc(window.firebase.db, 'artifacts', "darnote-app", 'users', user.uid, 'error_logs', id), updates);
+                    // Firebase handles debounce internally/efficiently enough usually
+                    const docRef = window.firebase.doc(window.firebase.db, 'artifacts', "darnote-app", 'users', user.uid, 'error_logs', id);
+                    window.firebase.updateDoc(docRef, updates);
                 } else {
-                    const existing = logs.find(l => l.id === id);
-                    if(existing) await LocalDB.save({ ...existing, ...updates });
+                    // 2. Debounced Local Save
+                    // Merge new updates into pending
+                    pendingUpdatesRef.current[id] = { ...(pendingUpdatesRef.current[id] || {}), ...updates };
+                    
+                    if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
+                    
+                    saveTimeoutRef.current = setTimeout(async () => {
+                        const idsToSave = Object.keys(pendingUpdatesRef.current);
+                        for (const logId of idsToSave) {
+                            // We need to fetch the full object from state to ensure we don't overwrite with partial data
+                            // Actually, fetching from DB is safer for atomic updates, but since we are single user, state is source of truth.
+                            // However, state `logs` might be stale in timeout closure. 
+                            // Better approach: Read current Full log from DB, merge pending, write back.
+                            const currentUpdates = pendingUpdatesRef.current[logId];
+                            delete pendingUpdatesRef.current[logId]; // Clear pending immediately to avoid race? No, clear after read.
+                            
+                            const fullLog = await new Promise(resolve => {
+                                // We can't use `logs` state safely here due to closure. 
+                                // Let's just read from IndexedDB.
+                                LocalDB.getAll().then(all => resolve(all.find(l => l.id === logId)));
+                            });
+                            
+                            if (fullLog) {
+                                await LocalDB.save({ ...fullLog, ...currentUpdates });
+                            }
+                        }
+                    }, 500); // 500ms debounce
                 }
             };
 
@@ -570,6 +592,7 @@
                     await window.firebase.updateDoc(docRef, { topics: window.firebase.arrayUnion(newTopic) });
                 } else {
                     const updatedSubjects = subjects.map(s => s.id === subjectDoc.id ? {...s, topics: [...s.topics, newTopic]} : s);
+                    setSubjects(updatedSubjects); // Immediate UI
                     await LocalDB.saveSubject(updatedSubjects);
                 }
             };
@@ -589,6 +612,8 @@
                         const reader = new FileReader();
                         reader.onloadend = async () => {
                             const base64 = reader.result;
+                            // For images, we update immediately, no debounce needed really as it's a one-time big event
+                            // But updateLog handles persistence
                             if (type === 'question') updateLog(activeLogId, { imageUrl: base64 });
                             else updateLog(activeLogId, { markingSchemeUrl: base64 });
                             setUploading(false);
@@ -600,13 +625,11 @@
                 setUploading(false);
             };
 
-            // AI Features need image URL or Base64. callGemini handles both.
             const handleAutoTitle = async () => {
                 if (!activeLogId || !activeLog.imageUrl) { alert("Please paste an image first!"); return; }
                 setIsAutoTitleLoading(true);
                 try {
                     let base64data = activeLog.imageUrl;
-                    // If URL, fetch it. If Base64, use it directly.
                     if (!activeLog.imageUrl.startsWith('data:')) {
                         const response = await fetch(activeLog.imageUrl);
                         if (!response.ok) throw new Error("Failed to fetch image for OCR.");
@@ -786,10 +809,13 @@
                                             {activeLog.mastered ? 'Mastered' : 'Needs Review'}
                                         </button>
                                         <div className="h-6 w-px bg-zinc-200 dark:bg-white/10 mx-2"></div>
-                                        <button onClick={()=>setIsAiOpen(!isAiOpen)} className={`p-2 rounded-lg transition-colors ${isAiOpen ? 'bg-brand/10 text-brand' : 'hover:bg-zinc-100 dark:hover:bg-white/5 text-zinc-500 dark:text-zinc-400'}`} title="Open AI Tutor"><Icons.Bot className="w-5 h-5"/></button>
+                                        <button onClick={()=> user ? setIsAiOpen(!isAiOpen) : null} disabled={!user} className={`p-2 rounded-lg transition-colors ${!user ? 'cursor-not-allowed opacity-50 bg-zinc-100 dark:bg-white/5 text-zinc-400' : isAiOpen ? 'bg-brand/10 text-brand' : 'hover:bg-zinc-100 dark:hover:bg-white/5 text-zinc-500 dark:text-zinc-400'}`} title={user ? "Open AI Tutor" : "Login required for AI Tutor"}><Icons.Bot className="w-5 h-5"/></button>
                                         <button onClick={()=>{if(confirm('Delete this log permanently?')) {
                                             if(user) deleteDoc(doc(window.firebase.db,'artifacts',"darnote-app",'users',user.uid,'error_logs',activeLog.id));
-                                            else LocalDB.delete(activeLog.id);
+                                            else {
+                                                LocalDB.delete(activeLog.id);
+                                                setLogs(prev => prev.filter(l => l.id !== activeLog.id)); // Immediate UI update
+                                            }
                                             setActiveLogId(null);
                                         }}} className="p-2 rounded-lg hover:bg-red-50 dark:hover:bg-red-900/20 text-zinc-400 hover:text-red-500 transition-colors"><Icons.Trash className="w-5 h-5"/></button>
                                     </div>
@@ -915,7 +941,7 @@
                         
                         {/* AI SLIDEOUT */}
                         <AnimatePresence>
-                            {isAiOpen && activeLog && (
+                            {isAiOpen && activeLog && user && (
                                 <div className="absolute top-0 right-0 bottom-0 w-[400px] z-30">
                                     <AIChat activeLog={activeLog} onClose={()=>setIsAiOpen(false)} user={user}/>
                                 </div>
