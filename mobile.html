@@ -158,13 +158,11 @@
         };
 
         const ErrorEditor = ({ item, onSave, onBack, onDelete, user, subjects }) => {
-            // Updated State Initialization to handle arrays
             const [data, setData] = useState(() => {
                 const i = item || {};
                 return {
                     title: i.title||'', subject: i.subject||'General', topic: i.topic||'', mastered: i.mastered||false, explanation: i.explanation||'', 
                     questionType: i.questionType||'MC', correctAnswer: i.correctAnswer||'',
-                    // Priority: Array -> Legacy String -> Empty Array
                     questionImages: i.questionImages || (i.imageUrl ? [i.imageUrl] : []),
                     schemeImages: i.schemeImages || (i.markingSchemeUrl ? [i.markingSchemeUrl] : []),
                     imageUrl: i.imageUrl||'', markingSchemeUrl: i.markingSchemeUrl||''
@@ -339,14 +337,25 @@
 
         const App = () => {
             const [user, setUser] = useState(null), [tab, setTab] = useState('home'), [sel, setSel] = useState(null), [sheet, setSheet] = useState(false);
+            // SETTINGS STATE
+            const [settings, setSettings] = useState({theme:'dark', bio:''});
+
             useEffect(()=>window.firebase.onAuthStateChanged(window.firebase.auth, setUser), []);
             const {data:errors} = useData(user,'error_logs'), {data:notes} = useData(user,'notes'), subjects = useSubjects(user);
             
+            // SETTINGS & THEME EFFECT
             useEffect(() => {
                 if(!user) return;
                 const setRef = window.firebase.doc(window.firebase.db,'artifacts','darnote-app','users',user.uid,'settings','profile');
-                window.firebase.onSnapshot(setRef,d=>{ const t=d.data()?.theme||'dark'; if(t==='dark')document.documentElement.classList.add('dark');else document.documentElement.classList.remove('dark'); });
+                return window.firebase.onSnapshot(setRef,d=>{ 
+                    const dat = d.data() || {theme:'dark', bio:''};
+                    setSettings(dat);
+                    if(dat.theme==='dark') document.documentElement.classList.add('dark');
+                    else document.documentElement.classList.remove('dark'); 
+                });
             }, [user]);
+
+            const updateSettings = async (newS) => await window.firebase.setDoc(window.firebase.doc(window.firebase.db,'artifacts','darnote-app','users',user.uid,'settings','profile'), newS, {merge:true});
 
             const save = async (col, d) => {
                 const c = window.firebase.collection(window.firebase.db,'artifacts','darnote-app','users',user.uid,col);
@@ -369,7 +378,27 @@
                             </div>}
                             {tab==='errors' && <ErrorList key="e" items={errors} onEdit={(m,i)=>{setSel(i);setTab(m)}} subjects={subjects} />}
                             {tab==='notes' && <div key="n" className="p-6 pb-24 min-h-screen"><h2 className="text-3xl font-bold mb-6">Notes</h2><div className="space-y-3">{notes.map(n=><div key={n.id} onClick={()=>{setSel(n);setTab('edit_note')}} className="bg-white dark:bg-surface p-4 rounded-2xl border border-zinc-200 dark:border-zinc-800 flex justify-between"><div><div className="font-bold">{n.title||'Untitled'}</div><div className="text-xs text-zinc-500">{new Date(n.createdAt||0).toLocaleDateString()}</div></div><Icons.ChevronLeft className="w-5 h-5 rotate-180"/></div>)}</div></div>}
-                            {tab==='profile' && <div key="p" className="p-6 pb-24 h-full flex flex-col"><h2 className="text-3xl font-bold mb-6">Settings</h2><div className="flex flex-col items-center mb-8"><img src={user.photoURL} className="w-24 h-24 rounded-full border-4 border-brand mb-4"/><h3 className="text-xl font-bold">{user.displayName}</h3></div><button onClick={()=>window.firebase.signOut(window.firebase.auth)} className="w-full py-4 bg-zinc-200 dark:bg-zinc-800 rounded-xl font-bold text-red-500 mt-auto">Sign Out</button></div>}
+                            
+                            {/* SETTINGS TAB RESTORED */}
+                            {tab==='profile' && <div key="p" className="p-6 pb-24 h-full flex flex-col">
+                                <h2 className="text-3xl font-bold mb-6">Settings</h2>
+                                <div className="flex flex-col items-center mb-8"><img src={user.photoURL} className="w-24 h-24 rounded-full border-4 border-brand mb-4"/><h3 className="text-xl font-bold">{user.displayName}</h3></div>
+                                
+                                <div className="space-y-4 mb-8">
+                                    <div className="bg-white dark:bg-surface p-4 rounded-2xl border border-zinc-200 dark:border-zinc-800 flex justify-between items-center">
+                                        <span className="font-bold flex items-center gap-3"><Icons.Sun className="w-5 h-5"/> Appearance</span>
+                                        <button onClick={()=>updateSettings({theme:settings.theme==='dark'?'light':'dark'})} className="bg-zinc-100 dark:bg-zinc-900 px-4 py-2 rounded-lg text-xs font-bold flex items-center gap-2 border border-zinc-200 dark:border-zinc-700">
+                                            {settings.theme==='dark' ? <><Icons.Moon className="w-4 h-4"/> Dark</> : <><Icons.Sun className="w-4 h-4"/> Light</>}
+                                        </button>
+                                    </div>
+                                    <div className="bg-white dark:bg-surface p-4 rounded-2xl border border-zinc-200 dark:border-zinc-800">
+                                         <label className="text-xs font-bold text-zinc-500 uppercase mb-2 block">Bio</label>
+                                         <textarea value={settings.bio||''} onChange={e=>updateSettings({bio:e.target.value})} placeholder="I make mistakes..." className="w-full bg-zinc-100 dark:bg-zinc-900 rounded-lg p-3 text-sm focus:outline-none resize-none h-20 text-zinc-900 dark:text-white"/>
+                                    </div>
+                                </div>
+                                
+                                <button onClick={()=>window.firebase.signOut(window.firebase.auth)} className="w-full py-4 bg-zinc-200 dark:bg-zinc-800 rounded-xl font-bold text-red-500 mt-auto">Sign Out</button>
+                            </div>}
                         </AnimatePresence>
                     </div>
                     <div className="fixed bottom-0 w-full h-[80px] glass z-50 px-6 pb-2 flex items-center justify-between">
