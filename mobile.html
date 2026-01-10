@@ -92,6 +92,13 @@
         // --- CONSTANTS & CONFIG ---
         const GDRIVE_API_KEY = "AIzaSyCScFR_D0snZ6hrHob5fUQM7Y2NhK-kTIA"; 
         const GDRIVE_CLIENT_ID = "256215327792-oglegui0q8qj507oao2c2733thcl9lrc.apps.googleusercontent.com"; 
+        
+        // DEFAULT SUBJECTS LIST
+        const DEFAULT_SUBJECTS = [
+            "Mathematics", "English", "Chinese", "Liberal Studies", 
+            "Physics", "Chemistry", "Biology", "Economics", 
+            "BAFS", "History", "Geography", "ICT", "M1", "M2", "General"
+        ];
 
         const { useState, useEffect, useRef, useMemo } = React;
         const { motion, AnimatePresence } = window.Motion;
@@ -462,6 +469,9 @@
             const { saveToDrive } = useGoogleDrive();
             const [uploading, setUploading] = useState(false);
             const [uploadingMs, setUploadingMs] = useState(false);
+            
+            // Initial check: if current subject is NOT in list (and not empty), it is custom.
+            const [isCustomSubject, setIsCustomSubject] = useState(!DEFAULT_SUBJECTS.includes(data.subject) && data.subject !== "");
 
             const handleImage = async (e, type) => {
                 const file = e.target.files[0];
@@ -536,7 +546,39 @@
                         </div>
 
                         <div className="grid grid-cols-2 gap-4">
-                            <div><label className="text-[10px] text-zinc-500 uppercase font-bold">Subject</label><input value={data.subject} onChange={e=>setData({...data, subject: e.target.value})} className="w-full bg-zinc-100 dark:bg-zinc-900 p-3 rounded-xl mt-1 focus:outline-none text-zinc-900 dark:text-white text-sm"/></div>
+                            {/* SUBJECT SELECTOR */}
+                            <div>
+                                <label className="text-[10px] text-zinc-500 uppercase font-bold">Subject</label>
+                                {isCustomSubject ? (
+                                    <div className="flex gap-2 mt-1">
+                                        <input 
+                                            value={data.subject} 
+                                            onChange={e=>setData({...data, subject: e.target.value})} 
+                                            className="w-full bg-zinc-100 dark:bg-zinc-900 p-3 rounded-xl focus:outline-none text-zinc-900 dark:text-white text-sm"
+                                            placeholder="Custom..."
+                                            autoFocus
+                                        />
+                                        <button onClick={() => { setIsCustomSubject(false); setData({...data, subject: 'General'}); }} className="p-3 bg-zinc-200 dark:bg-zinc-800 rounded-xl"><Icons.X className="w-4 h-4 text-zinc-600"/></button>
+                                    </div>
+                                ) : (
+                                    <select 
+                                        value={data.subject} 
+                                        onChange={(e) => {
+                                            if(e.target.value === 'OTHER_CUSTOM') {
+                                                setIsCustomSubject(true);
+                                                setData({...data, subject: ''});
+                                            } else {
+                                                setData({...data, subject: e.target.value});
+                                            }
+                                        }}
+                                        className="w-full bg-zinc-100 dark:bg-zinc-900 p-3 rounded-xl mt-1 focus:outline-none text-zinc-900 dark:text-white text-sm appearance-none"
+                                    >
+                                        {DEFAULT_SUBJECTS.map(s => <option key={s} value={s}>{s}</option>)}
+                                        <option value="OTHER_CUSTOM">Other / Custom...</option>
+                                    </select>
+                                )}
+                            </div>
+                            
                             <div><label className="text-[10px] text-zinc-500 uppercase font-bold">Type</label><select value={data.questionType} onChange={e=>setData({...data, questionType: e.target.value})} className="w-full bg-zinc-100 dark:bg-zinc-900 p-3 rounded-xl mt-1 focus:outline-none text-zinc-900 dark:text-white text-sm"><option value="MC">MC</option><option value="LQ">Long Question</option></select></div>
                         </div>
 
