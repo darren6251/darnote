@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>darNote - Error Log</title>
+    <title>darNote - Error Log (Local First)</title>
     <link rel="icon" type="image/png" href="https://raw.githubusercontent.com/darren6251/darnote/refs/heads/main/darNote%20logo.png">
     
     <!-- React & Tailwind -->
@@ -40,11 +40,11 @@
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-app.js";
         import { getAuth, signInWithPopup, GoogleAuthProvider, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-auth.js";
-        import { getFirestore, collection, doc, addDoc, updateDoc, deleteDoc, getDocs, getDoc, setDoc, increment, arrayUnion, writeBatch, query, limit, orderBy } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-firestore.js";
+        import { getFirestore, collection, doc, addDoc, updateDoc, deleteDoc, getDocs, getDoc, setDoc, increment, arrayUnion, writeBatch, query, limit, orderBy, startAfter } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-firestore.js";
         
         const firebaseConfig = { apiKey: "AIzaSyAvPEac-03kE4oazvaq8K3T2gxLPsnZO20", authDomain: "darnote625.firebaseapp.com", projectId: "darnote625", storageBucket: "darnote625.firebasestorage.app", messagingSenderId: "16458322562", appId: "1:16458322562:web:8894d71f3e6c326eba1a9b" };
         const app = initializeApp(firebaseConfig);
-        window.firebase = { app, auth: getAuth(app), db: getFirestore(app), signInWithPopup, GoogleAuthProvider, signOut, onAuthStateChanged, collection, doc, addDoc, updateDoc, deleteDoc, getDocs, getDoc, setDoc, increment, arrayUnion, writeBatch, query, limit, orderBy };
+        window.firebase = { app, auth: getAuth(app), db: getFirestore(app), signInWithPopup, GoogleAuthProvider, signOut, onAuthStateChanged, collection, doc, addDoc, updateDoc, deleteDoc, getDocs, getDoc, setDoc, increment, arrayUnion, writeBatch, query, limit, orderBy, startAfter };
     </script>
     
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
@@ -93,12 +93,13 @@
             ChevronLeft: (p) => <svg {...p} xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m15 18-6-6 6-6"/></svg>,
             ChevronRight: (p) => <svg {...p} xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m9 18 6-6-6-6"/></svg>,
             ZoomIn: (p) => <svg {...p} xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" x2="16.65" y1="21" y2="16.65"/><line x1="11" x2="11" y1="8" y2="14"/><line x1="8" x2="14" y1="11" y2="11"/></svg>,
-            Undo: (p) => <svg {...p} xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 7v6h6"/><path d="M21 17a9 9 0 0 0-9-9 9 9 0 0 0-6 2.3L3 13"/></svg>
+            Undo: (p) => <svg {...p} xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 7v6h6"/><path d="M21 17a9 9 0 0 0-9-9 9 9 0 0 0-6 2.3L3 13"/></svg>,
+            Sort: (p) => <svg {...p} xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="12" x2="12" y1="3" y2="21"/><polyline points="8 7 12 3 16 7"/><polyline points="8 17 12 21 16 17"/></svg>
         };
 
         // --- LOCAL DB (IndexedDB) ---
         const dbPromise = new Promise((resolve, reject) => {
-            const request = indexedDB.open("DarNoteLocal", 1);
+            const request = indexedDB.open("DarNoteLocal", 2); // Bump version for safety
             request.onupgradeneeded = (e) => {
                 const db = e.target.result;
                 if (!db.objectStoreNames.contains('logs')) db.createObjectStore('logs', { keyPath: 'id' });
@@ -135,23 +136,16 @@
         // --- GDRIVE HOOK ---
         const useGoogleDrive = () => {
             const [tokenClient, setTokenClient] = useState(null);
-            
             useEffect(() => {
                 if(!GDRIVE_API_KEY || !GDRIVE_CLIENT_ID) return;
                 const load = async () => {
                     try {
-                        if (window.gapi) {
-                            await new Promise(r => window.gapi.load('client', r));
-                            await window.gapi.client.init({ apiKey: GDRIVE_API_KEY, discoveryDocs: ['https://www.googleapis.com/discovery/v1/apis/drive/v3/rest'] });
-                        }
-                        if (window.google) {
-                            setTokenClient(window.google.accounts.oauth2.initTokenClient({ client_id: GDRIVE_CLIENT_ID, scope: 'https://www.googleapis.com/auth/drive.file', callback: () => {} }));
-                        }
+                        if (window.gapi) { await new Promise(r => window.gapi.load('client', r)); await window.gapi.client.init({ apiKey: GDRIVE_API_KEY, discoveryDocs: ['https://www.googleapis.com/discovery/v1/apis/drive/v3/rest'] }); }
+                        if (window.google) setTokenClient(window.google.accounts.oauth2.initTokenClient({ client_id: GDRIVE_CLIENT_ID, scope: 'https://www.googleapis.com/auth/drive.file', callback: () => {} }));
                     } catch(e) { console.error("Drive API Init Failed:", e); }
                 };
                 load();
             }, []);
-
             const getAccessToken = () => new Promise((resolve, reject) => {
                 if (!tokenClient) return reject("Auth not initialized");
                 const existing = window.gapi.client.getToken();
@@ -159,11 +153,9 @@
                 tokenClient.callback = (resp) => { if (resp.error) reject(resp); resolve(resp.access_token); };
                 tokenClient.requestAccessToken({ prompt: '' });
             });
-
             const saveToDrive = async (blob, filename) => {
                 try {
                     const token = await getAccessToken();
-                    // 1. Get/Create Folder
                     let folderId;
                     const q = `mimeType='application/vnd.google-apps.folder' and name='darNote_Errors' and trashed=false`;
                     const search = await fetch(`https://www.googleapis.com/drive/v3/files?q=${encodeURIComponent(q)}`, { headers: { Authorization: `Bearer ${token}` } });
@@ -173,24 +165,16 @@
                         const create = await fetch('https://www.googleapis.com/drive/v3/files', { method: 'POST', headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' }, body: JSON.stringify({ name: 'darNote_Errors', mimeType: 'application/vnd.google-apps.folder' }) });
                         folderId = (await create.json()).id;
                     }
-
-                    // 2. Upload
                     const metadata = { name: filename, mimeType: blob.type, parents: [folderId] };
                     const form = new FormData();
                     form.append('metadata', new Blob([JSON.stringify(metadata)], { type: 'application/json' }));
                     form.append('file', blob);
-                    
                     const upRes = await fetch('https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&fields=id', { method: 'POST', headers: { Authorization: `Bearer ${token}` }, body: form });
                     if(!upRes.ok) throw new Error(upRes.statusText);
                     const fileId = (await upRes.json()).id;
-
-                    // 3. Permission & Link
                     await fetch(`https://www.googleapis.com/drive/v3/files/${fileId}/permissions`, { method: 'POST', headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' }, body: JSON.stringify({ role: 'reader', type: 'anyone' }) });
                     return `https://lh3.googleusercontent.com/d/${fileId}`;
-                } catch (e) {
-                    console.error("Drive Upload Error:", e);
-                    throw e;
-                }
+                } catch (e) { console.error("Drive Upload Error:", e); throw e; }
             };
             return { saveToDrive };
         };
@@ -198,49 +182,23 @@
         // --- LIGHTBOX COMPONENT ---
         const Lightbox = ({ images, initialIndex, onClose }) => {
             const [index, setIndex] = useState(initialIndex);
-            
             useEffect(() => {
                 const handleKeyDown = (e) => {
                     if (e.key === 'Escape') onClose();
                     if (e.key === 'ArrowRight') setIndex((prev) => (prev + 1) % images.length);
                     if (e.key === 'ArrowLeft') setIndex((prev) => (prev - 1 + images.length) % images.length);
                 };
-                window.addEventListener('keydown', handleKeyDown);
-                return () => window.removeEventListener('keydown', handleKeyDown);
+                window.addEventListener('keydown', handleKeyDown); return () => window.removeEventListener('keydown', handleKeyDown);
             }, [images.length, onClose]);
-
             if (!images || images.length === 0) return null;
-
             return (
                 <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 z-[60] bg-black/95 flex items-center justify-center backdrop-blur-sm">
-                    <button onClick={onClose} className="absolute top-4 right-4 text-white/50 hover:text-white p-2 rounded-full hover:bg-white/10 transition-colors z-50">
-                        <Icons.X className="w-8 h-8"/>
-                    </button>
-                    
-                    <button onClick={(e) => { e.stopPropagation(); setIndex((prev) => (prev - 1 + images.length) % images.length); }} className="absolute left-4 text-white/50 hover:text-white p-4 rounded-full hover:bg-white/10 transition-colors z-50 hidden sm:block">
-                        <Icons.ChevronLeft className="w-8 h-8"/>
-                    </button>
-
-                    <motion.img 
-                        key={index}
-                        initial={{ opacity: 0, scale: 0.9 }}
-                        animate={{ opacity: 1, scale: 1 }}
-                        src={images[index]} 
-                        className="max-h-[90vh] max-w-[90vw] object-contain shadow-2xl rounded-lg select-none"
-                    />
-
-                    <button onClick={(e) => { e.stopPropagation(); setIndex((prev) => (prev + 1) % images.length); }} className="absolute right-4 text-white/50 hover:text-white p-4 rounded-full hover:bg-white/10 transition-colors z-50 hidden sm:block">
-                        <Icons.ChevronRight className="w-8 h-8"/>
-                    </button>
-
-                    <div className="absolute bottom-6 left-1/2 -translate-x-1/2 flex gap-2">
-                        {images.map((_, i) => (
-                            <button key={i} onClick={() => setIndex(i)} className={`w-2 h-2 rounded-full transition-all ${i === index ? 'bg-white scale-125' : 'bg-white/30 hover:bg-white/50'}`} />
-                        ))}
-                    </div>
-                    <div className="absolute bottom-6 right-6 text-white/30 text-xs font-mono">
-                        {index + 1} / {images.length}
-                    </div>
+                    <button onClick={onClose} className="absolute top-4 right-4 text-white/50 hover:text-white p-2 rounded-full hover:bg-white/10 transition-colors z-50"><Icons.X className="w-8 h-8"/></button>
+                    <button onClick={(e) => { e.stopPropagation(); setIndex((prev) => (prev - 1 + images.length) % images.length); }} className="absolute left-4 text-white/50 hover:text-white p-4 rounded-full hover:bg-white/10 transition-colors z-50 hidden sm:block"><Icons.ChevronLeft className="w-8 h-8"/></button>
+                    <motion.img key={index} initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} src={images[index]} className="max-h-[90vh] max-w-[90vw] object-contain shadow-2xl rounded-lg select-none"/>
+                    <button onClick={(e) => { e.stopPropagation(); setIndex((prev) => (prev + 1) % images.length); }} className="absolute right-4 text-white/50 hover:text-white p-4 rounded-full hover:bg-white/10 transition-colors z-50 hidden sm:block"><Icons.ChevronRight className="w-8 h-8"/></button>
+                    <div className="absolute bottom-6 left-1/2 -translate-x-1/2 flex gap-2">{images.map((_, i) => (<button key={i} onClick={() => setIndex(i)} className={`w-2 h-2 rounded-full transition-all ${i === index ? 'bg-white scale-125' : 'bg-white/30 hover:bg-white/50'}`} />))}</div>
+                    <div className="absolute bottom-6 right-6 text-white/30 text-xs font-mono">{index + 1} / {images.length}</div>
                 </motion.div>
             );
         };
@@ -250,29 +208,11 @@
             const [isDragging, setIsDragging] = useState(false);
             const [lightboxIndex, setLightboxIndex] = useState(null);
             const fileInputRef = useRef(null);
-
             const imageList = Array.isArray(images) ? images : (images ? [images] : []);
-
-            const handleFiles = (files) => {
-                Array.from(files).forEach(file => {
-                    if (file.type.startsWith('image/')) onUpdate(file, 'add');
-                });
-            };
-
+            const handleFiles = (files) => { Array.from(files).forEach(file => { if (file.type.startsWith('image/')) onUpdate(file, 'add'); }); };
             const handlePasteClick = async () => {
-                try {
-                    const items = await navigator.clipboard.read();
-                    for (const item of items) {
-                        for (const type of item.types) {
-                            if (type.startsWith("image/")) {
-                                const blob = await item.getType(type);
-                                onUpdate(blob, 'add');
-                            }
-                        }
-                    }
-                } catch (err) { alert("Clipboard permission denied or no image found."); }
+                try { const items = await navigator.clipboard.read(); for (const item of items) { for (const type of item.types) { if (type.startsWith("image/")) { const blob = await item.getType(type); onUpdate(blob, 'add'); } } } } catch (err) { alert("Clipboard permission denied or no image found."); }
             };
-
             return (
                 <div className="space-y-2">
                     <div className="flex justify-between items-end px-1">
@@ -283,44 +223,20 @@
                         </div>
                         <input type="file" multiple ref={fileInputRef} className="hidden" onChange={(e) => handleFiles(e.target.files)} accept="image/*" />
                     </div>
-                    
-                    <div 
-                        className={`w-full min-h-[120px] bg-white dark:bg-surface border-2 border-dashed rounded-xl p-3 transition-all ${isDragging ? 'border-brand bg-brand/5' : 'border-zinc-300 dark:border-zinc-700'}`}
-                        onDragOver={(e) => { e.preventDefault(); setIsDragging(true); }}
-                        onDragLeave={() => setIsDragging(false)}
-                        onDrop={(e) => { e.preventDefault(); setIsDragging(false); handleFiles(e.dataTransfer.files); }}
-                        onPaste={(e) => handleFiles(e.clipboardData.files)}
-                        tabIndex="0"
-                    >
-                        {imageList.length === 0 ? (
-                            <div className="h-24 flex flex-col items-center justify-center text-zinc-400 pointer-events-none">
-                                <Icons.Image className="w-6 h-6 mb-1 opacity-50"/>
-                                <span className="text-xs">Drag images or Ctrl+V</span>
-                            </div>
-                        ) : (
+                    <div className={`w-full min-h-[120px] bg-white dark:bg-surface border-2 border-dashed rounded-xl p-3 transition-all ${isDragging ? 'border-brand bg-brand/5' : 'border-zinc-300 dark:border-zinc-700'}`} onDragOver={(e) => { e.preventDefault(); setIsDragging(true); }} onDragLeave={() => setIsDragging(false)} onDrop={(e) => { e.preventDefault(); setIsDragging(false); handleFiles(e.dataTransfer.files); }} onPaste={(e) => handleFiles(e.clipboardData.files)} tabIndex="0">
+                        {imageList.length === 0 ? (<div className="h-24 flex flex-col items-center justify-center text-zinc-400 pointer-events-none"><Icons.Image className="w-6 h-6 mb-1 opacity-50"/><span className="text-xs">Drag images or Ctrl+V</span></div>) : (
                             <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
                                 {imageList.map((url, idx) => (
                                     <div key={idx} onClick={() => setLightboxIndex(idx)} className="group relative aspect-square bg-zinc-100 dark:bg-black/20 rounded-lg overflow-hidden border border-zinc-200 dark:border-white/5 shadow-sm hover:shadow-md transition-all cursor-zoom-in">
                                         <img src={url} className="w-full h-full object-cover" />
-                                        <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2">
-                                            <div className="p-1.5 bg-white/20 rounded-full text-white backdrop-blur-sm"><Icons.ZoomIn className="w-4 h-4"/></div>
-                                            <button onClick={(e) => { e.stopPropagation(); onUpdate(idx, 'remove'); }} className="p-1.5 bg-red-500/80 hover:bg-red-500 rounded-full text-white backdrop-blur-sm" title="Remove"><Icons.Trash className="w-4 h-4"/></button>
-                                        </div>
+                                        <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2"><div className="p-1.5 bg-white/20 rounded-full text-white backdrop-blur-sm"><Icons.ZoomIn className="w-4 h-4"/></div><button onClick={(e) => { e.stopPropagation(); onUpdate(idx, 'remove'); }} className="p-1.5 bg-red-500/80 hover:bg-red-500 rounded-full text-white backdrop-blur-sm" title="Remove"><Icons.Trash className="w-4 h-4"/></button></div>
                                     </div>
                                 ))}
-                                {isUploading && (
-                                    <div className="aspect-square rounded-lg bg-zinc-50 dark:bg-white/5 flex items-center justify-center border border-zinc-200 dark:border-white/10 animate-pulse">
-                                        <div className="w-5 h-5 border-2 border-brand border-t-transparent rounded-full animate-spin"></div>
-                                    </div>
-                                )}
+                                {isUploading && (<div className="aspect-square rounded-lg bg-zinc-50 dark:bg-white/5 flex items-center justify-center border border-zinc-200 dark:border-white/10 animate-pulse"><div className="w-5 h-5 border-2 border-brand border-t-transparent rounded-full animate-spin"></div></div>)}
                             </div>
                         )}
                     </div>
-                    <AnimatePresence>
-                        {lightboxIndex !== null && (
-                            <Lightbox images={imageList} initialIndex={lightboxIndex} onClose={() => setLightboxIndex(null)} />
-                        )}
-                    </AnimatePresence>
+                    <AnimatePresence>{lightboxIndex !== null && (<Lightbox images={imageList} initialIndex={lightboxIndex} onClose={() => setLightboxIndex(null)} />)}</AnimatePresence>
                 </div>
             );
         };
@@ -331,26 +247,19 @@
             const [input, setInput] = useState("");
             const [loading, setLoading] = useState(false);
             const messagesEndRef = useRef(null);
-
             useEffect(() => { messagesEndRef.current?.scrollIntoView({ behavior: "smooth" }); }, [messages]);
-
             const handleSend = async () => {
                 if(!input.trim()) return;
-                const userMsg = input;
-                setMessages(prev => [...prev, {role: 'user', text: userMsg}]); setInput(""); setLoading(true);
+                const userMsg = input; setMessages(prev => [...prev, {role: 'user', text: userMsg}]); setInput(""); setLoading(true);
                 const imgCtx = (activeLog.questionImages && activeLog.questionImages.length > 0) ? activeLog.questionImages[0] : (activeLog.imageUrl || null);
                 const context = `Subject: ${activeLog.subject}, Topic: ${activeLog.topic}, Type: ${activeLog.questionType}, Student Answer: ${activeLog.correctAnswer}, Explanation: ${activeLog.explanation}`;
                 const response = await callGemini(userMsg, `You are a tutor. Context: ${context}`, imgCtx);
                 setMessages(prev => [...prev, {role: 'ai', text: response}]); setLoading(false);
             };
-
             return (
                 <div className="flex flex-col h-full bg-white dark:bg-onyx border-l border-zinc-200 dark:border-white/10 shadow-2xl">
                     <div className="p-4 border-b border-zinc-200 dark:border-white/10 flex justify-between items-center bg-zinc-50 dark:bg-zinc-900"><span className="font-bold text-sm flex items-center gap-2"><Icons.Bot className="w-4 h-4 text-brand"/> Tutor AI</span><button onClick={onClose}><Icons.X className="w-4 h-4 hover:text-red-500"/></button></div>
-                    <div className="flex-1 overflow-y-auto p-4 space-y-4">
-                        {messages.map((m, i) => <div key={i} className={`flex ${m.role==='user'?'justify-end':'justify-start'}`}><div className={`max-w-[85%] p-3 rounded-2xl text-sm ${m.role==='user'?'bg-brand text-white rounded-br-none':'bg-zinc-100 dark:bg-zinc-800 rounded-bl-none text-zinc-900 dark:text-zinc-200'}`} dangerouslySetInnerHTML={{ __html: marked.parse(m.text) }} /></div>)}
-                        {loading && <div className="text-xs text-zinc-500 animate-pulse pl-2">Thinking...</div>} <div ref={messagesEndRef}/>
-                    </div>
+                    <div className="flex-1 overflow-y-auto p-4 space-y-4">{messages.map((m, i) => <div key={i} className={`flex ${m.role==='user'?'justify-end':'justify-start'}`}><div className={`max-w-[85%] p-3 rounded-2xl text-sm ${m.role==='user'?'bg-brand text-white rounded-br-none':'bg-zinc-100 dark:bg-zinc-800 rounded-bl-none text-zinc-900 dark:text-zinc-200'}`} dangerouslySetInnerHTML={{ __html: marked.parse(m.text) }} /></div>)}{loading && <div className="text-xs text-zinc-500 animate-pulse pl-2">Thinking...</div>} <div ref={messagesEndRef}/></div>
                     <div className="p-4 border-t border-zinc-200 dark:border-white/10 bg-white dark:bg-zinc-900 flex gap-2"><input value={input} onChange={e=>setInput(e.target.value)} onKeyDown={e=>e.key==='Enter'&&handleSend()} className="flex-1 bg-zinc-100 dark:bg-black/30 border border-zinc-200 dark:border-white/10 rounded-full px-4 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-brand dark:text-white" placeholder="Ask Tutor..."/><button onClick={handleSend} className="bg-brand text-white rounded-full p-2 hover:bg-indigo-600"><Icons.Plus className="w-4 h-4 rotate-90"/></button></div>
                 </div>
             );
@@ -376,161 +285,211 @@
             const [uploadingQ, setUploadingQ] = useState(false);
             const [uploadingS, setUploadingS] = useState(false);
 
+            const [lastDoc, setLastDoc] = useState(null);
+            const [hasMore, setHasMore] = useState(true);
+            const [sortBy, setSortBy] = useState('date-desc');
+            const [showSortMenu, setShowSortMenu] = useState(false);
+
             const pendingUpdatesRef = useRef({});
             const saveTimeoutRef = useRef(null);
             const undoStackRef = useRef([]);
 
-            // UNDO SYSTEM
-            const addToUndo = (action) => {
-                undoStackRef.current.push(action);
-                if (undoStackRef.current.length > 20) undoStackRef.current.shift();
-            };
-
+            const addToUndo = (action) => { undoStackRef.current.push(action); if (undoStackRef.current.length > 20) undoStackRef.current.shift(); };
             const performUndo = async () => {
-                const action = undoStackRef.current.pop();
-                if (!action) return;
-                
-                setShowUndoToast(true);
-                setTimeout(() => setShowUndoToast(false), 2000);
-
+                const action = undoStackRef.current.pop(); if (!action) return;
+                setShowUndoToast(true); setTimeout(() => setShowUndoToast(false), 2000);
                 if (action.type === 'restore_log') {
                     const { log } = action;
                     if (user) await window.firebase.setDoc(window.firebase.doc(window.firebase.db, 'artifacts', "darnote-app", 'users', user.uid, 'error_logs', log.id), log);
-                    else await LocalDB.save(log);
+                    // Also save to LocalDB
+                    await LocalDB.save(log);
                     setLogs(prev => [log, ...prev].sort((a,b)=>new Date(b.createdAt)-new Date(a.createdAt)));
                 } else if (action.type === 'restore_images') {
                     const { logId, field, images } = action;
-                    // We update immediately through state and then trigger the debounced save
                     setLogs(prev => prev.map(l => l.id === logId ? { ...l, [field]: images } : l));
-                    // Manually trigger the persistent save
                     if (user) await window.firebase.updateDoc(window.firebase.doc(window.firebase.db, 'artifacts', "darnote-app", 'users', user.uid, 'error_logs', logId), { [field]: images });
-                    else {
-                        const full = await new Promise(r => LocalDB.getAll().then(all => r(all.find(l => l.id === logId))));
-                        if(full) await LocalDB.save({...full, [field]: images});
-                    }
+                    // Also update LocalDB
+                    const full = await new Promise(r => LocalDB.getAll().then(all => r(all.find(l => l.id === logId)))); 
+                    if(full) await LocalDB.save({...full, [field]: images});
                 }
             };
 
+            useEffect(() => { const handleKeyDown = (e) => { if ((e.metaKey || e.ctrlKey) && e.key === 'z') { e.preventDefault(); performUndo(); } }; window.addEventListener('keydown', handleKeyDown); return () => window.removeEventListener('keydown', handleKeyDown); }, [user]);
+
+            // FETCH LOGS LOGIC (LOCAL FIRST STRATEGY)
+            const fetchLogs = async (isLoadMore = false) => {
+                // If it's the initial load (not Load More), check LocalDB first
+                if (!isLoadMore) {
+                    setIsLoadingLogs(true);
+                    const localLogs = await LocalDB.getAll();
+                    
+                    if (localLogs.length > 0) {
+                        // FOUND LOCAL DATA: Use it!
+                        console.log("Loaded from Local Cache");
+                        setLogs(localLogs.sort((a,b) => new Date(b.createdAt) - new Date(a.createdAt)));
+                        setIsLoadingLogs(false);
+                        
+                        // Also load subjects from local if available
+                        const localSubjects = await LocalDB.getSubjects();
+                        setSubjects(localSubjects);
+                        return; // EXIT EARLY: Do not call Firebase
+                    }
+                }
+
+                // If no local data or "Load More" clicked, THEN hit Firebase
+                if (!user) return;
+                setIsLoadingLogs(true);
+                try {
+                    const db = window.firebase.db;
+                    const logsRef = window.firebase.collection(db, 'artifacts', "darnote-app", 'users', user.uid, 'error_logs');
+                    
+                    let q;
+                    if (sortBy.startsWith('date')) {
+                        const dir = sortBy === 'date-desc' ? 'desc' : 'asc';
+                        q = window.firebase.query(logsRef, window.firebase.orderBy('createdAt', dir));
+                    } else if (sortBy.startsWith('type')) {
+                        const typeDir = sortBy === 'type-mc' ? 'desc' : 'asc';
+                        q = window.firebase.query(logsRef, window.firebase.orderBy('questionType', typeDir), window.firebase.orderBy('createdAt', 'desc')); 
+                    }
+
+                    if (isLoadMore && lastDoc) {
+                        q = window.firebase.query(q, window.firebase.startAfter(lastDoc), window.firebase.limit(10));
+                    } else {
+                        q = window.firebase.query(q, window.firebase.limit(10));
+                    }
+
+                    const snapshot = await window.firebase.getDocs(q);
+                    
+                    const processData = (doc) => {
+                        const d = doc.data();
+                        return { id: doc.id, ...d, questionImages: d.questionImages || (d.imageUrl ? [d.imageUrl] : []), schemeImages: d.schemeImages || (d.markingSchemeUrl ? [d.markingSchemeUrl] : []) };
+                    };
+
+                    const newLogs = snapshot.docs.map(processData);
+                    
+                    // SAVE FETCHED DATA TO LOCAL DB FOR NEXT TIME
+                    for(const log of newLogs) {
+                        await LocalDB.save(log);
+                    }
+
+                    if (isLoadMore) {
+                        setLogs(prev => [...prev, ...newLogs]);
+                    } else {
+                        setLogs(newLogs);
+                    }
+
+                    setLastDoc(snapshot.docs[snapshot.docs.length - 1]);
+                    setHasMore(snapshot.docs.length === 10); 
+
+                } catch (e) { console.error("Fetch Error", e); }
+                setIsLoadingLogs(false);
+            };
+
+            // Trigger fetch on user/sort change
             useEffect(() => {
-                const handleKeyDown = (e) => {
-                    if ((e.metaKey || e.ctrlKey) && e.key === 'z') { e.preventDefault(); performUndo(); }
-                };
-                window.addEventListener('keydown', handleKeyDown);
-                return () => window.removeEventListener('keydown', handleKeyDown);
-            }, [user]); // Re-bind if user changes context
+                if (user) {
+                    fetchLogs(false); 
+                    
+                    // Fetch Subjects from Firebase and Cache locally
+                    const db = window.firebase.db;
+                    window.firebase.getDocs(window.firebase.collection(db, 'artifacts', "darnote-app", 'users', user.uid, 'subjects')).then(snap => {
+                        const subs = snap.docs.map(d => ({id: d.id, name: d.data().name, topics: d.data().topics || []})).sort((a,b)=>a.name.localeCompare(b.name));
+                        setSubjects(subs);
+                        LocalDB.saveSubject(subs);
+                    });
+                }
+            }, [user, sortBy]);
 
             useEffect(() => {
-                const unsub = window.firebase.onAuthStateChanged(window.firebase.auth, async (u) => {
-                    if (u) {
-                        setUser(u); setIsGuest(false); setIsLoadingLogs(true);
-                        try {
-                            const db = window.firebase.db;
-                            const subSnap = await window.firebase.getDocs(window.firebase.collection(db, 'artifacts', "darnote-app", 'users', u.uid, 'subjects'));
-                            setSubjects(subSnap.docs.map(d => ({id: d.id, name: d.data().name, topics: d.data().topics || []})).sort((a,b)=>a.name.localeCompare(b.name)));
-                            const q = window.firebase.query(window.firebase.collection(db, 'artifacts', "darnote-app", 'users', u.uid, 'error_logs'), window.firebase.orderBy('createdAt', 'desc'), window.firebase.limit(50));
-                            const logSnap = await window.firebase.getDocs(q);
-                            setLogs(logSnap.docs.map(d => {
-                                const data = d.data();
-                                return {
-                                    id: d.id, ...data,
-                                    questionImages: data.questionImages || (data.imageUrl ? [data.imageUrl] : []),
-                                    schemeImages: data.schemeImages || (data.markingSchemeUrl ? [data.markingSchemeUrl] : [])
-                                };
-                            }));
-                        } catch(e) { console.error(e); } setIsLoadingLogs(false);
-                    } else setUser(null);
-                });
+                const unsub = window.firebase.onAuthStateChanged(window.firebase.auth, u => { if (u) { setUser(u); setIsGuest(false); } else setUser(null); });
                 return () => unsub();
             }, []);
 
-            useEffect(() => {
-                if(isGuest && !user) {
-                    LocalDB.getAll().then(l => {
-                        setLogs(l.map(d => ({
-                            ...d,
-                            questionImages: d.questionImages || (d.imageUrl ? [d.imageUrl] : []),
-                            schemeImages: d.schemeImages || (d.markingSchemeUrl ? [d.markingSchemeUrl] : [])
-                        })).sort((a,b)=>new Date(b.createdAt)-new Date(a.createdAt)));
-                        LocalDB.getSubjects().then(setSubjects);
-                    });
-                }
-            }, [isGuest, user]);
-
+            useEffect(() => { if(isGuest && !user) { LocalDB.getAll().then(l => { setLogs(l.map(d => ({...d, questionImages: d.questionImages || (d.imageUrl ? [d.imageUrl] : []), schemeImages: d.schemeImages || (d.markingSchemeUrl ? [d.markingSchemeUrl] : [])})).sort((a,b)=>new Date(b.createdAt)-new Date(a.createdAt))); LocalDB.getSubjects().then(setSubjects); }); } }, [isGuest, user]);
             useEffect(() => { if(isDarkMode) document.documentElement.classList.add('dark'); else document.documentElement.classList.remove('dark'); }, [isDarkMode]);
             useEffect(() => { const url = new URL(window.location); if (activeLogId) url.searchParams.set('log', activeLogId); else url.searchParams.delete('log'); window.history.pushState({}, '', url); }, [activeLogId]);
 
+            // MANUAL REFRESH (Explicitly calls Firebase)
+            const refreshLogs = async () => {
+                if(!user) return;
+                setIsLoadingLogs(true);
+                // Force clear local DB to ensure fresh fetch
+                await LocalDB.clear(); 
+                
+                const q = window.firebase.query(
+                    window.firebase.collection(window.firebase.db, 'artifacts', "darnote-app", 'users', user.uid, 'error_logs'),
+                    window.firebase.orderBy('createdAt', 'desc'),
+                    window.firebase.limit(10) // Limit 10 on Refresh
+                );
+                const logSnap = await window.firebase.getDocs(q);
+                
+                const fetchedLogs = logSnap.docs.map(d => {
+                    const data = d.data();
+                    return { id: d.id, ...data, questionImages: data.questionImages || [], schemeImages: data.schemeImages || [] };
+                });
+
+                // Save fresh data to local
+                for(const log of fetchedLogs) await LocalDB.save(log);
+                
+                setLogs(fetchedLogs);
+                setLastDoc(logSnap.docs[logSnap.docs.length - 1]);
+                setIsLoadingLogs(false);
+            };
+
             const createLog = async () => {
                 const newLog = { title: 'Untitled Mistake', subject: 'General', topic: '', questionImages: [], schemeImages: [], questionType: 'MC', correctAnswer: '', marks: '', explanation: '', mastered: false, createdAt: new Date().toISOString() };
-                if (user) {
-                    const docRef = await window.firebase.addDoc(window.firebase.collection(window.firebase.db, 'artifacts', "darnote-app", 'users', user.uid, 'error_logs'), newLog);
-                    setLogs(prev => [{...newLog, id: docRef.id}, ...prev]); setActiveLogId(docRef.id);
-                } else {
-                    const id = 'local_' + Date.now();
-                    setLogs(prev => [{...newLog, id}, ...prev]); await LocalDB.save({...newLog, id}); setActiveLogId(id);
-                }
+                if (user) { 
+                    const docRef = await window.firebase.addDoc(window.firebase.collection(window.firebase.db, 'artifacts', "darnote-app", 'users', user.uid, 'error_logs'), newLog); 
+                    const logWithId = {...newLog, id: docRef.id};
+                    setLogs(prev => [logWithId, ...prev]); 
+                    await LocalDB.save(logWithId); // Save to Local
+                    setActiveLogId(docRef.id); 
+                } 
+                else { const id = 'local_' + Date.now(); setLogs(prev => [{...newLog, id}, ...prev]); await LocalDB.save({...newLog, id}); setActiveLogId(id); }
             };
 
             const updateLog = (id, updates) => {
                 setLogs(prev => prev.map(l => l.id === id ? { ...l, ...updates } : l));
                 if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
                 pendingUpdatesRef.current[id] = { ...(pendingUpdatesRef.current[id] || {}), ...updates };
+                
+                // 5 SECOND DEBOUNCE (WRITE OPTIMIZATION)
                 saveTimeoutRef.current = setTimeout(async () => {
                     const ids = Object.keys(pendingUpdatesRef.current);
                     for (const logId of ids) {
                         const payload = pendingUpdatesRef.current[logId]; delete pendingUpdatesRef.current[logId];
+                        
+                        // Update LocalDB immediately
+                        const full = await new Promise(r=>LocalDB.getAll().then(all=>r(all.find(l=>l.id===logId)))); 
+                        if(full) await LocalDB.save({...full, ...payload});
+
+                        // Update Firebase
                         if (user) await window.firebase.updateDoc(window.firebase.doc(window.firebase.db, 'artifacts', "darnote-app", 'users', user.uid, 'error_logs', logId), payload);
-                        else { const full = await new Promise(r=>LocalDB.getAll().then(all=>r(all.find(l=>l.id===logId)))); if(full) await LocalDB.save({...full, ...payload}); }
                     }
-                }, 1500);
+                }, 5000);
             };
 
             const handleImageUpdate = async (data, action, type) => {
                 if (!activeLogId) return;
-                const isQ = type === 'question';
-                const setSpinner = isQ ? setUploadingQ : setUploadingS;
-                const targetField = isQ ? 'questionImages' : 'schemeImages';
-                const currentImages = isQ ? activeLog.questionImages : activeLog.schemeImages;
-
-                if (action === 'remove') {
-                    // Push state BEFORE removal to undo stack
-                    addToUndo({ type: 'restore_images', logId: activeLogId, field: targetField, images: [...currentImages] });
-                    const newArr = currentImages.filter((_, i) => i !== data);
-                    updateLog(activeLogId, { [targetField]: newArr });
-                    return;
-                }
-
+                const isQ = type === 'question'; const setSpinner = isQ ? setUploadingQ : setUploadingS; const targetField = isQ ? 'questionImages' : 'schemeImages'; const currentImages = isQ ? activeLog.questionImages : activeLog.schemeImages;
+                if (action === 'remove') { addToUndo({ type: 'restore_images', logId: activeLogId, field: targetField, images: [...currentImages] }); const newArr = currentImages.filter((_, i) => i !== data); updateLog(activeLogId, { [targetField]: newArr }); return; }
                 setSpinner(true);
                 try {
                     let finalUrl = null;
-                    if (user) {
-                        const blob = data instanceof Blob ? data : new Blob([data]);
-                        finalUrl = await saveToDrive(blob, `ErrorLog_${type}_${Date.now()}.png`);
-                    } else {
-                        finalUrl = await new Promise((resolve) => { const r = new FileReader(); r.onload=()=>resolve(r.result); r.readAsDataURL(data); });
-                    }
-                    if(finalUrl) {
-                        const newArr = [...currentImages, finalUrl];
-                        updateLog(activeLogId, { [targetField]: newArr });
-                    }
-                } catch(e) { alert("Upload Failed: " + e.message); }
-                setSpinner(false);
+                    if (user) { const blob = data instanceof Blob ? data : new Blob([data]); finalUrl = await saveToDrive(blob, `ErrorLog_${type}_${Date.now()}.png`); } 
+                    else { finalUrl = await new Promise((resolve) => { const r = new FileReader(); r.onload=()=>resolve(r.result); r.readAsDataURL(data); }); }
+                    if(finalUrl) { const newArr = [...currentImages, finalUrl]; updateLog(activeLogId, { [targetField]: newArr }); }
+                } catch(e) { alert("Upload Failed: " + e.message); } setSpinner(false);
             };
 
             const handleAutoTitle = async () => {
-                if (!activeLog.questionImages?.length && !activeLog.imageUrl) { alert("Paste image first!"); return; }
-                setIsAutoTitleLoading(true);
+                if (!activeLog.questionImages?.length && !activeLog.imageUrl) { alert("Paste image first!"); return; } setIsAutoTitleLoading(true);
                 try {
-                    let url = activeLog.questionImages?.[0] || activeLog.imageUrl;
-                    let base64 = url;
-                    if(!url.startsWith('data:')) {
-                        const res = await fetch(url);
-                        const b = await res.blob();
-                        base64 = await new Promise(r=>{const rd=new FileReader(); rd.onload=()=>r(rd.result); rd.readAsDataURL(b);});
-                    }
+                    let url = activeLog.questionImages?.[0] || activeLog.imageUrl; let base64 = url;
+                    if(!url.startsWith('data:')) { const res = await fetch(url); const b = await res.blob(); base64 = await new Promise(r=>{const rd=new FileReader(); rd.onload=()=>r(rd.result); rd.readAsDataURL(b);}); }
                     const title = await callGemini("Analyze image. Identify core question concept. Generate SHORT title (max 6 words). Return ONLY title.", "Concise Summarizer", base64);
                     updateLog(activeLogId, { title: title.replace(/^["']|["']$/g, '').trim() });
-                } catch(e) { alert("OCR Failed"); }
-                setIsAutoTitleLoading(false);
+                } catch(e) { alert("OCR Failed"); } setIsAutoTitleLoading(false);
             }
 
             const activeLog = logs.find(l => l.id === activeLogId);
@@ -570,7 +529,23 @@
                     {/* LIST */}
                     <div className="w-[320px] flex-shrink-0 border-r border-zinc-200 dark:border-white/5 bg-white dark:bg-surface flex flex-col z-10 shadow-lg">
                         <div className="p-4 border-b border-zinc-200 dark:border-white/5 space-y-3 bg-white dark:bg-surface z-20">
-                            <input type="text" placeholder="Search..." value={searchQuery} onChange={e=>setSearchQuery(e.target.value)} className="input-field pl-9 bg-[url('data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIGZpbGw9Im5vbmUiIHZpZXdCb3g9IjAgMCAyNCAyNCIgc3Ryb2tlPSIjNzE3MTdhIiBzdHJva2Utd2lkdGg9IjIiPjxjaXJjbGUgY3g9IjExIiBjeT0iMTEiIHI9IjgiLz48cGF0aCBkPSJtMjEgMjEtNC4zLTQuMyIvPjwvc3ZnPg==')] bg-no-repeat bg-[length:16px] bg-[12px_center]"/>
+                            <div className="flex gap-2">
+                                <input type="text" placeholder="Search..." value={searchQuery} onChange={e=>setSearchQuery(e.target.value)} className="input-field pl-9 bg-[url('data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIGZpbGw9Im5vbmUiIHZpZXdCb3g9IjAgMCAyNCAyNCIgc3Ryb2tlPSIjNzE3MTdhIiBzdHJva2Utd2lkdGg9IjIiPjxjaXJjbGUgY3g9IjExIiBjeT0iMTEiIHI9IjgiLz48cGF0aCBkPSJtMjEgMjEtNC4zLTQuMyIvPjwvc3ZnPg==')] bg-no-repeat bg-[length:16px] bg-[12px_center]"/>
+                                {user && (
+                                    <div className="relative">
+                                        <button onClick={()=>setShowSortMenu(!showSortMenu)} className="p-2 rounded-lg border border-zinc-200 dark:border-white/10 hover:bg-zinc-100 dark:hover:bg-white/5 text-zinc-500" title="Sort Logs"><Icons.Sort className="w-4 h-4"/></button>
+                                        {showSortMenu && (
+                                            <div className="absolute right-0 top-full mt-2 w-32 bg-white dark:bg-zinc-800 border border-zinc-200 dark:border-white/10 rounded-lg shadow-xl z-50 py-1">
+                                                <button onClick={()=>{setSortBy('date-desc'); setShowSortMenu(false)}} className={`w-full text-left px-3 py-2 text-xs hover:bg-zinc-100 dark:hover:bg-white/5 ${sortBy==='date-desc'?'text-indigo-500 font-bold':''}`}>Date (Newest)</button>
+                                                <button onClick={()=>{setSortBy('date-asc'); setShowSortMenu(false)}} className={`w-full text-left px-3 py-2 text-xs hover:bg-zinc-100 dark:hover:bg-white/5 ${sortBy==='date-asc'?'text-indigo-500 font-bold':''}`}>Date (Oldest)</button>
+                                                <button onClick={()=>{setSortBy('type-mc'); setShowSortMenu(false)}} className={`w-full text-left px-3 py-2 text-xs hover:bg-zinc-100 dark:hover:bg-white/5 ${sortBy==='type-mc'?'text-indigo-500 font-bold':''}`}>MC First</button>
+                                                <button onClick={()=>{setSortBy('type-lq'); setShowSortMenu(false)}} className={`w-full text-left px-3 py-2 text-xs hover:bg-zinc-100 dark:hover:bg-white/5 ${sortBy==='type-lq'?'text-indigo-500 font-bold':''}`}>LQ First</button>
+                                            </div>
+                                        )}
+                                    </div>
+                                )}
+                                {user && <button onClick={refreshLogs} disabled={isLoadingLogs} className={`p-2 rounded-lg border border-zinc-200 dark:border-white/10 hover:bg-zinc-100 dark:hover:bg-white/5 text-zinc-500 ${isLoadingLogs ? 'animate-spin' : ''}`} title="Refresh Logs (Costs Reads)"><Icons.Refresh className="w-4 h-4"/></button>}
+                            </div>
                             <button onClick={createLog} className="w-full bg-brand text-white py-2.5 rounded-lg font-bold text-sm hover:bg-indigo-600 shadow-lg transition-all flex justify-center items-center gap-2"><Icons.Plus className="w-4 h-4"/> Log New Error</button>
                         </div>
                         <div className="flex-1 overflow-y-auto p-2 space-y-2">
@@ -580,12 +555,17 @@
                                     <div className="flex justify-between items-center mt-2"><div className="flex gap-2"><span className="text-[10px] font-medium px-2 py-0.5 rounded bg-zinc-200 dark:bg-white/10 text-zinc-600 dark:text-zinc-400">{l.subject}</span>{l.topic && <span className="text-[10px] font-medium px-2 py-0.5 rounded border border-zinc-200 dark:border-white/10 text-zinc-500 truncate max-w-[80px]">{l.topic}</span>}</div><span className={`text-[10px] font-bold ${l.mastered ? 'text-green-600' : 'text-red-500'}`}>{l.mastered ? 'SOLVED' : 'REVIEW'}</span></div>
                                 </motion.div>
                             ))}
+                            {user && hasMore && !isLoadingLogs && (
+                                <button onClick={() => fetchLogs(true)} className="w-full py-2 text-xs text-indigo-500 hover:text-indigo-400 font-bold mt-2 border border-dashed border-zinc-300 dark:border-zinc-700 rounded-lg hover:bg-zinc-50 dark:hover:bg-white/5 transition-colors">
+                                    Load More (+10)
+                                </button>
+                            )}
+                            {isLoadingLogs && <div className="text-center text-zinc-400 py-4 text-xs animate-pulse">Loading Logs...</div>}
                         </div>
                     </div>
 
                     {/* EDITOR */}
                     <main className="flex-1 flex flex-col min-w-0 bg-[#f4f4f5] dark:bg-onyx relative transition-colors duration-300">
-                        {/* UNDO TOAST */}
                         <AnimatePresence>
                             {showUndoToast && (
                                 <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} className="absolute bottom-8 left-1/2 -translate-x-1/2 bg-zinc-900 text-white px-4 py-2 rounded-full shadow-2xl z-50 flex items-center gap-2 text-sm font-bold border border-zinc-700">
@@ -607,7 +587,7 @@
                                         <button onClick={()=> user ? setIsAiOpen(!isAiOpen) : null} disabled={!user} className={`p-2 rounded-lg transition-colors ${!user ? 'cursor-not-allowed opacity-50 bg-zinc-100 dark:bg-white/5 text-zinc-400' : isAiOpen ? 'bg-brand/10 text-brand' : 'hover:bg-zinc-100 dark:hover:bg-white/5 text-zinc-500'}`} title={user ? "Open AI Tutor" : "Login required for AI Tutor"}><Icons.Bot className="w-5 h-5"/></button>
                                         <button onClick={()=>{
                                             if(confirm('Delete?')) { 
-                                                addToUndo({ type: 'restore_log', log: activeLog }); // Add to undo stack
+                                                addToUndo({ type: 'restore_log', log: activeLog }); 
                                                 if(user) deleteDoc(doc(window.firebase.db,'artifacts',"darnote-app",'users',user.uid,'error_logs',activeLog.id)); 
                                                 else { LocalDB.delete(activeLog.id); setLogs(prev => prev.filter(l => l.id !== activeLog.id)); } 
                                                 setActiveLogId(null); 
@@ -624,8 +604,8 @@
                                             <div><label className="text-[11px] font-bold text-zinc-400 uppercase tracking-wider mb-1 block">Type</label><div className="flex bg-zinc-100 dark:bg-black/20 p-1 rounded-lg border border-zinc-200 dark:border-white/5">{['MC', 'LQ'].map(t => (<button key={t} onClick={()=>updateLog(activeLog.id, {questionType: t})} className={`flex-1 py-1.5 rounded-md text-xs font-bold transition-all ${activeLog.questionType===t ? 'bg-white dark:bg-zinc-700 shadow-sm text-black dark:text-white' : 'text-zinc-500'}`}>{t}</button>))}</div></div>
                                         </div>
                                         <div className="space-y-6">
-                                            <MultiImageUploader images={activeLog.questionImages} onUpdate={(d, a) => handleImageUpdate(d, a, 'question')} label="Question" isUploading={uploadingQ}/>
-                                            <motion.div initial={{opacity:0, height:0}} animate={{opacity:1, height:'auto'}}><MultiImageUploader images={activeLog.schemeImages} onUpdate={(d, a) => handleImageUpdate(d, a, 'scheme')} label="Marking Scheme" isUploading={uploadingS}/></motion.div>
+                                            <MultiImageUploader images={activeLog.questionImages} onUpdate={(d, a) => handleImageUpdate(d, a, 'question')} label="Question Evidence" isUploading={uploadingQ}/>
+                                            <MultiImageUploader images={activeLog.schemeImages} onUpdate={(d, a) => handleImageUpdate(d, a, 'scheme')} label="Marking Scheme" isUploading={uploadingS}/>
                                         </div>
                                         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
                                             <div className="lg:col-span-1 space-y-6"><div className="bg-white dark:bg-surface p-5 rounded-2xl shadow-sm border border-zinc-200 dark:border-white/5"><label className="text-[11px] font-bold text-zinc-400 uppercase tracking-wider mb-2 block">Correct Answer</label><input value={activeLog.correctAnswer} onChange={e=>updateLog(activeLog.id, {correctAnswer:e.target.value})} className="w-full bg-green-50 dark:bg-green-900/10 border border-green-200 dark:border-green-900/30 rounded-lg px-4 py-3 font-mono text-lg font-bold text-green-700 dark:text-green-400 focus:outline-none" placeholder="Ans"/></div><div className="bg-white dark:bg-surface p-5 rounded-2xl shadow-sm border border-zinc-200 dark:border-white/5"><label className="text-[11px] font-bold text-zinc-400 uppercase tracking-wider mb-2 block">Marks Lost</label><input value={activeLog.marks} onChange={e=>updateLog(activeLog.id, {marks:e.target.value})} className="w-full bg-red-50 dark:bg-red-900/10 border border-red-200 dark:border-red-900/30 rounded-lg px-4 py-3 font-bold text-red-700 dark:text-red-400 focus:outline-none" placeholder="-2"/></div></div>
