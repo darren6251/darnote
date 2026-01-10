@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>darNote - Error Log</title>
+    <title>darNote - Error Log (Sorted)</title>
     <link rel="icon" type="image/png" href="https://raw.githubusercontent.com/darren6251/darnote/refs/heads/main/darNote%20logo.png">
     
     <!-- React & Tailwind -->
@@ -311,14 +311,12 @@
                 if (action.type === 'restore_log') {
                     const { log } = action;
                     if (user) await window.firebase.setDoc(window.firebase.doc(window.firebase.db, 'artifacts', "darnote-app", 'users', user.uid, 'error_logs', log.id), log);
-                    // Also save to LocalDB
                     await LocalDB.save(log);
                     setLogs(prev => [log, ...prev].sort((a,b)=>new Date(b.createdAt)-new Date(a.createdAt)));
                 } else if (action.type === 'restore_images') {
                     const { logId, field, images } = action;
                     setLogs(prev => prev.map(l => l.id === logId ? { ...l, [field]: images } : l));
                     if (user) await window.firebase.updateDoc(window.firebase.doc(window.firebase.db, 'artifacts', "darnote-app", 'users', user.uid, 'error_logs', logId), { [field]: images });
-                    // Also update LocalDB
                     const full = await new Promise(r => LocalDB.getAll().then(all => r(all.find(l => l.id === logId)))); 
                     if(full) await LocalDB.save({...full, [field]: images});
                 }
@@ -328,40 +326,41 @@
 
             // FETCH LOGS LOGIC (LOCAL FIRST STRATEGY + SAFETY TIMEOUT)
             const fetchLogs = useCallback(async (isLoadMore = false) => {
-                // If it's the initial load (not Load More), check LocalDB first
                 if (!isLoadMore) {
                     setIsLoadingLogs(true);
-                    
-                    // SAFETY TIMEOUT: Force stop loading after 5 seconds to prevent eternal spin
-                    const safetyTimer = setTimeout(() => {
-                        console.warn("Safety Timeout Triggered");
-                        setIsLoadingLogs(false);
-                    }, 5000);
+                    const safetyTimer = setTimeout(() => setIsLoadingLogs(false), 5000);
 
                     try {
                         const localLogs = await LocalDB.getAll();
                         if (localLogs.length > 0) {
-                            // FOUND LOCAL DATA: Use it!
                             console.log("Loaded from Local Cache");
-                            setLogs(localLogs.sort((a,b) => new Date(b.createdAt) - new Date(a.createdAt)));
+                            // LOCAL SORT LOGIC
+                            let sorted = [...localLogs];
+                            if (sortBy === 'date-desc') sorted.sort((a,b) => new Date(b.createdAt) - new Date(a.createdAt));
+                            else if (sortBy === 'date-asc') sorted.sort((a,b) => new Date(a.createdAt) - new Date(b.createdAt));
+                            else if (sortBy === 'type-mc') sorted.sort((a,b) => {
+                                if (a.questionType === b.questionType) return new Date(b.createdAt) - new Date(a.createdAt);
+                                return a.questionType === 'MC' ? -1 : 1; 
+                            });
+                            else if (sortBy === 'type-lq') sorted.sort((a,b) => {
+                                if (a.questionType === b.questionType) return new Date(b.createdAt) - new Date(a.createdAt);
+                                return a.questionType === 'LQ' ? -1 : 1;
+                            });
+
+                            setLogs(sorted);
                             const localSubjects = await LocalDB.getSubjects();
                             setSubjects(localSubjects);
                             clearTimeout(safetyTimer);
                             setIsLoadingLogs(false);
-                            return; // EXIT EARLY
+                            return; 
                         }
-                    } catch (e) {
-                        console.error("LocalDB Read Failed, falling back to network", e);
-                    }
-                    // Continue to network if local failed or empty, but clear timeout first to restart logic
+                    } catch (e) { console.error("LocalDB Read Failed", e); }
                     clearTimeout(safetyTimer);
                 }
 
-                // If no local data or "Load More" clicked, THEN hit Firebase
                 if (!user) { setIsLoadingLogs(false); return; }
                 
-                // New Safety Timer for Network
-                const networkTimer = setTimeout(() => setIsLoadingLogs(false), 8000); // 8s for network
+                const networkTimer = setTimeout(() => setIsLoadingLogs(false), 8000);
                 setIsLoadingLogs(true);
 
                 try {
@@ -373,9 +372,20 @@
                         const dir = sortBy === 'date-desc' ? 'desc' : 'asc';
                         q = window.firebase.query(logsRef, window.firebase.orderBy('createdAt', dir));
                     } else if (sortBy.startsWith('type')) {
+                        // Use simple orderBy. 'MC' > 'LQ' (M comes after L). 
+                        // So 'desc' puts MC first. 'asc' puts LQ first.
                         const typeDir = sortBy === 'type-mc' ? 'desc' : 'asc';
-                        // Safety: If index missing, this might fail. We wrap in try catch.
-                        q = window.firebase.query(logsRef, window.firebase.orderBy('questionType', typeDir), window.firebase.orderBy('createdAt', 'desc')); 
+                        // IMPORTANT: For composite sort to work without index, we rely on primary sort only, or catch error.
+                        // We will try primary sort by type, then by date desc. 
+                        // IF INDEX MISSING, THIS WILL FAIL. 
+                        // Fallback: Just sort by date and let user filter client side? No, user requested sort.
+                        // We will TRY. If fail, alert user.
+                        try {
+                           q = window.firebase.query(logsRef, window.firebase.orderBy('questionType', typeDir), window.firebase.orderBy('createdAt', 'desc')); 
+                        } catch(e) {
+                           console.warn("Index missing for type sort, falling back to simple date sort");
+                           q = window.firebase.query(logsRef, window.firebase.orderBy('createdAt', 'desc'));
+                        }
                     }
 
                     if (isLoadMore && lastDoc) {
@@ -393,23 +403,17 @@
 
                     const newLogs = snapshot.docs.map(processData);
                     
-                    // SAVE FETCHED DATA TO LOCAL DB FOR NEXT TIME
-                    for(const log of newLogs) {
-                        await LocalDB.save(log);
-                    }
+                    for(const log of newLogs) await LocalDB.save(log);
 
-                    if (isLoadMore) {
-                        setLogs(prev => [...prev, ...newLogs]);
-                    } else {
-                        setLogs(newLogs);
-                    }
+                    if (isLoadMore) setLogs(prev => [...prev, ...newLogs]);
+                    else setLogs(newLogs);
 
                     setLastDoc(snapshot.docs[snapshot.docs.length - 1]);
                     setHasMore(snapshot.docs.length === 10); 
 
                 } catch (e) { 
                     console.error("Fetch Error", e);
-                    // Fallback to whatever local has if network fails
+                    if(e.code === 'failed-precondition') alert("Sorting by Type requires a Firebase Index. Please check console link.");
                     const emergencyLocal = await LocalDB.getAll();
                     if(emergencyLocal.length > 0) setLogs(emergencyLocal);
                 } finally {
@@ -418,11 +422,9 @@
                 }
             }, [user, sortBy, lastDoc]);
 
-            // Trigger fetch on user/sort change
             useEffect(() => {
                 if (user) {
                     fetchLogs(false); 
-                    // Fetch Subjects from Firebase and Cache locally (Fire & Forget)
                     const db = window.firebase.db;
                     window.firebase.getDocs(window.firebase.collection(db, 'artifacts', "darnote-app", 'users', user.uid, 'subjects')).then(snap => {
                         const subs = snap.docs.map(d => ({id: d.id, name: d.data().name, topics: d.data().topics || []})).sort((a,b)=>a.name.localeCompare(b.name));
@@ -430,79 +432,59 @@
                         LocalDB.saveSubject(subs);
                     }).catch(e => console.warn("Subject fetch failed", e));
                 }
-            }, [user, sortBy]); // Removed fetchLogs from dep to avoid loop
+            }, [user, sortBy]);
 
-            // One-time Auth Listener
             useEffect(() => {
                 const unsub = window.firebase.onAuthStateChanged(window.firebase.auth, u => { 
-                    if (u) { 
-                        setUser(u); 
-                        setIsGuest(false); 
-                        // Do NOT call fetchLogs here to avoid double fetch. 
-                        // The user state update will trigger the effect above.
-                    } else setUser(null); 
+                    if (u) { setUser(u); setIsGuest(false); } else setUser(null); 
                 });
                 return () => unsub();
             }, []);
 
-            useEffect(() => { if(isGuest && !user) { LocalDB.getAll().then(l => { setLogs(l.map(d => ({...d, questionImages: d.questionImages || (d.imageUrl ? [d.imageUrl] : []), schemeImages: d.schemeImages || (d.markingSchemeUrl ? [d.markingSchemeUrl] : [])})).sort((a,b)=>new Date(b.createdAt)-new Date(a.createdAt))); LocalDB.getSubjects().then(setSubjects); }); } }, [isGuest, user]);
+            useEffect(() => { if(isGuest && !user) { LocalDB.getAll().then(l => { 
+                // Local Guest Sort
+                let sorted = [...l];
+                if (sortBy === 'date-desc') sorted.sort((a,b) => new Date(b.createdAt) - new Date(a.createdAt));
+                else if (sortBy === 'date-asc') sorted.sort((a,b) => new Date(a.createdAt) - new Date(b.createdAt));
+                else if (sortBy === 'type-mc') sorted.sort((a,b) => (a.questionType === b.questionType) ? new Date(b.createdAt) - new Date(a.createdAt) : (a.questionType === 'MC' ? -1 : 1));
+                else if (sortBy === 'type-lq') sorted.sort((a,b) => (a.questionType === b.questionType) ? new Date(b.createdAt) - new Date(a.createdAt) : (a.questionType === 'LQ' ? -1 : 1));
+                setLogs(sorted); 
+                LocalDB.getSubjects().then(setSubjects); 
+            }); } }, [isGuest, user, sortBy]);
+
             useEffect(() => { if(isDarkMode) document.documentElement.classList.add('dark'); else document.documentElement.classList.remove('dark'); }, [isDarkMode]);
             useEffect(() => { const url = new URL(window.location); if (activeLogId) url.searchParams.set('log', activeLogId); else url.searchParams.delete('log'); window.history.pushState({}, '', url); }, [activeLogId]);
 
-            // MANUAL REFRESH (Explicitly calls Firebase)
             const refreshLogs = async () => {
                 if(!user) return;
                 setIsLoadingLogs(true);
-                // Force clear local DB to ensure fresh fetch
                 await LocalDB.clear(); 
-                
                 try {
-                    const q = window.firebase.query(
-                        window.firebase.collection(window.firebase.db, 'artifacts', "darnote-app", 'users', user.uid, 'error_logs'),
-                        window.firebase.orderBy('createdAt', 'desc'),
-                        window.firebase.limit(10) // Limit 10 on Refresh
-                    );
+                    const q = window.firebase.query(window.firebase.collection(window.firebase.db, 'artifacts', "darnote-app", 'users', user.uid, 'error_logs'), window.firebase.orderBy('createdAt', 'desc'), window.firebase.limit(10));
                     const logSnap = await window.firebase.getDocs(q);
-                    const fetchedLogs = logSnap.docs.map(d => {
-                        const data = d.data();
-                        return { id: d.id, ...data, questionImages: data.questionImages || [], schemeImages: data.schemeImages || [] };
-                    });
-                    // Save fresh data to local
+                    const fetchedLogs = logSnap.docs.map(d => { const data = d.data(); return { id: d.id, ...data, questionImages: data.questionImages || [], schemeImages: data.schemeImages || [] }; });
                     for(const log of fetchedLogs) await LocalDB.save(log);
                     setLogs(fetchedLogs);
                     setLastDoc(logSnap.docs[logSnap.docs.length - 1]);
-                } catch(e) { console.error("Refresh Error", e); }
-                finally { setIsLoadingLogs(false); }
+                } catch(e) { console.error("Refresh Error", e); } finally { setIsLoadingLogs(false); }
             };
 
             const createLog = async () => {
-                const newLog = { title: 'Untitled Mistake', subject: 'General', topic: '', questionImages: [], schemeImages: [], questionType: 'MC', correctAnswer: '', marks: '', explanation: '', mastered: false, createdAt: new Date().toISOString() };
-                if (user) { 
-                    const docRef = await window.firebase.addDoc(window.firebase.collection(window.firebase.db, 'artifacts', "darnote-app", 'users', user.uid, 'error_logs'), newLog); 
-                    const logWithId = {...newLog, id: docRef.id};
-                    setLogs(prev => [logWithId, ...prev]); 
-                    await LocalDB.save(logWithId); // Save to Local
-                    setActiveLogId(docRef.id); 
-                } 
+                const newLog = { title: 'Untitled Mistake', subject: 'General', topic: '', questionImages: [], schemeImages: [], questionType: 'MC', correctAnswer: '', marks: '', explanation: '', mastered: false, createdAt: new Date().toISOString(), lastModified: new Date().toISOString() };
+                if (user) { const docRef = await window.firebase.addDoc(window.firebase.collection(window.firebase.db, 'artifacts', "darnote-app", 'users', user.uid, 'error_logs'), newLog); const logWithId = {...newLog, id: docRef.id}; setLogs(prev => [logWithId, ...prev]); await LocalDB.save(logWithId); setActiveLogId(docRef.id); } 
                 else { const id = 'local_' + Date.now(); setLogs(prev => [{...newLog, id}, ...prev]); await LocalDB.save({...newLog, id}); setActiveLogId(id); }
             };
 
             const updateLog = (id, updates) => {
-                setLogs(prev => prev.map(l => l.id === id ? { ...l, ...updates } : l));
+                const timestampedUpdates = { ...updates, lastModified: new Date().toISOString() };
+                setLogs(prev => prev.map(l => l.id === id ? { ...l, ...timestampedUpdates } : l));
                 if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
-                pendingUpdatesRef.current[id] = { ...(pendingUpdatesRef.current[id] || {}), ...updates };
-                
-                // 5 SECOND DEBOUNCE (WRITE OPTIMIZATION)
+                pendingUpdatesRef.current[id] = { ...(pendingUpdatesRef.current[id] || {}), ...timestampedUpdates };
                 saveTimeoutRef.current = setTimeout(async () => {
                     const ids = Object.keys(pendingUpdatesRef.current);
                     for (const logId of ids) {
                         const payload = pendingUpdatesRef.current[logId]; delete pendingUpdatesRef.current[logId];
-                        
-                        // Update LocalDB immediately
-                        const full = await new Promise(r=>LocalDB.getAll().then(all=>r(all.find(l=>l.id===logId)))); 
-                        if(full) await LocalDB.save({...full, ...payload});
-
-                        // Update Firebase
+                        const full = await new Promise(r=>LocalDB.getAll().then(all=>r(all.find(l=>l.id===logId)))); if(full) await LocalDB.save({...full, ...payload});
                         if (user) await window.firebase.updateDoc(window.firebase.doc(window.firebase.db, 'artifacts', "darnote-app", 'users', user.uid, 'error_logs', logId), payload);
                     }
                 }, 5000);
@@ -592,6 +574,7 @@
                                 <motion.div key={l.id} onClick={()=>setActiveLogId(l.id)} className={`p-3.5 rounded-xl cursor-pointer border transition-all ${activeLogId===l.id ? 'bg-zinc-100 dark:bg-white/10 border-zinc-300 dark:border-white/20' : 'bg-transparent border-transparent hover:bg-zinc-50 dark:hover:bg-white/5'}`}>
                                     <div className="flex justify-between items-start mb-1"><div className="font-semibold text-sm truncate pr-2 text-zinc-800 dark:text-zinc-200 w-full">{l.title}</div>{l.mastered && <Icons.Check className="w-4 h-4 text-green-500"/>}</div>
                                     <div className="flex justify-between items-center mt-2"><div className="flex gap-2"><span className="text-[10px] font-medium px-2 py-0.5 rounded bg-zinc-200 dark:bg-white/10 text-zinc-600 dark:text-zinc-400">{l.subject}</span>{l.topic && <span className="text-[10px] font-medium px-2 py-0.5 rounded border border-zinc-200 dark:border-white/10 text-zinc-500 truncate max-w-[80px]">{l.topic}</span>}</div><span className={`text-[10px] font-bold ${l.mastered ? 'text-green-600' : 'text-red-500'}`}>{l.mastered ? 'SOLVED' : 'REVIEW'}</span></div>
+                                    <div className="mt-2 text-[9px] text-zinc-400 dark:text-zinc-500 text-right">{new Date(l.lastModified || l.createdAt).toLocaleDateString()}</div>
                                 </motion.div>
                             ))}
                             {user && hasMore && !isLoadingLogs && (
