@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>darNote - Error Log (Sorted)</title>
+    <title>darNote - Error Log (Pro)</title>
     <link rel="icon" type="image/png" href="https://raw.githubusercontent.com/darren6251/darnote/refs/heads/main/darNote%20logo.png">
     
     <!-- React & Tailwind -->
@@ -55,6 +55,10 @@
         .glass-panel { @apply bg-white dark:bg-surface border-r border-zinc-200 dark:border-border; }
         .input-field { @apply w-full bg-zinc-50 dark:bg-zinc-900 border border-zinc-200 dark:border-white/10 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-brand transition-all shadow-sm; }
         .btn-ghost { @apply hover:bg-zinc-100 dark:hover:bg-white/5 text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white transition-colors; }
+        
+        /* Context Menu Animation */
+        .context-menu { animation: fadein 0.1s ease-out; }
+        @keyframes fadein { from { opacity: 0; transform: scale(0.95); } to { opacity: 1; transform: scale(1); } }
     </style>
 </head>
 <body>
@@ -85,7 +89,6 @@
             Lock: (p) => <svg {...p} xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>,
             File: (p) => <svg {...p} xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" x2="8" y1="13" y2="13"/><line x1="16" x2="8" y1="17" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>,
             Book: (p) => <svg {...p} xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>,
-            WifiOff: (p) => <svg {...p} xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="1" y1="1" x2="23" y2="23"/><path d="M16.72 11.06A10.94 10.94 0 0 1 19 12.55"/><path d="M5 12.55a10.94 10.94 0 0 1 5.17-2.39"/><path d="M10.71 5.05A16 16 0 0 1 22.58 9"/><path d="M1.42 9a15.91 15.91 0 0 1 4.7-2.88"/><path d="M8.53 16.11a6 6 0 0 1 6.95 0"/><line x1="12" y1="20" x2="12.01" y2="20"/></svg>,
             CloudUpload: (p) => <svg {...p} xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M4 14.899A7 7 0 1 1 15.71 8h1.79a4.5 4.5 0 0 1 2.5 8.242"/><path d="M12 12v9"/><path d="m16 16-4-4-4 4"/></svg>,
             Refresh: (p) => <svg {...p} xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 12a9 9 0 0 0-9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/><path d="M3 12a9 9 0 0 0 9 9 9.75 9.75 0 0 0 6.74-2.74L21 16"/><path d="M21 21v-5h-5"/></svg>,
             Clip: (p) => <svg {...p} xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m21.44 11.05-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"/></svg>,
@@ -94,37 +97,9 @@
             ChevronRight: (p) => <svg {...p} xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m9 18 6-6-6-6"/></svg>,
             ZoomIn: (p) => <svg {...p} xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" x2="16.65" y1="21" y2="16.65"/><line x1="11" x2="11" y1="8" y2="14"/><line x1="8" x2="14" y1="11" y2="11"/></svg>,
             Undo: (p) => <svg {...p} xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 7v6h6"/><path d="M21 17a9 9 0 0 0-9-9 9 9 0 0 0-6 2.3L3 13"/></svg>,
-            Sort: (p) => <svg {...p} xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="12" x2="12" y1="3" y2="21"/><polyline points="8 7 12 3 16 7"/><polyline points="8 17 12 21 16 17"/></svg>
-        };
-
-        // --- LOCAL DB (IndexedDB) ---
-        const dbPromise = new Promise((resolve, reject) => {
-            const request = indexedDB.open("DarNoteLocal", 2); // Bump version for safety
-            request.onupgradeneeded = (e) => {
-                const db = e.target.result;
-                if (!db.objectStoreNames.contains('logs')) db.createObjectStore('logs', { keyPath: 'id' });
-            };
-            request.onsuccess = (e) => resolve(e.target.result);
-            request.onerror = (e) => reject(e);
-        });
-
-        const LocalDB = {
-            async getAll() { 
-                try {
-                    const db = await dbPromise; 
-                    return new Promise((resolve, reject) => { 
-                        const tx = db.transaction('logs', 'readonly'); 
-                        const req = tx.objectStore('logs').getAll(); 
-                        req.onsuccess = () => resolve(req.result);
-                        req.onerror = () => reject("LocalDB Read Error");
-                    }); 
-                } catch(e) { return []; }
-            },
-            async save(log) { try { const db = await dbPromise; return new Promise(r => { const tx = db.transaction('logs', 'readwrite'); tx.objectStore('logs').put(log).onsuccess = () => r(); }); } catch(e){} },
-            async delete(id) { try { const db = await dbPromise; return new Promise(r => { const tx = db.transaction('logs', 'readwrite'); tx.objectStore('logs').delete(id).onsuccess = () => r(); }); } catch(e){} },
-            async clear() { try { const db = await dbPromise; return new Promise(r => { const tx = db.transaction('logs', 'readwrite'); tx.objectStore('logs').clear().onsuccess = () => r(); }); } catch(e){} },
-            async getSubjects() { try { const s = localStorage.getItem('local_subjects'); return s ? JSON.parse(s) : [{id:'gen', name:'General', topics:[]}]; } catch(e) { return [{id:'gen', name:'General', topics:[]}]; } },
-            async saveSubject(s) { try { localStorage.setItem('local_subjects', JSON.stringify(s)); } catch(e){} }
+            Sort: (p) => <svg {...p} xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="12" x2="12" y1="3" y2="21"/><polyline points="8 7 12 3 16 7"/><polyline points="8 17 12 21 16 17"/></svg>,
+            Copy: (p) => <svg {...p} xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect width="14" height="14" x="8" y="8" rx="2" ry="2"/><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/></svg>,
+            MoreVertical: (p) => <svg {...p} xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="1"/><circle cx="12" cy="5" r="1"/><circle cx="12" cy="19" r="1"/></svg>
         };
 
         // --- GEMINI PROXY ---
@@ -189,7 +164,7 @@
             return { saveToDrive };
         };
 
-        // --- LIGHTBOX COMPONENT ---
+        // --- COMPONENTS ---
         const Lightbox = ({ images, initialIndex, onClose }) => {
             const [index, setIndex] = useState(initialIndex);
             useEffect(() => {
@@ -213,35 +188,20 @@
             );
         };
 
-        // --- MULTI-IMAGE UPLOADER COMPONENT ---
         const MultiImageUploader = ({ images = [], onUpdate, label, isUploading }) => {
             const [isDragging, setIsDragging] = useState(false);
             const [lightboxIndex, setLightboxIndex] = useState(null);
             const fileInputRef = useRef(null);
             const imageList = Array.isArray(images) ? images : (images ? [images] : []);
             const handleFiles = (files) => { Array.from(files).forEach(file => { if (file.type.startsWith('image/')) onUpdate(file, 'add'); }); };
-            const handlePasteClick = async () => {
-                try { const items = await navigator.clipboard.read(); for (const item of items) { for (const type of item.types) { if (type.startsWith("image/")) { const blob = await item.getType(type); onUpdate(blob, 'add'); } } } } catch (err) { alert("Clipboard permission denied or no image found."); }
-            };
+            const handlePasteClick = async () => { try { const items = await navigator.clipboard.read(); for (const item of items) { for (const type of item.types) { if (type.startsWith("image/")) { const blob = await item.getType(type); onUpdate(blob, 'add'); } } } } catch (err) { alert("Clipboard permission denied or no image found."); } };
             return (
                 <div className="space-y-2">
-                    <div className="flex justify-between items-end px-1">
-                        <label className="text-sm font-bold text-zinc-700 dark:text-zinc-300 flex items-center gap-2">{label} <span className="text-[10px] font-normal text-zinc-400 bg-zinc-100 dark:bg-white/5 px-1.5 rounded">{imageList.length} files</span></label>
-                        <div className="flex gap-2">
-                            <button onClick={handlePasteClick} className="text-[10px] flex items-center gap-1 text-indigo-500 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 px-2 py-1 rounded transition-colors"><Icons.Clip className="w-3 h-3"/> Paste</button>
-                            <button onClick={() => fileInputRef.current.click()} className="text-[10px] flex items-center gap-1 text-zinc-500 hover:bg-zinc-100 dark:hover:bg-white/10 px-2 py-1 rounded transition-colors"><Icons.Plus className="w-3 h-3"/> Add</button>
-                        </div>
-                        <input type="file" multiple ref={fileInputRef} className="hidden" onChange={(e) => handleFiles(e.target.files)} accept="image/*" />
-                    </div>
+                    <div className="flex justify-between items-end px-1"><label className="text-sm font-bold text-zinc-700 dark:text-zinc-300 flex items-center gap-2">{label} <span className="text-[10px] font-normal text-zinc-400 bg-zinc-100 dark:bg-white/5 px-1.5 rounded">{imageList.length} files</span></label><div className="flex gap-2"><button onClick={handlePasteClick} className="text-[10px] flex items-center gap-1 text-indigo-500 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 px-2 py-1 rounded transition-colors"><Icons.Clip className="w-3 h-3"/> Paste</button><button onClick={() => fileInputRef.current.click()} className="text-[10px] flex items-center gap-1 text-zinc-500 hover:bg-zinc-100 dark:hover:bg-white/10 px-2 py-1 rounded transition-colors"><Icons.Plus className="w-3 h-3"/> Add</button></div><input type="file" multiple ref={fileInputRef} className="hidden" onChange={(e) => handleFiles(e.target.files)} accept="image/*" /></div>
                     <div className={`w-full min-h-[120px] bg-white dark:bg-surface border-2 border-dashed rounded-xl p-3 transition-all ${isDragging ? 'border-brand bg-brand/5' : 'border-zinc-300 dark:border-zinc-700'}`} onDragOver={(e) => { e.preventDefault(); setIsDragging(true); }} onDragLeave={() => setIsDragging(false)} onDrop={(e) => { e.preventDefault(); setIsDragging(false); handleFiles(e.dataTransfer.files); }} onPaste={(e) => handleFiles(e.clipboardData.files)} tabIndex="0">
                         {imageList.length === 0 ? (<div className="h-24 flex flex-col items-center justify-center text-zinc-400 pointer-events-none"><Icons.Image className="w-6 h-6 mb-1 opacity-50"/><span className="text-xs">Drag images or Ctrl+V</span></div>) : (
                             <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
-                                {imageList.map((url, idx) => (
-                                    <div key={idx} onClick={() => setLightboxIndex(idx)} className="group relative aspect-square bg-zinc-100 dark:bg-black/20 rounded-lg overflow-hidden border border-zinc-200 dark:border-white/5 shadow-sm hover:shadow-md transition-all cursor-zoom-in">
-                                        <img src={url} className="w-full h-full object-cover" />
-                                        <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2"><div className="p-1.5 bg-white/20 rounded-full text-white backdrop-blur-sm"><Icons.ZoomIn className="w-4 h-4"/></div><button onClick={(e) => { e.stopPropagation(); onUpdate(idx, 'remove'); }} className="p-1.5 bg-red-500/80 hover:bg-red-500 rounded-full text-white backdrop-blur-sm" title="Remove"><Icons.Trash className="w-4 h-4"/></button></div>
-                                    </div>
-                                ))}
+                                {imageList.map((url, idx) => (<div key={idx} onClick={() => setLightboxIndex(idx)} className="group relative aspect-square bg-zinc-100 dark:bg-black/20 rounded-lg overflow-hidden border border-zinc-200 dark:border-white/5 shadow-sm hover:shadow-md transition-all cursor-zoom-in"><img src={url} className="w-full h-full object-cover" /><div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2"><div className="p-1.5 bg-white/20 rounded-full text-white backdrop-blur-sm"><Icons.ZoomIn className="w-4 h-4"/></div><button onClick={(e) => { e.stopPropagation(); onUpdate(idx, 'remove'); }} className="p-1.5 bg-red-500/80 hover:bg-red-500 rounded-full text-white backdrop-blur-sm" title="Remove"><Icons.Trash className="w-4 h-4"/></button></div></div>))}
                                 {isUploading && (<div className="aspect-square rounded-lg bg-zinc-50 dark:bg-white/5 flex items-center justify-center border border-zinc-200 dark:border-white/10 animate-pulse"><div className="w-5 h-5 border-2 border-brand border-t-transparent rounded-full animate-spin"></div></div>)}
                             </div>
                         )}
@@ -251,7 +211,6 @@
             );
         };
 
-        // --- AI CHAT ---
         const AIChat = ({ activeLog, onClose, user }) => {
             const [messages, setMessages] = useState([{role: 'ai', text: "I see your failure. How can I help you understand it?"}]);
             const [input, setInput] = useState("");
@@ -275,10 +234,22 @@
             );
         };
 
+        const ContextMenu = ({ visible, x, y, logId, onDuplicate, onDelete, onCopy, onPaste }) => {
+            if (!visible) return null;
+            return (
+                <div className="fixed z-50 bg-white dark:bg-zinc-800 border border-zinc-200 dark:border-white/10 rounded-lg shadow-xl py-1 w-40 context-menu" style={{ top: y, left: x }}>
+                    <button onClick={() => onDuplicate(logId)} className="w-full text-left px-3 py-2 text-xs hover:bg-zinc-100 dark:hover:bg-white/5 flex items-center gap-2"><Icons.Plus className="w-3 h-3"/> Duplicate</button>
+                    <button onClick={() => onCopy(logId)} className="w-full text-left px-3 py-2 text-xs hover:bg-zinc-100 dark:hover:bg-white/5 flex items-center gap-2"><Icons.Copy className="w-3 h-3"/> Copy Data</button>
+                    <button onClick={onPaste} className="w-full text-left px-3 py-2 text-xs hover:bg-zinc-100 dark:hover:bg-white/5 flex items-center gap-2"><Icons.Clip className="w-3 h-3"/> Paste Log</button>
+                    <div className="h-px bg-zinc-200 dark:bg-white/10 my-1"></div>
+                    <button onClick={() => onDelete(logId)} className="w-full text-left px-3 py-2 text-xs text-red-500 hover:bg-red-50 dark:hover:bg-red-900/10 flex items-center gap-2"><Icons.Trash className="w-3 h-3"/> Delete</button>
+                </div>
+            );
+        };
+
         // --- MAIN APP ---
         const App = () => {
             const [user, setUser] = useState(null);
-            const [isGuest, setIsGuest] = useState(false);
             const [logs, setLogs] = useState([]);
             const [subjects, setSubjects] = useState([]);
             const [activeLogId, setActiveLogId] = useState(() => new URLSearchParams(window.location.search).get('log'));
@@ -288,193 +259,94 @@
             const [isDarkMode, setIsDarkMode] = useState(true);
             const [isAutoTitleLoading, setIsAutoTitleLoading] = useState(false);
             const [isLoadingLogs, setIsLoadingLogs] = useState(false);
-            const [undoStack, setUndoStack] = useState([]);
-            const [showUndoToast, setShowUndoToast] = useState(false);
             const { saveToDrive } = useGoogleDrive();
             
+            // Upload States
             const [uploadingQ, setUploadingQ] = useState(false);
             const [uploadingS, setUploadingS] = useState(false);
 
+            // Pagination
             const [lastDoc, setLastDoc] = useState(null);
             const [hasMore, setHasMore] = useState(true);
             const [sortBy, setSortBy] = useState('date-desc');
             const [showSortMenu, setShowSortMenu] = useState(false);
 
+            // Context Menu
+            const [contextMenu, setContextMenu] = useState({ visible: false, x: 0, y: 0, logId: null });
+
             const pendingUpdatesRef = useRef({});
             const saveTimeoutRef = useRef(null);
-            const undoStackRef = useRef([]);
 
-            const addToUndo = (action) => { undoStackRef.current.push(action); if (undoStackRef.current.length > 20) undoStackRef.current.shift(); };
-            const performUndo = async () => {
-                const action = undoStackRef.current.pop(); if (!action) return;
-                setShowUndoToast(true); setTimeout(() => setShowUndoToast(false), 2000);
-                if (action.type === 'restore_log') {
-                    const { log } = action;
-                    if (user) await window.firebase.setDoc(window.firebase.doc(window.firebase.db, 'artifacts', "darnote-app", 'users', user.uid, 'error_logs', log.id), log);
-                    await LocalDB.save(log);
-                    setLogs(prev => [log, ...prev].sort((a,b)=>new Date(b.createdAt)-new Date(a.createdAt)));
-                } else if (action.type === 'restore_images') {
-                    const { logId, field, images } = action;
-                    setLogs(prev => prev.map(l => l.id === logId ? { ...l, [field]: images } : l));
-                    if (user) await window.firebase.updateDoc(window.firebase.doc(window.firebase.db, 'artifacts', "darnote-app", 'users', user.uid, 'error_logs', logId), { [field]: images });
-                    const full = await new Promise(r => LocalDB.getAll().then(all => r(all.find(l => l.id === logId)))); 
-                    if(full) await LocalDB.save({...full, [field]: images});
-                }
-            };
+            // 1. AUTH & INITIAL FETCH
+            useEffect(() => {
+                const unsub = window.firebase.onAuthStateChanged(window.firebase.auth, async (u) => {
+                    if (u) {
+                        setUser(u);
+                        fetchLogs(false, u.uid);
+                        // Fetch Subjects
+                        const db = window.firebase.db;
+                        window.firebase.getDocs(window.firebase.collection(db, 'artifacts', "darnote-app", 'users', u.uid, 'subjects')).then(snap => {
+                            setSubjects(snap.docs.map(d => ({id: d.id, name: d.data().name, topics: d.data().topics || []})).sort((a,b)=>a.name.localeCompare(b.name)));
+                        });
+                    } else setUser(null);
+                });
+                return () => unsub();
+            }, []);
 
-            useEffect(() => { const handleKeyDown = (e) => { if ((e.metaKey || e.ctrlKey) && e.key === 'z') { e.preventDefault(); performUndo(); } }; window.addEventListener('keydown', handleKeyDown); return () => window.removeEventListener('keydown', handleKeyDown); }, [user]);
+            useEffect(() => { if(isDarkMode) document.documentElement.classList.add('dark'); else document.documentElement.classList.remove('dark'); }, [isDarkMode]);
+            useEffect(() => { const url = new URL(window.location); if (activeLogId) url.searchParams.set('log', activeLogId); else url.searchParams.delete('log'); window.history.pushState({}, '', url); }, [activeLogId]);
+            useEffect(() => { const handleClick = () => setContextMenu({ ...contextMenu, visible: false }); window.addEventListener('click', handleClick); return () => window.removeEventListener('click', handleClick); }, [contextMenu]);
 
-            // FETCH LOGS LOGIC (LOCAL FIRST STRATEGY + SAFETY TIMEOUT)
-            const fetchLogs = useCallback(async (isLoadMore = false) => {
-                if (!isLoadMore) {
-                    setIsLoadingLogs(true);
-                    const safetyTimer = setTimeout(() => setIsLoadingLogs(false), 5000);
-
-                    try {
-                        const localLogs = await LocalDB.getAll();
-                        if (localLogs.length > 0) {
-                            console.log("Loaded from Local Cache");
-                            // LOCAL SORT LOGIC
-                            let sorted = [...localLogs];
-                            if (sortBy === 'date-desc') sorted.sort((a,b) => new Date(b.createdAt) - new Date(a.createdAt));
-                            else if (sortBy === 'date-asc') sorted.sort((a,b) => new Date(a.createdAt) - new Date(b.createdAt));
-                            else if (sortBy === 'type-mc') sorted.sort((a,b) => {
-                                if (a.questionType === b.questionType) return new Date(b.createdAt) - new Date(a.createdAt);
-                                return a.questionType === 'MC' ? -1 : 1; 
-                            });
-                            else if (sortBy === 'type-lq') sorted.sort((a,b) => {
-                                if (a.questionType === b.questionType) return new Date(b.createdAt) - new Date(a.createdAt);
-                                return a.questionType === 'LQ' ? -1 : 1;
-                            });
-
-                            setLogs(sorted);
-                            const localSubjects = await LocalDB.getSubjects();
-                            setSubjects(localSubjects);
-                            clearTimeout(safetyTimer);
-                            setIsLoadingLogs(false);
-                            return; 
-                        }
-                    } catch (e) { console.error("LocalDB Read Failed", e); }
-                    clearTimeout(safetyTimer);
-                }
-
-                if (!user) { setIsLoadingLogs(false); return; }
-                
-                const networkTimer = setTimeout(() => setIsLoadingLogs(false), 8000);
+            // FETCH LOGS
+            const fetchLogs = async (isLoadMore = false, uid = user?.uid) => {
+                if (!uid) return;
                 setIsLoadingLogs(true);
-
                 try {
                     const db = window.firebase.db;
-                    const logsRef = window.firebase.collection(db, 'artifacts', "darnote-app", 'users', user.uid, 'error_logs');
-                    
+                    const logsRef = window.firebase.collection(db, 'artifacts', "darnote-app", 'users', uid, 'error_logs');
                     let q;
+
+                    // Sort Logic
                     if (sortBy.startsWith('date')) {
                         const dir = sortBy === 'date-desc' ? 'desc' : 'asc';
                         q = window.firebase.query(logsRef, window.firebase.orderBy('createdAt', dir));
                     } else if (sortBy.startsWith('type')) {
-                        // Use simple orderBy. 'MC' > 'LQ' (M comes after L). 
-                        // So 'desc' puts MC first. 'asc' puts LQ first.
                         const typeDir = sortBy === 'type-mc' ? 'desc' : 'asc';
-                        // IMPORTANT: For composite sort to work without index, we rely on primary sort only, or catch error.
-                        // We will try primary sort by type, then by date desc. 
-                        // IF INDEX MISSING, THIS WILL FAIL. 
-                        // Fallback: Just sort by date and let user filter client side? No, user requested sort.
-                        // We will TRY. If fail, alert user.
                         try {
                            q = window.firebase.query(logsRef, window.firebase.orderBy('questionType', typeDir), window.firebase.orderBy('createdAt', 'desc')); 
                         } catch(e) {
-                           console.warn("Index missing for type sort, falling back to simple date sort");
                            q = window.firebase.query(logsRef, window.firebase.orderBy('createdAt', 'desc'));
                         }
                     }
 
-                    if (isLoadMore && lastDoc) {
-                        q = window.firebase.query(q, window.firebase.startAfter(lastDoc), window.firebase.limit(10));
-                    } else {
-                        q = window.firebase.query(q, window.firebase.limit(10));
-                    }
+                    if (isLoadMore && lastDoc) q = window.firebase.query(q, window.firebase.startAfter(lastDoc), window.firebase.limit(10));
+                    else q = window.firebase.query(q, window.firebase.limit(10));
 
                     const snapshot = await window.firebase.getDocs(q);
-                    
-                    const processData = (doc) => {
-                        const d = doc.data();
-                        return { id: doc.id, ...d, questionImages: d.questionImages || (d.imageUrl ? [d.imageUrl] : []), schemeImages: d.schemeImages || (d.markingSchemeUrl ? [d.markingSchemeUrl] : []) };
-                    };
-
-                    const newLogs = snapshot.docs.map(processData);
-                    
-                    for(const log of newLogs) await LocalDB.save(log);
+                    const newLogs = snapshot.docs.map(d => {
+                        const data = d.data();
+                        return { id: d.id, ...data, questionImages: data.questionImages || (data.imageUrl ? [data.imageUrl] : []), schemeImages: data.schemeImages || (data.markingSchemeUrl ? [data.markingSchemeUrl] : []) };
+                    });
 
                     if (isLoadMore) setLogs(prev => [...prev, ...newLogs]);
                     else setLogs(newLogs);
 
                     setLastDoc(snapshot.docs[snapshot.docs.length - 1]);
-                    setHasMore(snapshot.docs.length === 10); 
-
-                } catch (e) { 
-                    console.error("Fetch Error", e);
-                    if(e.code === 'failed-precondition') alert("Sorting by Type requires a Firebase Index. Please check console link.");
-                    const emergencyLocal = await LocalDB.getAll();
-                    if(emergencyLocal.length > 0) setLogs(emergencyLocal);
-                } finally {
-                    clearTimeout(networkTimer);
-                    setIsLoadingLogs(false);
-                }
-            }, [user, sortBy, lastDoc]);
-
-            useEffect(() => {
-                if (user) {
-                    fetchLogs(false); 
-                    const db = window.firebase.db;
-                    window.firebase.getDocs(window.firebase.collection(db, 'artifacts', "darnote-app", 'users', user.uid, 'subjects')).then(snap => {
-                        const subs = snap.docs.map(d => ({id: d.id, name: d.data().name, topics: d.data().topics || []})).sort((a,b)=>a.name.localeCompare(b.name));
-                        setSubjects(subs);
-                        LocalDB.saveSubject(subs);
-                    }).catch(e => console.warn("Subject fetch failed", e));
-                }
-            }, [user, sortBy]);
-
-            useEffect(() => {
-                const unsub = window.firebase.onAuthStateChanged(window.firebase.auth, u => { 
-                    if (u) { setUser(u); setIsGuest(false); } else setUser(null); 
-                });
-                return () => unsub();
-            }, []);
-
-            useEffect(() => { if(isGuest && !user) { LocalDB.getAll().then(l => { 
-                // Local Guest Sort
-                let sorted = [...l];
-                if (sortBy === 'date-desc') sorted.sort((a,b) => new Date(b.createdAt) - new Date(a.createdAt));
-                else if (sortBy === 'date-asc') sorted.sort((a,b) => new Date(a.createdAt) - new Date(b.createdAt));
-                else if (sortBy === 'type-mc') sorted.sort((a,b) => (a.questionType === b.questionType) ? new Date(b.createdAt) - new Date(a.createdAt) : (a.questionType === 'MC' ? -1 : 1));
-                else if (sortBy === 'type-lq') sorted.sort((a,b) => (a.questionType === b.questionType) ? new Date(b.createdAt) - new Date(a.createdAt) : (a.questionType === 'LQ' ? -1 : 1));
-                setLogs(sorted); 
-                LocalDB.getSubjects().then(setSubjects); 
-            }); } }, [isGuest, user, sortBy]);
-
-            useEffect(() => { if(isDarkMode) document.documentElement.classList.add('dark'); else document.documentElement.classList.remove('dark'); }, [isDarkMode]);
-            useEffect(() => { const url = new URL(window.location); if (activeLogId) url.searchParams.set('log', activeLogId); else url.searchParams.delete('log'); window.history.pushState({}, '', url); }, [activeLogId]);
-
-            const refreshLogs = async () => {
-                if(!user) return;
-                setIsLoadingLogs(true);
-                await LocalDB.clear(); 
-                try {
-                    const q = window.firebase.query(window.firebase.collection(window.firebase.db, 'artifacts', "darnote-app", 'users', user.uid, 'error_logs'), window.firebase.orderBy('createdAt', 'desc'), window.firebase.limit(10));
-                    const logSnap = await window.firebase.getDocs(q);
-                    const fetchedLogs = logSnap.docs.map(d => { const data = d.data(); return { id: d.id, ...data, questionImages: data.questionImages || [], schemeImages: data.schemeImages || [] }; });
-                    for(const log of fetchedLogs) await LocalDB.save(log);
-                    setLogs(fetchedLogs);
-                    setLastDoc(logSnap.docs[logSnap.docs.length - 1]);
-                } catch(e) { console.error("Refresh Error", e); } finally { setIsLoadingLogs(false); }
+                    setHasMore(snapshot.docs.length === 10);
+                } catch(e) { console.error(e); }
+                setIsLoadingLogs(false);
             };
+
+            // Trigger re-fetch on sort
+            useEffect(() => { if(user) fetchLogs(false); }, [sortBy]);
 
             const createLog = async () => {
                 const newLog = { title: 'Untitled Mistake', subject: 'General', topic: '', questionImages: [], schemeImages: [], questionType: 'MC', correctAnswer: '', marks: '', explanation: '', mastered: false, createdAt: new Date().toISOString(), lastModified: new Date().toISOString() };
-                if (user) { const docRef = await window.firebase.addDoc(window.firebase.collection(window.firebase.db, 'artifacts', "darnote-app", 'users', user.uid, 'error_logs'), newLog); const logWithId = {...newLog, id: docRef.id}; setLogs(prev => [logWithId, ...prev]); await LocalDB.save(logWithId); setActiveLogId(docRef.id); } 
-                else { const id = 'local_' + Date.now(); setLogs(prev => [{...newLog, id}, ...prev]); await LocalDB.save({...newLog, id}); setActiveLogId(id); }
+                const docRef = await window.firebase.addDoc(window.firebase.collection(window.firebase.db, 'artifacts', "darnote-app", 'users', user.uid, 'error_logs'), newLog);
+                setLogs(prev => [{...newLog, id: docRef.id}, ...prev]); setActiveLogId(docRef.id);
             };
 
+            // DEBOUNCED UPDATE (5s)
             const updateLog = (id, updates) => {
                 const timestampedUpdates = { ...updates, lastModified: new Date().toISOString() };
                 setLogs(prev => prev.map(l => l.id === id ? { ...l, ...timestampedUpdates } : l));
@@ -484,22 +356,68 @@
                     const ids = Object.keys(pendingUpdatesRef.current);
                     for (const logId of ids) {
                         const payload = pendingUpdatesRef.current[logId]; delete pendingUpdatesRef.current[logId];
-                        const full = await new Promise(r=>LocalDB.getAll().then(all=>r(all.find(l=>l.id===logId)))); if(full) await LocalDB.save({...full, ...payload});
-                        if (user) await window.firebase.updateDoc(window.firebase.doc(window.firebase.db, 'artifacts', "darnote-app", 'users', user.uid, 'error_logs', logId), payload);
+                        await window.firebase.updateDoc(window.firebase.doc(window.firebase.db, 'artifacts', "darnote-app", 'users', user.uid, 'error_logs', logId), payload);
                     }
                 }, 5000);
+            };
+
+            // CONTEXT MENU ACTIONS
+            const handleContextMenu = (e, logId) => { e.preventDefault(); setContextMenu({ visible: true, x: e.clientX, y: e.clientY, logId }); };
+            
+            const handleDuplicate = async (id) => {
+                const original = logs.find(l => l.id === id);
+                if (!original) return;
+                const { id: _, ...data } = original;
+                const newLog = { ...data, title: `${data.title} (Copy)`, createdAt: new Date().toISOString(), lastModified: new Date().toISOString() };
+                const docRef = await window.firebase.addDoc(window.firebase.collection(window.firebase.db, 'artifacts', "darnote-app", 'users', user.uid, 'error_logs'), newLog);
+                setLogs(prev => [{...newLog, id: docRef.id}, ...prev]);
+            };
+
+            const handleDelete = async (id) => {
+                if(!confirm("Delete this log permanently?")) return;
+                setLogs(prev => prev.filter(l => l.id !== id));
+                if (activeLogId === id) setActiveLogId(null);
+                await window.firebase.deleteDoc(window.firebase.doc(window.firebase.db, 'artifacts', "darnote-app", 'users', user.uid, 'error_logs', id));
+            };
+
+            const handleCopy = (id) => {
+                const original = logs.find(l => l.id === id);
+                if (original) navigator.clipboard.writeText(JSON.stringify(original));
+            };
+
+            const handlePaste = async () => {
+                try {
+                    const text = await navigator.clipboard.readText();
+                    const data = JSON.parse(text);
+                    if (data.title && data.createdAt) { // Basic validation
+                        const { id, ...cleanData } = data;
+                        const newLog = { ...cleanData, title: `${cleanData.title} (Pasted)`, createdAt: new Date().toISOString(), lastModified: new Date().toISOString() };
+                        const docRef = await window.firebase.addDoc(window.firebase.collection(window.firebase.db, 'artifacts', "darnote-app", 'users', user.uid, 'error_logs'), newLog);
+                        setLogs(prev => [{...newLog, id: docRef.id}, ...prev]);
+                    }
+                } catch(e) { alert("Invalid log data in clipboard"); }
+            };
+
+            const addTopicToSubject = async (subjectName) => {
+                const subjectDoc = subjects.find(s => s.name === subjectName);
+                if (!subjectDoc) { alert("Cannot add topic to General."); return; }
+                const newTopic = prompt(`Add topic for ${subjectName}:`);
+                if (!newTopic) return;
+                setSubjects(prev => prev.map(s => s.id === subjectDoc.id ? {...s, topics: [...s.topics, newTopic]} : s));
+                const docRef = window.firebase.doc(window.firebase.db, 'artifacts', 'darnote-app', 'users', user.uid, 'subjects', subjectDoc.id);
+                await window.firebase.updateDoc(docRef, { topics: window.firebase.arrayUnion(newTopic) });
             };
 
             const handleImageUpdate = async (data, action, type) => {
                 if (!activeLogId) return;
                 const isQ = type === 'question'; const setSpinner = isQ ? setUploadingQ : setUploadingS; const targetField = isQ ? 'questionImages' : 'schemeImages'; const currentImages = isQ ? activeLog.questionImages : activeLog.schemeImages;
-                if (action === 'remove') { addToUndo({ type: 'restore_images', logId: activeLogId, field: targetField, images: [...currentImages] }); const newArr = currentImages.filter((_, i) => i !== data); updateLog(activeLogId, { [targetField]: newArr }); return; }
+                if (action === 'remove') { const newArr = currentImages.filter((_, i) => i !== data); updateLog(activeLogId, { [targetField]: newArr }); return; }
                 setSpinner(true);
                 try {
-                    let finalUrl = null;
-                    if (user) { const blob = data instanceof Blob ? data : new Blob([data]); finalUrl = await saveToDrive(blob, `ErrorLog_${type}_${Date.now()}.png`); } 
-                    else { finalUrl = await new Promise((resolve) => { const r = new FileReader(); r.onload=()=>resolve(r.result); r.readAsDataURL(data); }); }
-                    if(finalUrl) { const newArr = [...currentImages, finalUrl]; updateLog(activeLogId, { [targetField]: newArr }); }
+                    const blob = data instanceof Blob ? data : new Blob([data]); 
+                    const finalUrl = await saveToDrive(blob, `ErrorLog_${type}_${Date.now()}.png`);
+                    const newArr = [...currentImages, finalUrl]; 
+                    updateLog(activeLogId, { [targetField]: newArr });
                 } catch(e) { alert("Upload Failed: " + e.message); } setSpinner(false);
             };
 
@@ -521,30 +439,29 @@
             }).filter(l => (l.title || '').toLowerCase().includes(searchQuery.toLowerCase()));
             const currentSub = activeLog ? subjects.find(s=>s.name===activeLog.subject) : null;
 
-            if (!user && !isGuest) return (
+            if (!user) return (
                 <div className="h-screen w-full flex items-center justify-center bg-zinc-950 text-white flex-col gap-6">
                     <img src="https://raw.githubusercontent.com/darren6251/darnote/refs/heads/main/darNote%20logo.png" className="w-20 h-20 mb-4 drop-shadow-[0_0_15px_rgba(99,102,241,0.5)]"/>
                     <h1 className="text-3xl font-bold">darNote Error Log</h1>
-                    <div className="flex flex-col gap-3">
-                        <button onClick={() => window.firebase.signInWithPopup(window.firebase.auth, new window.firebase.GoogleAuthProvider())} className="bg-white text-black px-8 py-3 rounded-full font-bold flex gap-2 items-center hover:scale-105 transition-transform shadow-xl w-64 justify-center"><Icons.Google className="w-5 h-5"/> Sign In</button>
-                        <button onClick={() => setIsGuest(true)} className="bg-zinc-800 text-zinc-300 px-8 py-3 rounded-full font-bold flex gap-2 items-center hover:bg-zinc-700 transition-colors w-64 justify-center border border-zinc-700"><Icons.WifiOff className="w-5 h-5"/> Offline Mode</button>
-                    </div>
+                    <button onClick={() => window.firebase.signInWithPopup(window.firebase.auth, new window.firebase.GoogleAuthProvider())} className="bg-white text-black px-8 py-3 rounded-full font-bold flex gap-2 items-center hover:scale-105 transition-transform shadow-xl w-64 justify-center"><Icons.Google className="w-5 h-5"/> Sign In</button>
                 </div>
             );
 
             return (
                 <div className={`flex h-screen w-full transition-colors duration-300 ${isDarkMode ? 'dark bg-onyx' : 'bg-[#f4f4f5]'}`}>
+                    <ContextMenu visible={contextMenu.visible} x={contextMenu.x} y={contextMenu.y} logId={contextMenu.logId} onDuplicate={handleDuplicate} onDelete={handleDelete} onCopy={handleCopy} onPaste={handlePaste}/>
+                    
                     {/* SIDEBAR */}
                     <div className="w-[260px] flex-shrink-0 glass-panel flex flex-col justify-between p-5 z-20 hidden md:flex transition-colors duration-300">
                         <div className="space-y-6">
                             <div className="flex items-center gap-3 px-1"><img src="https://raw.githubusercontent.com/darren6251/darnote/refs/heads/main/darNote%20logo.png" className="w-8 h-8"/><div><div className="font-bold text-sm tracking-tight text-zinc-900 dark:text-white">darNote</div><div className="text-[10px] text-zinc-500 font-medium uppercase tracking-wider">Error Log</div></div></div>
                             <nav className="space-y-1">
-                                <a href="note.html" className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-zinc-500 dark:text-zinc-400 hover:bg-zinc-100 dark:hover:bg-white/5 hover:text-zinc-900 dark:hover:text-white mb-4 border border-transparent hover:border-zinc-200 dark:hover:border-white/10 transition-all"><Icons.Book className="w-4 h-4"/> Back to Notes</a>
+                                <a href="note (5).html" className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-zinc-500 dark:text-zinc-400 hover:bg-zinc-100 dark:hover:bg-white/5 hover:text-zinc-900 dark:hover:text-white mb-4 border border-transparent hover:border-zinc-200 dark:hover:border-white/10 transition-all"><Icons.Book className="w-4 h-4"/> Back to Notes</a>
                                 {[{id: 'all', icon: Icons.Bug, label: 'All Errors'}, {id: 'active', icon: Icons.X, label: 'Needs Review'}, {id: 'mastered', icon: Icons.Check, label: 'Mastered'}].map(item => (<button key={item.id} onClick={()=>setFilter(item.id)} className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all ${filter===item.id ? 'bg-zinc-200 dark:bg-white/10 text-zinc-900 dark:text-white shadow-sm' : 'text-zinc-500 dark:text-zinc-400 hover:bg-zinc-100 dark:hover:bg-white/5 hover:text-zinc-900 dark:hover:text-white'}`}><item.icon className="w-4 h-4"/> {item.label}</button>))}
                             </nav>
                             <div className="pt-4 border-t border-zinc-200 dark:border-white/10"><div className="px-2 text-[10px] font-bold text-zinc-400 mb-2 uppercase tracking-widest">Subjects</div><div className="space-y-0.5 max-h-[250px] overflow-y-auto">{subjects.map(s => (<button key={s.id} onClick={()=>setFilter(`subject:${s.name}`)} className="w-full text-left px-3 py-2 rounded-lg text-sm transition-colors text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white hover:bg-zinc-100 dark:hover:bg-white/5">{s.name}</button>))}</div></div>
                         </div>
-                        <div className="space-y-3 pt-4 border-t border-zinc-200 dark:border-white/10"><div className="flex items-center gap-3 px-2 py-1">{user ? (<>{user.photoURL ? <img src={user.photoURL} className="w-8 h-8 rounded-full border border-zinc-200 dark:border-white/10"/> : <div className="w-8 h-8 rounded-full bg-zinc-200 dark:bg-white/10 flex items-center justify-center"><Icons.User className="w-4 h-4 text-zinc-500"/></div>}<div className="overflow-hidden"><div className="text-xs font-bold text-zinc-900 dark:text-white truncate w-32">{user.displayName}</div><div className="text-[10px] text-zinc-500 truncate">{user.email}</div></div></>) : <div className="text-xs text-zinc-500">Guest Mode</div>}</div><div className="flex gap-2"><button onClick={()=>setIsDarkMode(!isDarkMode)} className="flex-1 btn-ghost py-2 rounded-lg flex items-center justify-center gap-2 text-xs font-medium border border-zinc-200 dark:border-white/5 bg-white dark:bg-white/5 shadow-sm">{isDarkMode ? <><Icons.Sun className="w-3 h-3"/> Light</> : <><Icons.Moon className="w-3 h-3"/> Dark</>}</button>{user && <button onClick={()=>window.firebase.signOut(window.firebase.auth)} className="px-3 btn-ghost py-2 rounded-lg text-red-500 border border-transparent"><Icons.Logout className="w-4 h-4"/></button>}</div></div>
+                        <div className="space-y-3 pt-4 border-t border-zinc-200 dark:border-white/10"><div className="flex items-center gap-3 px-2 py-1"><>{user.photoURL ? <img src={user.photoURL} className="w-8 h-8 rounded-full border border-zinc-200 dark:border-white/10"/> : <div className="w-8 h-8 rounded-full bg-zinc-200 dark:bg-white/10 flex items-center justify-center"><Icons.User className="w-4 h-4 text-zinc-500"/></div>}<div className="overflow-hidden"><div className="text-xs font-bold text-zinc-900 dark:text-white truncate w-32">{user.displayName}</div><div className="text-[10px] text-zinc-500 truncate">{user.email}</div></div></></div><div className="flex gap-2"><button onClick={()=>setIsDarkMode(!isDarkMode)} className="flex-1 btn-ghost py-2 rounded-lg flex items-center justify-center gap-2 text-xs font-medium border border-zinc-200 dark:border-white/5 bg-white dark:bg-white/5 shadow-sm">{isDarkMode ? <><Icons.Sun className="w-3 h-3"/> Light</> : <><Icons.Moon className="w-3 h-3"/> Dark</>}</button><button onClick={()=>window.firebase.signOut(window.firebase.auth)} className="px-3 btn-ghost py-2 rounded-lg text-red-500 border border-transparent"><Icons.Logout className="w-4 h-4"/></button></div></div>
                     </div>
 
                     {/* LIST */}
@@ -552,32 +469,34 @@
                         <div className="p-4 border-b border-zinc-200 dark:border-white/5 space-y-3 bg-white dark:bg-surface z-20">
                             <div className="flex gap-2">
                                 <input type="text" placeholder="Search..." value={searchQuery} onChange={e=>setSearchQuery(e.target.value)} className="input-field pl-9 bg-[url('data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIGZpbGw9Im5vbmUiIHZpZXdCb3g9IjAgMCAyNCAyNCIgc3Ryb2tlPSIjNzE3MTdhIiBzdHJva2Utd2lkdGg9IjIiPjxjaXJjbGUgY3g9IjExIiBjeT0iMTEiIHI9IjgiLz48cGF0aCBkPSJtMjEgMjEtNC4zLTQuMyIvPjwvc3ZnPg==')] bg-no-repeat bg-[length:16px] bg-[12px_center]"/>
-                                {user && (
-                                    <div className="relative">
-                                        <button onClick={()=>setShowSortMenu(!showSortMenu)} className="p-2 rounded-lg border border-zinc-200 dark:border-white/10 hover:bg-zinc-100 dark:hover:bg-white/5 text-zinc-500" title="Sort Logs"><Icons.Sort className="w-4 h-4"/></button>
-                                        {showSortMenu && (
-                                            <div className="absolute right-0 top-full mt-2 w-32 bg-white dark:bg-zinc-800 border border-zinc-200 dark:border-white/10 rounded-lg shadow-xl z-50 py-1">
-                                                <button onClick={()=>{setSortBy('date-desc'); setShowSortMenu(false)}} className={`w-full text-left px-3 py-2 text-xs hover:bg-zinc-100 dark:hover:bg-white/5 ${sortBy==='date-desc'?'text-indigo-500 font-bold':''}`}>Date (Newest)</button>
-                                                <button onClick={()=>{setSortBy('date-asc'); setShowSortMenu(false)}} className={`w-full text-left px-3 py-2 text-xs hover:bg-zinc-100 dark:hover:bg-white/5 ${sortBy==='date-asc'?'text-indigo-500 font-bold':''}`}>Date (Oldest)</button>
-                                                <button onClick={()=>{setSortBy('type-mc'); setShowSortMenu(false)}} className={`w-full text-left px-3 py-2 text-xs hover:bg-zinc-100 dark:hover:bg-white/5 ${sortBy==='type-mc'?'text-indigo-500 font-bold':''}`}>MC First</button>
-                                                <button onClick={()=>{setSortBy('type-lq'); setShowSortMenu(false)}} className={`w-full text-left px-3 py-2 text-xs hover:bg-zinc-100 dark:hover:bg-white/5 ${sortBy==='type-lq'?'text-indigo-500 font-bold':''}`}>LQ First</button>
-                                            </div>
-                                        )}
-                                    </div>
-                                )}
-                                {user && <button onClick={refreshLogs} disabled={isLoadingLogs} className={`p-2 rounded-lg border border-zinc-200 dark:border-white/10 hover:bg-zinc-100 dark:hover:bg-white/5 text-zinc-500 ${isLoadingLogs ? 'animate-spin' : ''}`} title="Refresh Logs (Costs Reads)"><Icons.Refresh className="w-4 h-4"/></button>}
+                                <div className="relative">
+                                    <button onClick={()=>setShowSortMenu(!showSortMenu)} className="p-2 rounded-lg border border-zinc-200 dark:border-white/10 hover:bg-zinc-100 dark:hover:bg-white/5 text-zinc-500" title="Sort Logs"><Icons.Sort className="w-4 h-4"/></button>
+                                    {showSortMenu && (
+                                        <div className="absolute right-0 top-full mt-2 w-32 bg-white dark:bg-zinc-800 border border-zinc-200 dark:border-white/10 rounded-lg shadow-xl z-50 py-1">
+                                            <button onClick={()=>{setSortBy('date-desc'); setShowSortMenu(false)}} className={`w-full text-left px-3 py-2 text-xs hover:bg-zinc-100 dark:hover:bg-white/5 ${sortBy==='date-desc'?'text-indigo-500 font-bold':''}`}>Date (Newest)</button>
+                                            <button onClick={()=>{setSortBy('date-asc'); setShowSortMenu(false)}} className={`w-full text-left px-3 py-2 text-xs hover:bg-zinc-100 dark:hover:bg-white/5 ${sortBy==='date-asc'?'text-indigo-500 font-bold':''}`}>Date (Oldest)</button>
+                                            <button onClick={()=>{setSortBy('type-mc'); setShowSortMenu(false)}} className={`w-full text-left px-3 py-2 text-xs hover:bg-zinc-100 dark:hover:bg-white/5 ${sortBy==='type-mc'?'text-indigo-500 font-bold':''}`}>MC First</button>
+                                            <button onClick={()=>{setSortBy('type-lq'); setShowSortMenu(false)}} className={`w-full text-left px-3 py-2 text-xs hover:bg-zinc-100 dark:hover:bg-white/5 ${sortBy==='type-lq'?'text-indigo-500 font-bold':''}`}>LQ First</button>
+                                        </div>
+                                    )}
+                                </div>
                             </div>
                             <button onClick={createLog} className="w-full bg-brand text-white py-2.5 rounded-lg font-bold text-sm hover:bg-indigo-600 shadow-lg transition-all flex justify-center items-center gap-2"><Icons.Plus className="w-4 h-4"/> Log New Error</button>
                         </div>
                         <div className="flex-1 overflow-y-auto p-2 space-y-2">
                             {filteredLogs.map(l => (
-                                <motion.div key={l.id} onClick={()=>setActiveLogId(l.id)} className={`p-3.5 rounded-xl cursor-pointer border transition-all ${activeLogId===l.id ? 'bg-zinc-100 dark:bg-white/10 border-zinc-300 dark:border-white/20' : 'bg-transparent border-transparent hover:bg-zinc-50 dark:hover:bg-white/5'}`}>
+                                <motion.div 
+                                    key={l.id} 
+                                    onClick={()=>setActiveLogId(l.id)} 
+                                    onContextMenu={(e) => handleContextMenu(e, l.id)}
+                                    className={`p-3.5 rounded-xl cursor-pointer border transition-all ${activeLogId===l.id ? 'bg-zinc-100 dark:bg-white/10 border-zinc-300 dark:border-white/20' : 'bg-transparent border-transparent hover:bg-zinc-50 dark:hover:bg-white/5'}`}
+                                >
                                     <div className="flex justify-between items-start mb-1"><div className="font-semibold text-sm truncate pr-2 text-zinc-800 dark:text-zinc-200 w-full">{l.title}</div>{l.mastered && <Icons.Check className="w-4 h-4 text-green-500"/>}</div>
                                     <div className="flex justify-between items-center mt-2"><div className="flex gap-2"><span className="text-[10px] font-medium px-2 py-0.5 rounded bg-zinc-200 dark:bg-white/10 text-zinc-600 dark:text-zinc-400">{l.subject}</span>{l.topic && <span className="text-[10px] font-medium px-2 py-0.5 rounded border border-zinc-200 dark:border-white/10 text-zinc-500 truncate max-w-[80px]">{l.topic}</span>}</div><span className={`text-[10px] font-bold ${l.mastered ? 'text-green-600' : 'text-red-500'}`}>{l.mastered ? 'SOLVED' : 'REVIEW'}</span></div>
                                     <div className="mt-2 text-[9px] text-zinc-400 dark:text-zinc-500 text-right">{new Date(l.lastModified || l.createdAt).toLocaleDateString()}</div>
                                 </motion.div>
                             ))}
-                            {user && hasMore && !isLoadingLogs && (
+                            {hasMore && !isLoadingLogs && (
                                 <button onClick={() => fetchLogs(true)} className="w-full py-2 text-xs text-indigo-500 hover:text-indigo-400 font-bold mt-2 border border-dashed border-zinc-300 dark:border-zinc-700 rounded-lg hover:bg-zinc-50 dark:hover:bg-white/5 transition-colors">
                                     Load More (+10)
                                 </button>
@@ -588,14 +507,6 @@
 
                     {/* EDITOR */}
                     <main className="flex-1 flex flex-col min-w-0 bg-[#f4f4f5] dark:bg-onyx relative transition-colors duration-300">
-                        <AnimatePresence>
-                            {showUndoToast && (
-                                <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} className="absolute bottom-8 left-1/2 -translate-x-1/2 bg-zinc-900 text-white px-4 py-2 rounded-full shadow-2xl z-50 flex items-center gap-2 text-sm font-bold border border-zinc-700">
-                                    <Icons.Undo className="w-4 h-4"/> Undoing Action...
-                                </motion.div>
-                            )}
-                        </AnimatePresence>
-
                         {activeLog ? (
                             <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="flex flex-col h-full">
                                 <header className="h-16 flex items-center justify-between px-6 border-b border-zinc-200 dark:border-white/5 bg-white dark:bg-surface shrink-0 z-10">
@@ -607,14 +518,7 @@
                                         <button onClick={()=>updateLog(activeLog.id, {mastered: !activeLog.mastered})} className={`px-4 py-1.5 rounded-full text-xs font-bold border transition-all ${activeLog.mastered ? 'bg-green-500/10 border-green-500 text-green-600' : 'bg-red-500/10 border-red-500 text-red-600'}`}>{activeLog.mastered ? 'Mastered' : 'Needs Review'}</button>
                                         <div className="h-6 w-px bg-zinc-200 dark:bg-white/10 mx-2"></div>
                                         <button onClick={()=> user ? setIsAiOpen(!isAiOpen) : null} disabled={!user} className={`p-2 rounded-lg transition-colors ${!user ? 'cursor-not-allowed opacity-50 bg-zinc-100 dark:bg-white/5 text-zinc-400' : isAiOpen ? 'bg-brand/10 text-brand' : 'hover:bg-zinc-100 dark:hover:bg-white/5 text-zinc-500'}`} title={user ? "Open AI Tutor" : "Login required for AI Tutor"}><Icons.Bot className="w-5 h-5"/></button>
-                                        <button onClick={()=>{
-                                            if(confirm('Delete?')) { 
-                                                addToUndo({ type: 'restore_log', log: activeLog }); 
-                                                if(user) deleteDoc(doc(window.firebase.db,'artifacts',"darnote-app",'users',user.uid,'error_logs',activeLog.id)); 
-                                                else { LocalDB.delete(activeLog.id); setLogs(prev => prev.filter(l => l.id !== activeLog.id)); } 
-                                                setActiveLogId(null); 
-                                            }
-                                        }} className="p-2 rounded-lg hover:bg-red-50 dark:hover:bg-red-900/20 text-zinc-400 hover:text-red-500 transition-colors"><Icons.Trash className="w-5 h-5"/></button>
+                                        <button onClick={() => handleDelete(activeLog.id)} className="p-2 rounded-lg hover:bg-red-50 dark:hover:bg-red-900/20 text-zinc-400 hover:text-red-500 transition-colors"><Icons.Trash className="w-5 h-5"/></button>
                                     </div>
                                 </header>
 
