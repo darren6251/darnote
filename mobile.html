@@ -487,8 +487,12 @@
                 
                 try {
                     const url = await saveToDrive(file, `${type}_${Date.now()}.png`);
-                    if (type === 'evidence') setData({...data, imageUrl: url});
-                    else setData({...data, markingSchemeUrl: url});
+                    // FIX: Use functional state update to prevent stale closures overwriting text
+                    if (type === 'evidence') {
+                        setData(prev => ({...prev, imageUrl: url}));
+                    } else {
+                        setData(prev => ({...prev, markingSchemeUrl: url}));
+                    }
                 } catch(err) { alert('Upload failed: ' + err); }
                 
                 if (type === 'evidence') setUploading(false); else setUploadingMs(false);
@@ -501,7 +505,7 @@
                 try {
                     const docRef = window.firebase.doc(window.firebase.db, 'artifacts', 'darnote-app', 'users', user.uid, 'subjects', currentSubjectData.id);
                     await window.firebase.updateDoc(docRef, { topics: window.firebase.arrayUnion(newTopic) });
-                    setData({...data, topic: newTopic}); // Auto select new topic
+                    setData(prev => ({...prev, topic: newTopic})); // Auto select new topic
                 } catch (e) {
                     alert("Failed to add topic: " + e.message);
                 }
@@ -520,11 +524,11 @@
 
                     <div className="p-6 space-y-6 flex-1 overflow-y-auto pb-20">
                         <div className="flex gap-2 p-1 bg-zinc-200 dark:bg-zinc-900 rounded-xl">
-                            <button onClick={()=>setData({...data, mastered: false})} className={`flex-1 py-3 rounded-lg text-sm font-bold transition-all ${!data.mastered ? 'bg-red-500/20 text-red-500' : 'text-zinc-500'}`}>Review</button>
-                            <button onClick={()=>setData({...data, mastered: true})} className={`flex-1 py-3 rounded-lg text-sm font-bold transition-all ${data.mastered ? 'bg-green-500/20 text-green-500' : 'text-zinc-500'}`}>Mastered</button>
+                            <button onClick={()=>setData(prev => ({...prev, mastered: false}))} className={`flex-1 py-3 rounded-lg text-sm font-bold transition-all ${!data.mastered ? 'bg-red-500/20 text-red-500' : 'text-zinc-500'}`}>Review</button>
+                            <button onClick={()=>setData(prev => ({...prev, mastered: true}))} className={`flex-1 py-3 rounded-lg text-sm font-bold transition-all ${data.mastered ? 'bg-green-500/20 text-green-500' : 'text-zinc-500'}`}>Mastered</button>
                         </div>
 
-                        <input placeholder="What went wrong?" className="w-full bg-transparent text-2xl font-bold placeholder-zinc-400 dark:placeholder-zinc-600 focus:outline-none text-zinc-900 dark:text-white" value={data.title} onChange={(e) => setData({...data, title: e.target.value})} />
+                        <input placeholder="What went wrong?" className="w-full bg-transparent text-2xl font-bold placeholder-zinc-400 dark:placeholder-zinc-600 focus:outline-none text-zinc-900 dark:text-white" value={data.title} onChange={(e) => setData(prev => ({...prev, title: e.target.value}))} />
 
                         {/* Correct Answer Input */}
                         <div className="bg-white dark:bg-surface rounded-2xl p-4 border border-zinc-200 dark:border-zinc-800">
@@ -532,7 +536,7 @@
                              <input 
                                 placeholder="e.g. A, B, or 'The mitochondria...'" 
                                 value={data.correctAnswer || ''} 
-                                onChange={e=>setData({...data, correctAnswer: e.target.value})} 
+                                onChange={e=>setData(prev => ({...prev, correctAnswer: e.target.value}))} 
                                 className="w-full bg-zinc-100 dark:bg-zinc-900 p-3 rounded-xl focus:outline-none text-zinc-900 dark:text-white text-sm"
                             />
                         </div>
@@ -560,7 +564,7 @@
                         </div>
 
                         <div className="bg-white dark:bg-surface rounded-2xl p-4 min-h-[150px] border border-zinc-200 dark:border-zinc-800">
-                            <textarea className="w-full h-full bg-transparent resize-none focus:outline-none text-zinc-800 dark:text-zinc-300 leading-relaxed min-h-[150px]" placeholder="Explain why you failed..." value={data.explanation} onChange={(e) => setData({...data, explanation: e.target.value})}/>
+                            <textarea className="w-full h-full bg-transparent resize-none focus:outline-none text-zinc-800 dark:text-zinc-300 leading-relaxed min-h-[150px]" placeholder="Explain why you failed..." value={data.explanation} onChange={(e) => setData(prev => ({...prev, explanation: e.target.value}))}/>
                         </div>
 
                         <div className="grid grid-cols-2 gap-4">
@@ -569,7 +573,7 @@
                                 <label className="text-[10px] text-zinc-500 uppercase font-bold">Subject</label>
                                 <select 
                                     value={data.subject} 
-                                    onChange={(e) => setData({...data, subject: e.target.value, topic: ''})} // Reset topic on change
+                                    onChange={(e) => setData(prev => ({...prev, subject: e.target.value, topic: ''}))} // Reset topic on change
                                     className="w-full bg-zinc-100 dark:bg-zinc-900 p-3 rounded-xl mt-1 focus:outline-none text-zinc-900 dark:text-white text-sm appearance-none"
                                 >
                                     <option value="General">General</option>
@@ -577,7 +581,7 @@
                                 </select>
                             </div>
                             
-                            <div><label className="text-[10px] text-zinc-500 uppercase font-bold">Type</label><select value={data.questionType} onChange={e=>setData({...data, questionType: e.target.value})} className="w-full bg-zinc-100 dark:bg-zinc-900 p-3 rounded-xl mt-1 focus:outline-none text-zinc-900 dark:text-white text-sm"><option value="MC">MC</option><option value="LQ">Long Question</option></select></div>
+                            <div><label className="text-[10px] text-zinc-500 uppercase font-bold">Type</label><select value={data.questionType} onChange={e=>setData(prev => ({...prev, questionType: e.target.value}))} className="w-full bg-zinc-100 dark:bg-zinc-900 p-3 rounded-xl mt-1 focus:outline-none text-zinc-900 dark:text-white text-sm"><option value="MC">MC</option><option value="LQ">Long Question</option></select></div>
                         </div>
 
                         {/* TOPIC SELECTOR (Dropdown only if subjects exist, Input if General) */}
@@ -587,7 +591,7 @@
                                 {data.subject !== 'General' && currentSubjectData ? (
                                     <select 
                                         value={data.topic || ''} 
-                                        onChange={e=>setData({...data, topic: e.target.value})} 
+                                        onChange={e=>setData(prev => ({...prev, topic: e.target.value}))} 
                                         className="w-full bg-zinc-100 dark:bg-zinc-900 p-3 rounded-xl focus:outline-none text-zinc-900 dark:text-white text-sm"
                                     >
                                         <option value="">-- Select Topic --</option>
@@ -597,7 +601,7 @@
                                     <input 
                                         placeholder="e.g. Differentiation, Algebra" 
                                         value={data.topic || ''} 
-                                        onChange={e=>setData({...data, topic: e.target.value})} 
+                                        onChange={e=>setData(prev => ({...prev, topic: e.target.value}))} 
                                         className="w-full bg-zinc-100 dark:bg-zinc-900 p-3 rounded-xl focus:outline-none text-zinc-900 dark:text-white text-sm"
                                     />
                                 )}
@@ -714,12 +718,11 @@
         // --- ERROR LIST COMPONENT WITH FILTERS ---
         const ErrorList = ({ items, onEdit, subjects }) => { // Receiving subjects prop
             const [mode, setMode] = useState('date'); // 'date' | 'category'
+            const [sortOrder, setSortOrder] = useState('newest'); // 'newest' | 'oldest'
             const [selectedSubject, setSelectedSubject] = useState(null);
             const [selectedTopic, setSelectedTopic] = useState(null);
 
             // Get unique subjects from DB subjects list (better than items derived)
-            // But we also need to show subjects that might be in old items but not in current DB list?
-            // Actually, best to use DB subjects for the filter chips.
             const subjectNames = useMemo(() => subjects.map(s => s.name).sort(), [subjects]);
             
             // Get topics for selected subject
@@ -731,7 +734,9 @@
 
             // Filter logic
             const filteredItems = useMemo(() => {
-                let res = items;
+                let res = [...items]; // Clone to avoid mutation
+                const dateMultiplier = sortOrder === 'newest' ? 1 : -1;
+
                 if (mode === 'category') {
                     if (selectedSubject) {
                         res = res.filter(i => (i.subject || 'General') === selectedSubject);
@@ -742,18 +747,28 @@
                         return []; // Wait for selection
                     }
                     // Sort by Topic then Date
-                    res = [...res].sort((a,b) => (a.topic||'').localeCompare(b.topic||'') || new Date(b.createdAt) - new Date(a.createdAt));
+                    res.sort((a,b) => {
+                        const topicCompare = (a.topic||'').localeCompare(b.topic||'');
+                        if (topicCompare !== 0) return topicCompare;
+                        return (new Date(b.createdAt) - new Date(a.createdAt)) * dateMultiplier;
+                    });
+                } else {
+                    // Simple Date Sort
+                    res.sort((a,b) => (new Date(b.createdAt) - new Date(a.createdAt)) * dateMultiplier);
                 }
                 return res;
-            }, [items, mode, selectedSubject, selectedTopic]);
+            }, [items, mode, selectedSubject, selectedTopic, sortOrder]);
 
             return (
                 <div className="p-6 pb-24 min-h-screen flex flex-col">
                     <div className="flex justify-between items-end mb-6">
                         <h2 className="text-3xl font-bold text-zinc-900 dark:text-white">Error Logs</h2>
-                        <div className="flex bg-zinc-200 dark:bg-zinc-800 rounded-lg p-1 gap-1">
+                        <div className="flex bg-zinc-200 dark:bg-zinc-800 rounded-lg p-1 gap-1 items-center">
                             <button onClick={()=>{setMode('date'); setSelectedSubject(null);}} className={`px-3 py-1 rounded-md text-[10px] font-bold transition-all ${mode==='date'?'bg-white dark:bg-zinc-600 shadow-sm text-black dark:text-white':'text-zinc-500'}`}>By Date</button>
                             <button onClick={()=>setMode('category')} className={`px-3 py-1 rounded-md text-[10px] font-bold transition-all ${mode==='category'?'bg-white dark:bg-zinc-600 shadow-sm text-black dark:text-white':'text-zinc-500'}`}>By Category</button>
+                            <button onClick={() => setSortOrder(prev => prev === 'newest' ? 'oldest' : 'newest')} className="px-2 ml-1 text-zinc-500 hover:text-brand" title={sortOrder === 'newest' ? 'Newest First' : 'Oldest First'}>
+                                <Icons.Sort className={`w-4 h-4 transition-transform ${sortOrder === 'oldest' ? 'rotate-180' : ''}`}/>
+                            </button>
                         </div>
                     </div>
 
