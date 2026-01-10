@@ -53,7 +53,6 @@
     </script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
     <style>
-        /* Base styles using CSS variables for theme switching support if needed, but Tailwind 'dark' class handles most */
         body { 
             font-family: 'Inter', sans-serif; 
             overflow: hidden; 
@@ -92,13 +91,6 @@
         // --- CONSTANTS & CONFIG ---
         const GDRIVE_API_KEY = "AIzaSyCScFR_D0snZ6hrHob5fUQM7Y2NhK-kTIA"; 
         const GDRIVE_CLIENT_ID = "256215327792-oglegui0q8qj507oao2c2733thcl9lrc.apps.googleusercontent.com"; 
-        
-        // DEFAULT SUBJECTS LIST
-        const DEFAULT_SUBJECTS = [
-            "Mathematics", "English", "Chinese", "Liberal Studies", 
-            "Physics", "Chemistry", "Biology", "Economics", 
-            "BAFS", "History", "Geography", "ICT", "M1", "M2", "General"
-        ];
 
         const { useState, useEffect, useRef, useMemo } = React;
         const { motion, AnimatePresence } = window.Motion;
@@ -222,6 +214,20 @@
                 return () => unsub();
             }, [user, type]);
             return { data, loading };
+        };
+
+        // NEW: Hook to fetch subjects from DB
+        const useSubjects = (user) => {
+            const [subjects, setSubjects] = useState([]);
+            useEffect(() => {
+                if (!user) return;
+                const q = window.firebase.collection(window.firebase.db, 'artifacts', 'darnote-app', 'users', user.uid, 'subjects');
+                const unsub = window.firebase.onSnapshot(q, (snap) => {
+                    setSubjects(snap.docs.map(d => ({id: d.id, name: d.data().name, topics: d.data().topics || []})).sort((a,b) => a.name.localeCompare(b.name)));
+                });
+                return () => unsub();
+            }, [user]);
+            return subjects;
         };
 
         const useSettings = (user) => {
@@ -453,7 +459,7 @@
             );
         };
 
-        const ErrorEditor = ({ item, onSave, onBack, onDelete, user }) => {
+        const ErrorEditor = ({ item, onSave, onBack, onDelete, user, subjects }) => { // Receiving subjects prop
             const [data, setData] = useState(item || { 
                 title: '', 
                 subject: 'General', 
@@ -470,8 +476,9 @@
             const [uploading, setUploading] = useState(false);
             const [uploadingMs, setUploadingMs] = useState(false);
             
-            // Initial check: if current subject is NOT in list (and not empty), it is custom.
-            const [isCustomSubject, setIsCustomSubject] = useState(!DEFAULT_SUBJECTS.includes(data.subject) && data.subject !== "");
+            // Logic to find current subject and topics
+            const currentSubjectData = subjects.find(s => s.name === data.subject);
+            const availableTopics = currentSubjectData?.topics || [];
 
             const handleImage = async (e, type) => {
                 const file = e.target.files[0];
@@ -485,6 +492,19 @@
                 } catch(err) { alert('Upload failed: ' + err); }
                 
                 if (type === 'evidence') setUploading(false); else setUploadingMs(false);
+            };
+
+            const addTopicToSubject = async () => {
+                if (!currentSubjectData) return;
+                const newTopic = prompt(`Add a new topic for ${currentSubjectData.name}:`);
+                if (!newTopic) return;
+                try {
+                    const docRef = window.firebase.doc(window.firebase.db, 'artifacts', 'darnote-app', 'users', user.uid, 'subjects', currentSubjectData.id);
+                    await window.firebase.updateDoc(docRef, { topics: window.firebase.arrayUnion(newTopic) });
+                    setData({...data, topic: newTopic}); // Auto select new topic
+                } catch (e) {
+                    alert("Failed to add topic: " + e.message);
+                }
             };
 
             return (
@@ -546,50 +566,54 @@
                         </div>
 
                         <div className="grid grid-cols-2 gap-4">
-                            {/* SUBJECT SELECTOR */}
+                            {/* SUBJECT SELECTOR (Database Driven) */}
                             <div>
                                 <label className="text-[10px] text-zinc-500 uppercase font-bold">Subject</label>
-                                {isCustomSubject ? (
-                                    <div className="flex gap-2 mt-1">
-                                        <input 
-                                            value={data.subject} 
-                                            onChange={e=>setData({...data, subject: e.target.value})} 
-                                            className="w-full bg-zinc-100 dark:bg-zinc-900 p-3 rounded-xl focus:outline-none text-zinc-900 dark:text-white text-sm"
-                                            placeholder="Custom..."
-                                            autoFocus
-                                        />
-                                        <button onClick={() => { setIsCustomSubject(false); setData({...data, subject: 'General'}); }} className="p-3 bg-zinc-200 dark:bg-zinc-800 rounded-xl"><Icons.X className="w-4 h-4 text-zinc-600"/></button>
-                                    </div>
-                                ) : (
-                                    <select 
-                                        value={data.subject} 
-                                        onChange={(e) => {
-                                            if(e.target.value === 'OTHER_CUSTOM') {
-                                                setIsCustomSubject(true);
-                                                setData({...data, subject: ''});
-                                            } else {
-                                                setData({...data, subject: e.target.value});
-                                            }
-                                        }}
-                                        className="w-full bg-zinc-100 dark:bg-zinc-900 p-3 rounded-xl mt-1 focus:outline-none text-zinc-900 dark:text-white text-sm appearance-none"
-                                    >
-                                        {DEFAULT_SUBJECTS.map(s => <option key={s} value={s}>{s}</option>)}
-                                        <option value="OTHER_CUSTOM">Other / Custom...</option>
-                                    </select>
-                                )}
+                                <select 
+                                    value={data.subject} 
+                                    onChange={(e) => setData({...data, subject: e.target.value, topic: ''})} // Reset topic on change
+                                    className="w-full bg-zinc-100 dark:bg-zinc-900 p-3 rounded-xl mt-1 focus:outline-none text-zinc-900 dark:text-white text-sm appearance-none"
+                                >
+                                    <option value="General">General</option>
+                                    {subjects.map(s => <option key={s.id} value={s.name}>{s.name}</option>)}
+                                </select>
                             </div>
                             
                             <div><label className="text-[10px] text-zinc-500 uppercase font-bold">Type</label><select value={data.questionType} onChange={e=>setData({...data, questionType: e.target.value})} className="w-full bg-zinc-100 dark:bg-zinc-900 p-3 rounded-xl mt-1 focus:outline-none text-zinc-900 dark:text-white text-sm"><option value="MC">MC</option><option value="LQ">Long Question</option></select></div>
                         </div>
 
+                        {/* TOPIC SELECTOR (Dropdown only if subjects exist, Input if General) */}
                         <div className="bg-white dark:bg-surface rounded-2xl p-4 border border-zinc-200 dark:border-zinc-800">
                              <label className="text-[10px] text-zinc-500 uppercase font-bold mb-2 block">Topic</label>
-                             <input 
-                                placeholder="e.g. Differentiation, Algebra" 
-                                value={data.topic || ''} 
-                                onChange={e=>setData({...data, topic: e.target.value})} 
-                                className="w-full bg-zinc-100 dark:bg-zinc-900 p-3 rounded-xl focus:outline-none text-zinc-900 dark:text-white text-sm"
-                            />
+                             <div className="flex gap-2">
+                                {data.subject !== 'General' && currentSubjectData ? (
+                                    <select 
+                                        value={data.topic || ''} 
+                                        onChange={e=>setData({...data, topic: e.target.value})} 
+                                        className="w-full bg-zinc-100 dark:bg-zinc-900 p-3 rounded-xl focus:outline-none text-zinc-900 dark:text-white text-sm"
+                                    >
+                                        <option value="">-- Select Topic --</option>
+                                        {availableTopics.map(t => <option key={t} value={t}>{t}</option>)}
+                                    </select>
+                                ) : (
+                                    <input 
+                                        placeholder="e.g. Differentiation, Algebra" 
+                                        value={data.topic || ''} 
+                                        onChange={e=>setData({...data, topic: e.target.value})} 
+                                        className="w-full bg-zinc-100 dark:bg-zinc-900 p-3 rounded-xl focus:outline-none text-zinc-900 dark:text-white text-sm"
+                                    />
+                                )}
+                                {/* Add Topic Button (Only if not General) */}
+                                {data.subject !== 'General' && (
+                                    <button 
+                                        onClick={addTopicToSubject} 
+                                        className="p-3 bg-zinc-100 dark:bg-zinc-900 rounded-xl text-zinc-500 hover:text-brand transition-colors"
+                                        title="Add New Topic"
+                                    >
+                                        <Icons.Plus className="w-5 h-5"/>
+                                    </button>
+                                )}
+                            </div>
                         </div>
 
                         {item && <button onClick={() => { if(confirm('Delete?')) { onDelete(item.id); onBack(); }}} className="w-full py-4 text-red-500 font-bold text-sm bg-zinc-100 dark:bg-zinc-900 rounded-xl">Delete Log</button>}
@@ -690,20 +714,22 @@
         };
 
         // --- ERROR LIST COMPONENT WITH FILTERS ---
-        const ErrorList = ({ items, onEdit }) => {
+        const ErrorList = ({ items, onEdit, subjects }) => { // Receiving subjects prop
             const [mode, setMode] = useState('date'); // 'date' | 'category'
             const [selectedSubject, setSelectedSubject] = useState(null);
             const [selectedTopic, setSelectedTopic] = useState(null);
 
-            // Get unique subjects
-            const subjects = useMemo(() => [...new Set(items.map(i => i.subject || 'General'))].sort(), [items]);
+            // Get unique subjects from DB subjects list (better than items derived)
+            // But we also need to show subjects that might be in old items but not in current DB list?
+            // Actually, best to use DB subjects for the filter chips.
+            const subjectNames = useMemo(() => subjects.map(s => s.name).sort(), [subjects]);
             
             // Get topics for selected subject
             const topics = useMemo(() => {
                 if (!selectedSubject) return [];
-                const subjectItems = items.filter(i => (i.subject || 'General') === selectedSubject);
-                return [...new Set(subjectItems.map(i => i.topic).filter(Boolean))].sort();
-            }, [items, selectedSubject]);
+                const subjectDoc = subjects.find(s => s.name === selectedSubject);
+                return subjectDoc ? (subjectDoc.topics || []).sort() : [];
+            }, [subjects, selectedSubject]);
 
             // Filter logic
             const filteredItems = useMemo(() => {
@@ -715,9 +741,6 @@
                             res = res.filter(i => i.topic === selectedTopic);
                         }
                     } else {
-                        // If in category mode but no subject selected, show nothing or prompt? 
-                        // Let's show all grouped but that's complex. Let's show nothing and wait for selection.
-                        // Or just show all sorted by Subject.
                         return []; // Wait for selection
                     }
                     // Sort by Topic then Date
@@ -741,7 +764,13 @@
                             {/* Subject Chips */}
                             <div className="overflow-x-auto no-scrollbar pb-2">
                                 <div className="flex gap-2">
-                                    {subjects.map(sub => (
+                                    <button 
+                                        onClick={() => { setSelectedSubject(selectedSubject === 'General' ? null : 'General'); setSelectedTopic(null); }}
+                                        className={`px-4 py-2 rounded-full text-xs font-bold whitespace-nowrap transition-colors ${selectedSubject === 'General' ? 'bg-brand text-white' : 'bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-400'}`}
+                                    >
+                                        General
+                                    </button>
+                                    {subjectNames.map(sub => (
                                         <button 
                                             key={sub}
                                             onClick={() => { setSelectedSubject(sub === selectedSubject ? null : sub); setSelectedTopic(null); }}
@@ -786,7 +815,7 @@
                         {mode === 'category' && !selectedSubject ? (
                             <div className="h-40 flex items-center justify-center text-zinc-400 text-sm italic">Select a Subject to view errors.</div>
                         ) : (mode === 'category' && filteredItems.length === 0) ? (
-                            <div className="h-40 flex items-center justify-center text-zinc-400 text-sm italic">No errors found here. Good job?</div>
+                            <div className="h-40 flex items-center justify-center text-zinc-400 text-sm italic">No errors found here.</div>
                         ) : (
                             (mode === 'category' ? filteredItems : items).map((item, i) => (
                                 <motion.div key={item.id} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i*0.05 }} onClick={() => onEdit('edit_error', item)} className="bg-white dark:bg-surface p-4 rounded-2xl border border-zinc-200 dark:border-zinc-800 flex justify-between items-center active:scale-[0.98] transition-transform">
@@ -818,8 +847,11 @@
             const [isActionSheetOpen, setIsActionSheetOpen] = useState(false);
 
             useEffect(() => { window.firebase.onAuthStateChanged(window.firebase.auth, setUser); }, []);
+            
             const { data: errorLogs } = useData(user, 'error_logs');
             const { data: notes } = useData(user, 'notes');
+            // Fetch subjects globally
+            const subjects = useSubjects(user);
             
             useSettings(user);
 
@@ -852,7 +884,7 @@
                     <div className="flex-1 overflow-y-auto">
                         <AnimatePresence mode="wait">
                             {tab === 'home' && <Dashboard key="home" user={user} errors={errorLogs} notes={notes} setTab={handleEdit} />}
-                            {tab === 'errors' && <ErrorList items={errorLogs} onEdit={handleEdit} />}
+                            {tab === 'errors' && <ErrorList items={errorLogs} onEdit={handleEdit} subjects={subjects} />}
                             {tab === 'notes' && (
                                 <div className="p-6 pb-24 min-h-screen">
                                     <h2 className="text-3xl font-bold text-zinc-900 dark:text-white mb-6">Notes</h2>
@@ -874,7 +906,7 @@
 
                     <AnimatePresence>
                         {isActionSheetOpen && <ActionSheet onClose={() => setIsActionSheetOpen(false)} onSelect={handleCreate} />}
-                        {(tab === 'add_error' || tab === 'edit_error') && <ErrorEditor item={selectedItem} onSave={saveError} onBack={() => setTab('errors')} onDelete={(id) => deleteItem(id, 'error_logs')} user={user} />}
+                        {(tab === 'add_error' || tab === 'edit_error') && <ErrorEditor item={selectedItem} onSave={saveError} onBack={() => setTab('errors')} onDelete={(id) => deleteItem(id, 'error_logs')} user={user} subjects={subjects} />}
                         {(tab === 'add_note' || tab === 'edit_note') && <NoteEditor item={selectedItem} onSave={saveNote} onBack={() => setTab('notes')} onDelete={(id) => deleteItem(id, 'notes')} />}
                     </AnimatePresence>
                 </div>
