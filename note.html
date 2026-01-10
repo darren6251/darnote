@@ -279,6 +279,66 @@
                 });
             };
 
+const useGoogleDrive = () => {
+            const [tokenClient, setTokenClient] = useState(null);
+            const [isApiLoaded, setIsApiLoaded] = useState(false);
+            
+            useEffect(() => {
+                if(!GDRIVE_API_KEY || !GDRIVE_CLIENT_ID) return;
+                
+                const loadGapi = async () => {
+                    if (window.gapi) {
+                         await new Promise(r => window.gapi.load('client', r));
+                         await window.gapi.client.init({ apiKey: GDRIVE_API_KEY, discoveryDocs: ['https://www.googleapis.com/discovery/v1/apis/drive/v3/rest'] });
+                         setIsApiLoaded(true);
+                    }
+                };
+                loadGapi();
+
+                if (window.google && window.google.accounts) {
+                    const client = window.google.accounts.oauth2.initTokenClient({
+                        client_id: GDRIVE_CLIENT_ID,
+                        scope: 'https://www.googleapis.com/auth/drive.file',
+                        callback: () => {}
+                    });
+                    setTokenClient(client);
+                }
+            }, []);
+
+            const getAccessToken = () => {
+                return new Promise((resolve, reject) => {
+                    if (!tokenClient) return reject("Auth not initialized");
+                    const existing = window.gapi.client.getToken();
+                    if (existing && Date.now() < existing.expiry) return resolve(existing.access_token);
+                    tokenClient.callback = (resp) => { if (resp.error) reject(resp); resolve(resp.access_token); };
+                    tokenClient.requestAccessToken({ prompt: '' });
+                });
+            };
+
+            const getOrCreateFolder = async (folderName, accessToken) => {
+                const q = `mimeType='application/vnd.google-apps.folder' and name='${folderName}' and trashed=false`;
+                const search = await fetch(`https://www.googleapis.com/drive/v3/files?q=${encodeURIComponent(q)}`, { headers: { Authorization: `Bearer ${accessToken}` }});
+                const data = await search.json();
+                if (data.files?.length > 0) return data.files[0].id;
+                const create = await fetch('https://www.googleapis.com/drive/v3/files', { method: 'POST', headers: { Authorization: `Bearer ${accessToken}`, 'Content-Type': 'application/json' }, body: JSON.stringify({ name: folderName, mimeType: 'application/vnd.google-apps.folder' }) });
+                const createdData = await create.json();
+                return createdData.id;
+            };
+
+            const calculateMD5 = (blob) => {
+                return new Promise((resolve, reject) => {
+                    if (!window.SparkMD5) return resolve(null);
+                    const reader = new FileReader();
+                    reader.onload = (e) => {
+                        const spark = new SparkMD5.ArrayBuffer();
+                        spark.append(e.target.result);
+                        resolve(spark.end());
+                    };
+                    reader.onerror = reject;
+                    reader.readAsArrayBuffer(blob);
+                });
+            };
+
             const saveToDrive = async (content, filename, mimeType, folderName = null, convertToDocs = false) => {
                 const token = await getAccessToken();
                 let parentId = folderName ? await getOrCreateFolder(folderName, token) : null;
@@ -289,22 +349,28 @@
                     const md5Hash = await calculateMD5(fileContent);
                     if (md5Hash) {
                         const safeName = filename.replace(/'/g, "\\'");
+                        // Added thumbnailLink to fields
                         const nameQuery = `'${parentId}' in parents and name = '${safeName}' and trashed = false`;
-                        const nameReq = await fetch(`https://www.googleapis.com/drive/v3/files?q=${encodeURIComponent(nameQuery)}&fields=files(id,md5Checksum,webContentLink,webViewLink)`, { headers: { Authorization: `Bearer ${token}` } });
+                        const nameReq = await fetch(`https://www.googleapis.com/drive/v3/files?q=${encodeURIComponent(nameQuery)}&fields=files(id,md5Checksum,webContentLink,webViewLink,thumbnailLink)`, { headers: { Authorization: `Bearer ${token}` } });
                         const nameData = await nameReq.json();
 
                         const exactMatch = nameData.files?.find(f => f.md5Checksum === md5Hash);
                         if (exactMatch) {
-                            return { id: exactMatch.id, webContentLink: `https://lh3.googleusercontent.com/d/${exactMatch.id}`, webViewLink: exactMatch.webViewLink };
+                            // HACK: Convert thumbnailLink to full size (lh3 link)
+                            const url = exactMatch.thumbnailLink ? exactMatch.thumbnailLink.replace('=s220', '=s16383') : exactMatch.webContentLink;
+                            return { id: exactMatch.id, webContentLink: url, webViewLink: exactMatch.webViewLink };
                         }
 
+                        // Added thumbnailLink to fields
                         const listQuery = `'${parentId}' in parents and trashed = false and mimeType contains 'image/'`;
-                        const listReq = await fetch(`https://www.googleapis.com/drive/v3/files?q=${encodeURIComponent(listQuery)}&orderBy=createdTime desc&pageSize=50&fields=files(id,md5Checksum,webContentLink,webViewLink)`, { headers: { Authorization: `Bearer ${token}` } });
+                        const listReq = await fetch(`https://www.googleapis.com/drive/v3/files?q=${encodeURIComponent(listQuery)}&orderBy=createdTime desc&pageSize=50&fields=files(id,md5Checksum,webContentLink,webViewLink,thumbnailLink)`, { headers: { Authorization: `Bearer ${token}` } });
                         const listData = await listReq.json();
                         
                         const contentMatch = listData.files?.find(f => f.md5Checksum === md5Hash);
                         if (contentMatch) {
-                            return { id: contentMatch.id, webContentLink: `https://lh3.googleusercontent.com/d/${contentMatch.id}`, webViewLink: contentMatch.webViewLink };
+                            // HACK: Convert thumbnailLink to full size (lh3 link)
+                            const url = contentMatch.thumbnailLink ? contentMatch.thumbnailLink.replace('=s220', '=s16383') : contentMatch.webContentLink;
+                            return { id: contentMatch.id, webContentLink: url, webViewLink: contentMatch.webViewLink };
                         }
                     }
                 }
@@ -316,7 +382,8 @@
                 form.append('metadata', new Blob([JSON.stringify(metadata)], { type: 'application/json' }));
                 form.append('file', fileContent);
 
-                const uploadRes = await fetch('https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&fields=id', {
+                // Added thumbnailLink to fields
+                const uploadRes = await fetch('https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&fields=id,thumbnailLink,webViewLink', {
                     method: 'POST',
                     headers: { Authorization: `Bearer ${token}` },
                     body: form
@@ -327,15 +394,17 @@
                 const fileId = fileData.id;
 
                 if (mimeType.startsWith('image/')) {
-                    const permRes = await fetch(`https://www.googleapis.com/drive/v3/files/${fileId}/permissions`, {
+                    await fetch(`https://www.googleapis.com/drive/v3/files/${fileId}/permissions`, {
                         method: 'POST',
                         headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
                         body: JSON.stringify({ role: 'reader', type: 'anyone' })
                     });
                     
+                    // HACK: Convert thumbnailLink to full size (lh3 link)
+                    const url = fileData.thumbnailLink ? fileData.thumbnailLink.replace('=s220', '=s16383') : `https://drive.google.com/uc?export=view&id=${fileId}`;
                     return { 
                         id: fileId, 
-                        webContentLink: `https://lh3.googleusercontent.com/d/${fileId}`, 
+                        webContentLink: url, 
                         webViewLink: `https://drive.google.com/file/d/${fileId}/view`
                     };
                 }
