@@ -624,7 +624,7 @@
                                             <div><label className="text-[11px] font-bold text-zinc-400 uppercase tracking-wider mb-1 block">Type</label><div className="flex bg-zinc-100 dark:bg-black/20 p-1 rounded-lg border border-zinc-200 dark:border-white/5">{['MC', 'LQ'].map(t => (<button key={t} onClick={()=>updateLog(activeLog.id, {questionType: t})} className={`flex-1 py-1.5 rounded-md text-xs font-bold transition-all ${activeLog.questionType===t ? 'bg-white dark:bg-zinc-700 shadow-sm text-black dark:text-white' : 'text-zinc-500'}`}>{t}</button>))}</div></div>
                                         </div>
                                         <div className="space-y-6">
-                                            <MultiImageUploader images={activeLog.questionImages} onUpdate={(d, a) => handleImageUpdate(d, a, 'question')} label="Question Evidence" isUploading={uploadingQ}/>
+                                            <MultiImageUploader images={activeLog.questionImages} onUpdate={(d, a) => handleImageUpdate(d, a, 'question')} label="Question" isUploading={uploadingQ}/>
                                             <motion.div initial={{opacity:0, height:0}} animate={{opacity:1, height:'auto'}}><MultiImageUploader images={activeLog.schemeImages} onUpdate={(d, a) => handleImageUpdate(d, a, 'scheme')} label="Marking Scheme" isUploading={uploadingS}/></motion.div>
                                         </div>
                                         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
