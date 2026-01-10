@@ -550,7 +550,7 @@
                     snapshot.forEach(doc => {
                         const err = doc.data();
                         const el = document.createElement('a');
-                        el.href = 'el.html';
+                        el.href = `el.html?log=${doc.id}`;
                         el.className = "block p-2 rounded hover:bg-secondary transition-colors group flex items-center justify-between";
                         
                         const statusColor = err.mastered ? 'text-emerald-500' : 'text-red-500';
