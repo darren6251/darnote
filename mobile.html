@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>darNote Mobile</title>
+    <title>darNote Ultimate</title>
     <meta name="theme-color" content="#09090b">
     
     <!-- BRANDING -->
@@ -537,29 +537,27 @@
                             />
                         </div>
 
-                        {/* Evidence Image */}
+                        {/* Question Image (Renamed from Evidence) */}
                         <div className="relative w-full aspect-video bg-zinc-100 dark:bg-zinc-900 rounded-2xl border border-dashed border-zinc-300 dark:border-zinc-700 flex flex-col items-center justify-center overflow-hidden">
                             {uploading ? <span className="loader"></span> : data.imageUrl ? <img src={data.imageUrl} className="w-full h-full object-contain"/> : (
                                 <>
                                     <Icons.Camera className="w-8 h-8 text-zinc-400 dark:text-zinc-600 mb-2"/>
-                                    <span className="text-xs text-zinc-500">Upload Evidence</span>
+                                    <span className="text-xs text-zinc-500">Upload Question</span>
                                     <input type="file" accept="image/*" onChange={(e)=>handleImage(e, 'evidence')} className="absolute inset-0 opacity-0 cursor-pointer"/>
                                 </>
                             )}
                         </div>
 
-                        {/* Marking Scheme Image (Only for LQ) */}
-                        {data.questionType === 'LQ' && (
-                             <div className="relative w-full aspect-video bg-zinc-100 dark:bg-zinc-900 rounded-2xl border border-dashed border-blue-300 dark:border-blue-900 flex flex-col items-center justify-center overflow-hidden">
-                                {uploadingMs ? <span className="loader"></span> : data.markingSchemeUrl ? <img src={data.markingSchemeUrl} className="w-full h-full object-contain"/> : (
-                                    <>
-                                        <Icons.Check className="w-8 h-8 text-blue-400 mb-2"/>
-                                        <span className="text-xs text-blue-500 font-bold">Upload Marking Scheme</span>
-                                        <input type="file" accept="image/*" onChange={(e)=>handleImage(e, 'scheme')} className="absolute inset-0 opacity-0 cursor-pointer"/>
-                                    </>
-                                )}
-                            </div>
-                        )}
+                        {/* Marking Scheme Image (Always Visible) */}
+                         <div className="relative w-full aspect-video bg-zinc-100 dark:bg-zinc-900 rounded-2xl border border-dashed border-blue-300 dark:border-blue-900 flex flex-col items-center justify-center overflow-hidden">
+                            {uploadingMs ? <span className="loader"></span> : data.markingSchemeUrl ? <img src={data.markingSchemeUrl} className="w-full h-full object-contain"/> : (
+                                <>
+                                    <Icons.Check className="w-8 h-8 text-blue-400 mb-2"/>
+                                    <span className="text-xs text-blue-500 font-bold">Upload Marking Scheme</span>
+                                    <input type="file" accept="image/*" onChange={(e)=>handleImage(e, 'scheme')} className="absolute inset-0 opacity-0 cursor-pointer"/>
+                                </>
+                            )}
+                        </div>
 
                         <div className="bg-white dark:bg-surface rounded-2xl p-4 min-h-[150px] border border-zinc-200 dark:border-zinc-800">
                             <textarea className="w-full h-full bg-transparent resize-none focus:outline-none text-zinc-800 dark:text-zinc-300 leading-relaxed min-h-[150px]" placeholder="Explain why you failed..." value={data.explanation} onChange={(e) => setData({...data, explanation: e.target.value})}/>
