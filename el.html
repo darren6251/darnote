@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>darNote - Error Log</title>
+    <title>darNote - Error Log (Hybrid)</title>
     <link rel="icon" type="image/png" href="https://raw.githubusercontent.com/darren6251/darnote/refs/heads/main/darNote%20logo.png">
     
     <!-- React & Tailwind -->
@@ -24,12 +24,12 @@
         }
     </script>
     
-    <!-- Framer Motion for Animations -->
+    <!-- Framer Motion -->
     <script src="https://unpkg.com/framer-motion@10.16.4/dist/framer-motion.js"></script>
     
-    <!-- SparkMD5 for Deduplication -->
+    <!-- SparkMD5 -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/spark-md5/3.0.2/spark-md5.min.js"></script>
-    <!-- Marked for AI Chat -->
+    <!-- Marked -->
     <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
 
     <!-- Google APIs -->
@@ -40,11 +40,11 @@
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-app.js";
         import { getAuth, signInWithPopup, GoogleAuthProvider, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-auth.js";
-        import { getFirestore, collection, doc, addDoc, updateDoc, deleteDoc, onSnapshot, getDoc, setDoc, increment, arrayUnion } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-firestore.js";
+        import { getFirestore, collection, doc, addDoc, updateDoc, deleteDoc, onSnapshot, getDoc, setDoc, increment, arrayUnion, writeBatch } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-firestore.js";
         
         const firebaseConfig = { apiKey: "AIzaSyAvPEac-03kE4oazvaq8K3T2gxLPsnZO20", authDomain: "darnote625.firebaseapp.com", projectId: "darnote625", storageBucket: "darnote625.firebasestorage.app", messagingSenderId: "16458322562", appId: "1:16458322562:web:8894d71f3e6c326eba1a9b" };
         const app = initializeApp(firebaseConfig);
-        window.firebase = { app, auth: getAuth(app), db: getFirestore(app), signInWithPopup, GoogleAuthProvider, signOut, onAuthStateChanged, collection, doc, addDoc, updateDoc, deleteDoc, onSnapshot, getDoc, setDoc, increment, arrayUnion };
+        window.firebase = { app, auth: getAuth(app), db: getFirestore(app), signInWithPopup, GoogleAuthProvider, signOut, onAuthStateChanged, collection, doc, addDoc, updateDoc, deleteDoc, onSnapshot, getDoc, setDoc, increment, arrayUnion, writeBatch };
     </script>
     
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
@@ -67,7 +67,7 @@
         const { useState, useEffect, useRef, useMemo } = React;
         const { motion, AnimatePresence } = window.Motion;
 
-        // ICONS
+        // --- ICONS ---
         const Icons = {
             Plus: (p) => <svg {...p} xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12h14"/><path d="M12 5v14"/></svg>,
             Trash: (p) => <svg {...p} xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/></svg>,
@@ -84,7 +84,63 @@
             Scan: (p) => <svg {...p} xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 7V5a2 2 0 0 1 2-2h2"/><path d="M17 3h2a2 2 0 0 1 2 2v2"/><path d="M21 17v2a2 2 0 0 1-2 2h-2"/><path d="M7 21H5a2 2 0 0 1-2-2v-2"/><path d="M8 12h8"/><path d="M12 8v8"/></svg>,
             Lock: (p) => <svg {...p} xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>,
             File: (p) => <svg {...p} xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" x2="8" y1="13" y2="13"/><line x1="16" x2="8" y1="17" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>,
-            Book: (p) => <svg {...p} xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>
+            Book: (p) => <svg {...p} xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>,
+            WifiOff: (p) => <svg {...p} xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="1" y1="1" x2="23" y2="23"/><path d="M16.72 11.06A10.94 10.94 0 0 1 19 12.55"/><path d="M5 12.55a10.94 10.94 0 0 1 5.17-2.39"/><path d="M10.71 5.05A16 16 0 0 1 22.58 9"/><path d="M1.42 9a15.91 15.91 0 0 1 4.7-2.88"/><path d="M8.53 16.11a6 6 0 0 1 6.95 0"/><line x1="12" y1="20" x2="12.01" y2="20"/></svg>,
+            CloudUpload: (p) => <svg {...p} xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M4 14.899A7 7 0 1 1 15.71 8h1.79a4.5 4.5 0 0 1 2.5 8.242"/><path d="M12 12v9"/><path d="m16 16-4-4-4 4"/></svg>
+        };
+
+        // --- LOCAL DB (IndexedDB) ---
+        const dbPromise = new Promise((resolve, reject) => {
+            const request = indexedDB.open("DarNoteLocal", 1);
+            request.onupgradeneeded = (e) => {
+                const db = e.target.result;
+                if (!db.objectStoreNames.contains('logs')) db.createObjectStore('logs', { keyPath: 'id' });
+                if (!db.objectStoreNames.contains('meta')) db.createObjectStore('meta', { keyPath: 'key' });
+            };
+            request.onsuccess = (e) => resolve(e.target.result);
+            request.onerror = (e) => reject(e);
+        });
+
+        const LocalDB = {
+            async getAll() {
+                const db = await dbPromise;
+                return new Promise(resolve => {
+                    const tx = db.transaction('logs', 'readonly');
+                    const req = tx.objectStore('logs').getAll();
+                    req.onsuccess = () => resolve(req.result);
+                });
+            },
+            async save(log) {
+                const db = await dbPromise;
+                return new Promise(resolve => {
+                    const tx = db.transaction('logs', 'readwrite');
+                    tx.objectStore('logs').put(log);
+                    tx.oncomplete = () => resolve();
+                });
+            },
+            async delete(id) {
+                const db = await dbPromise;
+                return new Promise(resolve => {
+                    const tx = db.transaction('logs', 'readwrite');
+                    tx.objectStore('logs').delete(id);
+                    tx.oncomplete = () => resolve();
+                });
+            },
+            async clear() {
+                const db = await dbPromise;
+                return new Promise(resolve => {
+                    const tx = db.transaction('logs', 'readwrite');
+                    tx.objectStore('logs').clear();
+                    tx.oncomplete = () => resolve();
+                });
+            },
+            async getSubjects() { // Basic local storage for subjects in offline mode
+               const saved = localStorage.getItem('local_subjects');
+               return saved ? JSON.parse(saved) : [{id:'gen', name:'General', topics:[]}];
+            },
+            async saveSubject(subjects) {
+                localStorage.setItem('local_subjects', JSON.stringify(subjects));
+            }
         };
 
         // --- GEMINI PROXY ---
@@ -195,9 +251,7 @@
                 const items = e.dataTransfer.items;
                 for (let i = 0; i < items.length; i++) {
                     if (items[i].kind === 'file' && items[i].type.startsWith('image/')) {
-                        const file = items[i].getAsFile();
-                        onUpload(file);
-                        return; 
+                        onUpload(items[i].getAsFile()); return; 
                     }
                 }
             };
@@ -205,10 +259,7 @@
                 const items = (e.clipboardData || e.originalEvent.clipboardData).items;
                 for (let i = 0; i < items.length; i++) {
                     if (items[i].type.indexOf('image') !== -1) {
-                        e.preventDefault();
-                        const blob = items[i].getAsFile();
-                        onUpload(blob);
-                        return;
+                        e.preventDefault(); onUpload(items[i].getAsFile()); return;
                     }
                 }
             };
@@ -226,7 +277,7 @@
                         {isUploading && (
                             <div className="absolute inset-0 bg-white/80 dark:bg-black/80 z-20 flex flex-col items-center justify-center backdrop-blur-sm">
                                 <div className="w-10 h-10 border-4 border-brand border-t-transparent rounded-full animate-spin mb-3"></div>
-                                <div className="text-sm font-bold text-brand animate-pulse">Uploading to Drive...</div>
+                                <div className="text-sm font-bold text-brand animate-pulse">Processing...</div>
                             </div>
                         )}
                         {imageUrl ? (
@@ -261,7 +312,12 @@
             const todayDate = new Date().toISOString().split('T')[0];
 
             useEffect(() => {
-                if(!user) return;
+                if(!user) {
+                    // Guest quota logic
+                    const localUsage = JSON.parse(localStorage.getItem('guest_ai_usage') || '{}');
+                    setDailyCount(localUsage[todayDate] || 0);
+                    return;
+                }
                 const docRef = window.firebase.doc(window.firebase.db, 'artifacts', 'darnote-app', 'users', user.uid, 'ai_usage', todayDate);
                 const unsub = window.firebase.onSnapshot(docRef, (doc) => {
                     if (doc.exists()) { setDailyCount(doc.data().count || 0); } else { setDailyCount(0); }
@@ -282,8 +338,15 @@
                 setInput("");
                 setLoading(true);
 
-                const docRef = window.firebase.doc(window.firebase.db, 'artifacts', 'darnote-app', 'users', user.uid, 'ai_usage', todayDate);
-                await window.firebase.setDoc(docRef, { count: window.firebase.increment(1), date: todayDate }, { merge: true });
+                if (user) {
+                    const docRef = window.firebase.doc(window.firebase.db, 'artifacts', 'darnote-app', 'users', user.uid, 'ai_usage', todayDate);
+                    await window.firebase.setDoc(docRef, { count: window.firebase.increment(1), date: todayDate }, { merge: true });
+                } else {
+                    const localUsage = JSON.parse(localStorage.getItem('guest_ai_usage') || '{}');
+                    localUsage[todayDate] = (localUsage[todayDate] || 0) + 1;
+                    localStorage.setItem('guest_ai_usage', JSON.stringify(localUsage));
+                    setDailyCount(localUsage[todayDate]);
+                }
 
                 const context = `
                     Student is analyzing a mistake.
@@ -293,8 +356,7 @@
                     Student's Correct Answer: ${activeLog.correctAnswer}
                     Student's Explanation: ${activeLog.explanation}
                     Marks: ${activeLog.marks}
-                    Image of Question (Url): ${activeLog.imageUrl || "No image provided"}
-                    Marking Scheme Image (Url): ${activeLog.markingSchemeUrl || "No scheme provided"}
+                    Image of Question (Url/Base64): ${activeLog.imageUrl ? "Provided" : "No image"}
                 `;
                 const systemPrompt = `You are a supportive but witty tutor. The student is looking at an error log. Context: ${context}. Answer their question effectively.`;
                 
@@ -316,31 +378,16 @@
                         </div>
                         <button onClick={onClose}><Icons.X className="w-4 h-4 hover:text-red-500 transition-colors"/></button>
                     </div>
-                    
-                    <div className="h-1 w-full bg-zinc-200 dark:bg-zinc-800">
-                        <div className={`h-full transition-all duration-500 ${remaining === 0 ? 'bg-red-500' : 'bg-brand'}`} style={{ width: `${(dailyCount / QUOTA_LIMIT) * 100}%` }}></div>
-                    </div>
-
+                    <div className="h-1 w-full bg-zinc-200 dark:bg-zinc-800"><div className={`h-full transition-all duration-500 ${remaining === 0 ? 'bg-red-500' : 'bg-brand'}`} style={{ width: `${(dailyCount / QUOTA_LIMIT) * 100}%` }}></div></div>
                     <div className="flex-1 overflow-y-auto p-4 space-y-4">
                         {messages.map((m, i) => (
-                            <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} key={i} className={`flex ${m.role === 'user' ? 'justify-end' : 'justify-start'}`}>
-                                <div className={`max-w-[85%] p-3 rounded-2xl text-sm shadow-sm ${m.role === 'user' ? 'bg-brand text-white rounded-br-none' : 'bg-white border border-zinc-200 dark:border-white/10 dark:bg-zinc-800 rounded-bl-none text-zinc-800 dark:text-zinc-200'}`}>
-                                    <div dangerouslySetInnerHTML={{ __html: marked.parse(m.text) }} />
-                                </div>
-                            </motion.div>
+                            <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} key={i} className={`flex ${m.role === 'user' ? 'justify-end' : 'justify-start'}`}><div className={`max-w-[85%] p-3 rounded-2xl text-sm shadow-sm ${m.role === 'user' ? 'bg-brand text-white rounded-br-none' : 'bg-white border border-zinc-200 dark:border-white/10 dark:bg-zinc-800 rounded-bl-none text-zinc-800 dark:text-zinc-200'}`}><div dangerouslySetInnerHTML={{ __html: marked.parse(m.text) }} /></div></motion.div>
                         ))}
                         {loading && <div className="text-xs text-zinc-500 animate-pulse pl-2">Thinking...</div>}
                         <div ref={messagesEndRef} />
                     </div>
-                    
                     <div className="p-4 border-t border-zinc-200 dark:border-white/10 bg-white dark:bg-zinc-900 flex gap-2 relative">
-                        {remaining === 0 && (
-                             <div className="absolute inset-0 bg-white/50 dark:bg-black/50 backdrop-blur-sm z-10 flex items-center justify-center">
-                                 <div className="bg-white dark:bg-zinc-800 border border-red-500 text-red-500 px-4 py-2 rounded-lg text-xs font-bold shadow-lg flex items-center gap-2">
-                                     <Icons.Lock className="w-4 h-4"/> Quota Exceeded
-                                 </div>
-                             </div>
-                        )}
+                        {remaining === 0 && <div className="absolute inset-0 bg-white/50 dark:bg-black/50 backdrop-blur-sm z-10 flex items-center justify-center"><div className="bg-white dark:bg-zinc-800 border border-red-500 text-red-500 px-4 py-2 rounded-lg text-xs font-bold shadow-lg flex items-center gap-2"><Icons.Lock className="w-4 h-4"/> Quota Exceeded</div></div>}
                         <input value={input} onChange={e=>setInput(e.target.value)} onKeyDown={e=>e.key==='Enter' && handleSend()} placeholder={remaining > 0 ? "Ask about this error..." : "Come back tomorrow..."} disabled={remaining===0} className="flex-1 bg-zinc-100 dark:bg-black/30 border border-zinc-200 dark:border-white/10 rounded-full px-4 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-brand dark:text-white transition-shadow disabled:opacity-50"/>
                         <button onClick={handleSend} disabled={remaining===0} className="bg-brand text-white rounded-full p-2 hover:bg-indigo-600 transition-colors shadow-lg shadow-indigo-500/30 disabled:bg-zinc-400 disabled:shadow-none"><Icons.Plus className="w-4 h-4 rotate-90"/></button>
                     </div>
@@ -351,10 +398,10 @@
         // --- MAIN APP ---
         const App = () => {
             const [user, setUser] = useState(null);
+            const [isGuest, setIsGuest] = useState(false);
             const [logs, setLogs] = useState([]);
             const [subjects, setSubjects] = useState([]);
             
-            // 1. ROTATING LOGIC: Initialize state from URL params
             const [activeLogId, setActiveLogId] = useState(() => {
                 const params = new URLSearchParams(window.location.search);
                 return params.get('log');
@@ -365,66 +412,120 @@
             const [isAiOpen, setIsAiOpen] = useState(false);
             const [isDarkMode, setIsDarkMode] = useState(true);
             const [isAutoTitleLoading, setIsAutoTitleLoading] = useState(false);
+            const [isSyncing, setIsSyncing] = useState(false);
             const { saveToDrive } = useGoogleDrive();
             
-            // Image Upload State for Active Log
             const [isUploadingQ, setIsUploadingQ] = useState(false);
             const [isUploadingS, setIsUploadingS] = useState(false); 
 
-            useEffect(() => { window.firebase.onAuthStateChanged(window.firebase.auth, setUser); }, []);
+            // AUTH & SYNC LOGIC
+            useEffect(() => {
+                const unsubscribe = window.firebase.onAuthStateChanged(window.firebase.auth, async (u) => {
+                    if (u) {
+                        setUser(u);
+                        setIsGuest(false);
+                        // Check for local data to sync
+                        const localLogs = await LocalDB.getAll();
+                        if (localLogs.length > 0) {
+                            if(confirm(`Found ${localLogs.length} offline logs. Sync to cloud?`)) {
+                                setIsSyncing(true);
+                                try {
+                                    // BATCH UPLOAD
+                                    const batch = window.firebase.writeBatch(window.firebase.db);
+                                    
+                                    // Helper to convert dataURL to Blob
+                                    const dataURLtoBlob = (dataurl) => {
+                                        let arr = dataurl.split(','), mime = arr[0].match(/:(.*?);/)[1],
+                                            bstr = atob(arr[1]), n = bstr.length, u8arr = new Uint8Array(n);
+                                        while(n--){ u8arr[n] = bstr.charCodeAt(n); }
+                                        return new Blob([u8arr], {type:mime});
+                                    }
+
+                                    for (const log of localLogs) {
+                                        // Upload Images
+                                        let newImageUrl = log.imageUrl;
+                                        if (log.imageUrl && log.imageUrl.startsWith('data:')) {
+                                            const blob = dataURLtoBlob(log.imageUrl);
+                                            const driveUrl = await saveToDrive(blob, `ErrorLog_Sync_${Date.now()}.png`);
+                                            newImageUrl = driveUrl;
+                                        }
+                                        
+                                        let newSchemeUrl = log.markingSchemeUrl;
+                                        if (log.markingSchemeUrl && log.markingSchemeUrl.startsWith('data:')) {
+                                            const blob = dataURLtoBlob(log.markingSchemeUrl);
+                                            const driveUrl = await saveToDrive(blob, `ErrorLog_Sync_Scheme_${Date.now()}.png`);
+                                            newSchemeUrl = driveUrl;
+                                        }
+
+                                        const newLogRef = window.firebase.doc(window.firebase.collection(window.firebase.db, 'artifacts', "darnote-app", 'users', u.uid, 'error_logs'));
+                                        batch.set(newLogRef, { ...log, imageUrl: newImageUrl, markingSchemeUrl: newSchemeUrl, id: newLogRef.id }); // Use new ID
+                                    }
+                                    
+                                    await batch.commit();
+                                    await LocalDB.clear();
+                                    alert("Sync Complete! Local storage cleared.");
+                                } catch (e) {
+                                    console.error(e);
+                                    alert("Sync failed partially. Check console.");
+                                }
+                                setIsSyncing(false);
+                            }
+                        }
+                    } else {
+                        setUser(null);
+                    }
+                });
+                return () => unsubscribe();
+            }, []);
             
+            // THEME & ROUTING
             useEffect(() => {
                 if(isDarkMode) document.documentElement.classList.add('dark');
                 else document.documentElement.classList.remove('dark');
             }, [isDarkMode]);
 
-            // 2. ROTATING LOGIC: URL Persistence
             useEffect(() => {
                 const url = new URL(window.location);
-                if (activeLogId) {
-                    url.searchParams.set('log', activeLogId);
-                } else {
-                    url.searchParams.delete('log');
-                }
-                
-                // Only push state if URL actually changed to prevent history spam
-                if (url.href !== window.location.href) {
-                    window.history.pushState({}, '', url);
-                }
+                if (activeLogId) url.searchParams.set('log', activeLogId);
+                else url.searchParams.delete('log');
+                if (url.href !== window.location.href) window.history.pushState({}, '', url);
             }, [activeLogId]);
 
-            // 3. ROTATING LOGIC: Handle Browser Back/Forward
             useEffect(() => {
-                const onPopState = () => {
-                    const id = new URLSearchParams(window.location.search).get('log');
-                    setActiveLogId(id);
-                };
+                const onPopState = () => setActiveLogId(new URLSearchParams(window.location.search).get('log'));
                 window.addEventListener('popstate', onPopState);
                 return () => window.removeEventListener('popstate', onPopState);
             }, []);
 
+            // DATA FETCHING (HYBRID)
             useEffect(() => {
-                if (!user) return;
-                const db = window.firebase.db;
-                const appId = "darnote-app";
-                
-                const logsUnsub = window.firebase.onSnapshot(window.firebase.collection(db, 'artifacts', appId, 'users', user.uid, 'error_logs'), (snap) => {
-                    const data = snap.docs.map(d => ({id: d.id, ...d.data()})).sort((a,b) => new Date(b.createdAt) - new Date(a.createdAt));
-                    setLogs(data);
-                });
-                
-                const subUnsub = window.firebase.onSnapshot(window.firebase.collection(db, 'artifacts', appId, 'users', user.uid, 'subjects'), (snap) => {
-                    setSubjects(snap.docs.map(d => ({
-                        id: d.id, 
-                        name: d.data().name, 
-                        topics: d.data().topics || []
-                    })).sort((a,b) => a.name.localeCompare(b.name)));
-                });
-                return () => { logsUnsub(); subUnsub(); };
-            }, [user]);
+                if (user) {
+                    // FIRESTORE
+                    const db = window.firebase.db;
+                    const logsUnsub = window.firebase.onSnapshot(window.firebase.collection(db, 'artifacts', "darnote-app", 'users', user.uid, 'error_logs'), (snap) => {
+                        const data = snap.docs.map(d => ({id: d.id, ...d.data()})).sort((a,b) => new Date(b.createdAt) - new Date(a.createdAt));
+                        setLogs(data);
+                    });
+                    const subUnsub = window.firebase.onSnapshot(window.firebase.collection(db, 'artifacts', "darnote-app", 'users', user.uid, 'subjects'), (snap) => {
+                        setSubjects(snap.docs.map(d => ({id: d.id, name: d.data().name, topics: d.data().topics || []})).sort((a,b) => a.name.localeCompare(b.name)));
+                    });
+                    return () => { logsUnsub(); subUnsub(); };
+                } else if (isGuest) {
+                    // INDEXED DB POLLING (Simple approximation for reactivity)
+                    const loadLocal = async () => {
+                        const l = await LocalDB.getAll();
+                        setLogs(l.sort((a,b) => new Date(b.createdAt) - new Date(a.createdAt)));
+                        const s = await LocalDB.getSubjects();
+                        setSubjects(s);
+                    };
+                    loadLocal();
+                    const interval = setInterval(loadLocal, 1000); // Polling for local updates
+                    return () => clearInterval(interval);
+                }
+            }, [user, isGuest]);
 
+            // CRUD OPERATIONS (HYBRID)
             const createLog = async () => {
-                if (!user) return;
                 const newLog = {
                     title: 'Untitled Mistake',
                     subject: 'General',
@@ -438,58 +539,86 @@
                     mastered: false,
                     createdAt: new Date().toISOString()
                 };
-                const docRef = await window.firebase.addDoc(window.firebase.collection(window.firebase.db, 'artifacts', "darnote-app", 'users', user.uid, 'error_logs'), newLog);
-                setActiveLogId(docRef.id);
+
+                if (user) {
+                    const docRef = await window.firebase.addDoc(window.firebase.collection(window.firebase.db, 'artifacts', "darnote-app", 'users', user.uid, 'error_logs'), newLog);
+                    setActiveLogId(docRef.id);
+                } else {
+                    const id = 'local_' + Date.now();
+                    await LocalDB.save({ ...newLog, id });
+                    setActiveLogId(id);
+                }
             };
 
             const updateLog = async (id, updates) => {
-                await window.firebase.updateDoc(window.firebase.doc(window.firebase.db, 'artifacts', "darnote-app", 'users', user.uid, 'error_logs', id), updates);
+                if (user) {
+                    await window.firebase.updateDoc(window.firebase.doc(window.firebase.db, 'artifacts', "darnote-app", 'users', user.uid, 'error_logs', id), updates);
+                } else {
+                    const existing = logs.find(l => l.id === id);
+                    if(existing) await LocalDB.save({ ...existing, ...updates });
+                }
             };
 
             const addTopicToSubject = async (subjectName) => {
                 const subjectDoc = subjects.find(s => s.name === subjectName);
                 if (!subjectDoc) { alert("Cannot add topic to General/Unknown subject."); return; }
-                
                 const newTopic = prompt(`Add a new topic for ${subjectName}:`);
                 if (!newTopic) return;
 
-                const docRef = window.firebase.doc(window.firebase.db, 'artifacts', 'darnote-app', 'users', user.uid, 'subjects', subjectDoc.id);
-                await window.firebase.updateDoc(docRef, {
-                    topics: window.firebase.arrayUnion(newTopic)
-                });
+                if (user) {
+                    const docRef = window.firebase.doc(window.firebase.db, 'artifacts', 'darnote-app', 'users', user.uid, 'subjects', subjectDoc.id);
+                    await window.firebase.updateDoc(docRef, { topics: window.firebase.arrayUnion(newTopic) });
+                } else {
+                    const updatedSubjects = subjects.map(s => s.id === subjectDoc.id ? {...s, topics: [...s.topics, newTopic]} : s);
+                    await LocalDB.saveSubject(updatedSubjects);
+                }
             };
 
-            const handleUpload = async (blob, type) => {
+            const handleUpload = async (file, type) => {
                 if (!activeLogId) return;
                 const setUploading = type === 'question' ? setIsUploadingQ : setIsUploadingS;
                 setUploading(true);
+                
                 try {
-                    const url = await saveToDrive(blob, `ErrorLog_${type}_${Date.now()}.png`);
-                    if (type === 'question') updateLog(activeLogId, { imageUrl: url });
-                    else updateLog(activeLogId, { markingSchemeUrl: url });
+                    if (user) {
+                        const url = await saveToDrive(file, `ErrorLog_${type}_${Date.now()}.png`);
+                        if (type === 'question') updateLog(activeLogId, { imageUrl: url });
+                        else updateLog(activeLogId, { markingSchemeUrl: url });
+                    } else {
+                        // Local Mode: Convert to Base64
+                        const reader = new FileReader();
+                        reader.onloadend = async () => {
+                            const base64 = reader.result;
+                            if (type === 'question') updateLog(activeLogId, { imageUrl: base64 });
+                            else updateLog(activeLogId, { markingSchemeUrl: base64 });
+                            setUploading(false);
+                        };
+                        reader.readAsDataURL(file);
+                        return; // Async handled in onload
+                    }
                 } catch(err) { alert("Upload failed: " + err); }
                 setUploading(false);
             };
 
+            // AI Features need image URL or Base64. callGemini handles both.
             const handleAutoTitle = async () => {
                 if (!activeLogId || !activeLog.imageUrl) { alert("Please paste an image first!"); return; }
                 setIsAutoTitleLoading(true);
                 try {
-                    const response = await fetch(activeLog.imageUrl);
-                    if (!response.ok) throw new Error("Failed to fetch image for OCR.");
-                    const blob = await response.blob();
+                    let base64data = activeLog.imageUrl;
+                    // If URL, fetch it. If Base64, use it directly.
+                    if (!activeLog.imageUrl.startsWith('data:')) {
+                        const response = await fetch(activeLog.imageUrl);
+                        if (!response.ok) throw new Error("Failed to fetch image for OCR.");
+                        const blob = await response.blob();
+                        base64data = await new Promise(r => { const rd = new FileReader(); rd.onload=()=>r(rd.result); rd.readAsDataURL(blob); });
+                    }
                     
-                    const reader = new FileReader();
-                    reader.onloadend = async () => {
-                        const base64data = reader.result;
-                        const prompt = "Analyze this image. If it contains a question, identify the core concept or question text and generate a SHORT, descriptive title (max 6 words). Return ONLY the title.";
-                        const title = await callGemini(prompt, "You are a concise summarizer.", base64data);
-                        updateLog(activeLogId, { title: title.replace(/^["']|["']$/g, '').trim() });
-                        setIsAutoTitleLoading(false);
-                    };
-                    reader.readAsDataURL(blob);
-
-                } catch(e) { console.error(e); alert("OCR Failed. Image might be restricted (CORS) or AI is busy."); setIsAutoTitleLoading(false); }
+                    const prompt = "Analyze this image. If it contains a question, identify the core concept or question text and generate a SHORT, descriptive title (max 6 words). Return ONLY the title.";
+                    const title = await callGemini(prompt, "You are a concise summarizer.", base64data);
+                    updateLog(activeLogId, { title: title.replace(/^["']|["']$/g, '').trim() });
+                } catch(e) { console.error(e); alert("OCR Failed."); }
+                setIsAutoTitleLoading(false);
             }
 
             const activeLog = logs.find(l => l.id === activeLogId);
@@ -499,20 +628,29 @@
                 if (filter.startsWith('subject:')) return l.subject === filter.split(':')[1];
                 return true;
             }).filter(l => (l.title || '').toLowerCase().includes(searchQuery.toLowerCase()));
-
-            // Helper to get topics for active log
             const currentSubjectData = activeLog ? subjects.find(s => s.name === activeLog.subject) : null;
             const currentTopics = currentSubjectData ? currentSubjectData.topics : [];
 
-            if (!user) return (
+            if (!user && !isGuest) return (
                 <div className="h-screen w-full flex items-center justify-center bg-zinc-950 text-white relative overflow-hidden">
                      <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,_var(--tw-gradient-stops))] from-indigo-900/20 via-black to-black animate-pulse"></div>
                      <motion.div initial={{opacity:0, y:20}} animate={{opacity:1, y:0}} className="z-10 text-center flex flex-col items-center">
                         <img src="https://raw.githubusercontent.com/darren6251/darnote/refs/heads/main/darNote%20logo.png" className="w-20 h-20 mb-6 drop-shadow-[0_0_15px_rgba(99,102,241,0.5)]"/>
                         <h1 className="text-3xl font-bold mb-2 tracking-tight">darNote Error Log</h1>
                         <p className="text-zinc-500 mb-8">Document your failures. Learn from them.</p>
-                        <button onClick={() => window.firebase.signInWithPopup(window.firebase.auth, new window.firebase.GoogleAuthProvider())} className="bg-white text-black px-8 py-3 rounded-full font-bold flex gap-2 items-center hover:scale-105 transition-transform shadow-xl"><Icons.Google className="w-5 h-5"/> Sign In</button>
+                        <div className="flex flex-col gap-3">
+                            <button onClick={() => window.firebase.signInWithPopup(window.firebase.auth, new window.firebase.GoogleAuthProvider())} className="bg-white text-black px-8 py-3 rounded-full font-bold flex gap-2 items-center hover:scale-105 transition-transform shadow-xl w-64 justify-center"><Icons.Google className="w-5 h-5"/> Sign In</button>
+                            <button onClick={() => setIsGuest(true)} className="bg-zinc-800 text-zinc-300 px-8 py-3 rounded-full font-bold flex gap-2 items-center hover:bg-zinc-700 transition-colors w-64 justify-center border border-zinc-700"><Icons.WifiOff className="w-5 h-5"/> Offline Mode</button>
+                        </div>
                      </motion.div>
+                </div>
+            );
+
+            if (isSyncing) return (
+                <div className="h-screen w-full flex items-center justify-center bg-zinc-950 text-white flex-col">
+                    <div className="w-10 h-10 border-4 border-brand border-t-transparent rounded-full animate-spin mb-4"></div>
+                    <div className="text-xl font-bold">Syncing Local Logs to Cloud...</div>
+                    <div className="text-sm text-zinc-500">Converting base64 nightmares into cloud dreams</div>
                 </div>
             );
 
@@ -560,19 +698,37 @@
 
                         <div className="space-y-3 pt-4 border-t border-zinc-200 dark:border-white/10">
                              <div className="flex items-center gap-3 px-2 py-1">
-                                {user.photoURL ? <img src={user.photoURL} className="w-8 h-8 rounded-full border border-zinc-200 dark:border-white/10"/> : <div className="w-8 h-8 rounded-full bg-zinc-200 dark:bg-white/10 flex items-center justify-center"><Icons.User className="w-4 h-4 text-zinc-500"/></div>}
-                                <div className="overflow-hidden">
-                                    <div className="text-xs font-bold text-zinc-900 dark:text-white truncate w-32">{user.displayName || 'User'}</div>
-                                    <div className="text-[10px] text-zinc-500 truncate">{user.email}</div>
-                                </div>
+                                {user ? (
+                                    <>
+                                        {user.photoURL ? <img src={user.photoURL} className="w-8 h-8 rounded-full border border-zinc-200 dark:border-white/10"/> : <div className="w-8 h-8 rounded-full bg-zinc-200 dark:bg-white/10 flex items-center justify-center"><Icons.User className="w-4 h-4 text-zinc-500"/></div>}
+                                        <div className="overflow-hidden">
+                                            <div className="text-xs font-bold text-zinc-900 dark:text-white truncate w-32">{user.displayName || 'User'}</div>
+                                            <div className="text-[10px] text-zinc-500 truncate">{user.email}</div>
+                                        </div>
+                                    </>
+                                ) : (
+                                    <>
+                                        <div className="w-8 h-8 rounded-full bg-amber-500/10 flex items-center justify-center text-amber-500"><Icons.WifiOff className="w-4 h-4"/></div>
+                                        <div className="overflow-hidden">
+                                            <div className="text-xs font-bold text-zinc-900 dark:text-white truncate w-32">Guest Mode</div>
+                                            <div className="text-[10px] text-amber-500 truncate">Not Synced</div>
+                                        </div>
+                                    </>
+                                )}
                              </div>
                              <div className="flex gap-2">
                                 <button onClick={()=>setIsDarkMode(!isDarkMode)} className="flex-1 btn-ghost py-2 rounded-lg flex items-center justify-center gap-2 text-xs font-medium border border-zinc-200 dark:border-white/5 bg-white dark:bg-white/5 shadow-sm">
                                     {isDarkMode ? <><Icons.Sun className="w-3 h-3"/> Light</> : <><Icons.Moon className="w-3 h-3"/> Dark</>}
                                 </button>
-                                <button onClick={()=>window.firebase.signOut(window.firebase.auth)} className="px-3 btn-ghost py-2 rounded-lg text-red-500 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/10 border border-transparent">
-                                    <Icons.Logout className="w-4 h-4"/>
-                                </button>
+                                {user ? (
+                                    <button onClick={()=>window.firebase.signOut(window.firebase.auth)} className="px-3 btn-ghost py-2 rounded-lg text-red-500 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/10 border border-transparent">
+                                        <Icons.Logout className="w-4 h-4"/>
+                                    </button>
+                                ) : (
+                                    <button onClick={() => window.firebase.signInWithPopup(window.firebase.auth, new window.firebase.GoogleAuthProvider())} className="px-3 btn-ghost py-2 rounded-lg text-brand hover:bg-indigo-50 dark:hover:bg-indigo-900/10 border border-transparent" title="Login to Sync">
+                                        <Icons.CloudUpload className="w-4 h-4"/>
+                                    </button>
+                                )}
                              </div>
                         </div>
                     </div>
@@ -631,7 +787,11 @@
                                         </button>
                                         <div className="h-6 w-px bg-zinc-200 dark:bg-white/10 mx-2"></div>
                                         <button onClick={()=>setIsAiOpen(!isAiOpen)} className={`p-2 rounded-lg transition-colors ${isAiOpen ? 'bg-brand/10 text-brand' : 'hover:bg-zinc-100 dark:hover:bg-white/5 text-zinc-500 dark:text-zinc-400'}`} title="Open AI Tutor"><Icons.Bot className="w-5 h-5"/></button>
-                                        <button onClick={()=>{if(confirm('Delete this log permanently?')) {deleteDoc(doc(window.firebase.db,'artifacts',"darnote-app",'users',user.uid,'error_logs',activeLog.id)); setActiveLogId(null);}}} className="p-2 rounded-lg hover:bg-red-50 dark:hover:bg-red-900/20 text-zinc-400 hover:text-red-500 transition-colors"><Icons.Trash className="w-5 h-5"/></button>
+                                        <button onClick={()=>{if(confirm('Delete this log permanently?')) {
+                                            if(user) deleteDoc(doc(window.firebase.db,'artifacts',"darnote-app",'users',user.uid,'error_logs',activeLog.id));
+                                            else LocalDB.delete(activeLog.id);
+                                            setActiveLogId(null);
+                                        }}} className="p-2 rounded-lg hover:bg-red-50 dark:hover:bg-red-900/20 text-zinc-400 hover:text-red-500 transition-colors"><Icons.Trash className="w-5 h-5"/></button>
                                     </div>
                                 </header>
 
