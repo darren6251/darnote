@@ -346,7 +346,7 @@
                 setLogs(prev => [{...newLog, id: docRef.id}, ...prev]); setActiveLogId(docRef.id);
             };
 
-            // DEBOUNCED UPDATE (5s)
+            // DEBOUNCED UPDATE (10s)
             const updateLog = (id, updates) => {
                 const timestampedUpdates = { ...updates, lastModified: new Date().toISOString() };
                 setLogs(prev => prev.map(l => l.id === id ? { ...l, ...timestampedUpdates } : l));
