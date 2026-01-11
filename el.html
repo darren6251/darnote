@@ -358,7 +358,7 @@
                         const payload = pendingUpdatesRef.current[logId]; delete pendingUpdatesRef.current[logId];
                         await window.firebase.updateDoc(window.firebase.doc(window.firebase.db, 'artifacts', "darnote-app", 'users', user.uid, 'error_logs', logId), payload);
                     }
-                }, 5000);
+                }, 10000);
             };
 
             // CONTEXT MENU ACTIONS
