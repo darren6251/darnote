@@ -274,6 +274,10 @@
             // Context Menu
             const [contextMenu, setContextMenu] = useState({ visible: false, x: 0, y: 0, logId: null });
 
+            // Preview Feature
+            const [previewLog, setPreviewLog] = useState(null);
+            const hoverTimeoutRef = useRef(null);
+
             const pendingUpdatesRef = useRef({});
             const saveTimeoutRef = useRef(null);
 
@@ -297,7 +301,7 @@
             useEffect(() => { const url = new URL(window.location); if (activeLogId) url.searchParams.set('log', activeLogId); else url.searchParams.delete('log'); window.history.pushState({}, '', url); }, [activeLogId]);
             useEffect(() => { const handleClick = () => setContextMenu({ ...contextMenu, visible: false }); window.addEventListener('click', handleClick); return () => window.removeEventListener('click', handleClick); }, [contextMenu]);
 
-            // FETCH LOGS
+            // FETCH LOGS (Safety Net Sorting)
             const fetchLogs = async (isLoadMore = false, uid = user?.uid) => {
                 if (!uid) return;
                 setIsLoadingLogs(true);
@@ -305,40 +309,79 @@
                     const db = window.firebase.db;
                     const logsRef = window.firebase.collection(db, 'artifacts', "darnote-app", 'users', uid, 'error_logs');
                     let q;
+                    let fallbackSort = false;
 
-                    // Sort Logic
+                    // Sort Logic with Fallback Protection
                     if (sortBy.startsWith('date')) {
                         const dir = sortBy === 'date-desc' ? 'desc' : 'asc';
                         q = window.firebase.query(logsRef, window.firebase.orderBy('createdAt', dir));
+                        if (isLoadMore && lastDoc) q = window.firebase.query(q, window.firebase.startAfter(lastDoc), window.firebase.limit(10));
+                        else q = window.firebase.query(q, window.firebase.limit(10));
                     } else if (sortBy.startsWith('type')) {
                         const typeDir = sortBy === 'type-mc' ? 'desc' : 'asc';
                         try {
-                           q = window.firebase.query(logsRef, window.firebase.orderBy('questionType', typeDir), window.firebase.orderBy('createdAt', 'desc')); 
+                            // Attempt complex server-side sort
+                           let complexQ = window.firebase.query(logsRef, window.firebase.orderBy('questionType', typeDir), window.firebase.orderBy('createdAt', 'desc'));
+                           if (isLoadMore && lastDoc) complexQ = window.firebase.query(complexQ, window.firebase.startAfter(lastDoc), window.firebase.limit(10));
+                           else complexQ = window.firebase.query(complexQ, window.firebase.limit(10));
+                           q = complexQ;
                         } catch(e) {
-                           q = window.firebase.query(logsRef, window.firebase.orderBy('createdAt', 'desc'));
+                           // This block might not catch firestore index errors as those happen at getDocs
+                           fallbackSort = true;
                         }
                     }
 
-                    if (isLoadMore && lastDoc) q = window.firebase.query(q, window.firebase.startAfter(lastDoc), window.firebase.limit(10));
-                    else q = window.firebase.query(q, window.firebase.limit(10));
+                    // Execution
+                    let snapshot;
+                    try {
+                        snapshot = await window.firebase.getDocs(q);
+                    } catch (error) {
+                        // Catch missing index error here
+                        if (error.code === 'failed-precondition' || error.message.includes('index')) {
+                            console.warn("Firestore index missing for sort. Falling back to client-side sort.");
+                            fallbackSort = true;
+                            // Fallback: Just fetch by Date Descending
+                            q = window.firebase.query(logsRef, window.firebase.orderBy('createdAt', 'desc'));
+                            if (isLoadMore && lastDoc) q = window.firebase.query(q, window.firebase.startAfter(lastDoc), window.firebase.limit(10));
+                            else q = window.firebase.query(q, window.firebase.limit(10));
+                            snapshot = await window.firebase.getDocs(q);
+                        } else {
+                            throw error;
+                        }
+                    }
 
-                    const snapshot = await window.firebase.getDocs(q);
                     const newLogs = snapshot.docs.map(d => {
                         const data = d.data();
                         return { id: d.id, ...data, questionImages: data.questionImages || (data.imageUrl ? [data.imageUrl] : []), schemeImages: data.schemeImages || (data.markingSchemeUrl ? [data.markingSchemeUrl] : []) };
                     });
+
+                    // Client Side Sort if Index Failed
+                    if (fallbackSort && sortBy.startsWith('type')) {
+                        newLogs.sort((a, b) => {
+                            const tA = (a.questionType || '').toLowerCase();
+                            const tB = (b.questionType || '').toLowerCase();
+                            if (sortBy === 'type-mc') return tB.localeCompare(tA); // MC ('m') > LQ ('l'), so Desc puts MC first
+                            return tA.localeCompare(tB); // LQ first
+                        });
+                    }
 
                     if (isLoadMore) setLogs(prev => [...prev, ...newLogs]);
                     else setLogs(newLogs);
 
                     setLastDoc(snapshot.docs[snapshot.docs.length - 1]);
                     setHasMore(snapshot.docs.length === 10);
-                } catch(e) { console.error(e); }
+                } catch(e) { console.error("Fetch Error", e); }
                 setIsLoadingLogs(false);
             };
 
             // Trigger re-fetch on sort
-            useEffect(() => { if(user) fetchLogs(false); }, [sortBy]);
+            useEffect(() => { 
+                if(user) {
+                    setLastDoc(null); // Reset pagination
+                    setLogs([]); // Clear for visual clarity
+                    fetchLogs(false); 
+                }
+            }, [sortBy]);
 
             const createLog = async () => {
                 const newLog = { title: 'Untitled Mistake', subject: 'General', topic: '', questionImages: [], schemeImages: [], questionType: 'MC', correctAnswer: '', marks: '', explanation: '', mastered: false, createdAt: new Date().toISOString(), lastModified: new Date().toISOString() };
@@ -431,6 +474,20 @@
                 } catch(e) { alert("OCR Failed"); } setIsAutoTitleLoading(false);
             }
 
+            // --- HOVER PREVIEW ---
+            const handleMouseEnter = (log) => {
+                if (hoverTimeoutRef.current) clearTimeout(hoverTimeoutRef.current);
+                hoverTimeoutRef.current = setTimeout(() => {
+                    const img = (log.questionImages && log.questionImages.length > 0) ? log.questionImages[0] : log.imageUrl;
+                    if (img) setPreviewLog(log);
+                }, 600); // 0.6s delay
+            };
+
+            const handleMouseLeave = () => {
+                if (hoverTimeoutRef.current) clearTimeout(hoverTimeoutRef.current);
+                setPreviewLog(null);
+            };
+
             const activeLog = logs.find(l => l.id === activeLogId);
             const filteredLogs = logs.filter(l => {
                 if (filter === 'mastered') return l.mastered; if (filter === 'active') return !l.mastered;
@@ -451,6 +508,33 @@
                 <div className={`flex h-screen w-full transition-colors duration-300 ${isDarkMode ? 'dark bg-onyx' : 'bg-[#f4f4f5]'}`}>
                     <ContextMenu visible={contextMenu.visible} x={contextMenu.x} y={contextMenu.y} logId={contextMenu.logId} onDuplicate={handleDuplicate} onDelete={handleDelete} onCopy={handleCopy} onPaste={handlePaste}/>
                     
+                    {/* PREVIEW CARD */}
+                    <AnimatePresence>
+                        {previewLog && (
+                            <div className="fixed z-[100] top-0 bottom-0 left-[340px] md:left-[600px] pointer-events-none flex flex-col justify-center p-4">
+                                <motion.div 
+                                    initial={{ opacity: 0, x: -20, scale: 0.95 }} 
+                                    animate={{ opacity: 1, x: 0, scale: 1 }} 
+                                    exit={{ opacity: 0, scale: 0.95 }}
+                                    className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-white/10 rounded-xl shadow-2xl p-2 max-w-lg max-h-[80vh] overflow-hidden flex flex-col"
+                                >
+                                    <div className="text-[10px] font-bold px-2 py-1 text-zinc-400 uppercase tracking-wider flex justify-between">
+                                        <span>Quick Preview</span>
+                                        <span className={previewLog.questionType === 'MC' ? 'text-indigo-500' : 'text-orange-500'}>{previewLog.questionType}</span>
+                                    </div>
+                                    <img 
+                                        src={previewLog.questionImages?.[0] || previewLog.imageUrl} 
+                                        className="rounded-lg object-contain max-h-[60vh] bg-zinc-100 dark:bg-black/50" 
+                                    />
+                                    <div className="mt-2 px-2 pb-1">
+                                        <div className="font-bold text-sm truncate text-zinc-900 dark:text-zinc-100">{previewLog.title}</div>
+                                        <div className="text-[10px] text-zinc-500 truncate">{previewLog.subject} • {previewLog.topic || 'No Topic'}</div>
+                                    </div>
+                                </motion.div>
+                            </div>
+                        )}
+                    </AnimatePresence>
+
                     {/* SIDEBAR */}
                     <div className="w-[260px] flex-shrink-0 glass-panel flex flex-col justify-between p-5 z-20 hidden md:flex transition-colors duration-300">
                         <div className="space-y-6">
@@ -489,6 +573,8 @@
                                     key={l.id} 
                                     onClick={()=>setActiveLogId(l.id)} 
                                     onContextMenu={(e) => handleContextMenu(e, l.id)}
+                                    onMouseEnter={() => handleMouseEnter(l)}
+                                    onMouseLeave={handleMouseLeave}
                                     className={`p-3.5 rounded-xl cursor-pointer border transition-all ${activeLogId===l.id ? 'bg-zinc-100 dark:bg-white/10 border-zinc-300 dark:border-white/20' : 'bg-transparent border-transparent hover:bg-zinc-50 dark:hover:bg-white/5'}`}
                                 >
                                     <div className="flex justify-between items-start mb-1"><div className="font-semibold text-sm truncate pr-2 text-zinc-800 dark:text-zinc-200 w-full">{l.title}</div>{l.mastered && <Icons.Check className="w-4 h-4 text-green-500"/>}</div>
