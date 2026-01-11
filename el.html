@@ -215,9 +215,23 @@
             const [messages, setMessages] = useState([{role: 'ai', text: "I see your failure. How can I help you understand it?"}]);
             const [input, setInput] = useState("");
             const [loading, setLoading] = useState(false);
+            const [quota, setQuota] = useState(0);
             const messagesEndRef = useRef(null);
             
             useEffect(() => { messagesEndRef.current?.scrollIntoView({ behavior: "smooth" }); }, [messages]);
+
+            // Initial Quota Fetch
+            useEffect(() => {
+                const fetchQuota = async () => {
+                    if (!user) return;
+                    const today = new Date().toISOString().split('T')[0];
+                    const ref = window.firebase.doc(window.firebase.db, 'artifacts', "darnote-app", 'users', user.uid, 'ai_usage', today);
+                    const snap = await window.firebase.getDoc(ref);
+                    if (snap.exists()) setQuota(snap.data().count || 0);
+                    else setQuota(0);
+                };
+                fetchQuota();
+            }, [user]);
             
             const checkAndIncrementQuota = async () => {
                 if (!user) return false;
@@ -239,6 +253,7 @@
                     } else {
                         await window.firebase.setDoc(ref, { count: 1 });
                     }
+                    setQuota(count + 1); // Update UI immediately
                     return true;
                 } catch (e) {
                     console.error("Quota check failed:", e);
@@ -266,7 +281,6 @@
                 // 2. Prepare Image (Fix for 400 Error)
                 let imgCtx = (activeLog.questionImages && activeLog.questionImages.length > 0) ? activeLog.questionImages[0] : (activeLog.imageUrl || null);
                 
-                // Convert URL to Base64 if needed because API chokes on URLs
                 if (imgCtx && (imgCtx.startsWith('http') || imgCtx.startsWith('https'))) {
                     try {
                         const res = await fetch(imgCtx);
@@ -282,15 +296,29 @@
                     }
                 }
 
+                // 3. Prepare Chat History (Memory)
+                const historyText = messages.slice(1).map(m => 
+                    `${m.role === 'user' ? 'Student' : 'Tutor'}: ${m.text}`
+                ).join('\n');
+
                 const context = `Subject: ${activeLog.subject}, Topic: ${activeLog.topic}, Type: ${activeLog.questionType}, Student Answer: ${activeLog.correctAnswer}, Explanation: ${activeLog.explanation}`;
-                const response = await callGemini(userMsg, `You are a tutor. Context: ${context}`, imgCtx);
+                const systemPrompt = `You are a tutor. Context: ${context}. \n\nPREVIOUS CHAT HISTORY (Do not repeat what was said, just use it for context):\n${historyText}`;
+                const fullUserPrompt = `Student's New Question: ${userMsg}`;
+
+                const response = await callGemini(fullUserPrompt, systemPrompt, imgCtx);
                 setMessages(prev => [...prev, {role: 'ai', text: response}]); 
                 setLoading(false);
             };
 
             return (
                 <div className="flex flex-col h-full bg-white dark:bg-onyx border-l border-zinc-200 dark:border-white/10 shadow-2xl">
-                    <div className="p-4 border-b border-zinc-200 dark:border-white/10 flex justify-between items-center bg-zinc-50 dark:bg-zinc-900"><span className="font-bold text-sm flex items-center gap-2"><Icons.Bot className="w-4 h-4 text-brand"/> Tutor AI</span><button onClick={onClose}><Icons.X className="w-4 h-4 hover:text-red-500"/></button></div>
+                    <div className="p-4 border-b border-zinc-200 dark:border-white/10 flex justify-between items-center bg-zinc-50 dark:bg-zinc-900">
+                        <span className="font-bold text-sm flex items-center gap-2">
+                            <Icons.Bot className="w-4 h-4 text-brand"/> 
+                            Tutor AI <span className={`text-[10px] px-1.5 py-0.5 rounded-full ${quota >= 10 ? 'bg-red-100 text-red-600' : 'bg-zinc-200 dark:bg-white/10 text-zinc-500'}`}>{quota}/10</span>
+                        </span>
+                        <button onClick={onClose}><Icons.X className="w-4 h-4 hover:text-red-500"/></button>
+                    </div>
                     <div className="flex-1 overflow-y-auto p-4 space-y-4">{messages.map((m, i) => <div key={i} className={`flex ${m.role==='user'?'justify-end':'justify-start'}`}><div className={`max-w-[85%] p-3 rounded-2xl text-sm ${m.role==='user'?'bg-brand text-white rounded-br-none':'bg-zinc-100 dark:bg-zinc-800 rounded-bl-none text-zinc-900 dark:text-zinc-200'}`} dangerouslySetInnerHTML={{ __html: marked.parse(m.text) }} /></div>)}{loading && <div className="text-xs text-zinc-500 animate-pulse pl-2">Thinking...</div>} <div ref={messagesEndRef}/></div>
                     <div className="p-4 border-t border-zinc-200 dark:border-white/10 bg-white dark:bg-zinc-900 flex gap-2"><input value={input} onChange={e=>setInput(e.target.value)} onKeyDown={e=>e.key==='Enter'&&handleSend()} className="flex-1 bg-zinc-100 dark:bg-black/30 border border-zinc-200 dark:border-white/10 rounded-full px-4 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-brand dark:text-white" placeholder="Ask Tutor..."/><button onClick={handleSend} disabled={loading} className="bg-brand text-white rounded-full p-2 hover:bg-indigo-600 disabled:opacity-50 disabled:cursor-not-allowed"><Icons.Plus className="w-4 h-4 rotate-90"/></button></div>
                 </div>
