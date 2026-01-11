@@ -76,7 +76,7 @@
         const GDRIVE_API_KEY = "AIzaSyCScFR_D0snZ6hrHob5fUQM7Y2NhK-kTIA"; 
         const GDRIVE_CLIENT_ID = "256215327792-oglegui0q8qj507oao2c2733thcl9lrc.apps.googleusercontent.com"; 
         
-        // --- PROXY URL (UPDATED) ---
+        // --- PROXY URL ---
         const GEMINI_PROXY_URL = "https://gemini-proxy-513372702506.us-central1.run.app/proxy";
 
         const { useState, useEffect, useRef, useMemo, useCallback } = React;
@@ -147,17 +147,35 @@
             } catch (error) { return `Error: ${error.message}`; }
         };
 
-        const checkAndIncrementQuota = async (user) => {
+        // --- SMART QUOTA MANAGER ---
+        const checkAndIncrementQuota = async (user, type) => {
             if (!user) return false;
+            // LIMITS CONFIG
+            const limits = { chat: 5, practice: 10, ocr: 20 };
+            const fieldMap = { chat: 'chat_count', practice: 'practice_count', ocr: 'ocr_count' };
+            
+            const limit = limits[type];
+            const field = fieldMap[type];
+            if (!limit || !field) return false;
+
             const today = new Date().toISOString().split('T')[0];
             const ref = window.firebase.doc(window.firebase.db, 'artifacts', "darnote-app", 'users', user.uid, 'ai_usage', today);
+            
             try {
                 const snap = await window.firebase.getDoc(ref);
-                let count = 0; if (snap.exists()) count = snap.data().count || 0;
-                if (count >= 10) return false;
-                if (snap.exists()) await window.firebase.updateDoc(ref, { count: window.firebase.increment(1) });
-                else await window.firebase.setDoc(ref, { count: 1 });
-                return true;
+                let count = 0; 
+                if (snap.exists()) {
+                    count = snap.data()[field] || 0;
+                }
+                
+                if (count >= limit) return false;
+                
+                if (snap.exists()) {
+                    await window.firebase.updateDoc(ref, { [field]: window.firebase.increment(1) });
+                } else {
+                    await window.firebase.setDoc(ref, { [field]: 1 }, { merge: true });
+                }
+                return count + 1; // Return new count
             } catch (e) { console.error("Quota check failed:", e); return false; }
         };
 
@@ -277,13 +295,14 @@
             const messagesEndRef = useRef(null);
             
             useEffect(() => { messagesEndRef.current?.scrollIntoView({ behavior: "smooth" }); }, [messages]);
-            useEffect(() => { const fetchQuota = async () => { if (!user) return; const today = new Date().toISOString().split('T')[0]; const ref = window.firebase.doc(window.firebase.db, 'artifacts', "darnote-app", 'users', user.uid, 'ai_usage', today); const snap = await window.firebase.getDoc(ref); if (snap.exists()) setQuota(snap.data().count || 0); else setQuota(0); }; fetchQuota(); }, [user]);
+            useEffect(() => { const fetchQuota = async () => { if (!user) return; const today = new Date().toISOString().split('T')[0]; const ref = window.firebase.doc(window.firebase.db, 'artifacts', "darnote-app", 'users', user.uid, 'ai_usage', today); const snap = await window.firebase.getDoc(ref); if (snap.exists()) setQuota(snap.data().chat_count || 0); else setQuota(0); }; fetchQuota(); }, [user]);
             
             const handleSend = async () => {
                 if(!input.trim()) return;
-                const hasQuota = await checkAndIncrementQuota(user);
+                const newQuota = await checkAndIncrementQuota(user, 'chat');
                 const userMsg = input; setMessages(prev => [...prev, {role: 'user', text: userMsg}]); setInput(""); 
-                if (!hasQuota) { setMessages(prev => [...prev, {role: 'ai', text: "🛑 **Daily Limit Reached**\n\nCome back tomorrow!"}]); return; }
+                if (newQuota === false) { setMessages(prev => [...prev, {role: 'ai', text: "🛑 **Daily Chat Limit (5/5) Reached**\n\nCome back tomorrow!"}]); return; }
+                setQuota(newQuota);
 
                 setLoading(true);
                 let imgCtx = (activeLog.questionImages && activeLog.questionImages.length > 0) ? activeLog.questionImages[0] : (activeLog.imageUrl || null);
@@ -301,13 +320,12 @@
                 let response = await callGemini(fullUserPrompt, systemPrompt, imgCtx);
                 response = cleanLatex(response); // Safety Net
                 setMessages(prev => [...prev, {role: 'ai', text: response}]); setLoading(false);
-                setQuota(prev => prev + 1);
             };
 
             return (
                 <div className="flex flex-col h-full bg-white dark:bg-onyx border-l border-zinc-200 dark:border-white/10 shadow-2xl">
                     <div className="p-4 border-b border-zinc-200 dark:border-white/10 flex justify-between items-center bg-zinc-50 dark:bg-zinc-900">
-                        <span className="font-bold text-sm flex items-center gap-2"><Icons.Bot className="w-4 h-4 text-brand"/> Tutor AI <span className="text-[10px] bg-gradient-to-r from-blue-600 to-indigo-600 text-white px-2 py-0.5 rounded shadow-sm tracking-wide">GEMINI 3</span> <span className={`text-[10px] px-1.5 py-0.5 rounded-full ${quota >= 10 ? 'bg-red-100 text-red-600' : 'bg-zinc-200 dark:bg-white/10 text-zinc-500'}`}>{quota}/10</span></span>
+                        <span className="font-bold text-sm flex items-center gap-2"><Icons.Bot className="w-4 h-4 text-brand"/> Tutor AI <span className="text-[10px] bg-gradient-to-r from-blue-600 to-indigo-600 text-white px-2 py-0.5 rounded shadow-sm tracking-wide">GEMINI 3</span> <span className={`text-[10px] px-1.5 py-0.5 rounded-full ${quota >= 5 ? 'bg-red-100 text-red-600' : 'bg-zinc-200 dark:bg-white/10 text-zinc-500'}`}>{quota}/5</span></span>
                         <button onClick={onClose}><Icons.X className="w-4 h-4 hover:text-red-500"/></button>
                     </div>
                     <div className="flex-1 overflow-y-auto p-4 space-y-4 markdown-content">{messages.map((m, i) => <div key={i} className={`flex ${m.role==='user'?'justify-end':'justify-start'}`}><div className={`max-w-[85%] p-3 rounded-2xl text-sm ${m.role==='user'?'bg-brand text-white rounded-br-none':'bg-zinc-100 dark:bg-zinc-800 rounded-bl-none text-zinc-900 dark:text-zinc-200'}`} dangerouslySetInnerHTML={{ __html: marked.parse(m.text, {breaks: true, gfm: true}) }} /></div>)}{loading && <div className="text-xs text-zinc-500 animate-pulse pl-2">Thinking...</div>} <div ref={messagesEndRef}/></div>
@@ -324,15 +342,19 @@
             const [userAnswers, setUserAnswers] = useState({}); // {0: 'A', 1: 'B'} or {partId: 'text'}
             const [marked, setMarked] = useState(false);
             const [lqFeedback, setLqFeedback] = useState(null);
+            const [quota, setQuota] = useState(0);
             
             useEffect(() => {
+                const fetchQuota = async () => { if (!user) return; const today = new Date().toISOString().split('T')[0]; const ref = window.firebase.doc(window.firebase.db, 'artifacts', "darnote-app", 'users', user.uid, 'ai_usage', today); const snap = await window.firebase.getDoc(ref); if (snap.exists()) setQuota(snap.data().practice_count || 0); else setQuota(0); }; 
+                fetchQuota();
                 generatePractice();
             }, []);
 
             const generatePractice = async () => {
                 setLoading(true);
-                const hasQuota = await checkAndIncrementQuota(user);
-                if (!hasQuota) { alert("Daily quota reached!"); onClose(); return; }
+                const newQuota = await checkAndIncrementQuota(user, 'practice');
+                if (newQuota === false) { alert("Daily Practice Limit (10/10) Reached!"); onClose(); return; }
+                setQuota(newQuota);
 
                 // Get Image
                 let imgCtx = (activeLog.questionImages && activeLog.questionImages.length > 0) ? activeLog.questionImages[0] : (activeLog.imageUrl || null);
@@ -360,9 +382,7 @@
 
             const handleLqMark = async () => {
                 setLoading(true);
-                const hasQuota = await checkAndIncrementQuota(user); // Double quota for LQ marking
-                if (!hasQuota) { alert("Daily quota reached!"); setLoading(false); return; }
-
+                // NOTE: Marking is FREE because it's part of the single interaction quota paid at generation.
                 const prompt = `Mark this student's answer. \nContext: ${lqData.context}\nParts: ${JSON.stringify(lqData.parts)}\nStudent Answers: ${JSON.stringify(userAnswers)}\n\nReturn STRICTLY JSON: {"totalScore": 5, "maxScore": 10, "generalFeedback": "...", "partFeedback": {"a": {"score": 1, "comment": "..."}, "b": {"score": 4, "comment": "..."}}}. Plain text only, NO LaTeX.`;
                 const res = await callGemini(prompt, "You are a strict examiner. Return JSON only.");
                 try {
@@ -377,7 +397,7 @@
                 <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
                     <div className="bg-white dark:bg-zinc-900 w-full max-w-2xl rounded-2xl shadow-2xl flex flex-col max-h-[85vh]">
                         <div className="p-4 border-b border-zinc-200 dark:border-white/10 flex justify-between items-center">
-                            <h3 className="font-bold flex items-center gap-2 text-lg dark:text-white"><Icons.Brain className="w-5 h-5 text-brand"/> Practice Mode: {mode}</h3>
+                            <h3 className="font-bold flex items-center gap-2 text-lg dark:text-white"><Icons.Brain className="w-5 h-5 text-brand"/> Practice Mode <span className={`text-xs ml-2 px-2 py-0.5 rounded-full ${quota >= 10 ? 'bg-red-100 text-red-600' : 'bg-zinc-100 dark:bg-white/10 text-zinc-500'}`}>{quota}/10 Today</span></h3>
                             <button onClick={onClose}><Icons.X className="w-6 h-6 text-zinc-400 hover:text-white"/></button>
                         </div>
                         
@@ -655,7 +675,13 @@
             };
 
             const handleAutoTitle = async () => {
-                if (!activeLog.questionImages?.length && !activeLog.imageUrl) { alert("Paste image first!"); return; } setIsAutoTitleLoading(true);
+                if (!activeLog.questionImages?.length && !activeLog.imageUrl) { alert("Paste image first!"); return; } 
+                
+                // OCR QUOTA CHECK
+                const newQuota = await checkAndIncrementQuota(user, 'ocr');
+                if (newQuota === false) { alert("Daily OCR/Auto-Title Limit (20/20) Reached!"); return; }
+                
+                setIsAutoTitleLoading(true);
                 try {
                     let url = activeLog.questionImages?.[0] || activeLog.imageUrl; let base64 = url;
                     if(!url.startsWith('data:')) { const res = await fetch(url); const b = await res.blob(); base64 = await new Promise(r=>{const rd=new FileReader(); rd.onload=()=>r(rd.result); rd.readAsDataURL(b);}); }
