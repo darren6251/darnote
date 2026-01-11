@@ -254,6 +254,21 @@
             );
         };
 
+        const cleanLatex = (text) => {
+            return text
+                .replace(/\$\$/g, '\n') // Block math to newline
+                .replace(/\$/g, '') // Inline math delimiters
+                .replace(/\\text\{([^}]+)\}/g, '$1') // \text{...} -> ...
+                .replace(/\\times/g, '×')
+                .replace(/\\approx/g, '≈')
+                .replace(/\\le/g, '≤')
+                .replace(/\\ge/g, '≥')
+                .replace(/\\rightarrow/g, '→')
+                .replace(/\\cdot/g, '·')
+                .replace(/\\frac\{([^}]+)\}\{([^}]+)\}/g, '($1/$2)') // \frac{a}{b} -> (a/b)
+                .replace(/\\/g, ''); // Remove remaining backslashes
+        }
+
         const AIChat = ({ activeLog, onClose, user }) => {
             const [messages, setMessages] = useState([{role: 'ai', text: "I see your failure. How can I help you understand it?"}]);
             const [input, setInput] = useState("");
@@ -280,10 +295,11 @@
                 const historyText = messages.slice(Math.max(messages.length - 6, 1)).map(m => `${m.role === 'user' ? 'Student' : 'Tutor'}: ${m.text}`).join('\n');
                 const context = `Subject: ${activeLog.subject}, Topic: ${activeLog.topic}, Type: ${activeLog.questionType}, Student Answer: ${activeLog.correctAnswer}, Explanation: ${activeLog.explanation}`;
                 // SHORT RESPONSE SYSTEM PROMPT
-                const systemPrompt = `You are a tutor. Context: ${context}. \nPREVIOUS CHAT (Last 3 turns):\n${historyText}\n\nINSTRUCTIONS:\n1. Be CONCISE (TL;DR style).\n2. Use standard MARKDOWN for tables, bolding, and lists.\n3. Put new logic/steps on new lines.\n4. Do NOT use LaTeX block syntax like \\begin{..}, use simple markdown or Unicode symbols.`;
+                const systemPrompt = `You are a tutor. Context: ${context}. \nPREVIOUS CHAT (Last 3 turns):\n${historyText}\n\nINSTRUCTIONS:\n1. Be CONCISE (TL;DR style).\n2. Use standard MARKDOWN for tables, bolding, and lists.\n3. Put new logic/steps on new lines.\n4. STRICTLY NO LaTeX or '$' signs. Use Unicode math (e.g. "θ", "×", "≈", "²"). Write formulas in plain text.`;
                 const fullUserPrompt = `Student Question: ${userMsg}`;
 
-                const response = await callGemini(fullUserPrompt, systemPrompt, imgCtx);
+                let response = await callGemini(fullUserPrompt, systemPrompt, imgCtx);
+                response = cleanLatex(response); // Safety Net
                 setMessages(prev => [...prev, {role: 'ai', text: response}]); setLoading(false);
                 setQuota(prev => prev + 1);
             };
@@ -325,14 +341,14 @@
                 }
 
                 if (mode === 'MC') {
-                    const prompt = `Generate 5 Multiple Choice Questions (ABCD) based on the concept in the image/text. Return STRICTLY a JSON array: [{"q": "Question text", "options": ["A. ...", "B. ...", "C. ...", "D. ..."], "answer": "A", "explanation": "..."}]. No Markdown.`;
+                    const prompt = `Generate 5 Multiple Choice Questions (ABCD) based on the concept in the image/text. Return STRICTLY a JSON array: [{"q": "Question text", "options": ["A. ...", "B. ...", "C. ...", "D. ..."], "answer": "A", "explanation": "..."}]. Plain text only, NO LaTeX.`;
                     const res = await callGemini(prompt, "You are a JSON generator.", imgCtx);
                     try {
                         const json = JSON.parse(res.replace(/```json|```/g, ''));
                         setQuestions(json);
                     } catch(e) { alert("AI generation failed. Try again."); onClose(); }
                 } else {
-                    const prompt = `Generate 1 structured Long Question with 3 sub-parts based on the concept. Return STRICTLY JSON: {"context": "Main question text...", "parts": [{"id": "a", "text": "Sub-question A", "marks": 2}, {"id": "b", "text": "...", "marks": 4}, {"id": "c", "text": "...", "marks": 4}]}`;
+                    const prompt = `Generate 1 structured Long Question with 3 sub-parts based on the concept. Return STRICTLY JSON: {"context": "Main question text...", "parts": [{"id": "a", "text": "Sub-question A", "marks": 2}, {"id": "b", "text": "...", "marks": 4}, {"id": "c", "text": "...", "marks": 4}]}. Plain text only, NO LaTeX.`;
                     const res = await callGemini(prompt, "You are a JSON generator.", imgCtx);
                     try {
                         const json = JSON.parse(res.replace(/```json|```/g, ''));
@@ -347,7 +363,7 @@
                 const hasQuota = await checkAndIncrementQuota(user); // Double quota for LQ marking
                 if (!hasQuota) { alert("Daily quota reached!"); setLoading(false); return; }
 
-                const prompt = `Mark this student's answer. \nContext: ${lqData.context}\nParts: ${JSON.stringify(lqData.parts)}\nStudent Answers: ${JSON.stringify(userAnswers)}\n\nReturn STRICTLY JSON: {"totalScore": 5, "maxScore": 10, "generalFeedback": "...", "partFeedback": {"a": {"score": 1, "comment": "..."}, "b": {"score": 4, "comment": "..."}}}`;
+                const prompt = `Mark this student's answer. \nContext: ${lqData.context}\nParts: ${JSON.stringify(lqData.parts)}\nStudent Answers: ${JSON.stringify(userAnswers)}\n\nReturn STRICTLY JSON: {"totalScore": 5, "maxScore": 10, "generalFeedback": "...", "partFeedback": {"a": {"score": 1, "comment": "..."}, "b": {"score": 4, "comment": "..."}}}. Plain text only, NO LaTeX.`;
                 const res = await callGemini(prompt, "You are a strict examiner. Return JSON only.");
                 try {
                     const json = JSON.parse(res.replace(/```json|```/g, ''));
