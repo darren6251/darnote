@@ -113,8 +113,25 @@
             }
             try {
                 const response = await fetch(proxyUrl, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ contents: [{ parts }] }) });
+                
+                if (!response.ok) {
+                    return `Error: API Request Failed (${response.status})`;
+                }
+
                 const data = await response.json();
-                return data.candidates?.[0]?.content?.parts?.[0]?.text || "No response generated.";
+                console.log("Gemini Raw Debug:", data); // Check Console (F12) if issues persist
+
+                if (data.error) return `API Error: ${data.error.message}`;
+                
+                const candidate = data.candidates?.[0];
+                if (!candidate) return "Error: No candidates returned (Check Console)";
+                
+                // Check if the AI stopped because of safety filters
+                if (candidate.finishReason && candidate.finishReason !== "STOP") {
+                    return `Error: Response blocked due to ${candidate.finishReason}`;
+                }
+
+                return candidate.content?.parts?.[0]?.text || "Error: Empty response text.";
             } catch (error) { return `Error: ${error.message}`; }
         };
 
