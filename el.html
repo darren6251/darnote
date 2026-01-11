@@ -113,9 +113,30 @@
             }
             try {
                 const response = await fetch(proxyUrl, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ contents: [{ parts }] }) });
+                
+                // Better Error Handling
+                if (!response.ok) {
+                    const errText = await response.text();
+                    console.error("Gemini API Error:", response.status, errText);
+                    return `Error: API request failed with status ${response.status}`;
+                }
+
                 const data = await response.json();
+                
+                // Debug if empty candidates (often triggers "No response generated")
+                if (!data.candidates || data.candidates.length === 0) {
+                    console.warn("Gemini Debug: Empty Candidates. Full Response:", data);
+                    if (data.promptFeedback && data.promptFeedback.blockReason) {
+                        return `Response blocked: ${data.promptFeedback.blockReason}`;
+                    }
+                    return "No response generated (API returned empty content).";
+                }
+
                 return data.candidates?.[0]?.content?.parts?.[0]?.text || "No response generated.";
-            } catch (error) { return `Error: ${error.message}`; }
+            } catch (error) { 
+                console.error("Gemini Fetch Error:", error);
+                return `Error: ${error.message}`; 
+            }
         };
 
         // --- GDRIVE HOOK ---
@@ -216,15 +237,57 @@
             const [input, setInput] = useState("");
             const [loading, setLoading] = useState(false);
             const messagesEndRef = useRef(null);
+            
             useEffect(() => { messagesEndRef.current?.scrollIntoView({ behavior: "smooth" }); }, [messages]);
+            
             const handleSend = async () => {
                 if(!input.trim()) return;
-                const userMsg = input; setMessages(prev => [...prev, {role: 'user', text: userMsg}]); setInput(""); setLoading(true);
+                
+                // --- QUOTA CHECK START ---
+                const db = window.firebase.db;
+                const today = new Date().toISOString().split('T')[0];
+                const usageRef = window.firebase.doc(db, 'artifacts', "darnote-app", 'users', user.uid, 'ai_usage', 'daily');
+                
+                let currentUsage = 0;
+                let allow = true;
+
+                try {
+                    const docSnap = await window.firebase.getDoc(usageRef);
+                    if (docSnap.exists()) {
+                        const data = docSnap.data();
+                        if (data.date === today) {
+                            currentUsage = data.count || 0;
+                            if (currentUsage >= 10) allow = false;
+                        }
+                    }
+                } catch(e) { console.error("Quota check failed", e); }
+
+                if (!allow) {
+                    setMessages(prev => [...prev, {role: 'user', text: input}, {role: 'ai', text: `**Daily Limit Reached**\nYou have used ${currentUsage}/10 messages today. Please come back tomorrow!`}]);
+                    setInput("");
+                    return;
+                }
+                // --- QUOTA CHECK END ---
+
+                const userMsg = input; 
+                setMessages(prev => [...prev, {role: 'user', text: userMsg}]); 
+                setInput(""); 
+                setLoading(true);
+                
                 const imgCtx = (activeLog.questionImages && activeLog.questionImages.length > 0) ? activeLog.questionImages[0] : (activeLog.imageUrl || null);
                 const context = `Subject: ${activeLog.subject}, Topic: ${activeLog.topic}, Type: ${activeLog.questionType}, Student Answer: ${activeLog.correctAnswer}, Explanation: ${activeLog.explanation}`;
+                
                 const response = await callGemini(userMsg, `You are a tutor. Context: ${context}`, imgCtx);
-                setMessages(prev => [...prev, {role: 'ai', text: response}]); setLoading(false);
+                
+                setMessages(prev => [...prev, {role: 'ai', text: response}]); 
+                setLoading(false);
+
+                // --- UPDATE QUOTA ---
+                if (!response.startsWith("Error")) {
+                    await window.firebase.setDoc(usageRef, { date: today, count: currentUsage + 1 }, { merge: true });
+                }
             };
+            
             return (
                 <div className="flex flex-col h-full bg-white dark:bg-onyx border-l border-zinc-200 dark:border-white/10 shadow-2xl">
                     <div className="p-4 border-b border-zinc-200 dark:border-white/10 flex justify-between items-center bg-zinc-50 dark:bg-zinc-900"><span className="font-bold text-sm flex items-center gap-2"><Icons.Bot className="w-4 h-4 text-brand"/> Tutor AI</span><button onClick={onClose}><Icons.X className="w-4 h-4 hover:text-red-500"/></button></div>
