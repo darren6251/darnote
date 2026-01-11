@@ -56,6 +56,14 @@
         .input-field { @apply w-full bg-zinc-50 dark:bg-zinc-900 border border-zinc-200 dark:border-white/10 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-brand transition-all shadow-sm; }
         .btn-ghost { @apply hover:bg-zinc-100 dark:hover:bg-white/5 text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white transition-colors; }
         
+        /* Markdown Styles for Chat */
+        .markdown-content table { border-collapse: collapse; width: 100%; margin: 8px 0; font-size: 0.8rem; }
+        .markdown-content th, .markdown-content td { border: 1px solid #444; padding: 4px 8px; text-align: left; }
+        .dark .markdown-content th, .dark .markdown-content td { border-color: #555; }
+        .markdown-content ul, .markdown-content ol { padding-left: 20px; margin: 4px 0; list-style: disc; }
+        .markdown-content p { margin-bottom: 8px; }
+        .markdown-content pre { background: #1a1a1a; padding: 8px; rounded: 4px; overflow-x: auto; margin: 8px 0; }
+        
         /* Context Menu Animation */
         .context-menu { animation: fadein 0.1s ease-out; }
         @keyframes fadein { from { opacity: 0; transform: scale(0.95); } to { opacity: 1; transform: scale(1); } }
@@ -67,6 +75,9 @@
         // CONFIG
         const GDRIVE_API_KEY = "AIzaSyCScFR_D0snZ6hrHob5fUQM7Y2NhK-kTIA"; 
         const GDRIVE_CLIENT_ID = "256215327792-oglegui0q8qj507oao2c2733thcl9lrc.apps.googleusercontent.com"; 
+        
+        // --- PROXY URL (UPDATED) ---
+        const GEMINI_PROXY_URL = "https://gemini-proxy-513372702506.us-central1.run.app/proxy";
 
         const { useState, useEffect, useRef, useMemo, useCallback } = React;
         const { motion, AnimatePresence } = window.Motion;
@@ -99,12 +110,13 @@
             Undo: (p) => <svg {...p} xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 7v6h6"/><path d="M21 17a9 9 0 0 0-9-9 9 9 0 0 0-6 2.3L3 13"/></svg>,
             Sort: (p) => <svg {...p} xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="12" x2="12" y1="3" y2="21"/><polyline points="8 7 12 3 16 7"/><polyline points="8 17 12 21 16 17"/></svg>,
             Copy: (p) => <svg {...p} xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect width="14" height="14" x="8" y="8" rx="2" ry="2"/><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/></svg>,
-            MoreVertical: (p) => <svg {...p} xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="1"/><circle cx="12" cy="5" r="1"/><circle cx="12" cy="19" r="1"/></svg>
+            MoreVertical: (p) => <svg {...p} xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="1"/><circle cx="12" cy="5" r="1"/><circle cx="12" cy="19" r="1"/></svg>,
+            Brain: (p) => <svg {...p} xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M9.5 2A2.5 2.5 0 0 1 12 4.5v15a2.5 2.5 0 0 1-4.96.44 2.5 2.5 0 0 1-2.96-3.08 3 3 0 0 1-.34-5.58 2.5 2.5 0 0 1 1.32-4.24 2.5 2.5 0 0 1 1.98-3A2.5 2.5 0 0 1 9.5 2Z"/><path d="M14.5 2A2.5 2.5 0 0 0 12 4.5v15a2.5 2.5 0 0 0 4.96.44 2.5 2.5 0 0 0 2.96-3.08 3 3 0 0 0 .34-5.58 2.5 2.5 0 0 0-1.32-4.24 2.5 2.5 0 0 0-1.98-3A2.5 2.5 0 0 0 14.5 2Z"/></svg>
         };
 
         // --- GEMINI PROXY ---
         const callGemini = async (prompt, systemInstruction = "", imageBase64 = null) => {
-            const proxyUrl = "https://gemini-proxy-513372702506.us-central1.run.app/proxy";
+            const proxyUrl = GEMINI_PROXY_URL;
             const parts = [{ text: `${systemInstruction}\n\nUser: ${prompt}` }];
             if (imageBase64) {
                 let mimeType = "image/png"; let data = imageBase64;
@@ -115,24 +127,38 @@
                 const response = await fetch(proxyUrl, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ contents: [{ parts }] }) });
                 
                 if (!response.ok) {
-                    return `Error: API Request Failed (${response.status})`;
+                    console.error(`Gemini Proxy Error: ${response.status} ${response.statusText}`);
+                    return `Error: API Request Failed (${response.status} - ${response.statusText})`;
                 }
 
                 const data = await response.json();
-                console.log("Gemini Raw Debug:", data); // Check Console (F12) if issues persist
+                console.log("Gemini Raw Debug:", data); 
 
                 if (data.error) return `API Error: ${data.error.message}`;
                 
                 const candidate = data.candidates?.[0];
-                if (!candidate) return "Error: No candidates returned (Check Console)";
+                if (!candidate) return "Error: No candidates returned";
                 
-                // Check if the AI stopped because of safety filters
                 if (candidate.finishReason && candidate.finishReason !== "STOP") {
                     return `Error: Response blocked due to ${candidate.finishReason}`;
                 }
 
                 return candidate.content?.parts?.[0]?.text || "Error: Empty response text.";
             } catch (error) { return `Error: ${error.message}`; }
+        };
+
+        const checkAndIncrementQuota = async (user) => {
+            if (!user) return false;
+            const today = new Date().toISOString().split('T')[0];
+            const ref = window.firebase.doc(window.firebase.db, 'artifacts', "darnote-app", 'users', user.uid, 'ai_usage', today);
+            try {
+                const snap = await window.firebase.getDoc(ref);
+                let count = 0; if (snap.exists()) count = snap.data().count || 0;
+                if (count >= 10) return false;
+                if (snap.exists()) await window.firebase.updateDoc(ref, { count: window.firebase.increment(1) });
+                else await window.firebase.setDoc(ref, { count: 1 });
+                return true;
+            } catch (e) { console.error("Quota check failed:", e); return false; }
         };
 
         // --- GDRIVE HOOK ---
@@ -236,108 +262,201 @@
             const messagesEndRef = useRef(null);
             
             useEffect(() => { messagesEndRef.current?.scrollIntoView({ behavior: "smooth" }); }, [messages]);
-
-            // Initial Quota Fetch
-            useEffect(() => {
-                const fetchQuota = async () => {
-                    if (!user) return;
-                    const today = new Date().toISOString().split('T')[0];
-                    const ref = window.firebase.doc(window.firebase.db, 'artifacts', "darnote-app", 'users', user.uid, 'ai_usage', today);
-                    const snap = await window.firebase.getDoc(ref);
-                    if (snap.exists()) setQuota(snap.data().count || 0);
-                    else setQuota(0);
-                };
-                fetchQuota();
-            }, [user]);
+            useEffect(() => { const fetchQuota = async () => { if (!user) return; const today = new Date().toISOString().split('T')[0]; const ref = window.firebase.doc(window.firebase.db, 'artifacts', "darnote-app", 'users', user.uid, 'ai_usage', today); const snap = await window.firebase.getDoc(ref); if (snap.exists()) setQuota(snap.data().count || 0); else setQuota(0); }; fetchQuota(); }, [user]);
             
-            const checkAndIncrementQuota = async () => {
-                if (!user) return false;
-                const today = new Date().toISOString().split('T')[0]; // YYYY-MM-DD
-                const db = window.firebase.db;
-                const ref = window.firebase.doc(db, 'artifacts', "darnote-app", 'users', user.uid, 'ai_usage', today);
-                
-                try {
-                    const snap = await window.firebase.getDoc(ref);
-                    let count = 0;
-                    if (snap.exists()) {
-                        count = snap.data().count || 0;
-                    }
-                    
-                    if (count >= 10) return false;
-                    
-                    if (snap.exists()) {
-                        await window.firebase.updateDoc(ref, { count: window.firebase.increment(1) });
-                    } else {
-                        await window.firebase.setDoc(ref, { count: 1 });
-                    }
-                    setQuota(count + 1); // Update UI immediately
-                    return true;
-                } catch (e) {
-                    console.error("Quota check failed:", e);
-                    return false; // Fail safe
-                }
-            };
-
             const handleSend = async () => {
                 if(!input.trim()) return;
-                
-                // 1. Check Quota
-                const hasQuota = await checkAndIncrementQuota();
-                
-                const userMsg = input; 
-                setMessages(prev => [...prev, {role: 'user', text: userMsg}]); 
-                setInput(""); 
-                
-                if (!hasQuota) {
-                     setMessages(prev => [...prev, {role: 'ai', text: "🛑 **Daily Limit Reached**\n\nYou have used your 10 free AI interactions for today. The brain cells need a nap. Come back tomorrow!"}]);
-                     return;
-                }
+                const hasQuota = await checkAndIncrementQuota(user);
+                const userMsg = input; setMessages(prev => [...prev, {role: 'user', text: userMsg}]); setInput(""); 
+                if (!hasQuota) { setMessages(prev => [...prev, {role: 'ai', text: "🛑 **Daily Limit Reached**\n\nCome back tomorrow!"}]); return; }
 
                 setLoading(true);
-
-                // 2. Prepare Image (Fix for 400 Error)
                 let imgCtx = (activeLog.questionImages && activeLog.questionImages.length > 0) ? activeLog.questionImages[0] : (activeLog.imageUrl || null);
                 
                 if (imgCtx && (imgCtx.startsWith('http') || imgCtx.startsWith('https'))) {
-                    try {
-                        const res = await fetch(imgCtx);
-                        const blob = await res.blob();
-                        imgCtx = await new Promise((resolve) => {
-                            const reader = new FileReader();
-                            reader.onloadend = () => resolve(reader.result);
-                            reader.readAsDataURL(blob);
-                        });
-                    } catch (e) {
-                        console.error("Image conversion failed, sending text only", e);
-                        imgCtx = null;
-                    }
+                    try { const res = await fetch(imgCtx); const blob = await res.blob(); imgCtx = await new Promise((resolve) => { const reader = new FileReader(); reader.onloadend = () => resolve(reader.result); reader.readAsDataURL(blob); }); } catch (e) { console.error("Image conversion failed", e); imgCtx = null; }
                 }
 
-                // 3. Prepare Chat History (Memory)
-                const historyText = messages.slice(1).map(m => 
-                    `${m.role === 'user' ? 'Student' : 'Tutor'}: ${m.text}`
-                ).join('\n');
-
+                const historyText = messages.slice(Math.max(messages.length - 6, 1)).map(m => `${m.role === 'user' ? 'Student' : 'Tutor'}: ${m.text}`).join('\n');
                 const context = `Subject: ${activeLog.subject}, Topic: ${activeLog.topic}, Type: ${activeLog.questionType}, Student Answer: ${activeLog.correctAnswer}, Explanation: ${activeLog.explanation}`;
-                const systemPrompt = `You are a tutor. Context: ${context}. \n\nPREVIOUS CHAT HISTORY (Do not repeat what was said, just use it for context):\n${historyText}`;
-                const fullUserPrompt = `Student's New Question: ${userMsg}`;
+                // SHORT RESPONSE SYSTEM PROMPT
+                const systemPrompt = `You are a tutor. Context: ${context}. \nPREVIOUS CHAT (Last 3 turns):\n${historyText}\n\nINSTRUCTIONS:\n1. Be CONCISE (TL;DR style).\n2. Use standard MARKDOWN for tables, bolding, and lists.\n3. Put new logic/steps on new lines.\n4. Do NOT use LaTeX block syntax like \\begin{..}, use simple markdown or Unicode symbols.`;
+                const fullUserPrompt = `Student Question: ${userMsg}`;
 
                 const response = await callGemini(fullUserPrompt, systemPrompt, imgCtx);
-                setMessages(prev => [...prev, {role: 'ai', text: response}]); 
-                setLoading(false);
+                setMessages(prev => [...prev, {role: 'ai', text: response}]); setLoading(false);
+                setQuota(prev => prev + 1);
             };
 
             return (
                 <div className="flex flex-col h-full bg-white dark:bg-onyx border-l border-zinc-200 dark:border-white/10 shadow-2xl">
                     <div className="p-4 border-b border-zinc-200 dark:border-white/10 flex justify-between items-center bg-zinc-50 dark:bg-zinc-900">
-                        <span className="font-bold text-sm flex items-center gap-2">
-                            <Icons.Bot className="w-4 h-4 text-brand"/> 
-                            Tutor AI <span className="text-[10px] bg-gradient-to-r from-blue-600 to-indigo-600 text-white px-2 py-0.5 rounded shadow-sm tracking-wide">GEMINI 3</span> <span className={`text-[10px] px-1.5 py-0.5 rounded-full ${quota >= 10 ? 'bg-red-100 text-red-600' : 'bg-zinc-200 dark:bg-white/10 text-zinc-500'}`}>{quota}/10</span>
-                        </span>
+                        <span className="font-bold text-sm flex items-center gap-2"><Icons.Bot className="w-4 h-4 text-brand"/> Tutor AI <span className="text-[10px] bg-gradient-to-r from-blue-600 to-indigo-600 text-white px-2 py-0.5 rounded shadow-sm tracking-wide">GEMINI 3</span> <span className={`text-[10px] px-1.5 py-0.5 rounded-full ${quota >= 10 ? 'bg-red-100 text-red-600' : 'bg-zinc-200 dark:bg-white/10 text-zinc-500'}`}>{quota}/10</span></span>
                         <button onClick={onClose}><Icons.X className="w-4 h-4 hover:text-red-500"/></button>
                     </div>
-                    <div className="flex-1 overflow-y-auto p-4 space-y-4">{messages.map((m, i) => <div key={i} className={`flex ${m.role==='user'?'justify-end':'justify-start'}`}><div className={`max-w-[85%] p-3 rounded-2xl text-sm ${m.role==='user'?'bg-brand text-white rounded-br-none':'bg-zinc-100 dark:bg-zinc-800 rounded-bl-none text-zinc-900 dark:text-zinc-200'}`} dangerouslySetInnerHTML={{ __html: marked.parse(m.text) }} /></div>)}{loading && <div className="text-xs text-zinc-500 animate-pulse pl-2">Thinking...</div>} <div ref={messagesEndRef}/></div>
+                    <div className="flex-1 overflow-y-auto p-4 space-y-4 markdown-content">{messages.map((m, i) => <div key={i} className={`flex ${m.role==='user'?'justify-end':'justify-start'}`}><div className={`max-w-[85%] p-3 rounded-2xl text-sm ${m.role==='user'?'bg-brand text-white rounded-br-none':'bg-zinc-100 dark:bg-zinc-800 rounded-bl-none text-zinc-900 dark:text-zinc-200'}`} dangerouslySetInnerHTML={{ __html: marked.parse(m.text, {breaks: true, gfm: true}) }} /></div>)}{loading && <div className="text-xs text-zinc-500 animate-pulse pl-2">Thinking...</div>} <div ref={messagesEndRef}/></div>
                     <div className="p-4 border-t border-zinc-200 dark:border-white/10 bg-white dark:bg-zinc-900 flex gap-2"><input value={input} onChange={e=>setInput(e.target.value)} onKeyDown={e=>e.key==='Enter'&&handleSend()} className="flex-1 bg-zinc-100 dark:bg-black/30 border border-zinc-200 dark:border-white/10 rounded-full px-4 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-brand dark:text-white" placeholder="Ask Tutor..."/><button onClick={handleSend} disabled={loading} className="bg-brand text-white rounded-full p-2 hover:bg-indigo-600 disabled:opacity-50 disabled:cursor-not-allowed"><Icons.Plus className="w-4 h-4 rotate-90"/></button></div>
+                </div>
+            );
+        };
+
+        const PracticeModal = ({ activeLog, onClose, user }) => {
+            const [loading, setLoading] = useState(true);
+            const [mode, setMode] = useState(activeLog.questionType || 'MC'); // MC or LQ
+            const [questions, setQuestions] = useState([]); // For MC
+            const [lqData, setLqData] = useState(null); // For LQ {context, parts:[]}
+            const [userAnswers, setUserAnswers] = useState({}); // {0: 'A', 1: 'B'} or {partId: 'text'}
+            const [marked, setMarked] = useState(false);
+            const [lqFeedback, setLqFeedback] = useState(null);
+            
+            useEffect(() => {
+                generatePractice();
+            }, []);
+
+            const generatePractice = async () => {
+                setLoading(true);
+                const hasQuota = await checkAndIncrementQuota(user);
+                if (!hasQuota) { alert("Daily quota reached!"); onClose(); return; }
+
+                // Get Image
+                let imgCtx = (activeLog.questionImages && activeLog.questionImages.length > 0) ? activeLog.questionImages[0] : (activeLog.imageUrl || null);
+                if (imgCtx && (imgCtx.startsWith('http') || imgCtx.startsWith('https'))) {
+                    try { const res = await fetch(imgCtx); const blob = await res.blob(); imgCtx = await new Promise((r) => { const reader = new FileReader(); reader.onloadend = () => r(reader.result); reader.readAsDataURL(blob); }); } catch (e) { console.error(e); imgCtx = null; }
+                }
+
+                if (mode === 'MC') {
+                    const prompt = `Generate 5 Multiple Choice Questions (ABCD) based on the concept in the image/text. Return STRICTLY a JSON array: [{"q": "Question text", "options": ["A. ...", "B. ...", "C. ...", "D. ..."], "answer": "A", "explanation": "..."}]. No Markdown.`;
+                    const res = await callGemini(prompt, "You are a JSON generator.", imgCtx);
+                    try {
+                        const json = JSON.parse(res.replace(/```json|```/g, ''));
+                        setQuestions(json);
+                    } catch(e) { alert("AI generation failed. Try again."); onClose(); }
+                } else {
+                    const prompt = `Generate 1 structured Long Question with 3 sub-parts based on the concept. Return STRICTLY JSON: {"context": "Main question text...", "parts": [{"id": "a", "text": "Sub-question A", "marks": 2}, {"id": "b", "text": "...", "marks": 4}, {"id": "c", "text": "...", "marks": 4}]}`;
+                    const res = await callGemini(prompt, "You are a JSON generator.", imgCtx);
+                    try {
+                        const json = JSON.parse(res.replace(/```json|```/g, ''));
+                        setLqData(json);
+                    } catch(e) { alert("AI generation failed. Try again."); onClose(); }
+                }
+                setLoading(false);
+            };
+
+            const handleLqMark = async () => {
+                setLoading(true);
+                const hasQuota = await checkAndIncrementQuota(user); // Double quota for LQ marking
+                if (!hasQuota) { alert("Daily quota reached!"); setLoading(false); return; }
+
+                const prompt = `Mark this student's answer. \nContext: ${lqData.context}\nParts: ${JSON.stringify(lqData.parts)}\nStudent Answers: ${JSON.stringify(userAnswers)}\n\nReturn STRICTLY JSON: {"totalScore": 5, "maxScore": 10, "generalFeedback": "...", "partFeedback": {"a": {"score": 1, "comment": "..."}, "b": {"score": 4, "comment": "..."}}}`;
+                const res = await callGemini(prompt, "You are a strict examiner. Return JSON only.");
+                try {
+                    const json = JSON.parse(res.replace(/```json|```/g, ''));
+                    setLqFeedback(json);
+                    setMarked(true);
+                } catch(e) { alert("Marking failed."); }
+                setLoading(false);
+            };
+
+            return (
+                <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
+                    <div className="bg-white dark:bg-zinc-900 w-full max-w-2xl rounded-2xl shadow-2xl flex flex-col max-h-[85vh]">
+                        <div className="p-4 border-b border-zinc-200 dark:border-white/10 flex justify-between items-center">
+                            <h3 className="font-bold flex items-center gap-2 text-lg dark:text-white"><Icons.Brain className="w-5 h-5 text-brand"/> Practice Mode: {mode}</h3>
+                            <button onClick={onClose}><Icons.X className="w-6 h-6 text-zinc-400 hover:text-white"/></button>
+                        </div>
+                        
+                        <div className="flex-1 overflow-y-auto p-6 space-y-6">
+                            {loading ? (
+                                <div className="flex flex-col items-center justify-center py-10 space-y-4">
+                                    <div className="w-10 h-10 border-4 border-brand border-t-transparent rounded-full animate-spin"></div>
+                                    <p className="text-zinc-500 animate-pulse">Gemini 3 is crafting your drill...</p>
+                                </div>
+                            ) : mode === 'MC' ? (
+                                <div className="space-y-8">
+                                    {questions.map((q, idx) => (
+                                        <div key={idx} className="space-y-3">
+                                            <div className="font-semibold text-zinc-900 dark:text-zinc-100">{idx+1}. {q.q}</div>
+                                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                                                {q.options.map((opt) => {
+                                                    const letter = opt.charAt(0);
+                                                    const isSelected = userAnswers[idx] === letter;
+                                                    const isCorrect = q.answer === letter;
+                                                    let bg = "bg-zinc-50 dark:bg-white/5 border-zinc-200 dark:border-white/10 hover:border-brand";
+                                                    
+                                                    if (marked) {
+                                                        if (isCorrect) bg = "bg-green-500/20 border-green-500";
+                                                        else if (isSelected) bg = "bg-red-500/20 border-red-500";
+                                                    } else if (isSelected) {
+                                                        bg = "bg-brand/10 border-brand";
+                                                    }
+
+                                                    return (
+                                                        <button key={opt} onClick={() => !marked && setUserAnswers({...userAnswers, [idx]: letter})} className={`text-left p-3 rounded-lg border text-sm transition-all dark:text-zinc-300 ${bg}`}>
+                                                            {opt}
+                                                        </button>
+                                                    );
+                                                })}
+                                            </div>
+                                            {marked && (
+                                                <div className="text-xs p-3 rounded bg-zinc-100 dark:bg-white/5 text-zinc-600 dark:text-zinc-400">
+                                                    <span className="font-bold">Explanation:</span> {q.explanation}
+                                                </div>
+                                            )}
+                                        </div>
+                                    ))}
+                                </div>
+                            ) : (
+                                lqData && (
+                                    <div className="space-y-6">
+                                        <div className="p-4 bg-zinc-50 dark:bg-white/5 rounded-lg text-zinc-800 dark:text-zinc-200 font-medium">
+                                            {lqData.context}
+                                        </div>
+                                        {lqData.parts.map((part) => (
+                                            <div key={part.id} className="space-y-2">
+                                                <div className="flex justify-between text-sm">
+                                                    <span className="font-bold dark:text-white">({part.id}) {part.text}</span>
+                                                    <span className="text-zinc-500">[{part.marks} marks]</span>
+                                                </div>
+                                                <textarea 
+                                                    value={userAnswers[part.id] || ''} 
+                                                    onChange={e => setUserAnswers({...userAnswers, [part.id]: e.target.value})}
+                                                    disabled={marked}
+                                                    className="w-full bg-transparent border border-zinc-200 dark:border-white/10 rounded-lg p-3 text-sm focus:ring-1 focus:ring-brand outline-none dark:text-white"
+                                                    rows="3"
+                                                    placeholder="Type your answer here..."
+                                                />
+                                                {marked && lqFeedback?.partFeedback[part.id] && (
+                                                    <div className={`text-xs p-2 rounded flex justify-between ${lqFeedback.partFeedback[part.id].score === part.marks ? 'bg-green-500/10 text-green-500' : 'bg-red-500/10 text-red-400'}`}>
+                                                        <span>{lqFeedback.partFeedback[part.id].comment}</span>
+                                                        <span className="font-bold">{lqFeedback.partFeedback[part.id].score}/{part.marks}</span>
+                                                    </div>
+                                                )}
+                                            </div>
+                                        ))}
+                                        {marked && (
+                                            <div className="p-4 rounded-lg bg-brand/10 border border-brand/20 text-center">
+                                                <div className="text-2xl font-bold text-brand">{lqFeedback.totalScore} / {lqFeedback.maxScore}</div>
+                                                <div className="text-sm text-brand/80">{lqFeedback.generalFeedback}</div>
+                                            </div>
+                                        )}
+                                    </div>
+                                )
+                            )}
+                        </div>
+
+                        <div className="p-4 border-t border-zinc-200 dark:border-white/10 bg-zinc-50 dark:bg-zinc-900/50 flex justify-end gap-3 rounded-b-2xl">
+                            {!marked ? (
+                                <button 
+                                    onClick={() => mode === 'MC' ? setMarked(true) : handleLqMark()} 
+                                    className="px-6 py-2 bg-brand text-white font-bold rounded-lg hover:bg-indigo-600 transition-colors shadow-lg"
+                                >
+                                    {mode === 'MC' ? 'Check Answers' : 'Submit for Grading'}
+                                </button>
+                            ) : (
+                                <button onClick={onClose} className="px-6 py-2 bg-zinc-200 dark:bg-white/10 text-zinc-900 dark:text-white font-bold rounded-lg hover:bg-zinc-300 transition-colors">Close</button>
+                            )}
+                        </div>
+                    </div>
                 </div>
             );
         };
@@ -367,6 +486,10 @@
             const [isDarkMode, setIsDarkMode] = useState(true);
             const [isAutoTitleLoading, setIsAutoTitleLoading] = useState(false);
             const [isLoadingLogs, setIsLoadingLogs] = useState(false);
+            
+            // Practice Mode State
+            const [isPracticeOpen, setIsPracticeOpen] = useState(false);
+
             const { saveToDrive } = useGoogleDrive();
             
             // Upload States
@@ -428,34 +551,22 @@
                     } else if (sortBy.startsWith('type')) {
                         const typeDir = sortBy === 'type-mc' ? 'desc' : 'asc';
                         try {
-                            // Attempt complex server-side sort
                            let complexQ = window.firebase.query(logsRef, window.firebase.orderBy('questionType', typeDir), window.firebase.orderBy('createdAt', 'desc'));
                            if (isLoadMore && lastDoc) complexQ = window.firebase.query(complexQ, window.firebase.startAfter(lastDoc), window.firebase.limit(10));
                            else complexQ = window.firebase.query(complexQ, window.firebase.limit(10));
                            q = complexQ;
-                        } catch(e) {
-                           // This block might not catch firestore index errors as those happen at getDocs
-                           fallbackSort = true;
-                        }
+                        } catch(e) { fallbackSort = true; }
                     }
 
-                    // Execution
                     let snapshot;
-                    try {
-                        snapshot = await window.firebase.getDocs(q);
-                    } catch (error) {
-                        // Catch missing index error here
+                    try { snapshot = await window.firebase.getDocs(q); } catch (error) {
                         if (error.code === 'failed-precondition' || error.message.includes('index')) {
-                            console.warn("Firestore index missing for sort. Falling back to client-side sort.");
                             fallbackSort = true;
-                            // Fallback: Just fetch by Date Descending
                             q = window.firebase.query(logsRef, window.firebase.orderBy('createdAt', 'desc'));
                             if (isLoadMore && lastDoc) q = window.firebase.query(q, window.firebase.startAfter(lastDoc), window.firebase.limit(10));
                             else q = window.firebase.query(q, window.firebase.limit(10));
                             snapshot = await window.firebase.getDocs(q);
-                        } else {
-                            throw error;
-                        }
+                        } else { throw error; }
                     }
 
                     const newLogs = snapshot.docs.map(d => {
@@ -463,33 +574,21 @@
                         return { id: d.id, ...data, questionImages: data.questionImages || (data.imageUrl ? [data.imageUrl] : []), schemeImages: data.schemeImages || (data.markingSchemeUrl ? [data.markingSchemeUrl] : []) };
                     });
 
-                    // Client Side Sort if Index Failed
                     if (fallbackSort && sortBy.startsWith('type')) {
                         newLogs.sort((a, b) => {
-                            const tA = (a.questionType || '').toLowerCase();
-                            const tB = (b.questionType || '').toLowerCase();
-                            if (sortBy === 'type-mc') return tB.localeCompare(tA); // MC ('m') > LQ ('l'), so Desc puts MC first
-                            return tA.localeCompare(tB); // LQ first
+                            const tA = (a.questionType || '').toLowerCase(); const tB = (b.questionType || '').toLowerCase();
+                            if (sortBy === 'type-mc') return tB.localeCompare(tA); return tA.localeCompare(tB); 
                         });
                     }
 
-                    if (isLoadMore) setLogs(prev => [...prev, ...newLogs]);
-                    else setLogs(newLogs);
-
-                    setLastDoc(snapshot.docs[snapshot.docs.length - 1]);
-                    setHasMore(snapshot.docs.length === 10);
+                    if (isLoadMore) setLogs(prev => [...prev, ...newLogs]); else setLogs(newLogs);
+                    setLastDoc(snapshot.docs[snapshot.docs.length - 1]); setHasMore(snapshot.docs.length === 10);
                 } catch(e) { console.error("Fetch Error", e); }
                 setIsLoadingLogs(false);
             };
 
             // Trigger re-fetch on sort
-            useEffect(() => { 
-                if(user) {
-                    setLastDoc(null); // Reset pagination
-                    setLogs([]); // Clear for visual clarity
-                    fetchLogs(false); 
-                }
-            }, [sortBy]);
+            useEffect(() => { if(user) { setLastDoc(null); setLogs([]); fetchLogs(false); } }, [sortBy]);
 
             const createLog = async () => {
                 const newLog = { title: 'Untitled Mistake', subject: 'General', topic: '', questionImages: [], schemeImages: [], questionType: 'MC', correctAnswer: '', marks: '', explanation: '', mastered: false, createdAt: new Date().toISOString(), lastModified: new Date().toISOString() };
@@ -512,48 +611,15 @@
                 }, 10000);
             };
 
-            // CONTEXT MENU ACTIONS
             const handleContextMenu = (e, logId) => { e.preventDefault(); setContextMenu({ visible: true, x: e.clientX, y: e.clientY, logId }); };
-            
-            const handleDuplicate = async (id) => {
-                const original = logs.find(l => l.id === id);
-                if (!original) return;
-                const { id: _, ...data } = original;
-                const newLog = { ...data, title: `${data.title} (Copy)`, createdAt: new Date().toISOString(), lastModified: new Date().toISOString() };
-                const docRef = await window.firebase.addDoc(window.firebase.collection(window.firebase.db, 'artifacts', "darnote-app", 'users', user.uid, 'error_logs'), newLog);
-                setLogs(prev => [{...newLog, id: docRef.id}, ...prev]);
-            };
-
-            const handleDelete = async (id) => {
-                if(!confirm("Delete this log permanently?")) return;
-                setLogs(prev => prev.filter(l => l.id !== id));
-                if (activeLogId === id) setActiveLogId(null);
-                await window.firebase.deleteDoc(window.firebase.doc(window.firebase.db, 'artifacts', "darnote-app", 'users', user.uid, 'error_logs', id));
-            };
-
-            const handleCopy = (id) => {
-                const original = logs.find(l => l.id === id);
-                if (original) navigator.clipboard.writeText(JSON.stringify(original));
-            };
-
-            const handlePaste = async () => {
-                try {
-                    const text = await navigator.clipboard.readText();
-                    const data = JSON.parse(text);
-                    if (data.title && data.createdAt) { // Basic validation
-                        const { id, ...cleanData } = data;
-                        const newLog = { ...cleanData, title: `${cleanData.title} (Pasted)`, createdAt: new Date().toISOString(), lastModified: new Date().toISOString() };
-                        const docRef = await window.firebase.addDoc(window.firebase.collection(window.firebase.db, 'artifacts', "darnote-app", 'users', user.uid, 'error_logs'), newLog);
-                        setLogs(prev => [{...newLog, id: docRef.id}, ...prev]);
-                    }
-                } catch(e) { alert("Invalid log data in clipboard"); }
-            };
+            const handleDuplicate = async (id) => { const original = logs.find(l => l.id === id); if (!original) return; const { id: _, ...data } = original; const newLog = { ...data, title: `${data.title} (Copy)`, createdAt: new Date().toISOString(), lastModified: new Date().toISOString() }; const docRef = await window.firebase.addDoc(window.firebase.collection(window.firebase.db, 'artifacts', "darnote-app", 'users', user.uid, 'error_logs'), newLog); setLogs(prev => [{...newLog, id: docRef.id}, ...prev]); };
+            const handleDelete = async (id) => { if(!confirm("Delete this log permanently?")) return; setLogs(prev => prev.filter(l => l.id !== id)); if (activeLogId === id) setActiveLogId(null); await window.firebase.deleteDoc(window.firebase.doc(window.firebase.db, 'artifacts', "darnote-app", 'users', user.uid, 'error_logs', id)); };
+            const handleCopy = (id) => { const original = logs.find(l => l.id === id); if (original) navigator.clipboard.writeText(JSON.stringify(original)); };
+            const handlePaste = async () => { try { const text = await navigator.clipboard.readText(); const data = JSON.parse(text); if (data.title && data.createdAt) { const { id, ...cleanData } = data; const newLog = { ...cleanData, title: `${cleanData.title} (Pasted)`, createdAt: new Date().toISOString(), lastModified: new Date().toISOString() }; const docRef = await window.firebase.addDoc(window.firebase.collection(window.firebase.db, 'artifacts', "darnote-app", 'users', user.uid, 'error_logs'), newLog); setLogs(prev => [{...newLog, id: docRef.id}, ...prev]); } } catch(e) { alert("Invalid log data in clipboard"); } };
 
             const addTopicToSubject = async (subjectName) => {
-                const subjectDoc = subjects.find(s => s.name === subjectName);
-                if (!subjectDoc) { alert("Cannot add topic to General."); return; }
-                const newTopic = prompt(`Add topic for ${subjectName}:`);
-                if (!newTopic) return;
+                const subjectDoc = subjects.find(s => s.name === subjectName); if (!subjectDoc) { alert("Cannot add topic to General."); return; }
+                const newTopic = prompt(`Add topic for ${subjectName}:`); if (!newTopic) return;
                 setSubjects(prev => prev.map(s => s.id === subjectDoc.id ? {...s, topics: [...s.topics, newTopic]} : s));
                 const docRef = window.firebase.doc(window.firebase.db, 'artifacts', 'darnote-app', 'users', user.uid, 'subjects', subjectDoc.id);
                 await window.firebase.updateDoc(docRef, { topics: window.firebase.arrayUnion(newTopic) });
@@ -582,19 +648,8 @@
                 } catch(e) { alert("OCR Failed"); } setIsAutoTitleLoading(false);
             }
 
-            // --- HOVER PREVIEW ---
-            const handleMouseEnter = (log) => {
-                if (hoverTimeoutRef.current) clearTimeout(hoverTimeoutRef.current);
-                hoverTimeoutRef.current = setTimeout(() => {
-                    const img = (log.questionImages && log.questionImages.length > 0) ? log.questionImages[0] : log.imageUrl;
-                    if (img) setPreviewLog(log);
-                }, 600); // 0.6s delay
-            };
-
-            const handleMouseLeave = () => {
-                if (hoverTimeoutRef.current) clearTimeout(hoverTimeoutRef.current);
-                setPreviewLog(null);
-            };
+            const handleMouseEnter = (log) => { if (hoverTimeoutRef.current) clearTimeout(hoverTimeoutRef.current); hoverTimeoutRef.current = setTimeout(() => { const img = (log.questionImages && log.questionImages.length > 0) ? log.questionImages[0] : log.imageUrl; if (img) setPreviewLog(log); }, 600); };
+            const handleMouseLeave = () => { if (hoverTimeoutRef.current) clearTimeout(hoverTimeoutRef.current); setPreviewLog(null); };
 
             const activeLog = logs.find(l => l.id === activeLogId);
             const filteredLogs = logs.filter(l => {
@@ -621,23 +676,12 @@
                         {previewLog && (
                             <div className="fixed z-[100] top-0 bottom-0 left-[340px] md:left-[600px] pointer-events-none flex flex-col justify-center p-4">
                                 <motion.div 
-                                    initial={{ opacity: 0, x: -20, scale: 0.95 }} 
-                                    animate={{ opacity: 1, x: 0, scale: 1 }} 
-                                    exit={{ opacity: 0, scale: 0.95 }}
+                                    initial={{ opacity: 0, x: -20, scale: 0.95 }} animate={{ opacity: 1, x: 0, scale: 1 }} exit={{ opacity: 0, scale: 0.95 }}
                                     className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-white/10 rounded-xl shadow-2xl p-2 max-w-lg max-h-[80vh] overflow-hidden flex flex-col"
                                 >
-                                    <div className="text-[10px] font-bold px-2 py-1 text-zinc-400 uppercase tracking-wider flex justify-between">
-                                        <span>Quick Preview</span>
-                                        <span className={previewLog.questionType === 'MC' ? 'text-indigo-500' : 'text-orange-500'}>{previewLog.questionType}</span>
-                                    </div>
-                                    <img 
-                                        src={previewLog.questionImages?.[0] || previewLog.imageUrl} 
-                                        className="rounded-lg object-contain max-h-[60vh] bg-zinc-100 dark:bg-black/50" 
-                                    />
-                                    <div className="mt-2 px-2 pb-1">
-                                        <div className="font-bold text-sm truncate text-zinc-900 dark:text-zinc-100">{previewLog.title}</div>
-                                        <div className="text-[10px] text-zinc-500 truncate">{previewLog.subject} • {previewLog.topic || 'No Topic'}</div>
-                                    </div>
+                                    <div className="text-[10px] font-bold px-2 py-1 text-zinc-400 uppercase tracking-wider flex justify-between"><span>Quick Preview</span><span className={previewLog.questionType === 'MC' ? 'text-indigo-500' : 'text-orange-500'}>{previewLog.questionType}</span></div>
+                                    <img src={previewLog.questionImages?.[0] || previewLog.imageUrl} className="rounded-lg object-contain max-h-[60vh] bg-zinc-100 dark:bg-black/50" />
+                                    <div className="mt-2 px-2 pb-1"><div className="font-bold text-sm truncate text-zinc-900 dark:text-zinc-100">{previewLog.title}</div><div className="text-[10px] text-zinc-500 truncate">{previewLog.subject} • {previewLog.topic || 'No Topic'}</div></div>
                                 </motion.div>
                             </div>
                         )}
@@ -707,6 +751,11 @@
                                     <div className="flex-1 flex items-center gap-2 mr-4">
                                         <input value={activeLog.title} onChange={e=>updateLog(activeLog.id, {title:e.target.value})} className="bg-transparent text-xl font-bold outline-none w-full text-zinc-900 dark:text-white placeholder-zinc-400" placeholder="Untitled Mistake"/>
                                         <button onClick={handleAutoTitle} disabled={isAutoTitleLoading || (!activeLog.questionImages?.length && !activeLog.imageUrl)} className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${isAutoTitleLoading ? 'bg-indigo-100 text-indigo-500 animate-pulse' : 'bg-zinc-100 dark:bg-white/10 text-zinc-600 dark:text-zinc-400 hover:bg-brand hover:text-white'}`}>{isAutoTitleLoading ? <div className="w-3 h-3 border-2 border-current border-t-transparent rounded-full animate-spin"/> : <><Icons.Scan className="w-3 h-3"/><span className="hidden sm:inline">Auto-Title</span></>}</button>
+                                        
+                                        {/* NEW PRACTICE BUTTON */}
+                                        <button onClick={() => setIsPracticeOpen(true)} className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold bg-zinc-100 dark:bg-white/10 text-zinc-600 dark:text-zinc-400 hover:bg-orange-500 hover:text-white transition-all ml-1" title="Generate Drill Questions">
+                                            <Icons.Brain className="w-3 h-3"/> <span className="hidden sm:inline">Practice</span>
+                                        </button>
                                     </div>
                                     <div className="flex items-center gap-3">
                                         <button onClick={()=>updateLog(activeLog.id, {mastered: !activeLog.mastered})} className={`px-4 py-1.5 rounded-full text-xs font-bold border transition-all ${activeLog.mastered ? 'bg-green-500/10 border-green-500 text-green-600' : 'bg-red-500/10 border-red-500 text-red-600'}`}>{activeLog.mastered ? 'Mastered' : 'Needs Review'}</button>
@@ -757,6 +806,9 @@
                             </div>
                         )}
                         <AnimatePresence>{isAiOpen && activeLog && user && (<div className="absolute top-0 right-0 bottom-0 w-[400px] z-30"><AIChat activeLog={activeLog} onClose={()=>setIsAiOpen(false)} user={user}/></div>)}</AnimatePresence>
+                        
+                        {/* PRACTICE MODAL */}
+                        {isPracticeOpen && activeLog && <PracticeModal activeLog={activeLog} onClose={() => setIsPracticeOpen(false)} user={user} />}
                     </main>
                 </div>
             );
