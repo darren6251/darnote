@@ -33,7 +33,12 @@
     <div id="root"></div>
     <script type="text/babel">
         const GDRIVE_API_KEY="AIzaSyCScFR_D0snZ6hrHob5fUQM7Y2NhK-kTIA",GDRIVE_CLIENT_ID="256215327792-oglegui0q8qj507oao2c2733thcl9lrc.apps.googleusercontent.com"; 
+        
+        // --- UPDATED PROXY ---
+        const GEMINI_PROXY_URL = "https://gemini-proxy-513372702506.us-central1.run.app/proxy";
+
         const {useState,useEffect,useRef,useMemo}=React,{motion,AnimatePresence}=window.Motion;
+        
         const Icons={
             Home:p=><svg {...p} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>,
             Book:p=><svg {...p} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>,
@@ -49,15 +54,49 @@
             Lock:p=><svg {...p} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>,
             Sun:p=><svg {...p} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>,
             Moon:p=><svg {...p} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>,
-            Sort:p=><svg {...p} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><polyline points="19 12 12 19 5 12"/></svg>
+            Sort:p=><svg {...p} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><polyline points="19 12 12 19 5 12"/></svg>,
+            Brain: p=><svg {...p} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M9.5 2A2.5 2.5 0 0 1 12 4.5v15a2.5 2.5 0 0 1-4.96.44 2.5 2.5 0 0 1-2.96-3.08 3 3 0 0 1-.34-5.58 2.5 2.5 0 0 1 1.32-4.24 2.5 2.5 0 0 1 1.98-3A2.5 2.5 0 0 1 9.5 2Z"/><path d="M14.5 2A2.5 2.5 0 0 0 12 4.5v15a2.5 2.5 0 0 0 4.96.44 2.5 2.5 0 0 0 2.96-3.08 3 3 0 0 0 .34-5.58 2.5 2.5 0 0 0-1.32-4.24 2.5 2.5 0 0 0-1.98-3A2.5 2.5 0 0 0 14.5 2Z"/></svg>
         };
 
-        const callGemini = async (prompt, sys="") => {
+        const callGemini = async (prompt, sys="", imageBase64=null) => {
+            const proxyUrl = GEMINI_PROXY_URL;
+            const parts = [{ text: `${sys}\n\nUser: ${prompt}` }];
+            if (imageBase64) {
+                let mimeType = "image/png"; let data = imageBase64;
+                if (imageBase64.includes(",")) { const s = imageBase64.split(","); mimeType = s[0].match(/:(.*?);/)[1]; data = s[1]; }
+                parts.push({ inlineData: { mimeType, data } });
+            }
             try {
-                const res = await fetch("https://gemini-proxy-157237873670.us-central1.run.app/proxy", {method:'POST', body:JSON.stringify({contents:[{parts:[{text:`${sys}\n\nUser: ${prompt}`}]}]}), headers:{'Content-Type':'application/json'}});
+                const res = await fetch(proxyUrl, {method:'POST', body:JSON.stringify({contents:[{parts}]}), headers:{'Content-Type':'application/json'}});
                 if(!res.ok) throw new Error("API Error");
                 return (await res.json()).candidates?.[0]?.content?.parts?.[0]?.text || "No response.";
             } catch(e) { return "Error: " + e.message; }
+        };
+
+        // --- SHARED QUOTA LOGIC ---
+        const checkAndIncrementQuota = async (user) => {
+            if (!user) return false;
+            const today = new Date().toISOString().split('T')[0];
+            const ref = window.firebase.doc(window.firebase.db, 'artifacts', "darnote-app", 'users', user.uid, 'ai_usage', today);
+            try {
+                const snap = await window.firebase.getDoc(ref);
+                let count = 0; if (snap.exists()) count = snap.data().count || 0;
+                if (count >= 10) return false;
+                await window.firebase.setDoc(ref, { count: window.firebase.increment(1), date: today }, { merge: true });
+                return true;
+            } catch (e) { console.error("Quota check failed:", e); return false; }
+        };
+
+        // --- UTILS ---
+        const cleanLatex = (text) => {
+            return text
+                .replace(/\$\$/g, '\n')
+                .replace(/\$/g, '')
+                .replace(/\\text\{([^}]+)\}/g, '$1')
+                .replace(/\\times/g, '×').replace(/\\approx/g, '≈').replace(/\\le/g, '≤').replace(/\\ge/g, '≥')
+                .replace(/\\rightarrow/g, '→').replace(/\\cdot/g, '·')
+                .replace(/\\frac\{([^}]+)\}\{([^}]+)\}/g, '($1/$2)')
+                .replace(/\\/g, '');
         };
 
         const useGoogleDrive = () => {
@@ -122,37 +161,163 @@
             </div>
         );
 
+        // --- NEW PRACTICE MODAL (MOBILE) ---
+        const PracticeModal = ({ activeLog, onClose, user }) => {
+            const [loading, setLoading] = useState(true);
+            const [mode, setMode] = useState(activeLog.questionType || 'MC');
+            const [questions, setQuestions] = useState([]);
+            const [lqData, setLqData] = useState(null);
+            const [userAnswers, setUserAnswers] = useState({});
+            const [marked, setMarked] = useState(false);
+            const [lqFeedback, setLqFeedback] = useState(null);
+            
+            useEffect(() => { generatePractice(); }, []);
+
+            const generatePractice = async () => {
+                setLoading(true);
+                const hasQuota = await checkAndIncrementQuota(user);
+                if (!hasQuota) { alert("Daily quota reached! (10/10)"); onClose(); return; }
+
+                let imgCtx = (activeLog.questionImages && activeLog.questionImages.length > 0) ? activeLog.questionImages[0] : (activeLog.imageUrl || null);
+                if (imgCtx && (imgCtx.startsWith('http') || imgCtx.startsWith('https'))) {
+                    try { const res = await fetch(imgCtx); const blob = await res.blob(); imgCtx = await new Promise((r) => { const reader = new FileReader(); reader.onloadend = () => r(reader.result); reader.readAsDataURL(blob); }); } catch (e) { console.error(e); imgCtx = null; }
+                }
+
+                if (mode === 'MC') {
+                    const prompt = `Generate 3 Multiple Choice Questions (ABCD) based on the concept. Return STRICTLY JSON array: [{"q": "Question", "options": ["A. x", "B. y", "C. z", "D. w"], "answer": "A", "explanation": "..."}]. Plain text only, NO LaTeX.`;
+                    const res = await callGemini(prompt, "You are a JSON generator.", imgCtx);
+                    try { setQuestions(JSON.parse(res.replace(/```json|```/g, ''))); } catch(e) { alert("Generation failed."); onClose(); }
+                } else {
+                    const prompt = `Generate 1 structured Long Question with 2 sub-parts. Return STRICTLY JSON: {"context": "...", "parts": [{"id": "a", "text": "...", "marks": 2}, {"id": "b", "text": "...", "marks": 4}]}. Plain text only, NO LaTeX.`;
+                    const res = await callGemini(prompt, "You are a JSON generator.", imgCtx);
+                    try { setLqData(JSON.parse(res.replace(/```json|```/g, ''))); } catch(e) { alert("Generation failed."); onClose(); }
+                }
+                setLoading(false);
+            };
+
+            const handleLqMark = async () => {
+                setLoading(true);
+                // Quota check for marking
+                const hasQuota = await checkAndIncrementQuota(user);
+                if (!hasQuota) { alert("Daily quota reached!"); setLoading(false); return; }
+
+                const prompt = `Mark answer. Context: ${lqData.context}. Answers: ${JSON.stringify(userAnswers)}. Return JSON: {"totalScore": 5, "maxScore": 6, "generalFeedback": "...", "partFeedback": {"a": {"score": 1, "comment": "..."}, "b": {"score": 4, "comment": "..."}}}.`;
+                const res = await callGemini(prompt, "Strict examiner. JSON only.");
+                try { setLqFeedback(JSON.parse(res.replace(/```json|```/g, ''))); setMarked(true); } catch(e) { alert("Marking failed."); }
+                setLoading(false);
+            };
+
+            return (
+                <div className="fixed inset-0 z-[100] bg-white dark:bg-onyx flex flex-col">
+                    <div className="p-4 border-b border-zinc-200 dark:border-white/10 flex justify-between items-center bg-zinc-50 dark:bg-black/20">
+                        <span className="font-bold text-zinc-900 dark:text-white flex items-center gap-2"><Icons.Brain className="w-5 h-5 text-brand"/> Practice: {mode}</span>
+                        <button onClick={onClose}><Icons.X className="w-6 h-6 text-zinc-400"/></button>
+                    </div>
+                    <div className="flex-1 overflow-y-auto p-4 space-y-6">
+                        {loading ? (
+                             <div className="flex flex-col items-center justify-center h-64 space-y-4">
+                                <div className="loader"></div>
+                                <p className="text-zinc-500 animate-pulse text-sm">Constructing pain...</p>
+                             </div>
+                        ) : mode === 'MC' ? (
+                            <div className="space-y-8 pb-20">
+                                {questions.map((q, idx) => (
+                                    <div key={idx} className="space-y-3">
+                                        <div className="font-bold text-zinc-900 dark:text-zinc-100">{idx+1}. {q.q}</div>
+                                        <div className="grid grid-cols-1 gap-2">
+                                            {q.options.map((opt) => {
+                                                const letter = opt.charAt(0);
+                                                const isSelected = userAnswers[idx] === letter;
+                                                const isCorrect = q.answer === letter;
+                                                let bg = "bg-zinc-50 dark:bg-zinc-800 border-zinc-200 dark:border-zinc-700";
+                                                if (marked) {
+                                                    if (isCorrect) bg = "bg-green-500/20 border-green-500";
+                                                    else if (isSelected) bg = "bg-red-500/20 border-red-500";
+                                                } else if (isSelected) bg = "bg-brand/20 border-brand";
+                                                return (
+                                                    <button key={opt} onClick={() => !marked && setUserAnswers({...userAnswers, [idx]: letter})} className={`text-left p-3 rounded-lg border text-sm ${bg} dark:text-zinc-200`}>{opt}</button>
+                                                );
+                                            })}
+                                        </div>
+                                        {marked && <div className="text-xs p-3 rounded bg-zinc-100 dark:bg-white/5 text-zinc-600 dark:text-zinc-400"><span className="font-bold">Explanation:</span> {q.explanation}</div>}
+                                    </div>
+                                ))}
+                            </div>
+                        ) : (
+                            lqData && (
+                                <div className="space-y-6 pb-20">
+                                    <div className="p-3 bg-zinc-100 dark:bg-white/5 rounded-lg text-sm text-zinc-800 dark:text-zinc-200">{lqData.context}</div>
+                                    {lqData.parts.map((part) => (
+                                        <div key={part.id} className="space-y-2">
+                                            <div className="flex justify-between text-sm"><span className="font-bold dark:text-white">({part.id}) {part.text}</span><span className="text-zinc-500">[{part.marks}m]</span></div>
+                                            <textarea value={userAnswers[part.id] || ''} onChange={e => setUserAnswers({...userAnswers, [part.id]: e.target.value})} disabled={marked} className="w-full bg-transparent border border-zinc-200 dark:border-white/10 rounded-lg p-3 text-sm dark:text-white" rows="3" placeholder="Answer..."/>
+                                            {marked && lqFeedback?.partFeedback[part.id] && (
+                                                <div className={`text-xs p-2 rounded flex justify-between ${lqFeedback.partFeedback[part.id].score === part.marks ? 'bg-green-500/10 text-green-500' : 'bg-red-500/10 text-red-400'}`}>
+                                                    <span>{lqFeedback.partFeedback[part.id].comment}</span><span className="font-bold">{lqFeedback.partFeedback[part.id].score}/{part.marks}</span>
+                                                </div>
+                                            )}
+                                        </div>
+                                    ))}
+                                    {marked && <div className="p-4 rounded-lg bg-brand/10 border border-brand/20 text-center"><div className="text-2xl font-bold text-brand">{lqFeedback.totalScore} / {lqFeedback.maxScore}</div></div>}
+                                </div>
+                            )
+                        )}
+                    </div>
+                    <div className="p-4 border-t border-zinc-200 dark:border-white/10 bg-white dark:bg-onyx">
+                        {!marked ? (
+                            <button onClick={() => mode === 'MC' ? setMarked(true) : handleLqMark()} disabled={loading} className="w-full py-3 bg-brand text-white font-bold rounded-xl shadow-lg">Submit</button>
+                        ) : (
+                            <button onClick={onClose} className="w-full py-3 bg-zinc-200 dark:bg-white/10 text-zinc-900 dark:text-white font-bold rounded-xl">Close</button>
+                        )}
+                    </div>
+                </div>
+            );
+        };
+
         const AIChat = ({ activeLog, onClose, user }) => {
             const [msgs, setMsgs] = useState([{role:'ai',text:"How can I help you understand this failure?"}]);
             const [inp, setInp] = useState("");
             const [load, setLoad] = useState(false);
-            const [daily, setDaily] = useState(0);
-            const endRef=useRef(null), today=new Date().toISOString().split('T')[0], LIMIT=10;
+            const [quotaCount, setQuotaCount] = useState(0);
+            const endRef=useRef(null), today=new Date().toISOString().split('T')[0];
 
-            useEffect(()=>{if(user)return window.firebase.onSnapshot(window.firebase.doc(window.firebase.db,'artifacts','darnote-app','users',user.uid,'ai_usage',today),d=>setDaily(d.exists()?d.data().count:0))},[user,today]);
+            useEffect(()=>{if(user)return window.firebase.onSnapshot(window.firebase.doc(window.firebase.db,'artifacts','darnote-app','users',user.uid,'ai_usage',today),d=>setQuotaCount(d.exists()?d.data().count:0))},[user,today]);
             useEffect(()=>{endRef.current?.scrollIntoView({behavior:"smooth"})},[msgs]);
 
             const send = async () => {
                 if(!inp.trim()) return;
-                if(daily>=LIMIT) return setMsgs(p=>[...p,{role:'ai',text:"<span class='text-red-500'>DAILY LIMIT REACHED.</span>"}]);
-                const uMsg=inp; setMsgs(p=>[...p,{role:'user',text:uMsg}]); setInp(""); setLoad(true);
-                await window.firebase.setDoc(window.firebase.doc(window.firebase.db,'artifacts','darnote-app','users',user.uid,'ai_usage',today),{count:window.firebase.increment(1),date:today},{merge:true});
-                const ctx = activeLog ? `Sub:${activeLog.subject}, Q:${activeLog.explanation}` : 'Chat';
-                const res = await callGemini(uMsg, `Roast-heavy tutor. Context: ${ctx}`);
+                const uMsg=inp; setMsgs(p=>[...p,{role:'user',text:uMsg}]); setInp(""); 
+                
+                // QUOTA CHECK
+                const hasQuota = await checkAndIncrementQuota(user);
+                if(!hasQuota) { setMsgs(p=>[...p,{role:'ai',text:"<span class='text-red-500'>DAILY LIMIT REACHED (10/10).</span>"}]); return; }
+                
+                setLoad(true);
+                const ctx = activeLog ? `Sub:${activeLog.subject}, Q:${activeLog.explanation}, Answer:${activeLog.correctAnswer}` : 'General Chat';
+                let imgCtx = null;
+                if(activeLog) {
+                    let url = (activeLog.questionImages && activeLog.questionImages.length > 0) ? activeLog.questionImages[0] : activeLog.imageUrl;
+                    if(url && (url.startsWith('http'))) {
+                         try { const r=await fetch(url); const b=await r.blob(); imgCtx=await new Promise(res=>{const fr=new FileReader();fr.onloadend=()=>res(fr.result);fr.readAsDataURL(b)}); } catch(e){}
+                    }
+                }
+                
+                let res = await callGemini(uMsg, `Roast-heavy tutor. Context: ${ctx}`, imgCtx);
+                res = cleanLatex(res);
                 setMsgs(p=>[...p,{role:'ai',text:res}]); setLoad(false);
             };
 
             return (
                 <div className="flex flex-col w-full bg-zinc-50 dark:bg-surface fixed inset-0 z-[80] h-[100dvh]">
                     <div className="p-4 border-b border-zinc-200 dark:border-white/10 flex justify-between items-center bg-zinc-100 dark:bg-black/20 shrink-0">
-                        <div><span className="font-bold text-sm text-zinc-800 dark:text-white flex items-center gap-2"><Icons.Bot className="w-4 h-4 text-brand"/> AI Tutor</span><span className="text-[10px] text-zinc-500">{Math.max(0,LIMIT-daily)}/{LIMIT} left</span></div>
+                        <div><span className="font-bold text-sm text-zinc-800 dark:text-white flex items-center gap-2"><Icons.Bot className="w-4 h-4 text-brand"/> AI Tutor</span><span className="text-[10px] text-zinc-500">{quotaCount}/10 Used</span></div>
                         <button onClick={onClose}><Icons.ChevronLeft className="w-6 h-6 rotate-[-90deg] text-zinc-400"/></button>
                     </div>
                     <div className="flex-1 overflow-y-auto p-4 space-y-4">
                         {msgs.map((m,i)=><div key={i} className={`flex ${m.role==='user'?'justify-end':'justify-start'}`}><div className={`max-w-[85%] p-3 rounded-2xl text-sm ${m.role==='user'?'bg-brand text-white rounded-br-none':'bg-zinc-200 dark:bg-zinc-800 text-zinc-800 dark:text-zinc-200 rounded-bl-none'}`} dangerouslySetInnerHTML={{__html:window.marked?window.marked.parse(m.text):m.text}}/></div>)}
                         {load && <div className="text-xs text-zinc-500 animate-pulse pl-2">Thinking...</div>}<div ref={endRef}/>
                     </div>
-                    <div className="p-4 border-t border-zinc-200 dark:border-white/10 bg-white dark:bg-black flex gap-2"><input value={inp} onChange={e=>setInp(e.target.value)} onKeyDown={e=>e.key==='Enter'&&send()} placeholder="Ask..." className="flex-1 bg-zinc-100 dark:bg-zinc-900 border border-zinc-200 dark:border-white/10 rounded-full px-4 py-3 text-sm text-zinc-900 dark:text-white"/><button onClick={send} disabled={daily>=LIMIT} className="bg-brand text-white rounded-full p-3 disabled:opacity-50"><Icons.Plus className="w-5 h-5 rotate-90"/></button></div>
+                    <div className="p-4 border-t border-zinc-200 dark:border-white/10 bg-white dark:bg-black flex gap-2"><input value={inp} onChange={e=>setInp(e.target.value)} onKeyDown={e=>e.key==='Enter'&&send()} placeholder="Ask..." className="flex-1 bg-zinc-100 dark:bg-zinc-900 border border-zinc-200 dark:border-white/10 rounded-full px-4 py-3 text-sm text-zinc-900 dark:text-white"/><button onClick={send} disabled={quotaCount>=10} className="bg-brand text-white rounded-full p-3 disabled:opacity-50"><Icons.Plus className="w-5 h-5 rotate-90"/></button></div>
                 </div>
             );
         };
@@ -169,6 +334,7 @@
                 };
             });
             const [aiOpen, setAiOpen] = useState(false);
+            const [practiceOpen, setPracticeOpen] = useState(false); // NEW STATE
             const { saveToDrive } = useGoogleDrive();
             const [upQ, setUpQ] = useState(false);
             const [upS, setUpS] = useState(false);
@@ -198,6 +364,8 @@
                         <button onClick={onBack} className="p-2 rounded-full bg-zinc-100 dark:bg-zinc-800"><Icons.ChevronLeft className="w-6 h-6 text-zinc-700 dark:text-zinc-300"/></button>
                         <span className="font-bold text-zinc-900 dark:text-white">Failure Log</span>
                         <div className="flex gap-2">
+                             {/* ADDED PRACTICE BUTTON */}
+                             {item && <button onClick={()=>setPracticeOpen(true)} className="p-2 bg-orange-500/10 text-orange-500 rounded-full"><Icons.Brain className="w-5 h-5"/></button>}
                              {item && <button onClick={()=>setAiOpen(true)} className="p-2 bg-brand/10 text-brand rounded-full"><Icons.Bot className="w-5 h-5"/></button>}
                              <button onClick={()=>onSave(data)} className="px-4 py-2 bg-brand rounded-full text-sm font-bold text-white">Save</button>
                         </div>
@@ -256,6 +424,9 @@
                         {item && <button onClick={()=>{if(confirm('Delete?')){onDelete(item.id);onBack()}}} className="w-full py-4 text-red-500 font-bold text-sm bg-zinc-100 dark:bg-zinc-900 rounded-xl">Delete Log</button>}
                     </div>
                     <AnimatePresence>{aiOpen && <motion.div initial={{y:"100%"}} animate={{y:"0%"}} exit={{y:"100%"}} className="fixed inset-0 z-[70] bg-white dark:bg-surface rounded-t-3xl shadow-2xl overflow-hidden"><AIChat activeLog={data} onClose={()=>setAiOpen(false)} user={user} /></motion.div>}</AnimatePresence>
+                    
+                    {/* RENDER PRACTICE MODAL */}
+                    <AnimatePresence>{practiceOpen && <motion.div initial={{y:"100%"}} animate={{y:"0%"}} exit={{y:"100%"}} className="fixed inset-0 z-[70] bg-white dark:bg-surface rounded-t-3xl shadow-2xl overflow-hidden"><PracticeModal activeLog={data} onClose={()=>setPracticeOpen(false)} user={user} /></motion.div>}</AnimatePresence>
                 </motion.div>
             );
         };
@@ -337,13 +508,11 @@
 
         const App = () => {
             const [user, setUser] = useState(null), [tab, setTab] = useState('home'), [sel, setSel] = useState(null), [sheet, setSheet] = useState(false);
-            // SETTINGS STATE
             const [settings, setSettings] = useState({theme:'dark', bio:''});
 
             useEffect(()=>window.firebase.onAuthStateChanged(window.firebase.auth, setUser), []);
             const {data:errors} = useData(user,'error_logs'), {data:notes} = useData(user,'notes'), subjects = useSubjects(user);
             
-            // SETTINGS & THEME EFFECT
             useEffect(() => {
                 if(!user) return;
                 const setRef = window.firebase.doc(window.firebase.db,'artifacts','darnote-app','users',user.uid,'settings','profile');
@@ -379,7 +548,6 @@
                             {tab==='errors' && <ErrorList key="e" items={errors} onEdit={(m,i)=>{setSel(i);setTab(m)}} subjects={subjects} />}
                             {tab==='notes' && <div key="n" className="p-6 pb-24 min-h-screen"><h2 className="text-3xl font-bold mb-6">Notes</h2><div className="space-y-3">{notes.map(n=><div key={n.id} onClick={()=>{setSel(n);setTab('edit_note')}} className="bg-white dark:bg-surface p-4 rounded-2xl border border-zinc-200 dark:border-zinc-800 flex justify-between"><div><div className="font-bold">{n.title||'Untitled'}</div><div className="text-xs text-zinc-500">{new Date(n.createdAt||0).toLocaleDateString()}</div></div><Icons.ChevronLeft className="w-5 h-5 rotate-180"/></div>)}</div></div>}
                             
-                            {/* SETTINGS TAB RESTORED */}
                             {tab==='profile' && <div key="p" className="p-6 pb-24 h-full flex flex-col">
                                 <h2 className="text-3xl font-bold mb-6">Settings</h2>
                                 <div className="flex flex-col items-center mb-8"><img src={user.photoURL} className="w-24 h-24 rounded-full border-4 border-brand mb-4"/><h3 className="text-xl font-bold">{user.displayName}</h3></div>
