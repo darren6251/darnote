@@ -469,7 +469,7 @@
                 try {
                     let url = activeLog.questionImages?.[0] || activeLog.imageUrl; let base64 = url;
                     if(!url.startsWith('data:')) { const res = await fetch(url); const b = await res.blob(); base64 = await new Promise(r=>{const rd=new FileReader(); rd.onload=()=>r(rd.result); rd.readAsDataURL(b);}); }
-                    const title = await callGemini("Analyze image. Identify core question concept. Generate SHORT title for a wrong question log (max 6 words). Return ONLY title.", "Concise Summarizer", base64);
+                    const title = await callGemini("Analyze image. Identify core question concept. Generate SHORT title (max 6 words). Return ONLY title.", "Concise Summarizer", base64);
                     updateLog(activeLogId, { title: title.replace(/^["']|["']$/g, '').trim() });
                 } catch(e) { alert("OCR Failed"); } setIsAutoTitleLoading(false);
             }
@@ -612,7 +612,24 @@
                                     <div className="max-w-5xl mx-auto space-y-8">
                                         <div className="bg-white dark:bg-surface p-5 rounded-2xl shadow-sm border border-zinc-200 dark:border-white/5 grid grid-cols-1 md:grid-cols-3 gap-6">
                                             <div><label className="text-[11px] font-bold text-zinc-400 uppercase tracking-wider mb-1 block">Subject</label><select value={activeLog.subject} onChange={e=>updateLog(activeLog.id, {subject:e.target.value, topic: ''})} className="input-field bg-zinc-50 dark:bg-black/20"><option>General</option>{subjects.map(s=><option key={s.id} value={s.name}>{s.name}</option>)}</select></div>
-                                            <div><label className="text-[11px] font-bold text-zinc-400 uppercase tracking-wider mb-1 block">Topic</label><div className="flex gap-2">{activeLog.subject !== 'General' && currentSub ? (<select value={activeLog.topic || ''} onChange={e=>updateLog(activeLog.id, {topic:e.target.value})} className="input-field bg-zinc-50 dark:bg-black/20 flex-1"><option value="">-- Select --</option>{currentSub.topics.map(t => <option key={t} value={t}>{t}</option>)}</select>) : (<input value={activeLog.topic || ''} onChange={e=>updateLog(activeLog.id, {topic:e.target.value})} className="input-field bg-zinc-50 dark:bg-black/20 flex-1" placeholder="Custom" disabled={activeLog.subject !== 'General'}/>)}</div></div>
+                                            <div>
+                                                <label className="text-[11px] font-bold text-zinc-400 uppercase tracking-wider mb-1 block">Topic</label>
+                                                <div className="flex gap-2">
+                                                    {activeLog.subject !== 'General' && currentSub ? (
+                                                        <>
+                                                            <select value={activeLog.topic || ''} onChange={e=>updateLog(activeLog.id, {topic:e.target.value})} className="input-field bg-zinc-50 dark:bg-black/20 flex-1">
+                                                                <option value="">-- Select --</option>
+                                                                {currentSub.topics.map(t => <option key={t} value={t}>{t}</option>)}
+                                                            </select>
+                                                            <button onClick={() => addTopicToSubject(activeLog.subject)} className="px-3 rounded-lg bg-zinc-100 dark:bg-white/5 hover:bg-brand hover:text-white transition-colors text-zinc-500 border border-zinc-200 dark:border-white/10" title="Add New Topic">
+                                                                <Icons.Plus className="w-4 h-4"/>
+                                                            </button>
+                                                        </>
+                                                    ) : (
+                                                        <input value={activeLog.topic || ''} onChange={e=>updateLog(activeLog.id, {topic:e.target.value})} className="input-field bg-zinc-50 dark:bg-black/20 flex-1" placeholder="Custom" disabled={activeLog.subject !== 'General'}/>
+                                                    )}
+                                                </div>
+                                            </div>
                                             <div><label className="text-[11px] font-bold text-zinc-400 uppercase tracking-wider mb-1 block">Type</label><div className="flex bg-zinc-100 dark:bg-black/20 p-1 rounded-lg border border-zinc-200 dark:border-white/5">{['MC', 'LQ'].map(t => (<button key={t} onClick={()=>updateLog(activeLog.id, {questionType: t})} className={`flex-1 py-1.5 rounded-md text-xs font-bold transition-all ${activeLog.questionType===t ? 'bg-white dark:bg-zinc-700 shadow-sm text-black dark:text-white' : 'text-zinc-500'}`}>{t}</button>))}</div></div>
                                         </div>
                                         <div className="space-y-6">
