@@ -469,7 +469,7 @@
                 try {
                     let url = activeLog.questionImages?.[0] || activeLog.imageUrl; let base64 = url;
                     if(!url.startsWith('data:')) { const res = await fetch(url); const b = await res.blob(); base64 = await new Promise(r=>{const rd=new FileReader(); rd.onload=()=>r(rd.result); rd.readAsDataURL(b);}); }
-                    const title = await callGemini("Analyze image. Identify core question concept. Generate SHORT title (max 6 words). Return ONLY title.", "Concise Summarizer", base64);
+                    const title = await callGemini("Analyze image. Identify core question concept. Generate SHORT title for a wrong question log (max 6 words). Return ONLY title.", "Concise Summarizer", base64);
                     updateLog(activeLogId, { title: title.replace(/^["']|["']$/g, '').trim() });
                 } catch(e) { alert("OCR Failed"); } setIsAutoTitleLoading(false);
             }
