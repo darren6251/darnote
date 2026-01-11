@@ -341,7 +341,7 @@
                     });
                     
                     // HACK: Convert thumbnailLink to full size (lh3 link)
-                    const url = fileData.thumbnailLink ? fileData.thumbnailLink.replace('=s220', '=s16383') : `https://drive.google.com/uc?export=view&id=${fileId}`;
+                    const url = fileData.thumbnailLink ? fileData.thumbnailLink.replace('=s220', '=s16383') : `https://lh3.googleusercontent.com/d/${fileId}`;
                     return { 
                         id: fileId, 
                         webContentLink: url, 
