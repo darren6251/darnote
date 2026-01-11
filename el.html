@@ -104,7 +104,7 @@
 
         // --- GEMINI PROXY ---
         const callGemini = async (prompt, systemInstruction = "", imageBase64 = null) => {
-            const proxyUrl = "https://gemini-proxy-157237873670.us-central1.run.app/proxy";
+            const proxyUrl = "https://gemini-proxy-513372702506.us-central1.run.app/proxy";
             const parts = [{ text: `${systemInstruction}\n\nUser: ${prompt}` }];
             if (imageBase64) {
                 let mimeType = "image/png"; let data = imageBase64;
