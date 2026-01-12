@@ -31,18 +31,18 @@
                     animation: {
                         'fade-in': 'fadeIn 0.5s ease-out forwards',
                         'pop-in': 'popIn 0.6s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards',
+                        'slide-up': 'slideUp 0.8s cubic-bezier(0.16, 1, 0.3, 1) forwards',
+                        'slide-in-right': 'slideInRight 0.5s ease-out forwards',
                         'float': 'float 6s ease-in-out infinite',
-                        'slide-up': 'slideUp 0.6s ease-out forwards',
-                        'slide-up-delayed': 'slideUp 0.6s ease-out 0.2s forwards',
-                        'slide-up-more-delayed': 'slideUp 0.6s ease-out 0.4s forwards',
                         'pulse-slow': 'pulse 3s cubic-bezier(0.4, 0, 0.6, 1) infinite',
                         'bounce-in': 'bounceIn 0.8s cubic-bezier(0.36, 0, 0.66, -0.56) forwards',
                     },
                     keyframes: {
-                        fadeIn: { '0%': { opacity: '0', transform: 'translateY(5px)' }, '100%': { opacity: '1', transform: 'translateY(0)' } },
+                        fadeIn: { '0%': { opacity: '0' }, '100%': { opacity: '1' } },
                         popIn: { '0%': { opacity: '0', transform: 'scale(0.9) translateY(20px)' }, '100%': { opacity: '1', transform: 'scale(1) translateY(0)' } },
-                        float: { '0%, 100%': { transform: 'translateY(0)' }, '50%': { transform: 'translateY(-10px)' } },
-                        slideUp: { '0%': { transform: 'translateY(20px)', opacity: '0' }, '100%': { transform: 'translateY(0)', opacity: '1' } },
+                        slideUp: { '0%': { transform: 'translateY(40px)', opacity: '0' }, '100%': { transform: 'translateY(0)', opacity: '1' } },
+                        slideInRight: { '0%': { transform: 'translateX(20px)', opacity: '0' }, '100%': { transform: 'translateX(0)', opacity: '1' } },
+                        float: { '0%, 100%': { transform: 'translateY(0)' }, '50%': { transform: 'translateY(-15px)' } },
                         bounceIn: { '0%': { transform: 'scale(0)' }, '50%': { transform: 'scale(1.1)' }, '100%': { transform: 'scale(1)' } }
                     }
                 }
@@ -171,13 +171,49 @@
         .logo-img { transition: filter 0.3s; }
         .dark .logo-img { filter: invert(1); }
 
-        /* Carousel Styles */
-        .carousel-slide { display: none; }
-        .carousel-slide.active { display: block; animation: fadeIn 0.4s ease-out; }
-        .carousel-dots span { width: 8px; height: 8px; border-radius: 50%; background-color: var(--border); transition: all 0.3s; cursor: pointer; }
-        .carousel-dots span.active { background-color: var(--primary); width: 24px; border-radius: 4px; }
+        /* Carousel Styles - IMPROVED */
+        .carousel-container {
+            position: relative;
+            width: 100%;
+            height: 100%;
+        }
+        .carousel-slide { 
+            position: absolute;
+            inset: 0;
+            opacity: 0;
+            transition: opacity 0.5s ease-in-out;
+            pointer-events: none;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 1rem;
+        }
+        .carousel-slide.active { 
+            opacity: 1; 
+            pointer-events: auto;
+            z-index: 10;
+        }
+        .carousel-dots span { 
+            width: 8px; height: 8px; 
+            border-radius: 50%; 
+            background-color: var(--border); 
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); 
+            cursor: pointer; 
+        }
+        .carousel-dots span.active { 
+            background-color: var(--primary); 
+            width: 24px; 
+            border-radius: 4px; 
+        }
         
-        /* Utility delay classes for staggered animations */
+        /* Animations Stagger */
+        .delay-100 { animation-delay: 100ms; }
+        .delay-200 { animation-delay: 200ms; }
+        .delay-300 { animation-delay: 300ms; }
+        .delay-500 { animation-delay: 500ms; }
+        .delay-700 { animation-delay: 700ms; }
+
         .opacity-0-init { opacity: 0; }
     </style>
 </head>
@@ -188,9 +224,7 @@
         <div class="loader mb-6"></div>
         <h2 class="text-xs font-mono uppercase tracking-widest opacity-50">Initializing System</h2>
         <div id="loginContainer" class="hidden mt-8 text-center animate-fade-in max-w-sm w-full px-6">
-            <!-- Logo Here -->
             <img src="https://raw.githubusercontent.com/darren6251/darnote/refs/heads/main/darNote%20logo.png" class="h-16 w-auto mx-auto mb-6 logo-img" alt="darNote">
-            
             <h1 class="text-2xl font-bold mb-2 tracking-tight">Welcome Back</h1>
             <p class="text-zinc-500 mb-8 text-sm">Sign in to access your workspace.</p>
             <button id="googleSignIn" class="w-full bg-secondary hover:bg-zinc-200 dark:hover:bg-zinc-800 text-primary py-3 rounded-lg font-medium flex items-center justify-center gap-3 transition-all border border-border">
@@ -200,130 +234,163 @@
         </div>
     </div>
 
-    <!-- WELCOME / ONBOARDING MODAL (NEW) -->
-    <div id="welcomeModal" class="fixed inset-0 z-[60] flex items-center justify-center p-4 backdrop-blur-md bg-black/40 hidden transition-all duration-300">
-        <div class="bg-background border border-border rounded-2xl shadow-2xl w-full max-w-4xl max-h-[90vh] flex flex-col overflow-hidden animate-pop-in relative">
+    <!-- WELCOME / ONBOARDING MODAL (Rebuilt) -->
+    <div id="welcomeModal" class="fixed inset-0 z-[60] flex items-center justify-center p-4 backdrop-blur-xl bg-black/40 hidden transition-all duration-300">
+        <div class="bg-background border border-border rounded-2xl shadow-2xl w-full max-w-5xl h-[85vh] flex flex-col md:flex-row overflow-hidden animate-pop-in relative ring-1 ring-white/10">
             
-            <!-- Confetti/Background decoration -->
-            <div class="absolute top-0 left-0 w-full h-full overflow-hidden pointer-events-none z-0 opacity-20">
-                <div class="absolute top-[-10%] left-[10%] w-20 h-20 bg-blue-500 rounded-full blur-3xl animate-float" style="animation-delay: 0s;"></div>
-                <div class="absolute bottom-[-10%] right-[10%] w-32 h-32 bg-purple-500 rounded-full blur-3xl animate-float" style="animation-delay: 2s;"></div>
-                <div class="absolute top-[40%] left-[60%] w-16 h-16 bg-emerald-500 rounded-full blur-3xl animate-float" style="animation-delay: 1s;"></div>
+            <!-- Decoration -->
+            <div class="absolute top-0 left-0 w-full h-full overflow-hidden pointer-events-none z-0 opacity-30">
+                <div class="absolute top-[-20%] left-[0%] w-64 h-64 bg-blue-500/30 rounded-full blur-[100px] animate-float"></div>
+                <div class="absolute bottom-[-20%] right-[0%] w-64 h-64 bg-purple-500/30 rounded-full blur-[100px] animate-float" style="animation-delay: 2s;"></div>
             </div>
 
-            <!-- Header -->
-            <div class="p-6 md:p-8 text-center relative z-10 opacity-0-init animate-slide-up">
-                <div class="inline-block mb-4 px-3 py-1 rounded-full bg-primary/10 text-primary text-xs font-bold uppercase tracking-widest border border-primary/20 animate-pulse-slow">
-                    🚀 Launch Ready
-                </div>
-                <h2 class="text-3xl md:text-5xl font-black tracking-tighter mb-2 bg-gradient-to-r from-primary to-zinc-500 bg-clip-text text-transparent">Welcome to darNote</h2>
-                <p class="text-zinc-500 text-sm md:text-base max-w-lg mx-auto">Your all-in-one workspace for notes, errors logs, and focus.</p>
-            </div>
-
-            <!-- Main Actions (Two Big Buttons) -->
-            <div class="grid grid-cols-2 gap-4 px-6 md:px-12 mb-8 relative z-10 opacity-0-init animate-slide-up-delayed">
-                <a href="note.html" class="group relative overflow-hidden bg-primary text-primary-fg p-6 rounded-xl flex flex-col items-center justify-center text-center hover:scale-[1.02] active:scale-[0.98] transition-all shadow-lg hover:shadow-primary/20">
-                    <div class="absolute inset-0 bg-gradient-to-br from-white/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity"></div>
-                    <i data-lucide="pen-tool" class="w-8 h-8 mb-2 group-hover:-translate-y-1 transition-transform"></i>
-                    <span class="text-lg font-bold">New Note</span>
-                    <span class="text-xs opacity-70">Capture ideas instantly</span>
-                </a>
-                
-                <a href="el.html" class="group relative overflow-hidden bg-secondary text-primary border border-border p-6 rounded-xl flex flex-col items-center justify-center text-center hover:bg-zinc-100 dark:hover:bg-zinc-800 hover:scale-[1.02] active:scale-[0.98] transition-all hover:border-primary">
-                    <i data-lucide="bug" class="w-8 h-8 mb-2 text-red-500 group-hover:rotate-12 transition-transform"></i>
-                    <span class="text-lg font-bold">Error Log</span>
-                    <span class="text-xs opacity-70 text-zinc-500">Track & fix mistakes</span>
-                </a>
-            </div>
-
-            <!-- Tutorial Carousel -->
-            <div class="flex-1 bg-secondary/30 border-t border-border relative flex flex-col overflow-hidden opacity-0-init animate-slide-up-more-delayed group/carousel">
-                <div class="px-6 py-3 flex justify-between items-center border-b border-border/50 bg-background/50 backdrop-blur-sm">
-                    <span class="text-xs font-bold uppercase tracking-wider text-zinc-500">Quick Tour</span>
-                    <div class="carousel-dots flex gap-1">
-                        <!-- Dots injected by JS -->
+            <!-- Left Side: Actions & Welcome -->
+            <div class="w-full md:w-[40%] p-8 flex flex-col justify-center relative z-10 border-b md:border-b-0 md:border-r border-border bg-background/50">
+                <div class="mb-8 opacity-0-init animate-slide-up">
+                    <div class="inline-flex items-center gap-2 mb-4 px-3 py-1 rounded-full bg-primary/5 text-primary text-[10px] font-bold uppercase tracking-widest border border-primary/10 animate-pulse-slow">
+                        <span class="w-2 h-2 rounded-full bg-green-500"></span> Live & Ready
                     </div>
+                    <h2 class="text-4xl md:text-5xl font-black tracking-tighter mb-4 leading-[0.9]">
+                        Hello,<br>
+                        <span class="bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">Creator.</span>
+                    </h2>
+                    <p class="text-zinc-500 font-medium">What would you like to do first?</p>
                 </div>
 
-                <div class="relative flex-1 w-full overflow-hidden bg-zinc-900/5 dark:bg-zinc-900/50">
-                    <!-- Slide 1: Dashboard -->
-                    <div class="carousel-slide active h-full flex flex-col items-center justify-center p-4">
-                        <img src="https://lh3.googleusercontent.com/d/1StWyfU-P4-_M6vBF6ixIQiBjhpfgV6Z-" class="max-h-[250px] md:max-h-[300px] object-contain rounded-lg shadow-xl border border-zinc-200 dark:border-zinc-700 mb-4 hover:scale-105 transition-transform duration-500" alt="Dashboard">
-                        <div class="text-center">
-                            <h3 class="font-bold text-lg">Your Command Center</h3>
-                            <p class="text-xs text-zinc-500">Track your stats, recent notes, and quick tasks in one glance.</p>
+                <!-- THE 2 BIG BUTTONS -->
+                <div class="grid gap-4 w-full opacity-0-init animate-slide-up delay-200">
+                    <a href="note.html" class="group relative overflow-hidden bg-primary text-primary-fg p-6 rounded-2xl flex items-center gap-4 hover:scale-[1.02] active:scale-[0.98] transition-all shadow-xl hover:shadow-primary/20">
+                        <div class="bg-white/10 p-3 rounded-xl group-hover:rotate-12 transition-transform">
+                            <i data-lucide="pen-tool" class="w-8 h-8"></i>
                         </div>
-                    </div>
+                        <div class="flex flex-col text-left">
+                            <span class="text-xl font-bold">Write a Note</span>
+                            <span class="text-xs opacity-70">Capture ideas instantly</span>
+                        </div>
+                        <div class="absolute right-4 opacity-0 group-hover:opacity-100 transition-opacity transform translate-x-2 group-hover:translate-x-0">
+                            <i data-lucide="arrow-right" class="w-6 h-6"></i>
+                        </div>
+                    </a>
 
-                    <!-- Slide 2: Mobile -->
-                    <div class="carousel-slide h-full flex flex-col items-center justify-center p-4">
-                        <img src="https://lh3.googleusercontent.com/d/1dhTi8NQH-k2ReZkExfRwEIxedqEpRGB9" class="max-h-[250px] md:max-h-[300px] object-contain rounded-lg shadow-xl border border-zinc-200 dark:border-zinc-700 mb-4 hover:scale-105 transition-transform duration-500" alt="Mobile">
-                        <div class="text-center">
-                            <h3 class="font-bold text-lg">Go Mobile</h3>
-                            <p class="text-xs text-zinc-500">Optimized for your phone. Take your workspace anywhere.</p>
+                    <a href="el.html" class="group relative overflow-hidden bg-white dark:bg-zinc-900 border border-border text-primary p-6 rounded-2xl flex items-center gap-4 hover:scale-[1.02] active:scale-[0.98] transition-all hover:border-red-500/50">
+                        <div class="bg-red-500/10 text-red-500 p-3 rounded-xl group-hover:rotate-[-12deg] transition-transform">
+                            <i data-lucide="bug" class="w-8 h-8"></i>
                         </div>
-                    </div>
-
-                    <!-- Slide 3: Error Log -->
-                    <div class="carousel-slide h-full flex flex-col items-center justify-center p-4">
-                        <img src="https://lh3.googleusercontent.com/d/1fXQ6mZYy1_a0EGee2Lfg44ijYybLrxXB" class="max-h-[250px] md:max-h-[300px] object-contain rounded-lg shadow-xl border border-zinc-200 dark:border-zinc-700 mb-4 hover:scale-105 transition-transform duration-500" alt="Error Log">
-                        <div class="text-center">
-                            <h3 class="font-bold text-lg">Master Mistakes</h3>
-                            <p class="text-xs text-zinc-500">Log errors, reflect, and track your mastery over time.</p>
+                        <div class="flex flex-col text-left">
+                            <span class="text-xl font-bold">Log an Error</span>
+                            <span class="text-xs text-zinc-500">Track & fix mistakes</span>
                         </div>
-                    </div>
-                    
-                    <!-- Slide 4: Timer -->
-                    <div class="carousel-slide h-full flex flex-col items-center justify-center p-4">
-                        <img src="https://lh3.googleusercontent.com/d/1V8H3qgE5C12GofFaymegsSAQjRqy8egL" class="max-h-[250px] md:max-h-[300px] object-contain rounded-lg shadow-xl border border-zinc-200 dark:border-zinc-700 mb-4 hover:scale-105 transition-transform duration-500" alt="Timer">
-                        <div class="text-center">
-                            <h3 class="font-bold text-lg">Deep Focus</h3>
-                            <p class="text-xs text-zinc-500">Use the built-in timer to stay productive and block distractions.</p>
-                        </div>
-                    </div>
-
-                    <!-- Slide 5: Notes -->
-                    <div class="carousel-slide h-full flex flex-col items-center justify-center p-4">
-                        <img src="https://lh3.googleusercontent.com/d/1UYgAE1xLH2FlogJoARa_67Udu2YAGEGS" class="max-h-[250px] md:max-h-[300px] object-contain rounded-lg shadow-xl border border-zinc-200 dark:border-zinc-700 mb-4 hover:scale-105 transition-transform duration-500" alt="Notes">
-                        <div class="text-center">
-                            <h3 class="font-bold text-lg">Rich Notes</h3>
-                            <p class="text-xs text-zinc-500">Create beautiful notes with formatting and tagging.</p>
-                        </div>
-                    </div>
-
-                     <!-- Slide 6: Practice -->
-                    <div class="carousel-slide h-full flex flex-col items-center justify-center p-4">
-                        <img src="https://lh3.googleusercontent.com/d/10pg2wSAgEmfTTZo3B_6qO2DUo3gPH_de" class="max-h-[250px] md:max-h-[300px] object-contain rounded-lg shadow-xl border border-zinc-200 dark:border-zinc-700 mb-4 hover:scale-105 transition-transform duration-500" alt="Practice">
-                        <div class="text-center">
-                            <h3 class="font-bold text-lg">Practice Mode</h3>
-                            <p class="text-xs text-zinc-500">Test yourself on the go to reinforce learning.</p>
-                        </div>
-                    </div>
-
-                    <!-- Slide 7: Error Log Mobile (ADDED) -->
-                    <div class="carousel-slide h-full flex flex-col items-center justify-center p-4">
-                        <img src="https://lh3.googleusercontent.com/d/1wYSPRZQ2N-JbnW0hmmm9YT99-fDdVVmb" class="max-h-[250px] md:max-h-[300px] object-contain rounded-lg shadow-xl border border-zinc-200 dark:border-zinc-700 mb-4 hover:scale-105 transition-transform duration-500" alt="Error Log Mobile">
-                        <div class="text-center">
-                            <h3 class="font-bold text-lg">Mobile Tracking</h3>
-                            <p class="text-xs text-zinc-500">Log your errors directly from your phone for instant feedback.</p>
-                        </div>
-                    </div>
-
-                    <!-- Navigation Arrows -->
-                    <button onclick="moveSlide(-1)" class="absolute left-2 top-1/2 -translate-y-1/2 p-2 rounded-full bg-background/80 hover:bg-background border border-border shadow-lg transition-all z-20 hover:scale-110 active:scale-90"><i data-lucide="chevron-left" class="w-5 h-5"></i></button>
-                    <button onclick="moveSlide(1)" class="absolute right-2 top-1/2 -translate-y-1/2 p-2 rounded-full bg-background/80 hover:bg-background border border-border shadow-lg transition-all z-20 hover:scale-110 active:scale-90"><i data-lucide="chevron-right" class="w-5 h-5"></i></button>
+                    </a>
                 </div>
 
-                <!-- Footer / Close -->
-                <div class="p-4 bg-background border-t border-border flex justify-between items-center z-20 relative">
-                    <label class="flex items-center gap-2 text-xs text-zinc-500 cursor-pointer hover:text-primary transition-colors">
-                        <input type="checkbox" id="dontShowAgain" class="rounded border-zinc-300 dark:border-zinc-700 accent-primary">
-                        Don't show this again
-                    </label>
-                    <button onclick="closeWelcome()" class="px-6 py-2 bg-primary text-primary-fg text-sm font-bold rounded-lg hover:opacity-90 transition-opacity flex items-center gap-2">
-                        Get Started <i data-lucide="arrow-right" class="w-3 h-3"></i>
+                <div class="mt-auto pt-8 opacity-0-init animate-slide-up delay-500">
+                    <button onclick="closeWelcome()" class="text-sm font-bold text-zinc-400 hover:text-primary transition-colors flex items-center gap-2">
+                        Skip Introduction <i data-lucide="x" class="w-4 h-4"></i>
                     </button>
                 </div>
+            </div>
+
+            <!-- Right Side: Carousel -->
+            <div class="w-full md:w-[60%] bg-zinc-50/50 dark:bg-black/20 relative group/carousel opacity-0-init animate-fade-in delay-700">
+                <!-- Navigation -->
+                <div class="absolute top-4 left-0 right-0 z-20 flex justify-between px-6 pointer-events-none">
+                    <div class="bg-background/80 backdrop-blur border border-border px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider shadow-sm pointer-events-auto">
+                        App Tour
+                    </div>
+                    <div class="carousel-dots flex gap-2 pointer-events-auto items-center bg-background/50 backdrop-blur rounded-full px-2 py-1">
+                        <!-- Dots JS Injected -->
+                    </div>
+                </div>
+
+                <!-- Carousel Items -->
+                <div class="carousel-container relative w-full h-full">
+                    
+                    <!-- 1. Dashboard -->
+                    <div class="carousel-slide active">
+                        <div class="relative w-full max-w-md aspect-[16/10] bg-background rounded-lg shadow-2xl border border-border overflow-hidden group-hover/carousel:scale-105 transition-transform duration-700">
+                            <img src="https://lh3.googleusercontent.com/d/1StWyfU-P4-_M6vBF6ixIQiBjhpfgV6Z-" class="w-full h-full object-contain bg-zinc-100 dark:bg-zinc-900" alt="Dashboard">
+                        </div>
+                        <div class="mt-8 text-center max-w-sm">
+                            <h3 class="text-xl font-bold mb-1">Your Command Center</h3>
+                            <p class="text-sm text-zinc-500">Track your stats, recent activity, and daily focus in one beautiful view.</p>
+                        </div>
+                    </div>
+
+                    <!-- 2. Notes -->
+                    <div class="carousel-slide">
+                        <div class="relative w-full max-w-md aspect-[16/10] bg-background rounded-lg shadow-2xl border border-border overflow-hidden group-hover/carousel:scale-105 transition-transform duration-700">
+                            <img src="https://lh3.googleusercontent.com/d/1UYgAE1xLH2FlogJoARa_67Udu2YAGEGS" class="w-full h-full object-contain bg-zinc-100 dark:bg-zinc-900" alt="Notes">
+                        </div>
+                        <div class="mt-8 text-center max-w-sm">
+                            <h3 class="text-xl font-bold mb-1">Powerful Notes</h3>
+                            <p class="text-sm text-zinc-500">Create rich text notes, tag them, and organize your knowledge base.</p>
+                        </div>
+                    </div>
+
+                    <!-- 3. Error Log -->
+                    <div class="carousel-slide">
+                        <div class="relative w-full max-w-md aspect-[16/10] bg-background rounded-lg shadow-2xl border border-border overflow-hidden group-hover/carousel:scale-105 transition-transform duration-700">
+                            <img src="https://lh3.googleusercontent.com/d/1fXQ6mZYy1_a0EGee2Lfg44ijYybLrxXB" class="w-full h-full object-contain bg-zinc-100 dark:bg-zinc-900" alt="Error Log">
+                        </div>
+                        <div class="mt-8 text-center max-w-sm">
+                            <h3 class="text-xl font-bold mb-1">Master Your Mistakes</h3>
+                            <p class="text-sm text-zinc-500">Log errors, analyze why they happened, and track your improvement.</p>
+                        </div>
+                    </div>
+
+                    <!-- 4. Timer -->
+                    <div class="carousel-slide">
+                        <div class="relative w-full max-w-md aspect-[16/10] bg-background rounded-lg shadow-2xl border border-border overflow-hidden group-hover/carousel:scale-105 transition-transform duration-700">
+                            <img src="https://lh3.googleusercontent.com/d/1V8H3qgE5C12GofFaymegsSAQjRqy8egL" class="w-full h-full object-contain bg-zinc-100 dark:bg-zinc-900" alt="Timer">
+                        </div>
+                        <div class="mt-8 text-center max-w-sm">
+                            <h3 class="text-xl font-bold mb-1">Deep Focus Mode</h3>
+                            <p class="text-sm text-zinc-500">Eliminate distractions with the built-in focus timer and fullscreen mode.</p>
+                        </div>
+                    </div>
+
+                    <!-- 5. Mobile Home -->
+                    <div class="carousel-slide">
+                        <div class="relative h-[60%] aspect-[9/19] bg-background rounded-3xl shadow-2xl border border-border overflow-hidden group-hover/carousel:scale-105 transition-transform duration-700 ring-4 ring-zinc-900">
+                            <img src="https://lh3.googleusercontent.com/d/1dhTi8NQH-k2ReZkExfRwEIxedqEpRGB9" class="w-full h-full object-cover" alt="Mobile">
+                        </div>
+                        <div class="mt-6 text-center max-w-sm">
+                            <h3 class="text-xl font-bold mb-1">Fully Mobile Optimized</h3>
+                            <p class="text-sm text-zinc-500">Take your workspace anywhere. Works perfectly on your phone.</p>
+                        </div>
+                    </div>
+
+                    <!-- 6. Mobile Error Log -->
+                    <div class="carousel-slide">
+                        <div class="relative h-[60%] aspect-[9/19] bg-background rounded-3xl shadow-2xl border border-border overflow-hidden group-hover/carousel:scale-105 transition-transform duration-700 ring-4 ring-zinc-900">
+                            <img src="https://lh3.googleusercontent.com/d/1wYSPRZQ2N-JbnW0hmmm9YT99-fDdVVmb" class="w-full h-full object-cover" alt="Mobile Logs">
+                        </div>
+                        <div class="mt-6 text-center max-w-sm">
+                            <h3 class="text-xl font-bold mb-1">Log on the Go</h3>
+                            <p class="text-sm text-zinc-500">Capture mistakes immediately after class or practice sessions.</p>
+                        </div>
+                    </div>
+
+                    <!-- 7. Practice Mode -->
+                    <div class="carousel-slide">
+                        <div class="relative h-[60%] aspect-[9/19] bg-background rounded-3xl shadow-2xl border border-border overflow-hidden group-hover/carousel:scale-105 transition-transform duration-700 ring-4 ring-zinc-900">
+                            <img src="https://lh3.googleusercontent.com/d/10pg2wSAgEmfTTZo3B_6qO2DUo3gPH_de" class="w-full h-full object-cover" alt="Practice">
+                        </div>
+                        <div class="mt-6 text-center max-w-sm">
+                            <h3 class="text-xl font-bold mb-1">Practice Anywhere</h3>
+                            <p class="text-sm text-zinc-500">Review your notes and test your knowledge on mobile.</p>
+                        </div>
+                    </div>
+
+                </div>
+
+                <!-- Arrows -->
+                <button onclick="moveSlide(-1)" class="absolute left-4 top-1/2 -translate-y-1/2 p-3 rounded-full bg-background/80 hover:bg-background border border-border shadow-lg transition-all hover:scale-110 active:scale-90 z-20">
+                    <i data-lucide="chevron-left" class="w-6 h-6"></i>
+                </button>
+                <button onclick="moveSlide(1)" class="absolute right-4 top-1/2 -translate-y-1/2 p-3 rounded-full bg-background/80 hover:bg-background border border-border shadow-lg transition-all hover:scale-110 active:scale-90 z-20">
+                    <i data-lucide="chevron-right" class="w-6 h-6"></i>
+                </button>
             </div>
         </div>
     </div>
@@ -403,7 +470,7 @@
                             <span id="heroName">Student</span>.
                         </h2>
                     </div>
-                    <div class="relative z-10 flex gap-3 mt-4">
+                    <div class="relative z-10 flex flex-wrap gap-3 mt-4">
                         <a href="note.html" class="btn-primary">
                             <span>Open Workspace</span>
                             <i data-lucide="arrow-right" class="w-4 h-4"></i>
@@ -412,7 +479,7 @@
                             <i data-lucide="maximize" class="w-4 h-4"></i> Focus
                         </button>
                         <button onclick="showWelcome(true)" class="btn-secondary flex items-center gap-2">
-                             <i data-lucide="help-circle" class="w-4 h-4"></i> Help
+                             <i data-lucide="help-circle" class="w-4 h-4"></i> Tour
                         </button>
                     </div>
                 </div>
@@ -577,7 +644,7 @@
         let timerTime = timerDuration;
         let currentCalendarDate = new Date();
 
-        // --- WELCOME MODAL LOGIC (NEW) ---
+        // --- WELCOME MODAL LOGIC (IMPROVED) ---
         let currentSlide = 0;
         const slides = document.querySelectorAll('.carousel-slide');
         const dotsContainer = document.querySelector('.carousel-dots');
@@ -599,6 +666,7 @@
         }
 
         window.goToSlide = (idx) => {
+            stopAutoPlay();
             currentSlide = idx;
             updateCarousel();
         }
@@ -619,7 +687,7 @@
             autoPlayInterval = setInterval(() => {
                 currentSlide = (currentSlide + 1) % slides.length;
                 updateCarousel();
-            }, 3000); // 3 seconds per slide
+            }, 4000); // 4 seconds per slide
         }
 
         function stopAutoPlay() {
@@ -640,21 +708,32 @@
 
         window.closeWelcome = () => {
             stopAutoPlay();
-            if(document.getElementById('dontShowAgain').checked) {
-                localStorage.setItem('darnote_welcome_seen', 'true');
+            if(currentUser) {
+                localStorage.setItem(`darnote_welcome_seen_${currentUser.uid}`, 'true');
             }
             welcomeModal.classList.add('opacity-0');
-            setTimeout(() => welcomeModal.classList.add('hidden'), 300);
+            setTimeout(() => {
+                welcomeModal.classList.add('hidden');
+                // Reset Animations for next time
+                document.querySelectorAll('.animate-slide-up').forEach(el => {
+                    el.style.animation = 'none';
+                    el.offsetHeight; /* trigger reflow */
+                    el.style.animation = null; 
+                });
+            }, 300);
         }
 
         window.showWelcome = (force = false) => {
             // Check if seen before
-            const seen = localStorage.getItem('darnote_welcome_seen');
+            const seen = currentUser ? localStorage.getItem(`darnote_welcome_seen_${currentUser.uid}`) : false;
+            
             if(!seen || force) {
                 welcomeModal.classList.remove('hidden');
-                // Small delay to allow transition
+                // Small delay to allow transition and reset animations
                 setTimeout(() => {
                     welcomeModal.classList.remove('opacity-0');
+                    currentSlide = 0;
+                    updateCarousel();
                     startAutoPlay();
                 }, 10);
             }
@@ -695,7 +774,7 @@
                 initDashboard(user.uid);
                 
                 // Show Welcome Modal if needed (1s delay for effect)
-                setTimeout(() => showWelcome(), 1000);
+                setTimeout(() => showWelcome(), 1500);
 
             } else {
                 currentUser = null;
