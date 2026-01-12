@@ -26,7 +26,17 @@
     <script>tailwind.config={darkMode:'class',theme:{extend:{colors:{onyx:'#09090b',surface:'#18181b',border:'#27272a',brand:'#6366f1','brand-dark':'#4338ca','mistake-red':'#7f1d1d'},fontFamily:{sans:['Inter','sans-serif']},boxShadow:{'glow':'0 0 20px rgba(99, 102, 241, 0.3)'}}}}</script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
     <style>
-        body{font-family:'Inter',sans-serif;overflow:hidden;-webkit-tap-highlight-color:transparent}::-webkit-scrollbar{width:4px}::-webkit-scrollbar-track{background:0 0}::-webkit-scrollbar-thumb{background:#71717a;border-radius:2px}.glass{background:rgba(255,255,255,.85);backdrop-filter:blur(16px);border-top:1px solid rgba(0,0,0,.05)}.dark .glass{background:rgba(24,24,27,.85);border-top:1px solid rgba(255,255,255,.05)}.tox-tinymce{border:none!important}.tox .tox-toolbar{background:#f4f4f5!important;border-bottom:1px solid #e4e4e7!important}.dark .tox .tox-toolbar{background:#18181b!important;border-bottom:1px solid #27272a!important}.tox .tox-edit-area__iframe{background:#fff!important}.dark .tox .tox-edit-area__iframe{background:#09090b!important}.tox .tox-statusbar{display:none!important}.loader{width:48px;height:48px;border:5px solid #a1a1aa;border-bottom-color:#6366f1;border-radius:50%;display:inline-block;animation:r 1s linear infinite}@keyframes r{0%{transform:rotate(0)}100%{transform:rotate(360deg)}}.no-scrollbar::-webkit-scrollbar{display:none}.no-scrollbar{-ms-overflow-style:none;scrollbar-width:none}
+        body { font-family:'Inter',sans-serif; overflow:hidden; -webkit-tap-highlight-color:transparent; overscroll-behavior-x: none; touch-action: pan-y; width: 100vw; height: 100dvh; }
+        ::-webkit-scrollbar{width:4px}::-webkit-scrollbar-track{background:0 0}::-webkit-scrollbar-thumb{background:#71717a;border-radius:2px}
+        .glass{background:rgba(255,255,255,.85);backdrop-filter:blur(16px);border-top:1px solid rgba(0,0,0,.05)}
+        .dark .glass{background:rgba(24,24,27,.85);border-top:1px solid rgba(255,255,255,.05)}
+        .tox-tinymce{border:none!important}.tox .tox-toolbar{background:#f4f4f5!important;border-bottom:1px solid #e4e4e7!important}
+        .dark .tox .tox-toolbar{background:#18181b!important;border-bottom:1px solid #27272a!important}
+        .tox .tox-edit-area__iframe{background:#fff!important}.dark .tox .tox-edit-area__iframe{background:#09090b!important}
+        .tox .tox-statusbar{display:none!important}
+        .loader{width:48px;height:48px;border:5px solid #a1a1aa;border-bottom-color:#6366f1;border-radius:50%;display:inline-block;animation:r 1s linear infinite}
+        @keyframes r{0%{transform:rotate(0)}100%{transform:rotate(360deg)}}
+        .no-scrollbar::-webkit-scrollbar{display:none}.no-scrollbar{-ms-overflow-style:none;scrollbar-width:none}
     </style>
 </head>
 <body class="bg-zinc-50 text-zinc-900 dark:bg-onyx dark:text-zinc-100 transition-colors duration-300">
@@ -136,31 +146,18 @@
             return s;
         };
 
-        // --- SWIPE WRAPPER COMPONENT ---
         const TouchWrapper = ({ onBack, children, className }) => {
             const startX = useRef(null);
-            
-            const handleTouchStart = (e) => {
-                startX.current = e.touches[0].clientX;
-            };
-
+            const startY = useRef(null);
+            const handleTouchStart = (e) => { startX.current = e.touches[0].clientX; startY.current = e.touches[0].clientY; };
             const handleTouchEnd = (e) => {
                 if (!startX.current) return;
-                const endX = e.changedTouches[0].clientX;
-                const diff = endX - startX.current;
-                
-                // If swipe right > 50px and starting from left edge (first 40px)
-                if (startX.current < 40 && diff > 50) {
-                    onBack();
-                }
+                const diffX = e.changedTouches[0].clientX - startX.current;
+                const diffY = Math.abs(e.changedTouches[0].clientY - startY.current);
+                if (startX.current < 30 && diffX > 60 && diffY < 30) { onBack(); }
                 startX.current = null;
             };
-
-            return (
-                <div onTouchStart={handleTouchStart} onTouchEnd={handleTouchEnd} className={className}>
-                    {children}
-                </div>
-            );
+            return <div onTouchStart={handleTouchStart} onTouchEnd={handleTouchEnd} className={className}>{children}</div>;
         };
 
         const Splash = ({ onLogin }) => (
@@ -175,7 +172,6 @@
             </div>
         );
 
-        // ... PracticeModal & AIChat components remain largely same, just updated in context ...
         const PracticeModal = ({ activeLog, onClose, user }) => {
             const [loading, setLoading] = useState(true);
             const [questions, setQuestions] = useState([]);
@@ -305,14 +301,13 @@
 
             return (
                 <TouchWrapper onBack={onBack} className="fixed inset-0 bg-zinc-50 dark:bg-onyx z-[60] overflow-y-auto flex flex-col">
-                    <motion.div initial={{x:'100%'}} animate={{x:0}} exit={{x:'100%'}} className="flex-1 flex flex-col">
+                    <motion.div initial={{x:'100%'}} animate={{x:0}} exit={{x:'100%'}} transition={{type:'spring',damping:25,stiffness:300}} className="flex-1 flex flex-col">
                         <div className="sticky top-0 bg-white/90 dark:bg-onyx/90 backdrop-blur-md p-4 border-b border-zinc-200 dark:border-zinc-800 flex justify-between items-center z-10 shrink-0">
                             <button onClick={onBack} className="p-2 rounded-full bg-zinc-100 dark:bg-zinc-800"><Icons.ChevronLeft className="w-6 h-6 text-zinc-700 dark:text-zinc-300"/></button>
                             <span className="font-bold text-zinc-900 dark:text-white">Failure Log</span>
                             <div className="flex gap-2">
                                  {item && <button onClick={()=>setPracticeOpen(true)} className="p-2 bg-orange-500/10 text-orange-500 rounded-full"><Icons.Brain className="w-5 h-5"/></button>}
                                  {item && <button onClick={()=>setAiOpen(true)} className="p-2 bg-brand/10 text-brand rounded-full"><Icons.Bot className="w-5 h-5"/></button>}
-                                 {/* FIX: Passing ID correctly prevents duplication */}
                                  <button onClick={()=>onSave({...data, id: item?.id})} className="px-4 py-2 bg-brand rounded-full text-sm font-bold text-white">Save</button>
                             </div>
                         </div>
@@ -405,7 +400,7 @@
                 if (candidates.length === 0) return alert(`No ${type} logs found to study!`);
                 const rand = candidates[Math.floor(Math.random() * candidates.length)];
                 setShowRandomPicker(false);
-                onEdit('edit_error', rand);
+                onEdit('edit_error', rand.id); // FIXED: Pass ID
             };
 
             return (
@@ -431,7 +426,7 @@
                     <AnimatePresence>{showRandomPicker && (<motion.div initial={{opacity:0, scale:0.9}} animate={{opacity:1, scale:1}} exit={{opacity:0, scale:0.9}} className="absolute top-16 right-6 z-20 bg-white dark:bg-zinc-800 border border-zinc-200 dark:border-white/10 shadow-xl rounded-xl p-3 w-48 origin-top-right"><div className="text-xs font-bold text-zinc-500 mb-2 uppercase tracking-wider">Pick Random to Study</div><div className="space-y-2"><button onClick={()=>handleRandom('MC')} className="w-full text-left p-2 hover:bg-zinc-100 dark:hover:bg-white/5 rounded-lg text-sm flex justify-between"><span>Random MC</span> <span className="text-xs bg-indigo-500 text-white px-1.5 rounded">?</span></button><button onClick={()=>handleRandom('LQ')} className="w-full text-left p-2 hover:bg-zinc-100 dark:hover:bg-white/5 rounded-lg text-sm flex justify-between"><span>Random LQ</span> <span className="text-xs bg-orange-500 text-white px-1.5 rounded">?</span></button></div></motion.div>)}</AnimatePresence>
                     {mode === 'category' && (<div className="mb-4 space-y-4"><div className="overflow-x-auto no-scrollbar pb-2"><div className="flex gap-2"><button onClick={()=>{setSub(sub==='General'?null:'General');setTop(null)}} className={`px-4 py-2 rounded-full text-xs font-bold whitespace-nowrap ${sub==='General'?'bg-brand text-white':'bg-zinc-100 dark:bg-zinc-800 text-zinc-500'}`}>General</button>{subjects.map(s=><button key={s.name} onClick={()=>{setSub(sub===s.name?null:s.name);setTop(null)}} className={`px-4 py-2 rounded-full text-xs font-bold whitespace-nowrap ${sub===s.name?'bg-brand text-white':'bg-zinc-100 dark:bg-zinc-800 text-zinc-500'}`}>{s.name}</button>)}</div></div><AnimatePresence>{sub && topics.length>0 && <motion.div initial={{height:0}} animate={{height:'auto'}} className="overflow-x-auto no-scrollbar pb-2"><div className="flex gap-2"><button onClick={()=>setTop(null)} className={`px-3 py-1 rounded-lg text-[10px] font-bold border ${!top?'border-brand text-brand':'border-zinc-200 dark:border-zinc-700 text-zinc-500'}`}>All</button>{topics.map(t=><button key={t} onClick={()=>setTop(top===t?null:t)} className={`px-3 py-1 rounded-lg text-[10px] font-bold border ${top===t?'bg-brand border-brand text-white':'border-zinc-200 dark:border-zinc-700 text-zinc-500'}`}>{t}</button>)}</div></motion.div>}</AnimatePresence></div>)}
                     <div className="space-y-3 flex-1">
-                        {mode==='category' && !sub ? <div className="h-40 flex items-center justify-center text-zinc-400 text-sm italic">Select a Subject</div> : filtered.length===0 ? <div className="h-40 flex items-center justify-center text-zinc-400 text-sm italic">No errors found.</div> : filtered.map((item,i) => (<motion.div key={item.id} initial={{opacity:0,y:10}} animate={{opacity:1,y:0}} transition={{delay:i*0.05}} onClick={()=>onEdit('edit_error',item)} className="bg-white dark:bg-surface p-4 rounded-2xl border border-zinc-200 dark:border-zinc-800 flex justify-between items-center active:scale-[0.98] transition-transform"><div><div className="font-bold text-zinc-800 dark:text-zinc-200 mb-1">{item.title||'Untitled'}</div><div className="flex items-center gap-2"><span className={`text-[10px] font-bold px-2 py-0.5 rounded ${item.mastered?"bg-green-500/20 text-green-500":"bg-red-500/20 text-red-500"}`}>{item.mastered?'SOLVED':'REVIEW'}</span><span className="text-[10px] text-zinc-400 uppercase tracking-wider">{item.subject}</span><span className={`text-[10px] font-bold px-1.5 py-0.5 rounded border ${item.questionType==='LQ'?'border-orange-500 text-orange-500':'border-indigo-500 text-indigo-500'}`}>{item.questionType||'MC'}</span>{item.topic && <span className="text-[10px] text-zinc-500 bg-zinc-100 dark:bg-zinc-800 px-2 py-0.5 rounded-md hidden sm:inline">{item.topic}</span>}</div></div><div className="text-right"><div className="text-[10px] text-zinc-500 mb-1">{new Date(item.createdAt||0).toLocaleDateString()}</div><Icons.ChevronLeft className="w-5 h-5 text-zinc-600 rotate-180 ml-auto"/></div></motion.div>))}
+                        {mode==='category' && !sub ? <div className="h-40 flex items-center justify-center text-zinc-400 text-sm italic">Select a Subject</div> : filtered.length===0 ? <div className="h-40 flex items-center justify-center text-zinc-400 text-sm italic">No errors found.</div> : filtered.map((item,i) => (<motion.div key={item.id} initial={{opacity:0,y:10}} animate={{opacity:1,y:0}} transition={{delay:i*0.05}} onClick={()=>onEdit('edit_error',item.id)} className="bg-white dark:bg-surface p-4 rounded-2xl border border-zinc-200 dark:border-zinc-800 flex justify-between items-center active:scale-[0.98] transition-transform"><div><div className="font-bold text-zinc-800 dark:text-zinc-200 mb-1">{item.title||'Untitled'}</div><div className="flex items-center gap-2"><span className={`text-[10px] font-bold px-2 py-0.5 rounded ${item.mastered?"bg-green-500/20 text-green-500":"bg-red-500/20 text-red-500"}`}>{item.mastered?'SOLVED':'REVIEW'}</span><span className="text-[10px] text-zinc-400 uppercase tracking-wider">{item.subject}</span><span className={`text-[10px] font-bold px-1.5 py-0.5 rounded border ${item.questionType==='LQ'?'border-orange-500 text-orange-500':'border-indigo-500 text-indigo-500'}`}>{item.questionType||'MC'}</span>{item.topic && <span className="text-[10px] text-zinc-500 bg-zinc-100 dark:bg-zinc-800 px-2 py-0.5 rounded-md hidden sm:inline">{item.topic}</span>}</div></div><div className="text-right"><div className="text-[10px] text-zinc-500 mb-1">{new Date(item.createdAt||0).toLocaleDateString()}</div><Icons.ChevronLeft className="w-5 h-5 text-zinc-600 rotate-180 ml-auto"/></div></motion.div>))}
                     </div>
                 </div>
             );
@@ -444,28 +439,48 @@
             useEffect(()=>window.firebase.onAuthStateChanged(window.firebase.auth, setUser), []);
             const {data:errors} = useData(user,'error_logs'), {data:notes} = useData(user,'notes'), subjects = useSubjects(user);
             
-            // --- ROUTING HANDLER ---
+            // --- DEEP LINKING LOGIC ---
+            const getParams = () => { const p = new URLSearchParams(window.location.search); return { view: p.get('view') || 'home', id: p.get('id') }; };
+            
+            // Sync URL on Mount & Popstate
             useEffect(() => {
-                const handlePopState = (e) => {
-                    if (e.state && e.state.tab) {
-                        setTab(e.state.tab);
-                    } else {
-                        setTab('home'); // Default fallback
-                    }
-                };
-                window.addEventListener('popstate', handlePopState);
-                return () => window.removeEventListener('popstate', handlePopState);
+                const handleNav = () => { const { view } = getParams(); setTab(view); };
+                window.addEventListener('popstate', handleNav);
+                handleNav(); // Run once on mount
+                return () => window.removeEventListener('popstate', handleNav);
             }, []);
 
-            const navigate = (newTab) => {
-                window.history.pushState({ tab: newTab }, '', `?view=${newTab}`);
+            // HYDRATION: Restore 'sel' (selected item) when data arrives if URL has an ID
+            useEffect(() => {
+                const { view, id } = getParams();
+                if (!id || sel?.id === id) return; // already set or no id
+                if (view === 'edit_error' && errors.length > 0) {
+                    const found = errors.find(e => e.id === id);
+                    if(found) setSel(found);
+                } else if (view === 'edit_note' && notes.length > 0) {
+                    const found = notes.find(n => n.id === id);
+                    if(found) setSel(found);
+                }
+            }, [errors, notes, tab]);
+
+            const navigate = (newTab, id=null) => {
+                const url = id ? `?view=${newTab}&id=${id}` : `?view=${newTab}`;
+                window.history.pushState({ tab: newTab, id }, '', url);
                 setTab(newTab);
+                // If we are navigating to add, clear selection
+                if(newTab.startsWith('add')) setSel(null); 
+                // If we are navigating to edit/list without ID, we handle 'sel' via props/click
             };
 
             const goBack = () => {
-                window.history.back(); // Triggers popstate
+                if (tab.includes('edit') || tab.includes('add')) {
+                    const dest = tab.includes('error') ? 'errors' : 'notes';
+                    navigate(dest); // Use navigate to clear ID param from URL
+                } else {
+                    if (window.history.length > 1) window.history.back(); else navigate('home');
+                }
             };
-            // -----------------------
+            // --------------------------
 
             useEffect(() => {
                 if(!user) return;
@@ -483,9 +498,6 @@
             const save = async (col, d) => {
                 const c = window.firebase.collection(window.firebase.db,'artifacts','darnote-app','users',user.uid,col);
                 if(d.id) await window.firebase.updateDoc(window.firebase.doc(c,d.id),d); else await window.firebase.addDoc(c,{...d,createdAt:new Date().toISOString()});
-                // When saving, we assume user is done, so we pop back to list.
-                // Or if we want to stay, we don't call anything.
-                // Assuming we want to go back to list:
                 goBack();
             };
             const del = async (id, col) => await window.firebase.deleteDoc(window.firebase.doc(window.firebase.db,'artifacts','darnote-app','users',user.uid,col,id));
@@ -500,10 +512,14 @@
                                 <div className="flex justify-between items-center"><div><div className="text-zinc-500 text-sm">Welcome Back,</div><div className="text-2xl font-bold">{user.displayName?.split(' ')[0]}</div></div><img src={user.photoURL} className="w-10 h-10 rounded-full"/></div>
                                 <div className="bg-gradient-to-br from-brand to-brand-dark p-6 rounded-3xl text-white shadow-glow"><div className="text-sm opacity-80">Total Failures</div><div className="text-4xl font-bold mb-4">{errors.length}</div><div className="flex gap-4"><div className="bg-white/20 px-3 py-1 rounded text-xs"><b>{errors.filter(e=>e.mastered).length}</b> Mastered</div><div className="bg-white/20 px-3 py-1 rounded text-xs"><b>{notes.length}</b> Notes</div></div></div>
                                 <div className="grid grid-cols-2 gap-4"><button onClick={()=>{setSel(null);navigate('add_error')}} className="bg-white dark:bg-surface p-4 rounded-2xl border border-zinc-200 dark:border-zinc-800 flex flex-col items-center gap-2"><div className="w-10 h-10 bg-red-500/10 rounded-full flex items-center justify-center text-red-500"><Icons.Bug className="w-5 h-5"/></div><span className="text-sm font-bold">Log Error</span></button><button onClick={()=>{setSel(null);navigate('add_note')}} className="bg-white dark:bg-surface p-4 rounded-2xl border border-zinc-200 dark:border-zinc-800 flex flex-col items-center gap-2"><div className="w-10 h-10 bg-blue-500/10 rounded-full flex items-center justify-center text-blue-500"><Icons.Book className="w-5 h-5"/></div><span className="text-sm font-bold">New Note</span></button></div>
-                                <div><div className="flex justify-between items-end mb-4"><h3 className="font-bold text-lg">Recent Failures</h3><button onClick={()=>navigate('errors')} className="text-xs text-brand">View All</button></div><div className="space-y-3">{errors.slice(0,3).map(e=><div key={e.id} onClick={()=>{setSel(e);navigate('edit_error')}} className="bg-white dark:bg-surface p-4 rounded-2xl border border-zinc-200 dark:border-zinc-800 flex items-center gap-4"><div className={`w-2 h-10 rounded-full ${e.mastered?'bg-green-500':'bg-red-500'}`}></div><div className="flex-1 overflow-hidden"><div className="font-bold truncate">{e.title}</div><div className="text-xs text-zinc-500">{e.subject} • {new Date(e.createdAt||0).toLocaleDateString()}</div></div></div>)}</div></div>
+                                <div><div className="flex justify-between items-end mb-4"><h3 className="font-bold text-lg">Recent Failures</h3><button onClick={()=>navigate('errors')} className="text-xs text-brand">View All</button></div><div className="space-y-3">{errors.slice(0,3).map(e=><div key={e.id} onClick={()=>{setSel(e);navigate('edit_error', e.id)}} className="bg-white dark:bg-surface p-4 rounded-2xl border border-zinc-200 dark:border-zinc-800 flex items-center gap-4"><div className={`w-2 h-10 rounded-full ${e.mastered?'bg-green-500':'bg-red-500'}`}></div><div className="flex-1 overflow-hidden"><div className="font-bold truncate">{e.title}</div><div className="text-xs text-zinc-500">{e.subject} • {new Date(e.createdAt||0).toLocaleDateString()}</div></div></div>)}</div></div>
                             </div>}
-                            {tab==='errors' && <ErrorList key="e" items={errors} onEdit={(m,i)=>{setSel(i);navigate(m)}} subjects={subjects} />}
-                            {tab==='notes' && <div key="n" className="p-6 pb-24 min-h-screen"><h2 className="text-3xl font-bold mb-6">Notes</h2><div className="space-y-3">{notes.map(n=><div key={n.id} onClick={()=>{setSel(n);navigate('edit_note')}} className="bg-white dark:bg-surface p-4 rounded-2xl border border-zinc-200 dark:border-zinc-800 flex justify-between"><div><div className="font-bold">{n.title||'Untitled'}</div><div className="text-xs text-zinc-500">{new Date(n.createdAt||0).toLocaleDateString()}</div></div><Icons.ChevronLeft className="w-5 h-5 rotate-180"/></div>)}</div></div>}
+                            {tab==='errors' && <ErrorList key="e" items={errors} onEdit={(m,id)=>{ 
+                                const it = errors.find(x=>x.id===id); 
+                                setSel(it); 
+                                navigate(m, id); 
+                            }} subjects={subjects} />}
+                            {tab==='notes' && <div key="n" className="p-6 pb-24 min-h-screen"><h2 className="text-3xl font-bold mb-6">Notes</h2><div className="space-y-3">{notes.map(n=><div key={n.id} onClick={()=>{setSel(n);navigate('edit_note',n.id)}} className="bg-white dark:bg-surface p-4 rounded-2xl border border-zinc-200 dark:border-zinc-800 flex justify-between"><div><div className="font-bold">{n.title||'Untitled'}</div><div className="text-xs text-zinc-500">{new Date(n.createdAt||0).toLocaleDateString()}</div></div><Icons.ChevronLeft className="w-5 h-5 rotate-180"/></div>)}</div></div>}
                             
                             {tab==='profile' && <div key="p" className="p-6 pb-24 h-full flex flex-col">
                                 <h2 className="text-3xl font-bold mb-6">Settings</h2>
