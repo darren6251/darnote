@@ -82,24 +82,29 @@
             } catch(e) { return "Error: " + e.message; }
         };
 
-        // --- NEW QUOTA LOGIC (SEPARATE BUCKETS) ---
+        // --- SMART QUOTA MANAGER (UPDATED FOR CORRECT FIELDS) ---
         const checkAndIncrementQuota = async (user, type) => {
             if (!user) return false;
-            const today = new Date().toISOString().split('T')[0];
             // Limits: Chat=5, Practice=10, OCR=20
             const limits = { chat: 5, practice: 10, ocr: 20 };
-            const limit = limits[type] || 0;
+            const fieldMap = { chat: 'chat_count', practice: 'practice_count', ocr: 'ocr_count' };
+            
+            const limit = limits[type];
+            const field = fieldMap[type];
+            const today = new Date().toISOString().split('T')[0];
             
             const ref = window.firebase.doc(window.firebase.db, 'artifacts', "darnote-app", 'users', user.uid, 'ai_usage', today);
             try {
                 const snap = await window.firebase.getDoc(ref);
-                let data = snap.exists() ? snap.data() : {};
-                let count = data[type] || 0;
+                let count = snap.exists() ? (snap.data()[field] || 0) : 0;
                 
                 if (count >= limit) return false;
                 
-                await window.firebase.setDoc(ref, { [type]: window.firebase.increment(1), date: today }, { merge: true });
-                return true;
+                await window.firebase.setDoc(ref, { 
+                    [field]: window.firebase.increment(1), 
+                    date: today 
+                }, { merge: true });
+                return count + 1;
             } catch (e) { console.error("Quota check failed:", e); return false; }
         };
 
@@ -190,11 +195,11 @@
             const [quota, setQuota] = useState(0);
             const mode = activeLog.questionType || 'MC';
 
-            // Watch Practice Quota
+            // Watch Practice Quota (using correct field: practice_count)
             useEffect(() => {
                 const today = new Date().toISOString().split('T')[0];
                 return window.firebase.onSnapshot(window.firebase.doc(window.firebase.db, 'artifacts', "darnote-app", 'users', user.uid, 'ai_usage', today), s => {
-                    setQuota(s.exists() ? (s.data().practice || 0) : 0);
+                    setQuota(s.exists() ? (s.data().practice_count || 0) : 0);
                 });
             }, [user]);
 
@@ -202,9 +207,9 @@
 
             const generatePractice = async () => {
                 setLoading(true);
-                // CHARGE PRACTICE QUOTA HERE (10 limit)
-                const hasQuota = await checkAndIncrementQuota(user, 'practice');
-                if (!hasQuota) { alert("Daily Practice Limit Reached (10/10)!"); onClose(); return; }
+                // CHARGE PRACTICE QUOTA HERE (10 limit) - Counts as 1 for whole session
+                const newQuota = await checkAndIncrementQuota(user, 'practice');
+                if (newQuota === false) { alert("Daily Practice Limit Reached (10/10)!"); onClose(); return; }
 
                 let imgCtx = (activeLog.questionImages && activeLog.questionImages.length > 0) ? activeLog.questionImages[0] : (activeLog.imageUrl || null);
                 if (imgCtx && (imgCtx.startsWith('http') || imgCtx.startsWith('https'))) {
@@ -258,17 +263,20 @@
             const [quotaCount, setQuotaCount] = useState(0);
             const endRef=useRef(null), today=new Date().toISOString().split('T')[0];
             
-            // Watch Chat Quota
-            useEffect(()=>{if(user)return window.firebase.onSnapshot(window.firebase.doc(window.firebase.db,'artifacts','darnote-app','users',user.uid,'ai_usage',today),d=>setQuotaCount(d.exists()?(d.data().chat || 0):0))},[user,today]);
+            // Watch Chat Quota (using correct field: chat_count)
+            useEffect(()=>{if(user)return window.firebase.onSnapshot(window.firebase.doc(window.firebase.db,'artifacts','darnote-app','users',user.uid,'ai_usage',today),d=>setQuotaCount(d.exists()?(d.data().chat_count || 0):0))},[user,today]);
             
             useEffect(()=>{endRef.current?.scrollIntoView({behavior:"smooth"})},[msgs]);
             
             const send = async () => {
                 if(!inp.trim()) return;
-                const uMsg=inp; setMsgs(p=>[...p,{role:'user',text:uMsg}]); setInp(""); 
+                
                 // CHARGE CHAT QUOTA (5 limit)
-                const hasQuota = await checkAndIncrementQuota(user, 'chat');
-                if(!hasQuota) { setMsgs(p=>[...p,{role:'ai',text:"<span class='text-red-500'>DAILY CHAT LIMIT REACHED (5/5).</span>"}]); return; }
+                const newQuota = await checkAndIncrementQuota(user, 'chat');
+                
+                const uMsg=inp; setMsgs(p=>[...p,{role:'user',text:uMsg}]); setInp(""); 
+                
+                if(newQuota === false) { setMsgs(p=>[...p,{role:'ai',text:"<span class='text-red-500'>DAILY CHAT LIMIT REACHED (5/5).</span>"}]); return; }
                 
                 setLoad(true);
                 const ctx = activeLog ? `Sub:${activeLog.subject}, Q:${activeLog.explanation}, Answer:${activeLog.correctAnswer}` : 'General Chat';
@@ -566,5 +574,3 @@
     </script>
 </body>
 </html>
-
-
