@@ -33,8 +33,6 @@
     <div id="root"></div>
     <script type="text/babel">
         const GDRIVE_API_KEY="AIzaSyCScFR_D0snZ6hrHob5fUQM7Y2NhK-kTIA",GDRIVE_CLIENT_ID="256215327792-oglegui0q8qj507oao2c2733thcl9lrc.apps.googleusercontent.com"; 
-        
-        // --- PROXY ---
         const GEMINI_PROXY_URL = "https://gemini-proxy-513372702506.us-central1.run.app/proxy";
 
         const {useState,useEffect,useRef,useMemo}=React,{motion,AnimatePresence}=window.Motion;
@@ -74,7 +72,6 @@
             } catch(e) { return "Error: " + e.message; }
         };
 
-        // --- SHARED QUOTA LOGIC ---
         const checkAndIncrementQuota = async (user) => {
             if (!user) return false;
             const today = new Date().toISOString().split('T')[0];
@@ -88,17 +85,7 @@
             } catch (e) { console.error("Quota check failed:", e); return false; }
         };
 
-        // --- UTILS ---
-        const cleanLatex = (text) => {
-            return text
-                .replace(/\$\$/g, '\n')
-                .replace(/\$/g, '')
-                .replace(/\\text\{([^}]+)\}/g, '$1')
-                .replace(/\\times/g, '×').replace(/\\approx/g, '≈').replace(/\\le/g, '≤').replace(/\\ge/g, '≥')
-                .replace(/\\rightarrow/g, '→').replace(/\\cdot/g, '·')
-                .replace(/\\frac\{([^}]+)\}\{([^}]+)\}/g, '($1/$2)')
-                .replace(/\\/g, '');
-        };
+        const cleanLatex = (text) => text.replace(/\$\$/g, '\n').replace(/\$/g, '').replace(/\\text\{([^}]+)\}/g, '$1').replace(/\\times/g, '×').replace(/\\approx/g, '≈').replace(/\\le/g, '≤').replace(/\\ge/g, '≥').replace(/\\rightarrow/g, '→').replace(/\\cdot/g, '·').replace(/\\frac\{([^}]+)\}\{([^}]+)\}/g, '($1/$2)').replace(/\\/g, '');
 
         const useGoogleDrive = () => {
             const [tClient, setTClient] = useState(null);
@@ -119,7 +106,6 @@
                 const search=await fetch(`https://www.googleapis.com/drive/v3/files?q=${encodeURIComponent(q)}`,{headers:{Authorization:`Bearer ${token}`}});
                 let pId=(await search.json()).files?.[0]?.id;
                 if(!pId){const c=await fetch('https://www.googleapis.com/drive/v3/files',{method:'POST',headers:{Authorization:`Bearer ${token}`,'Content-Type':'application/json'},body:JSON.stringify({name:'darNote_Images',mimeType:'application/vnd.google-apps.folder'})}); pId=(await c.json()).id;}
-                
                 const meta={name,mimeType:blob.type,parents:[pId]}, form=new FormData();
                 form.append('metadata',new Blob([JSON.stringify(meta)],{type:'application/json'})); form.append('file',blob);
                 const up=await fetch('https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&fields=id',{method:'POST',headers:{Authorization:`Bearer ${token}`},body:form});
@@ -150,6 +136,33 @@
             return s;
         };
 
+        // --- SWIPE WRAPPER COMPONENT ---
+        const TouchWrapper = ({ onBack, children, className }) => {
+            const startX = useRef(null);
+            
+            const handleTouchStart = (e) => {
+                startX.current = e.touches[0].clientX;
+            };
+
+            const handleTouchEnd = (e) => {
+                if (!startX.current) return;
+                const endX = e.changedTouches[0].clientX;
+                const diff = endX - startX.current;
+                
+                // If swipe right > 50px and starting from left edge (first 40px)
+                if (startX.current < 40 && diff > 50) {
+                    onBack();
+                }
+                startX.current = null;
+            };
+
+            return (
+                <div onTouchStart={handleTouchStart} onTouchEnd={handleTouchEnd} className={className}>
+                    {children}
+                </div>
+            );
+        };
+
         const Splash = ({ onLogin }) => (
             <div className="h-screen w-full flex flex-col items-center justify-center bg-onyx relative overflow-hidden px-6">
                 <div className="absolute top-[-20%] right-[-20%] w-[80%] h-[80%] bg-brand/20 rounded-full blur-[100px] animate-pulse"></div>
@@ -162,7 +175,7 @@
             </div>
         );
 
-        // --- PRACTICE MODAL ---
+        // ... PracticeModal & AIChat components remain largely same, just updated in context ...
         const PracticeModal = ({ activeLog, onClose, user }) => {
             const [loading, setLoading] = useState(true);
             const [questions, setQuestions] = useState([]);
@@ -170,7 +183,6 @@
             const [userAnswers, setUserAnswers] = useState({});
             const [marked, setMarked] = useState(false);
             const [lqFeedback, setLqFeedback] = useState(null);
-            
             const mode = activeLog.questionType || 'MC';
 
             useEffect(() => { generatePractice(); }, []);
@@ -201,7 +213,6 @@
                 setLoading(true);
                 const hasQuota = await checkAndIncrementQuota(user);
                 if (!hasQuota) { alert("Daily quota reached!"); setLoading(false); return; }
-
                 const prompt = `Mark answer. Context: ${lqData.context}. Answers: ${JSON.stringify(userAnswers)}. Return JSON: {"totalScore": 5, "maxScore": 6, "generalFeedback": "...", "partFeedback": {"a": {"score": 1, "comment": "..."}, "b": {"score": 4, "comment": "..."}}}.`;
                 const res = await callGemini(prompt, "Strict examiner. JSON only.");
                 try { setLqFeedback(JSON.parse(res.replace(/```json|```/g, ''))); setMarked(true); } catch(e) { alert("Marking failed."); }
@@ -215,62 +226,11 @@
                         <button onClick={onClose}><Icons.X className="w-6 h-6 text-zinc-400"/></button>
                     </div>
                     <div className="flex-1 overflow-y-auto p-4 space-y-6">
-                        {loading ? (
-                             <div className="flex flex-col items-center justify-center h-64 space-y-4">
-                                <div className="loader"></div>
-                                <p className="text-zinc-500 animate-pulse text-sm">Constructing pain...</p>
-                             </div>
-                        ) : mode === 'MC' ? (
-                            <div className="space-y-8 pb-20">
-                                {questions.map((q, idx) => (
-                                    <div key={idx} className="space-y-3">
-                                        <div className="font-bold text-zinc-900 dark:text-zinc-100">{idx+1}. {q.q}</div>
-                                        <div className="grid grid-cols-1 gap-2">
-                                            {q.options.map((opt) => {
-                                                const letter = opt.charAt(0);
-                                                const isSelected = userAnswers[idx] === letter;
-                                                const isCorrect = q.answer === letter;
-                                                let bg = "bg-zinc-50 dark:bg-zinc-800 border-zinc-200 dark:border-zinc-700";
-                                                if (marked) {
-                                                    if (isCorrect) bg = "bg-green-500/20 border-green-500";
-                                                    else if (isSelected) bg = "bg-red-500/20 border-red-500";
-                                                } else if (isSelected) bg = "bg-brand/20 border-brand";
-                                                return (
-                                                    <button key={opt} onClick={() => !marked && setUserAnswers({...userAnswers, [idx]: letter})} className={`text-left p-3 rounded-lg border text-sm ${bg} dark:text-zinc-200`}>{opt}</button>
-                                                );
-                                            })}
-                                        </div>
-                                        {marked && <div className="text-xs p-3 rounded bg-zinc-100 dark:bg-white/5 text-zinc-600 dark:text-zinc-400"><span className="font-bold">Explanation:</span> {q.explanation}</div>}
-                                    </div>
-                                ))}
-                            </div>
-                        ) : (
-                            lqData && (
-                                <div className="space-y-6 pb-20">
-                                    <div className="p-3 bg-zinc-100 dark:bg-white/5 rounded-lg text-sm text-zinc-800 dark:text-zinc-200">{lqData.context}</div>
-                                    {lqData.parts.map((part) => (
-                                        <div key={part.id} className="space-y-2">
-                                            <div className="flex justify-between text-sm"><span className="font-bold dark:text-white">({part.id}) {part.text}</span><span className="text-zinc-500">[{part.marks}m]</span></div>
-                                            <textarea value={userAnswers[part.id] || ''} onChange={e => setUserAnswers({...userAnswers, [part.id]: e.target.value})} disabled={marked} className="w-full bg-transparent border border-zinc-200 dark:border-white/10 rounded-lg p-3 text-sm dark:text-white" rows="3" placeholder="Answer..."/>
-                                            {marked && lqFeedback?.partFeedback[part.id] && (
-                                                <div className={`text-xs p-2 rounded flex justify-between ${lqFeedback.partFeedback[part.id].score === part.marks ? 'bg-green-500/10 text-green-500' : 'bg-red-500/10 text-red-400'}`}>
-                                                    <span>{lqFeedback.partFeedback[part.id].comment}</span><span className="font-bold">{lqFeedback.partFeedback[part.id].score}/{part.marks}</span>
-                                                </div>
-                                            )}
-                                        </div>
-                                    ))}
-                                    {marked && <div className="p-4 rounded-lg bg-brand/10 border border-brand/20 text-center"><div className="text-2xl font-bold text-brand">{lqFeedback.totalScore} / {lqFeedback.maxScore}</div></div>}
-                                </div>
-                            )
-                        )}
+                        {loading ? <div className="flex flex-col items-center justify-center h-64 space-y-4"><div className="loader"></div><p className="text-zinc-500 animate-pulse text-sm">Constructing pain...</p></div> : mode === 'MC' ? (
+                            <div className="space-y-8 pb-20">{questions.map((q, idx) => (<div key={idx} className="space-y-3"><div className="font-bold text-zinc-900 dark:text-zinc-100">{idx+1}. {q.q}</div><div className="grid grid-cols-1 gap-2">{q.options.map((opt) => { const letter = opt.charAt(0); const isSelected = userAnswers[idx] === letter; const isCorrect = q.answer === letter; let bg = "bg-zinc-50 dark:bg-zinc-800 border-zinc-200 dark:border-zinc-700"; if (marked) { if (isCorrect) bg = "bg-green-500/20 border-green-500"; else if (isSelected) bg = "bg-red-500/20 border-red-500"; } else if (isSelected) bg = "bg-brand/20 border-brand"; return (<button key={opt} onClick={() => !marked && setUserAnswers({...userAnswers, [idx]: letter})} className={`text-left p-3 rounded-lg border text-sm ${bg} dark:text-zinc-200`}>{opt}</button>); })}</div>{marked && <div className="text-xs p-3 rounded bg-zinc-100 dark:bg-white/5 text-zinc-600 dark:text-zinc-400"><span className="font-bold">Explanation:</span> {q.explanation}</div>}</div>))}</div>
+                        ) : (lqData && <div className="space-y-6 pb-20"><div className="p-3 bg-zinc-100 dark:bg-white/5 rounded-lg text-sm text-zinc-800 dark:text-zinc-200">{lqData.context}</div>{lqData.parts.map((part) => (<div key={part.id} className="space-y-2"><div className="flex justify-between text-sm"><span className="font-bold dark:text-white">({part.id}) {part.text}</span><span className="text-zinc-500">[{part.marks}m]</span></div><textarea value={userAnswers[part.id] || ''} onChange={e => setUserAnswers({...userAnswers, [part.id]: e.target.value})} disabled={marked} className="w-full bg-transparent border border-zinc-200 dark:border-white/10 rounded-lg p-3 text-sm dark:text-white" rows="3" placeholder="Answer..."/>{marked && lqFeedback?.partFeedback[part.id] && (<div className={`text-xs p-2 rounded flex justify-between ${lqFeedback.partFeedback[part.id].score === part.marks ? 'bg-green-500/10 text-green-500' : 'bg-red-500/10 text-red-400'}`}><span>{lqFeedback.partFeedback[part.id].comment}</span><span className="font-bold">{lqFeedback.partFeedback[part.id].score}/{part.marks}</span></div>)}</div>))}{marked && <div className="p-4 rounded-lg bg-brand/10 border border-brand/20 text-center"><div className="text-2xl font-bold text-brand">{lqFeedback.totalScore} / {lqFeedback.maxScore}</div></div>}</div>)}
                     </div>
-                    <div className="p-4 border-t border-zinc-200 dark:border-white/10 bg-white dark:bg-onyx">
-                        {!marked ? (
-                            <button onClick={() => mode === 'MC' ? setMarked(true) : handleLqMark()} disabled={loading} className="w-full py-3 bg-brand text-white font-bold rounded-xl shadow-lg">Submit</button>
-                        ) : (
-                            <button onClick={onClose} className="w-full py-3 bg-zinc-200 dark:bg-white/10 text-zinc-900 dark:text-white font-bold rounded-xl">Close</button>
-                        )}
-                    </div>
+                    <div className="p-4 border-t border-zinc-200 dark:border-white/10 bg-white dark:bg-onyx">{!marked ? <button onClick={() => mode === 'MC' ? setMarked(true) : handleLqMark()} disabled={loading} className="w-full py-3 bg-brand text-white font-bold rounded-xl shadow-lg">Submit</button> : <button onClick={onClose} className="w-full py-3 bg-zinc-200 dark:bg-white/10 text-zinc-900 dark:text-white font-bold rounded-xl">Close</button>}</div>
                 </div>
             );
         };
@@ -281,46 +241,27 @@
             const [load, setLoad] = useState(false);
             const [quotaCount, setQuotaCount] = useState(0);
             const endRef=useRef(null), today=new Date().toISOString().split('T')[0];
-
             useEffect(()=>{if(user)return window.firebase.onSnapshot(window.firebase.doc(window.firebase.db,'artifacts','darnote-app','users',user.uid,'ai_usage',today),d=>setQuotaCount(d.exists()?d.data().count:0))},[user,today]);
             useEffect(()=>{endRef.current?.scrollIntoView({behavior:"smooth"})},[msgs]);
-
             const send = async () => {
                 if(!inp.trim()) return;
                 const uMsg=inp; setMsgs(p=>[...p,{role:'user',text:uMsg}]); setInp(""); 
                 const hasQuota = await checkAndIncrementQuota(user);
                 if(!hasQuota) { setMsgs(p=>[...p,{role:'ai',text:"<span class='text-red-500'>DAILY LIMIT REACHED (10/10).</span>"}]); return; }
-                
                 setLoad(true);
                 const ctx = activeLog ? `Sub:${activeLog.subject}, Q:${activeLog.explanation}, Answer:${activeLog.correctAnswer}` : 'General Chat';
                 let imgCtx = null;
-                if(activeLog) {
-                    let url = (activeLog.questionImages && activeLog.questionImages.length > 0) ? activeLog.questionImages[0] : activeLog.imageUrl;
-                    if(url && (url.startsWith('http'))) {
-                         try { const r=await fetch(url); const b=await r.blob(); imgCtx=await new Promise(res=>{const fr=new FileReader();fr.onloadend=()=>res(fr.result);fr.readAsDataURL(b)}); } catch(e){}
-                    }
-                }
+                if(activeLog) { let url = (activeLog.questionImages && activeLog.questionImages.length > 0) ? activeLog.questionImages[0] : activeLog.imageUrl; if(url && (url.startsWith('http'))) { try { const r=await fetch(url); const b=await r.blob(); imgCtx=await new Promise(res=>{const fr=new FileReader();fr.onloadend=()=>res(fr.result);fr.readAsDataURL(b)}); } catch(e){} } }
                 let res = await callGemini(uMsg, `Roast-heavy tutor. Context: ${ctx}`, imgCtx);
                 res = cleanLatex(res);
                 setMsgs(p=>[...p,{role:'ai',text:res}]); setLoad(false);
             };
-
             return (
                 <div className="flex flex-col w-full bg-zinc-50 dark:bg-surface fixed inset-0 z-[80] h-[100dvh]">
                     <div className="p-4 border-b border-zinc-200 dark:border-white/10 flex justify-between items-center bg-zinc-100 dark:bg-black/20 shrink-0">
-                        <div className="flex flex-col">
-                            <span className="font-bold text-sm text-zinc-800 dark:text-white flex items-center gap-2">
-                                <Icons.Bot className="w-4 h-4 text-brand"/> 
-                                Gemini <span className="text-[10px] uppercase font-black bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500 bg-clip-text text-transparent tracking-widest">3 PRO</span>
-                            </span>
-                            <span className="text-[10px] text-zinc-500">{quotaCount}/10 Used • Experimental Build</span>
-                        </div>
-                        <button onClick={onClose}><Icons.ChevronLeft className="w-6 h-6 rotate-[-90deg] text-zinc-400"/></button>
+                        <div className="flex flex-col"><span className="font-bold text-sm text-zinc-800 dark:text-white flex items-center gap-2"><Icons.Bot className="w-4 h-4 text-brand"/> Gemini <span className="text-[10px] uppercase font-black bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500 bg-clip-text text-transparent tracking-widest">3 PRO</span></span><span className="text-[10px] text-zinc-500">{quotaCount}/10 Used • Experimental Build</span></div><button onClick={onClose}><Icons.ChevronLeft className="w-6 h-6 rotate-[-90deg] text-zinc-400"/></button>
                     </div>
-                    <div className="flex-1 overflow-y-auto p-4 space-y-4">
-                        {msgs.map((m,i)=><div key={i} className={`flex ${m.role==='user'?'justify-end':'justify-start'}`}><div className={`max-w-[85%] p-3 rounded-2xl text-sm ${m.role==='user'?'bg-brand text-white rounded-br-none':'bg-zinc-200 dark:bg-zinc-800 text-zinc-800 dark:text-zinc-200 rounded-bl-none'}`} dangerouslySetInnerHTML={{__html:window.marked?window.marked.parse(m.text):m.text}}/></div>)}
-                        {load && <div className="text-xs text-zinc-500 animate-pulse pl-2">Thinking...</div>}<div ref={endRef}/>
-                    </div>
+                    <div className="flex-1 overflow-y-auto p-4 space-y-4">{msgs.map((m,i)=><div key={i} className={`flex ${m.role==='user'?'justify-end':'justify-start'}`}><div className={`max-w-[85%] p-3 rounded-2xl text-sm ${m.role==='user'?'bg-brand text-white rounded-br-none':'bg-zinc-200 dark:bg-zinc-800 text-zinc-800 dark:text-zinc-200 rounded-bl-none'}`} dangerouslySetInnerHTML={{__html:window.marked?window.marked.parse(m.text):m.text}}/></div>)}{load && <div className="text-xs text-zinc-500 animate-pulse pl-2">Thinking...</div>}<div ref={endRef}/></div>
                     <div className="p-4 border-t border-zinc-200 dark:border-white/10 bg-white dark:bg-black flex gap-2"><input value={inp} onChange={e=>setInp(e.target.value)} onKeyDown={e=>e.key==='Enter'&&send()} placeholder="Ask..." className="flex-1 bg-zinc-100 dark:bg-zinc-900 border border-zinc-200 dark:border-white/10 rounded-full px-4 py-3 text-sm text-zinc-900 dark:text-white"/><button onClick={send} disabled={quotaCount>=10} className="bg-brand text-white rounded-full p-3 disabled:opacity-50"><Icons.Plus className="w-5 h-5 rotate-90"/></button></div>
                 </div>
             );
@@ -363,65 +304,68 @@
             };
 
             return (
-                <motion.div initial={{x:'100%'}} animate={{x:0}} exit={{x:'100%'}} className="fixed inset-0 bg-zinc-50 dark:bg-onyx z-[60] overflow-y-auto flex flex-col">
-                    <div className="sticky top-0 bg-white/90 dark:bg-onyx/90 backdrop-blur-md p-4 border-b border-zinc-200 dark:border-zinc-800 flex justify-between items-center z-10 shrink-0">
-                        <button onClick={onBack} className="p-2 rounded-full bg-zinc-100 dark:bg-zinc-800"><Icons.ChevronLeft className="w-6 h-6 text-zinc-700 dark:text-zinc-300"/></button>
-                        <span className="font-bold text-zinc-900 dark:text-white">Failure Log</span>
-                        <div className="flex gap-2">
-                             {item && <button onClick={()=>setPracticeOpen(true)} className="p-2 bg-orange-500/10 text-orange-500 rounded-full"><Icons.Brain className="w-5 h-5"/></button>}
-                             {item && <button onClick={()=>setAiOpen(true)} className="p-2 bg-brand/10 text-brand rounded-full"><Icons.Bot className="w-5 h-5"/></button>}
-                             <button onClick={()=>onSave(data)} className="px-4 py-2 bg-brand rounded-full text-sm font-bold text-white">Save</button>
-                        </div>
-                    </div>
-                    <div className="p-6 space-y-6 flex-1 overflow-y-auto pb-20">
-                        <div className="flex gap-2 p-1 bg-zinc-200 dark:bg-zinc-900 rounded-xl">
-                            <button onClick={()=>setData({...data,mastered:false})} className={`flex-1 py-3 rounded-lg text-sm font-bold ${!data.mastered?'bg-red-500/20 text-red-500':'text-zinc-500'}`}>Review</button>
-                            <button onClick={()=>setData({...data,mastered:true})} className={`flex-1 py-3 rounded-lg text-sm font-bold ${data.mastered?'bg-green-500/20 text-green-500':'text-zinc-500'}`}>Mastered</button>
-                        </div>
-                        <input placeholder="What went wrong?" className="w-full bg-transparent text-2xl font-bold placeholder-zinc-400 dark:placeholder-zinc-600 focus:outline-none text-zinc-900 dark:text-white" value={data.title} onChange={e=>setData({...data,title:e.target.value})} />
-                        
-                        <div className="bg-white dark:bg-surface rounded-2xl p-4 border border-zinc-200 dark:border-zinc-800">
-                             <label className="text-[10px] text-zinc-500 uppercase font-bold mb-2 block">Correct Answer</label>
-                             <input placeholder="e.g. A, B, or 'Mitochondria'" value={data.correctAnswer} onChange={e=>setData({...data,correctAnswer:e.target.value})} className="w-full bg-zinc-100 dark:bg-zinc-900 p-3 rounded-xl focus:outline-none text-zinc-900 dark:text-white text-sm"/>
-                        </div>
-                        <div className="relative w-full aspect-video bg-zinc-100 dark:bg-zinc-900 rounded-2xl border border-dashed border-zinc-300 dark:border-zinc-700 flex flex-col items-center justify-center overflow-hidden">
-                            {upQ ? <span className="loader"></span> : (data.questionImages?.[0]) ? <img src={data.questionImages[0]} className="w-full h-full object-contain"/> : (
-                                <><Icons.Camera className="w-8 h-8 text-zinc-400 dark:text-zinc-600 mb-2"/><span className="text-xs text-zinc-500">Upload Question</span><input type="file" accept="image/*" onChange={e=>handleImg(e,'evidence')} className="absolute inset-0 opacity-0 cursor-pointer"/></>
-                            )}
-                        </div>
-                        <div className="relative w-full aspect-video bg-zinc-100 dark:bg-zinc-900 rounded-2xl border border-dashed border-blue-300 dark:border-blue-900 flex flex-col items-center justify-center overflow-hidden">
-                            {upS ? <span className="loader"></span> : (data.schemeImages?.[0]) ? <img src={data.schemeImages[0]} className="w-full h-full object-contain"/> : (
-                                <><Icons.Check className="w-8 h-8 text-blue-400 mb-2"/><span className="text-xs text-blue-500 font-bold">Upload Marking Scheme</span><input type="file" accept="image/*" onChange={e=>handleImg(e,'scheme')} className="absolute inset-0 opacity-0 cursor-pointer"/></>
-                            )}
-                        </div>
-                        <div className="bg-white dark:bg-surface rounded-2xl p-4 min-h-[150px] border border-zinc-200 dark:border-zinc-800">
-                            <textarea className="w-full h-full bg-transparent resize-none focus:outline-none text-zinc-800 dark:text-zinc-300 min-h-[150px]" placeholder="Explain why you failed..." value={data.explanation} onChange={e=>setData({...data,explanation:e.target.value})}/>
-                        </div>
-                        <div className="grid grid-cols-2 gap-4">
-                            <div>
-                                <label className="text-[10px] text-zinc-500 uppercase font-bold">Subject</label>
-                                <select value={data.subject} onChange={e=>setData({...data,subject:e.target.value,topic:''})} className="w-full bg-zinc-100 dark:bg-zinc-900 p-3 rounded-xl mt-1 focus:outline-none text-zinc-900 dark:text-white text-sm appearance-none">
-                                    <option value="General">General</option>{subjects.map(s=><option key={s.id} value={s.name}>{s.name}</option>)}
-                                </select>
+                <TouchWrapper onBack={onBack} className="fixed inset-0 bg-zinc-50 dark:bg-onyx z-[60] overflow-y-auto flex flex-col">
+                    <motion.div initial={{x:'100%'}} animate={{x:0}} exit={{x:'100%'}} className="flex-1 flex flex-col">
+                        <div className="sticky top-0 bg-white/90 dark:bg-onyx/90 backdrop-blur-md p-4 border-b border-zinc-200 dark:border-zinc-800 flex justify-between items-center z-10 shrink-0">
+                            <button onClick={onBack} className="p-2 rounded-full bg-zinc-100 dark:bg-zinc-800"><Icons.ChevronLeft className="w-6 h-6 text-zinc-700 dark:text-zinc-300"/></button>
+                            <span className="font-bold text-zinc-900 dark:text-white">Failure Log</span>
+                            <div className="flex gap-2">
+                                 {item && <button onClick={()=>setPracticeOpen(true)} className="p-2 bg-orange-500/10 text-orange-500 rounded-full"><Icons.Brain className="w-5 h-5"/></button>}
+                                 {item && <button onClick={()=>setAiOpen(true)} className="p-2 bg-brand/10 text-brand rounded-full"><Icons.Bot className="w-5 h-5"/></button>}
+                                 {/* FIX: Passing ID correctly prevents duplication */}
+                                 <button onClick={()=>onSave({...data, id: item?.id})} className="px-4 py-2 bg-brand rounded-full text-sm font-bold text-white">Save</button>
                             </div>
-                            <div><label className="text-[10px] text-zinc-500 uppercase font-bold">Type</label><select value={data.questionType} onChange={e=>setData({...data,questionType:e.target.value})} className="w-full bg-zinc-100 dark:bg-zinc-900 p-3 rounded-xl mt-1 focus:outline-none text-zinc-900 dark:text-white text-sm"><option value="MC">MC</option><option value="LQ">Long Question</option></select></div>
                         </div>
-                        <div className="bg-white dark:bg-surface rounded-2xl p-4 border border-zinc-200 dark:border-zinc-800">
-                             <label className="text-[10px] text-zinc-500 uppercase font-bold mb-2 block">Topic</label>
-                             <div className="flex gap-2">
-                                {data.subject !== 'General' && curSub ? (
-                                    <select value={data.topic} onChange={e=>setData({...data,topic:e.target.value})} className="w-full bg-zinc-100 dark:bg-zinc-900 p-3 rounded-xl focus:outline-none text-zinc-900 dark:text-white text-sm">
-                                        <option value="">-- Select --</option>{topics.map(t=><option key={t} value={t}>{t}</option>)}
+                        <div className="p-6 space-y-6 flex-1 overflow-y-auto pb-20">
+                            <div className="flex gap-2 p-1 bg-zinc-200 dark:bg-zinc-900 rounded-xl">
+                                <button onClick={()=>setData({...data,mastered:false})} className={`flex-1 py-3 rounded-lg text-sm font-bold ${!data.mastered?'bg-red-500/20 text-red-500':'text-zinc-500'}`}>Review</button>
+                                <button onClick={()=>setData({...data,mastered:true})} className={`flex-1 py-3 rounded-lg text-sm font-bold ${data.mastered?'bg-green-500/20 text-green-500':'text-zinc-500'}`}>Mastered</button>
+                            </div>
+                            <input placeholder="What went wrong?" className="w-full bg-transparent text-2xl font-bold placeholder-zinc-400 dark:placeholder-zinc-600 focus:outline-none text-zinc-900 dark:text-white" value={data.title} onChange={e=>setData({...data,title:e.target.value})} />
+                            
+                            <div className="bg-white dark:bg-surface rounded-2xl p-4 border border-zinc-200 dark:border-zinc-800">
+                                 <label className="text-[10px] text-zinc-500 uppercase font-bold mb-2 block">Correct Answer</label>
+                                 <input placeholder="e.g. A, B, or 'Mitochondria'" value={data.correctAnswer} onChange={e=>setData({...data,correctAnswer:e.target.value})} className="w-full bg-zinc-100 dark:bg-zinc-900 p-3 rounded-xl focus:outline-none text-zinc-900 dark:text-white text-sm"/>
+                            </div>
+                            <div className="relative w-full aspect-video bg-zinc-100 dark:bg-zinc-900 rounded-2xl border border-dashed border-zinc-300 dark:border-zinc-700 flex flex-col items-center justify-center overflow-hidden">
+                                {upQ ? <span className="loader"></span> : (data.questionImages?.[0]) ? <img src={data.questionImages[0]} className="w-full h-full object-contain"/> : (
+                                    <><Icons.Camera className="w-8 h-8 text-zinc-400 dark:text-zinc-600 mb-2"/><span className="text-xs text-zinc-500">Upload Question</span><input type="file" accept="image/*" onChange={e=>handleImg(e,'evidence')} className="absolute inset-0 opacity-0 cursor-pointer"/></>
+                                )}
+                            </div>
+                            <div className="relative w-full aspect-video bg-zinc-100 dark:bg-zinc-900 rounded-2xl border border-dashed border-blue-300 dark:border-blue-900 flex flex-col items-center justify-center overflow-hidden">
+                                {upS ? <span className="loader"></span> : (data.schemeImages?.[0]) ? <img src={data.schemeImages[0]} className="w-full h-full object-contain"/> : (
+                                    <><Icons.Check className="w-8 h-8 text-blue-400 mb-2"/><span className="text-xs text-blue-500 font-bold">Upload Marking Scheme</span><input type="file" accept="image/*" onChange={e=>handleImg(e,'scheme')} className="absolute inset-0 opacity-0 cursor-pointer"/></>
+                                )}
+                            </div>
+                            <div className="bg-white dark:bg-surface rounded-2xl p-4 min-h-[150px] border border-zinc-200 dark:border-zinc-800">
+                                <textarea className="w-full h-full bg-transparent resize-none focus:outline-none text-zinc-800 dark:text-zinc-300 min-h-[150px]" placeholder="Explain why you failed..." value={data.explanation} onChange={e=>setData({...data,explanation:e.target.value})}/>
+                            </div>
+                            <div className="grid grid-cols-2 gap-4">
+                                <div>
+                                    <label className="text-[10px] text-zinc-500 uppercase font-bold">Subject</label>
+                                    <select value={data.subject} onChange={e=>setData({...data,subject:e.target.value,topic:''})} className="w-full bg-zinc-100 dark:bg-zinc-900 p-3 rounded-xl mt-1 focus:outline-none text-zinc-900 dark:text-white text-sm appearance-none">
+                                        <option value="General">General</option>{subjects.map(s=><option key={s.id} value={s.name}>{s.name}</option>)}
                                     </select>
-                                ) : <input placeholder="e.g. Algebra" value={data.topic} onChange={e=>setData({...data,topic:e.target.value})} className="w-full bg-zinc-100 dark:bg-zinc-900 p-3 rounded-xl focus:outline-none text-zinc-900 dark:text-white text-sm"/>}
-                                {data.subject !== 'General' && <button onClick={addTopic} className="p-3 bg-zinc-100 dark:bg-zinc-900 rounded-xl text-zinc-500"><Icons.Plus className="w-5 h-5"/></button>}
+                                </div>
+                                <div><label className="text-[10px] text-zinc-500 uppercase font-bold">Type</label><select value={data.questionType} onChange={e=>setData({...data,questionType:e.target.value})} className="w-full bg-zinc-100 dark:bg-zinc-900 p-3 rounded-xl mt-1 focus:outline-none text-zinc-900 dark:text-white text-sm"><option value="MC">MC</option><option value="LQ">Long Question</option></select></div>
                             </div>
+                            <div className="bg-white dark:bg-surface rounded-2xl p-4 border border-zinc-200 dark:border-zinc-800">
+                                 <label className="text-[10px] text-zinc-500 uppercase font-bold mb-2 block">Topic</label>
+                                 <div className="flex gap-2">
+                                    {data.subject !== 'General' && curSub ? (
+                                        <select value={data.topic} onChange={e=>setData({...data,topic:e.target.value})} className="w-full bg-zinc-100 dark:bg-zinc-900 p-3 rounded-xl focus:outline-none text-zinc-900 dark:text-white text-sm">
+                                            <option value="">-- Select --</option>{topics.map(t=><option key={t} value={t}>{t}</option>)}
+                                        </select>
+                                    ) : <input placeholder="e.g. Algebra" value={data.topic} onChange={e=>setData({...data,topic:e.target.value})} className="w-full bg-zinc-100 dark:bg-zinc-900 p-3 rounded-xl focus:outline-none text-zinc-900 dark:text-white text-sm"/>}
+                                    {data.subject !== 'General' && <button onClick={addTopic} className="p-3 bg-zinc-100 dark:bg-zinc-900 rounded-xl text-zinc-500"><Icons.Plus className="w-5 h-5"/></button>}
+                                </div>
+                            </div>
+                            {item && <button onClick={()=>{if(confirm('Delete?')){onDelete(item.id);onBack()}}} className="w-full py-4 text-red-500 font-bold text-sm bg-zinc-100 dark:bg-zinc-900 rounded-xl">Delete Log</button>}
                         </div>
-                        {item && <button onClick={()=>{if(confirm('Delete?')){onDelete(item.id);onBack()}}} className="w-full py-4 text-red-500 font-bold text-sm bg-zinc-100 dark:bg-zinc-900 rounded-xl">Delete Log</button>}
-                    </div>
+                    </motion.div>
                     <AnimatePresence>{aiOpen && <motion.div initial={{y:"100%"}} animate={{y:"0%"}} exit={{y:"100%"}} className="fixed inset-0 z-[70] bg-white dark:bg-surface rounded-t-3xl shadow-2xl overflow-hidden"><AIChat activeLog={data} onClose={()=>setAiOpen(false)} user={user} /></motion.div>}</AnimatePresence>
                     <AnimatePresence>{practiceOpen && <motion.div initial={{y:"100%"}} animate={{y:"0%"}} exit={{y:"100%"}} className="fixed inset-0 z-[70] bg-white dark:bg-surface rounded-t-3xl shadow-2xl overflow-hidden"><PracticeModal activeLog={data} onClose={()=>setPracticeOpen(false)} user={user} /></motion.div>}</AnimatePresence>
-                </motion.div>
+                </TouchWrapper>
             );
         };
 
@@ -429,39 +373,33 @@
             const [title, setTitle] = useState(item?.title||''), ref=useRef(null), isDark=document.documentElement.classList.contains('dark');
             useEffect(() => { if(window.tinymce){window.tinymce.init({selector:'#mobile-editor',height:'100%',menubar:false,toolbar:'bold italic bullist | h1 h2',skin:isDark?'oxide-dark':'oxide',content_css:isDark?'dark':'default',setup:ed=>{ref.current=ed;ed.on('init',()=>{if(item?.content)ed.setContent(item.content)})}}); return ()=>window.tinymce.remove()} }, []);
             return (
-                <motion.div initial={{y:'100%'}} animate={{y:0}} exit={{y:'100%'}} className="fixed inset-0 bg-zinc-50 dark:bg-onyx z-[60] flex flex-col">
-                    <div className="p-4 flex items-center justify-between border-b border-zinc-200 dark:border-zinc-800 bg-white dark:bg-onyx shrink-0">
-                        <button onClick={onBack}><Icons.X className="w-6 h-6 text-zinc-400"/></button>
-                        <input value={title} onChange={e=>setTitle(e.target.value)} placeholder="Untitled Note" className="bg-transparent font-bold text-center focus:outline-none text-zinc-900 dark:text-white w-full mx-4"/>
-                        <button onClick={()=>{onSave({...item,title,content:ref.current?ref.current.getContent():''});onBack()}} className="text-brand font-bold">Done</button>
-                    </div>
-                    <div className="flex-1 relative"><textarea id="mobile-editor"></textarea></div>
-                    {item && <div className="p-4 border-t border-zinc-200 dark:border-zinc-800 bg-white dark:bg-onyx"><button onClick={()=>{onDelete(item.id);onBack()}} className="text-red-500 w-full text-center text-sm font-bold">Delete Note</button></div>}
-                </motion.div>
+                <TouchWrapper onBack={onBack} className="fixed inset-0 bg-zinc-50 dark:bg-onyx z-[60] flex flex-col">
+                    <motion.div initial={{y:'100%'}} animate={{y:0}} exit={{y:'100%'}} className="flex-1 flex flex-col">
+                        <div className="p-4 flex items-center justify-between border-b border-zinc-200 dark:border-zinc-800 bg-white dark:bg-onyx shrink-0">
+                            <button onClick={onBack}><Icons.X className="w-6 h-6 text-zinc-400"/></button>
+                            <input value={title} onChange={e=>setTitle(e.target.value)} placeholder="Untitled Note" className="bg-transparent font-bold text-center focus:outline-none text-zinc-900 dark:text-white w-full mx-4"/>
+                            <button onClick={()=>{onSave({...item,title,content:ref.current?ref.current.getContent():''});onBack()}} className="text-brand font-bold">Done</button>
+                        </div>
+                        <div className="flex-1 relative"><textarea id="mobile-editor"></textarea></div>
+                        {item && <div className="p-4 border-t border-zinc-200 dark:border-zinc-800 bg-white dark:bg-onyx"><button onClick={()=>{onDelete(item.id);onBack()}} className="text-red-500 w-full text-center text-sm font-bold">Delete Note</button></div>}
+                    </motion.div>
+                </TouchWrapper>
             );
         }
 
         const ErrorList = ({ items, onEdit, subjects }) => {
             const [mode, setMode] = useState('date'), [sub, setSub] = useState(null), [top, setTop] = useState(null), [sort, setSort] = useState('desc');
-            const [typeFilter, setTypeFilter] = useState('all'); // 'all', 'MC', 'LQ'
+            const [typeFilter, setTypeFilter] = useState('all');
             const [showRandomPicker, setShowRandomPicker] = useState(false);
 
             const filtered = useMemo(() => {
                 let res = items;
-                // Type Filter First
-                if(typeFilter !== 'all') {
-                    res = res.filter(i => (i.questionType || 'MC') === typeFilter);
-                }
-
+                if(typeFilter !== 'all') { res = res.filter(i => (i.questionType || 'MC') === typeFilter); }
                 if (mode==='category') { if(sub) { res=res.filter(i=>(i.subject||'General')===sub); if(top) res=res.filter(i=>i.topic===top); } else return []; }
-                return [...res].sort((a,b) => {
-                    const da=new Date(a.createdAt||0), db=new Date(b.createdAt||0);
-                    return sort==='desc' ? db-da : da-db;
-                });
+                return [...res].sort((a,b) => { const da=new Date(a.createdAt||0), db=new Date(b.createdAt||0); return sort==='desc' ? db-da : da-db; });
             }, [items, mode, sub, top, sort, typeFilter]);
             
             const topics = (subjects.find(s=>s.name===sub)?.topics||[]).sort();
-
             const handleRandom = (type) => {
                 const candidates = items.filter(i => (i.questionType || 'MC') === type);
                 if (candidates.length === 0) return alert(`No ${type} logs found to study!`);
@@ -484,61 +422,16 @@
                             </div>
                         </div>
                         <div className="flex justify-between items-center">
-                            {/* TYPE FILTER TOGGLE */}
                             <div className="flex bg-zinc-100 dark:bg-zinc-800/50 p-1 rounded-lg">
-                                {['all', 'MC', 'LQ'].map(t => (
-                                    <button key={t} onClick={()=>setTypeFilter(t)} className={`px-3 py-1 rounded-md text-[10px] font-bold uppercase transition-all ${typeFilter===t ? 'bg-white dark:bg-zinc-700 shadow-sm text-brand' : 'text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-300'}`}>
-                                        {t}
-                                    </button>
-                                ))}
+                                {['all', 'MC', 'LQ'].map(t => (<button key={t} onClick={()=>setTypeFilter(t)} className={`px-3 py-1 rounded-md text-[10px] font-bold uppercase transition-all ${typeFilter===t ? 'bg-white dark:bg-zinc-700 shadow-sm text-brand' : 'text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-300'}`}>{t}</button>))}
                             </div>
                             <button onClick={()=>setSort(p=>p==='desc'?'asc':'desc')} className="flex items-center gap-1 text-xs font-bold text-zinc-500 hover:text-brand"><Icons.Sort className="w-4 h-4"/>{sort==='desc'?'Newest':'Oldest'}</button>
                         </div>
                     </div>
-
-                    {/* RANDOM POPUP */}
-                    <AnimatePresence>
-                        {showRandomPicker && (
-                            <motion.div initial={{opacity:0, scale:0.9}} animate={{opacity:1, scale:1}} exit={{opacity:0, scale:0.9}} className="absolute top-16 right-6 z-20 bg-white dark:bg-zinc-800 border border-zinc-200 dark:border-white/10 shadow-xl rounded-xl p-3 w-48 origin-top-right">
-                                <div className="text-xs font-bold text-zinc-500 mb-2 uppercase tracking-wider">Pick Random to Study</div>
-                                <div className="space-y-2">
-                                    <button onClick={()=>handleRandom('MC')} className="w-full text-left p-2 hover:bg-zinc-100 dark:hover:bg-white/5 rounded-lg text-sm flex justify-between"><span>Random MC</span> <span className="text-xs bg-indigo-500 text-white px-1.5 rounded">?</span></button>
-                                    <button onClick={()=>handleRandom('LQ')} className="w-full text-left p-2 hover:bg-zinc-100 dark:hover:bg-white/5 rounded-lg text-sm flex justify-between"><span>Random LQ</span> <span className="text-xs bg-orange-500 text-white px-1.5 rounded">?</span></button>
-                                </div>
-                            </motion.div>
-                        )}
-                    </AnimatePresence>
-
-                    {mode === 'category' && (
-                        <div className="mb-4 space-y-4">
-                            <div className="overflow-x-auto no-scrollbar pb-2"><div className="flex gap-2">
-                                <button onClick={()=>{setSub(sub==='General'?null:'General');setTop(null)}} className={`px-4 py-2 rounded-full text-xs font-bold whitespace-nowrap ${sub==='General'?'bg-brand text-white':'bg-zinc-100 dark:bg-zinc-800 text-zinc-500'}`}>General</button>
-                                {subjects.map(s=><button key={s.name} onClick={()=>{setSub(sub===s.name?null:s.name);setTop(null)}} className={`px-4 py-2 rounded-full text-xs font-bold whitespace-nowrap ${sub===s.name?'bg-brand text-white':'bg-zinc-100 dark:bg-zinc-800 text-zinc-500'}`}>{s.name}</button>)}
-                            </div></div>
-                            <AnimatePresence>{sub && topics.length>0 && <motion.div initial={{height:0}} animate={{height:'auto'}} className="overflow-x-auto no-scrollbar pb-2"><div className="flex gap-2">
-                                <button onClick={()=>setTop(null)} className={`px-3 py-1 rounded-lg text-[10px] font-bold border ${!top?'border-brand text-brand':'border-zinc-200 dark:border-zinc-700 text-zinc-500'}`}>All</button>
-                                {topics.map(t=><button key={t} onClick={()=>setTop(top===t?null:t)} className={`px-3 py-1 rounded-lg text-[10px] font-bold border ${top===t?'bg-brand border-brand text-white':'border-zinc-200 dark:border-zinc-700 text-zinc-500'}`}>{t}</button>)}
-                            </div></motion.div>}</AnimatePresence>
-                        </div>
-                    )}
-
+                    <AnimatePresence>{showRandomPicker && (<motion.div initial={{opacity:0, scale:0.9}} animate={{opacity:1, scale:1}} exit={{opacity:0, scale:0.9}} className="absolute top-16 right-6 z-20 bg-white dark:bg-zinc-800 border border-zinc-200 dark:border-white/10 shadow-xl rounded-xl p-3 w-48 origin-top-right"><div className="text-xs font-bold text-zinc-500 mb-2 uppercase tracking-wider">Pick Random to Study</div><div className="space-y-2"><button onClick={()=>handleRandom('MC')} className="w-full text-left p-2 hover:bg-zinc-100 dark:hover:bg-white/5 rounded-lg text-sm flex justify-between"><span>Random MC</span> <span className="text-xs bg-indigo-500 text-white px-1.5 rounded">?</span></button><button onClick={()=>handleRandom('LQ')} className="w-full text-left p-2 hover:bg-zinc-100 dark:hover:bg-white/5 rounded-lg text-sm flex justify-between"><span>Random LQ</span> <span className="text-xs bg-orange-500 text-white px-1.5 rounded">?</span></button></div></motion.div>)}</AnimatePresence>
+                    {mode === 'category' && (<div className="mb-4 space-y-4"><div className="overflow-x-auto no-scrollbar pb-2"><div className="flex gap-2"><button onClick={()=>{setSub(sub==='General'?null:'General');setTop(null)}} className={`px-4 py-2 rounded-full text-xs font-bold whitespace-nowrap ${sub==='General'?'bg-brand text-white':'bg-zinc-100 dark:bg-zinc-800 text-zinc-500'}`}>General</button>{subjects.map(s=><button key={s.name} onClick={()=>{setSub(sub===s.name?null:s.name);setTop(null)}} className={`px-4 py-2 rounded-full text-xs font-bold whitespace-nowrap ${sub===s.name?'bg-brand text-white':'bg-zinc-100 dark:bg-zinc-800 text-zinc-500'}`}>{s.name}</button>)}</div></div><AnimatePresence>{sub && topics.length>0 && <motion.div initial={{height:0}} animate={{height:'auto'}} className="overflow-x-auto no-scrollbar pb-2"><div className="flex gap-2"><button onClick={()=>setTop(null)} className={`px-3 py-1 rounded-lg text-[10px] font-bold border ${!top?'border-brand text-brand':'border-zinc-200 dark:border-zinc-700 text-zinc-500'}`}>All</button>{topics.map(t=><button key={t} onClick={()=>setTop(top===t?null:t)} className={`px-3 py-1 rounded-lg text-[10px] font-bold border ${top===t?'bg-brand border-brand text-white':'border-zinc-200 dark:border-zinc-700 text-zinc-500'}`}>{t}</button>)}</div></motion.div>}</AnimatePresence></div>)}
                     <div className="space-y-3 flex-1">
-                        {mode==='category' && !sub ? <div className="h-40 flex items-center justify-center text-zinc-400 text-sm italic">Select a Subject</div> :
-                        filtered.length===0 ? <div className="h-40 flex items-center justify-center text-zinc-400 text-sm italic">No errors found.</div> :
-                        filtered.map((item,i) => (
-                            <motion.div key={item.id} initial={{opacity:0,y:10}} animate={{opacity:1,y:0}} transition={{delay:i*0.05}} onClick={()=>onEdit('edit_error',item)} className="bg-white dark:bg-surface p-4 rounded-2xl border border-zinc-200 dark:border-zinc-800 flex justify-between items-center active:scale-[0.98] transition-transform">
-                                <div>
-                                    <div className="font-bold text-zinc-800 dark:text-zinc-200 mb-1">{item.title||'Untitled'}</div>
-                                    <div className="flex items-center gap-2">
-                                        <span className={`text-[10px] font-bold px-2 py-0.5 rounded ${item.mastered?"bg-green-500/20 text-green-500":"bg-red-500/20 text-red-500"}`}>{item.mastered?'SOLVED':'REVIEW'}</span>
-                                        <span className="text-[10px] text-zinc-400 uppercase tracking-wider">{item.subject}</span>
-                                        <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded border ${item.questionType==='LQ'?'border-orange-500 text-orange-500':'border-indigo-500 text-indigo-500'}`}>{item.questionType||'MC'}</span>
-                                        {item.topic && <span className="text-[10px] text-zinc-500 bg-zinc-100 dark:bg-zinc-800 px-2 py-0.5 rounded-md hidden sm:inline">{item.topic}</span>}
-                                    </div>
-                                </div>
-                                <div className="text-right"><div className="text-[10px] text-zinc-500 mb-1">{new Date(item.createdAt||0).toLocaleDateString()}</div><Icons.ChevronLeft className="w-5 h-5 text-zinc-600 rotate-180 ml-auto"/></div>
-                            </motion.div>
-                        ))}
+                        {mode==='category' && !sub ? <div className="h-40 flex items-center justify-center text-zinc-400 text-sm italic">Select a Subject</div> : filtered.length===0 ? <div className="h-40 flex items-center justify-center text-zinc-400 text-sm italic">No errors found.</div> : filtered.map((item,i) => (<motion.div key={item.id} initial={{opacity:0,y:10}} animate={{opacity:1,y:0}} transition={{delay:i*0.05}} onClick={()=>onEdit('edit_error',item)} className="bg-white dark:bg-surface p-4 rounded-2xl border border-zinc-200 dark:border-zinc-800 flex justify-between items-center active:scale-[0.98] transition-transform"><div><div className="font-bold text-zinc-800 dark:text-zinc-200 mb-1">{item.title||'Untitled'}</div><div className="flex items-center gap-2"><span className={`text-[10px] font-bold px-2 py-0.5 rounded ${item.mastered?"bg-green-500/20 text-green-500":"bg-red-500/20 text-red-500"}`}>{item.mastered?'SOLVED':'REVIEW'}</span><span className="text-[10px] text-zinc-400 uppercase tracking-wider">{item.subject}</span><span className={`text-[10px] font-bold px-1.5 py-0.5 rounded border ${item.questionType==='LQ'?'border-orange-500 text-orange-500':'border-indigo-500 text-indigo-500'}`}>{item.questionType||'MC'}</span>{item.topic && <span className="text-[10px] text-zinc-500 bg-zinc-100 dark:bg-zinc-800 px-2 py-0.5 rounded-md hidden sm:inline">{item.topic}</span>}</div></div><div className="text-right"><div className="text-[10px] text-zinc-500 mb-1">{new Date(item.createdAt||0).toLocaleDateString()}</div><Icons.ChevronLeft className="w-5 h-5 text-zinc-600 rotate-180 ml-auto"/></div></motion.div>))}
                     </div>
                 </div>
             );
@@ -551,6 +444,29 @@
             useEffect(()=>window.firebase.onAuthStateChanged(window.firebase.auth, setUser), []);
             const {data:errors} = useData(user,'error_logs'), {data:notes} = useData(user,'notes'), subjects = useSubjects(user);
             
+            // --- ROUTING HANDLER ---
+            useEffect(() => {
+                const handlePopState = (e) => {
+                    if (e.state && e.state.tab) {
+                        setTab(e.state.tab);
+                    } else {
+                        setTab('home'); // Default fallback
+                    }
+                };
+                window.addEventListener('popstate', handlePopState);
+                return () => window.removeEventListener('popstate', handlePopState);
+            }, []);
+
+            const navigate = (newTab) => {
+                window.history.pushState({ tab: newTab }, '', `?view=${newTab}`);
+                setTab(newTab);
+            };
+
+            const goBack = () => {
+                window.history.back(); // Triggers popstate
+            };
+            // -----------------------
+
             useEffect(() => {
                 if(!user) return;
                 const setRef = window.firebase.doc(window.firebase.db,'artifacts','darnote-app','users',user.uid,'settings','profile');
@@ -567,7 +483,10 @@
             const save = async (col, d) => {
                 const c = window.firebase.collection(window.firebase.db,'artifacts','darnote-app','users',user.uid,col);
                 if(d.id) await window.firebase.updateDoc(window.firebase.doc(c,d.id),d); else await window.firebase.addDoc(c,{...d,createdAt:new Date().toISOString()});
-                setTab(col==='error_logs'?'errors':'notes');
+                // When saving, we assume user is done, so we pop back to list.
+                // Or if we want to stay, we don't call anything.
+                // Assuming we want to go back to list:
+                goBack();
             };
             const del = async (id, col) => await window.firebase.deleteDoc(window.firebase.doc(window.firebase.db,'artifacts','darnote-app','users',user.uid,col,id));
 
@@ -580,11 +499,11 @@
                             {tab==='home' && <div key="h" className="p-6 pb-24 space-y-8">
                                 <div className="flex justify-between items-center"><div><div className="text-zinc-500 text-sm">Welcome Back,</div><div className="text-2xl font-bold">{user.displayName?.split(' ')[0]}</div></div><img src={user.photoURL} className="w-10 h-10 rounded-full"/></div>
                                 <div className="bg-gradient-to-br from-brand to-brand-dark p-6 rounded-3xl text-white shadow-glow"><div className="text-sm opacity-80">Total Failures</div><div className="text-4xl font-bold mb-4">{errors.length}</div><div className="flex gap-4"><div className="bg-white/20 px-3 py-1 rounded text-xs"><b>{errors.filter(e=>e.mastered).length}</b> Mastered</div><div className="bg-white/20 px-3 py-1 rounded text-xs"><b>{notes.length}</b> Notes</div></div></div>
-                                <div className="grid grid-cols-2 gap-4"><button onClick={()=>{setSel(null);setTab('add_error')}} className="bg-white dark:bg-surface p-4 rounded-2xl border border-zinc-200 dark:border-zinc-800 flex flex-col items-center gap-2"><div className="w-10 h-10 bg-red-500/10 rounded-full flex items-center justify-center text-red-500"><Icons.Bug className="w-5 h-5"/></div><span className="text-sm font-bold">Log Error</span></button><button onClick={()=>{setSel(null);setTab('add_note')}} className="bg-white dark:bg-surface p-4 rounded-2xl border border-zinc-200 dark:border-zinc-800 flex flex-col items-center gap-2"><div className="w-10 h-10 bg-blue-500/10 rounded-full flex items-center justify-center text-blue-500"><Icons.Book className="w-5 h-5"/></div><span className="text-sm font-bold">New Note</span></button></div>
-                                <div><div className="flex justify-between items-end mb-4"><h3 className="font-bold text-lg">Recent Failures</h3><button onClick={()=>setTab('errors')} className="text-xs text-brand">View All</button></div><div className="space-y-3">{errors.slice(0,3).map(e=><div key={e.id} onClick={()=>{setSel(e);setTab('edit_error')}} className="bg-white dark:bg-surface p-4 rounded-2xl border border-zinc-200 dark:border-zinc-800 flex items-center gap-4"><div className={`w-2 h-10 rounded-full ${e.mastered?'bg-green-500':'bg-red-500'}`}></div><div className="flex-1 overflow-hidden"><div className="font-bold truncate">{e.title}</div><div className="text-xs text-zinc-500">{e.subject} • {new Date(e.createdAt||0).toLocaleDateString()}</div></div></div>)}</div></div>
+                                <div className="grid grid-cols-2 gap-4"><button onClick={()=>{setSel(null);navigate('add_error')}} className="bg-white dark:bg-surface p-4 rounded-2xl border border-zinc-200 dark:border-zinc-800 flex flex-col items-center gap-2"><div className="w-10 h-10 bg-red-500/10 rounded-full flex items-center justify-center text-red-500"><Icons.Bug className="w-5 h-5"/></div><span className="text-sm font-bold">Log Error</span></button><button onClick={()=>{setSel(null);navigate('add_note')}} className="bg-white dark:bg-surface p-4 rounded-2xl border border-zinc-200 dark:border-zinc-800 flex flex-col items-center gap-2"><div className="w-10 h-10 bg-blue-500/10 rounded-full flex items-center justify-center text-blue-500"><Icons.Book className="w-5 h-5"/></div><span className="text-sm font-bold">New Note</span></button></div>
+                                <div><div className="flex justify-between items-end mb-4"><h3 className="font-bold text-lg">Recent Failures</h3><button onClick={()=>navigate('errors')} className="text-xs text-brand">View All</button></div><div className="space-y-3">{errors.slice(0,3).map(e=><div key={e.id} onClick={()=>{setSel(e);navigate('edit_error')}} className="bg-white dark:bg-surface p-4 rounded-2xl border border-zinc-200 dark:border-zinc-800 flex items-center gap-4"><div className={`w-2 h-10 rounded-full ${e.mastered?'bg-green-500':'bg-red-500'}`}></div><div className="flex-1 overflow-hidden"><div className="font-bold truncate">{e.title}</div><div className="text-xs text-zinc-500">{e.subject} • {new Date(e.createdAt||0).toLocaleDateString()}</div></div></div>)}</div></div>
                             </div>}
-                            {tab==='errors' && <ErrorList key="e" items={errors} onEdit={(m,i)=>{setSel(i);setTab(m)}} subjects={subjects} />}
-                            {tab==='notes' && <div key="n" className="p-6 pb-24 min-h-screen"><h2 className="text-3xl font-bold mb-6">Notes</h2><div className="space-y-3">{notes.map(n=><div key={n.id} onClick={()=>{setSel(n);setTab('edit_note')}} className="bg-white dark:bg-surface p-4 rounded-2xl border border-zinc-200 dark:border-zinc-800 flex justify-between"><div><div className="font-bold">{n.title||'Untitled'}</div><div className="text-xs text-zinc-500">{new Date(n.createdAt||0).toLocaleDateString()}</div></div><Icons.ChevronLeft className="w-5 h-5 rotate-180"/></div>)}</div></div>}
+                            {tab==='errors' && <ErrorList key="e" items={errors} onEdit={(m,i)=>{setSel(i);navigate(m)}} subjects={subjects} />}
+                            {tab==='notes' && <div key="n" className="p-6 pb-24 min-h-screen"><h2 className="text-3xl font-bold mb-6">Notes</h2><div className="space-y-3">{notes.map(n=><div key={n.id} onClick={()=>{setSel(n);navigate('edit_note')}} className="bg-white dark:bg-surface p-4 rounded-2xl border border-zinc-200 dark:border-zinc-800 flex justify-between"><div><div className="font-bold">{n.title||'Untitled'}</div><div className="text-xs text-zinc-500">{new Date(n.createdAt||0).toLocaleDateString()}</div></div><Icons.ChevronLeft className="w-5 h-5 rotate-180"/></div>)}</div></div>}
                             
                             {tab==='profile' && <div key="p" className="p-6 pb-24 h-full flex flex-col">
                                 <h2 className="text-3xl font-bold mb-6">Settings</h2>
@@ -608,12 +527,12 @@
                         </AnimatePresence>
                     </div>
                     <div className="fixed bottom-0 w-full h-[80px] glass z-50 px-6 pb-2 flex items-center justify-between">
-                        {[{id:'home',I:Icons.Home,l:'Home'},{id:'errors',I:Icons.Bug,l:'Mistakes'},{id:'add',I:Icons.Plus,l:'',s:1},{id:'notes',I:Icons.Book,l:'Notes'},{id:'profile',I:Icons.User,l:'Settings'}].map(t=>t.s?<motion.button key={t.id} whileTap={{scale:0.9}} onClick={()=>setSheet(true)} className="w-14 h-14 bg-brand rounded-full flex items-center justify-center text-white shadow-glow mb-6"><t.I className="w-8 h-8"/></motion.button>:<button key={t.id} onClick={()=>setTab(t.id)} className={`flex flex-col items-center gap-1 ${tab===t.id?'text-brand':'text-zinc-500'}`}><t.I className="w-6 h-6"/><span className="text-[10px] font-medium">{t.l}</span></button>)}
+                        {[{id:'home',I:Icons.Home,l:'Home'},{id:'errors',I:Icons.Bug,l:'Mistakes'},{id:'add',I:Icons.Plus,l:'',s:1},{id:'notes',I:Icons.Book,l:'Notes'},{id:'profile',I:Icons.User,l:'Settings'}].map(t=>t.s?<motion.button key={t.id} whileTap={{scale:0.9}} onClick={()=>setSheet(true)} className="w-14 h-14 bg-brand rounded-full flex items-center justify-center text-white shadow-glow mb-6"><t.I className="w-8 h-8"/></motion.button>:<button key={t.id} onClick={()=>navigate(t.id)} className={`flex flex-col items-center gap-1 ${tab===t.id?'text-brand':'text-zinc-500'}`}><t.I className="w-6 h-6"/><span className="text-[10px] font-medium">{t.l}</span></button>)}
                     </div>
-                    {sheet && <div className="fixed inset-0 bg-black/80 z-[70] flex items-end justify-center" onClick={()=>setSheet(false)}><motion.div initial={{y:100}} animate={{y:0}} className="bg-white dark:bg-surface w-full max-w-md rounded-t-3xl p-6 space-y-4" onClick={e=>e.stopPropagation()}><div className="w-12 h-1 bg-zinc-300 rounded-full mx-auto mb-4"/><button onClick={()=>{setSheet(false);setSel(null);setTab('add_error')}} className="w-full p-4 bg-zinc-100 dark:bg-zinc-800 rounded-2xl flex items-center gap-4"><div className="p-2 bg-red-500/20 rounded-full text-red-500"><Icons.Bug className="w-6 h-6"/></div><span className="font-bold">Log Failure</span></button><button onClick={()=>{setSheet(false);setSel(null);setTab('add_note')}} className="w-full p-4 bg-zinc-100 dark:bg-zinc-800 rounded-2xl flex items-center gap-4"><div className="p-2 bg-blue-500/20 rounded-full text-blue-500"><Icons.Book className="w-6 h-6"/></div><span className="font-bold">New Note</span></button></motion.div></div>}
+                    {sheet && <div className="fixed inset-0 bg-black/80 z-[70] flex items-end justify-center" onClick={()=>setSheet(false)}><motion.div initial={{y:100}} animate={{y:0}} className="bg-white dark:bg-surface w-full max-w-md rounded-t-3xl p-6 space-y-4" onClick={e=>e.stopPropagation()}><div className="w-12 h-1 bg-zinc-300 rounded-full mx-auto mb-4"/><button onClick={()=>{setSheet(false);setSel(null);navigate('add_error')}} className="w-full p-4 bg-zinc-100 dark:bg-zinc-800 rounded-2xl flex items-center gap-4"><div className="p-2 bg-red-500/20 rounded-full text-red-500"><Icons.Bug className="w-6 h-6"/></div><span className="font-bold">Log Failure</span></button><button onClick={()=>{setSheet(false);setSel(null);navigate('add_note')}} className="w-full p-4 bg-zinc-100 dark:bg-zinc-800 rounded-2xl flex items-center gap-4"><div className="p-2 bg-blue-500/20 rounded-full text-blue-500"><Icons.Book className="w-6 h-6"/></div><span className="font-bold">New Note</span></button></motion.div></div>}
                     <AnimatePresence>
-                        {(tab==='add_error'||tab==='edit_error') && <ErrorEditor item={sel} onSave={d=>save('error_logs',d)} onBack={()=>setTab('errors')} onDelete={id=>del(id,'error_logs')} user={user} subjects={subjects}/>}
-                        {(tab==='add_note'||tab==='edit_note') && <NoteEditor item={sel} onSave={d=>save('notes',d)} onBack={()=>setTab('notes')} onDelete={id=>del(id,'notes')}/>}
+                        {(tab==='add_error'||tab==='edit_error') && <ErrorEditor item={sel} onSave={d=>save('error_logs',d)} onBack={goBack} onDelete={id=>del(id,'error_logs')} user={user} subjects={subjects}/>}
+                        {(tab==='add_note'||tab==='edit_note') && <NoteEditor item={sel} onSave={d=>save('notes',d)} onBack={goBack} onDelete={id=>del(id,'notes')}/>}
                     </AnimatePresence>
                 </div>
             );
