@@ -401,7 +401,7 @@
                     const res = await callGemini(prompt, "You are a JSON generator.", imgCtx);
                     try { const json = JSON.parse(res.replace(/```json|```/g, '')); setQuestions(json); } catch(e) { alert("AI generation failed. Try again."); onClose(); }
                 } else {
-                    const prompt = `Generate 1 structured Long Question with 3 sub-parts. Return STRICTLY JSON: {"context": "Main question text...", "parts": [{"id": "a", "text": "Sub-question A", "marks": 2}, {"id": "b", "text": "...", "marks": 4}, {"id": "c", "text": "...", "marks": 4}]}. Plain text only, NO LaTeX.`;
+                    const prompt = `Generate 1 structured long question with 3 sub-parts. Use the core concept of the provided question but change the numerical values. Return STRICTLY JSON: {"context": "Main question text...", "parts": [{"id": "a", "text": "Sub-question A", "marks": 2}, {"id": "b", "text": "...", "marks": 4}, {"id": "c", "text": "...", "marks": 4}]}. Plain text only, NO LaTeX.`;
                     const res = await callGemini(prompt, "You are a JSON generator.", imgCtx);
                     try { const json = JSON.parse(res.replace(/```json|```/g, '')); setLqData(json); } catch(e) { alert("AI generation failed. Try again."); onClose(); }
                 }
