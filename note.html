@@ -753,7 +753,7 @@
 
                 // --- QUOTA CHECK START ---
                 if (dailyCount >= QUOTA_LIMIT) {
-                    setMessages(prev => [...prev, {role: 'ai', text: "<span class='text-red-500 font-bold'>DAILY LIMIT REACHED.</span> You have used all 10 AI requests for today.", type: 'text'}]);
+                    setMessages(prev => [...prev, {role: 'ai', text: "<span class='text-red-500 font-bold'>DAILY LIMIT REACHED.</span> You have used all 5 AI requests for today.", type: 'text'}]);
                     return;
                 }
                 // --- QUOTA CHECK END ---
@@ -763,7 +763,7 @@
                 
                 // --- QUOTA INCREMENT START ---
                 const docRef = window.firebase.doc(window.firebase.db, 'artifacts', 'darnote-app', 'users', user.uid, 'ai_usage', todayDate);
-                await window.firebase.setDoc(docRef, { count: window.firebase.increment(1), date: todayDate }, { merge: true });
+                await window.firebase.setDoc(docRef, { chat_count: window.firebase.increment(1), date: todayDate }, { merge: true });
                 // --- QUOTA INCREMENT END ---
 
                 try {
