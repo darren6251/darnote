@@ -1,872 +1,469 @@
 <!DOCTYPE html>
 <html lang="en" class="dark">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>darNote - Error Log (Pro)</title>
-    <link rel="icon" type="image/png" href="https://raw.githubusercontent.com/darren6251/darnote/refs/heads/main/darNote%20logo.png">
-    
-    <!-- React & Tailwind -->
-    <script crossorigin src="https://unpkg.com/react@18/umd/react.development.js"></script>
-    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
-    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <script>
-        tailwind.config = {
-            darkMode: 'class',
-            theme: {
-                extend: {
-                    colors: { onyx: '#09090b', surface: '#18181b', border: '#27272a', 'mistake-red': '#7f1d1d', 'brand': '#4f46e5' },
-                    fontFamily: { sans: ['Inter', 'sans-serif'] },
-                    animation: { 'spin-slow': 'spin 20s linear infinite' }
-                }
-            }
-        }
-    </script>
-    
-    <!-- Framer Motion -->
-    <script src="https://unpkg.com/framer-motion@10.16.4/dist/framer-motion.js"></script>
-    
-    <!-- SparkMD5 -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/spark-md5/3.0.2/spark-md5.min.js"></script>
-    <!-- Marked -->
-    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>darNote - Error Log (Pro)</title>
+<link rel="icon" type="image/png" href="https://raw.githubusercontent.com/darren6251/darnote/refs/heads/main/darNote%20logo.png">
 
-    <!-- Google APIs -->
-    <script src="https://apis.google.com/js/api.js" async defer></script>
-    <script src="https://accounts.google.com/gsi/client" async defer></script>
+<!-- React, Tailwind, Framer, Md5, Marked -->
+<script crossorigin src="https://unpkg.com/react@18/umd/react.development.js"></script>
+<script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+<script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+<script src="https://cdn.tailwindcss.com"></script>
+<script src="https://unpkg.com/framer-motion@10.16.4/dist/framer-motion.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/spark-md5/3.0.2/spark-md5.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+<script src="https://apis.google.com/js/api.js" async defer></script>
+<script src="https://accounts.google.com/gsi/client" async defer></script>
 
-    <!-- Firebase -->
-    <script type="module">
-        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-app.js";
-        import { getAuth, signInWithPopup, GoogleAuthProvider, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-auth.js";
-        import { getFirestore, collection, doc, addDoc, updateDoc, deleteDoc, getDocs, getDoc, setDoc, increment, arrayUnion, writeBatch, query, limit, orderBy, startAfter, where } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-firestore.js";
-        
-        const firebaseConfig = { apiKey: "AIzaSyAvPEac-03kE4oazvaq8K3T2gxLPsnZO20", authDomain: "darnote625.firebaseapp.com", projectId: "darnote625", storageBucket: "darnote625.firebasestorage.app", messagingSenderId: "16458322562", appId: "1:16458322562:web:8894d71f3e6c326eba1a9b" };
-        const app = initializeApp(firebaseConfig);
-        window.firebase = { app, auth: getAuth(app), db: getFirestore(app), signInWithPopup, GoogleAuthProvider, signOut, onAuthStateChanged, collection, doc, addDoc, updateDoc, deleteDoc, getDocs, getDoc, setDoc, increment, arrayUnion, writeBatch, query, limit, orderBy, startAfter, where };
-    </script>
-    
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-    <style>
-        body { @apply bg-[#f4f4f5] text-zinc-900 dark:bg-onyx dark:text-zinc-100; font-family: 'Inter', sans-serif; overflow: hidden; }
-        ::-webkit-scrollbar { width: 6px; }
-        ::-webkit-scrollbar-thumb { @apply bg-zinc-300 dark:bg-zinc-700; border-radius: 4px; }
-        .glass-panel { @apply bg-white dark:bg-surface border-r border-zinc-200 dark:border-border; }
-        .input-field { @apply w-full bg-zinc-50 dark:bg-zinc-900 border border-zinc-200 dark:border-white/10 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-brand transition-all shadow-sm; }
-        .btn-ghost { @apply hover:bg-zinc-100 dark:hover:bg-white/5 text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white transition-colors; }
-        
-        /* Markdown Styles for Chat */
-        .markdown-content table { border-collapse: collapse; width: 100%; margin: 8px 0; font-size: 0.8rem; }
-        .markdown-content th, .markdown-content td { border: 1px solid #444; padding: 4px 8px; text-align: left; }
-        .dark .markdown-content th, .dark .markdown-content td { border-color: #555; }
-        .markdown-content ul, .markdown-content ol { padding-left: 20px; margin: 4px 0; list-style: disc; }
-        .markdown-content p { margin-bottom: 8px; }
-        .markdown-content pre { background: #1a1a1a; padding: 8px; rounded: 4px; overflow-x: auto; margin: 8px 0; }
-        
-        /* Context Menu Animation */
-        .context-menu { animation: fadein 0.1s ease-out; }
-        @keyframes fadein { from { opacity: 0; transform: scale(0.95); } to { opacity: 1; transform: scale(1); } }
-    </style>
+<script>
+tailwind.config = {
+    darkMode: 'class',
+    theme: { extend: {
+        colors: { onyx: '#09090b', surface: '#18181b', border: '#27272a', 'brand': '#4f46e5' },
+        fontFamily: { sans: ['Inter', 'sans-serif'] }
+    }}
+}
+</script>
+
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-app.js";
+import { getAuth, signInWithPopup, GoogleAuthProvider, signOut, onAuthStateChanged } 
+from "https://www.gstatic.com/firebasejs/11.0.2/firebase-auth.js";
+import { getFirestore, collection, doc, addDoc, updateDoc, deleteDoc, getDocs, getDoc, 
+setDoc, increment, arrayUnion, query, limit, orderBy, startAfter, where } 
+from "https://www.gstatic.com/firebasejs/11.0.2/firebase-firestore.js";
+
+const firebaseConfig = { 
+    apiKey: "AIzaSyAvPEac-03kE4oazvaq8K3T2gxLPsnZO20", 
+    authDomain: "darnote625.firebaseapp.com", 
+    projectId: "darnote625", 
+    storageBucket: "darnote625.firebasestorage.app", 
+    messagingSenderId: "16458322562", 
+    appId: "1:16458322562:web:8894d71f3e6c326eba1a9b" 
+};
+
+const app = initializeApp(firebaseConfig);
+window.firebase = { 
+    app, auth: getAuth(app), db: getFirestore(app), signInWithPopup, GoogleAuthProvider, 
+    signOut, onAuthStateChanged, collection, doc, addDoc, updateDoc, deleteDoc, getDocs, 
+    getDoc, setDoc, increment, arrayUnion, query, limit, orderBy, startAfter, where 
+};
+</script>
+
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<style>
+    body { @apply bg-[#f4f4f5] text-zinc-900 dark:bg-onyx dark:text-zinc-100; font-family: 'Inter', sans-serif; overflow: hidden; }
+    ::-webkit-scrollbar { width: 6px; }
+    ::-webkit-scrollbar-thumb { @apply bg-zinc-300 dark:bg-zinc-700; border-radius: 4px; }
+    .glass-panel { @apply bg-white dark:bg-surface border-r border-zinc-200 dark:border-border; }
+    .input-field { @apply w-full bg-zinc-50 dark:bg-zinc-900 border border-zinc-200 dark:border-white/10 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-brand transition-all shadow-sm; }
+    .btn-ghost { @apply hover:bg-zinc-100 dark:hover:bg-white/5 text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white transition-colors; }
+    .markdown-content table { border-collapse: collapse; width: 100%; margin: 8px 0; font-size: 0.8rem; }
+    .markdown-content th, .markdown-content td { border: 1px solid #444; padding: 4px 8px; text-align: left; }
+    .context-menu { animation: fadein 0.1s ease-out; }
+    @keyframes fadein { from { opacity: 0; transform: scale(0.95); } to { opacity: 1; transform: scale(1); } }
+</style>
 </head>
 <body>
-    <div id="root"></div>
-    <script type="text/babel">
-        // CONFIG
-        const GDRIVE_API_KEY = "AIzaSyCScFR_D0snZ6hrHob5fUQM7Y2NhK-kTIA"; 
-        const GDRIVE_CLIENT_ID = "256215327792-oglegui0q8qj507oao2c2733thcl9lrc.apps.googleusercontent.com"; 
-        
-        // --- PROXY URL ---
-        const GEMINI_PROXY_URL = "https://gemini-proxy-513372702506.us-central1.run.app/proxy";
+<div id="root"></div>
+<script type="text/babel">
+const GDRIVE_API_KEY = "AIzaSyCScFR_D0snZ6hrHob5fUQM7Y2NhK-kTIA"; 
+const GDRIVE_CLIENT_ID = "256215327792-oglegui0q8qj507oao2c2733thcl9lrc.apps.googleusercontent.com"; 
+const GEMINI_PROXY_URL = "https://gemini-proxy-513372702506.us-central1.run.app/proxy";
 
-        const { useState, useEffect, useRef, useMemo, useCallback } = React;
-        const { motion, AnimatePresence } = window.Motion;
+const { useState, useEffect, useRef } = React;
+const { motion, AnimatePresence } = window.Motion;
 
-        // --- ICONS ---
-        const Icons = {
-            Plus: (p) => <svg {...p} xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12h14"/><path d="M12 5v14"/></svg>,
-            Trash: (p) => <svg {...p} xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/></svg>,
-            Bug: (p) => <svg {...p} xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m8 2 1.88 1.88"/><path d="M14.12 3.88 16 2"/><path d="M9 7.13v-1a3.003 3.003 0 1 1 6 0v1"/><path d="M12 20c-3.3 0-6-2.7-6-6v-3a4 4 0 0 1 4-4h4a4 4 0 0 1 4 4v3c0 3.3-2.7 6-6 6"/><path d="M12 20v-9"/><path d="M6.53 9C4.6 8.8 3 7.1 3 5"/><path d="M6 13H2"/><path d="M3 21c0-2.1 1.7-3.9 3.8-4"/><path d="M20.97 5c0 2.1-1.6 3.8-3.5 4"/><path d="M22 13h-4"/><path d="M17.2 17c2.1.1 3.8 1.9 3.8 4"/></svg>,
-            Check: (p) => <svg {...p} xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>,
-            Image: (p) => <svg {...p} xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect width="18" height="18" x="3" y="3" rx="2" ry="2"/><circle cx="9" cy="9" r="2"/><path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21"/></svg>,
-            Bot: (p) => <svg {...p} xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 8V4H8"/><rect width="16" height="12" x="4" y="8" rx="2"/><path d="M2 14h2"/><path d="M20 14h2"/><path d="M15 13v2"/><path d="M9 13v2"/></svg>,
-            X: (p) => <svg {...p} xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M18 6 6 18"/><path d="m6 6 18 18"/></svg>,
-            Logout: (p) => <svg {...p} xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" x2="9" y1="12" y2="12"/></svg>,
-            Google: (p) => <svg {...p} xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 22C6.477 22 2 17.523 2 12S6.477 2 12 2s10 4.477 10 10-4.477 10-10 10z"/><path d="M12 11h9c.1 1.4.1 2.9-.4 4.3-1.1 3-4.1 5.3-7.6 5.6-5 .5-9.4-3.1-9.9-8.1C2.5 7.1 6 2.3 11 2c2.5-.1 4.9.9 6.7 2.6l-2.7 2.8c-1-.7-2.3-1.1-3.6-1-2.9.2-5.1 2.8-4.9 5.7.2 2.6 2.4 4.7 5 4.7 2 0 3.6-1.1 4.3-2.9H12v-3z" fill="currentColor"/></svg>,
-            Sun: (p) => <svg {...p} xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="5"/><path d="M12 1v2"/><path d="M12 21v2"/><path d="M4.22 4.22l1.42 1.42"/><path d="M18.36 18.36l1.42 1.42"/><path d="M1 12h2"/><path d="M21 12h2"/><path d="M4.22 19.78l1.42-1.42"/><path d="M18.36 5.64l1.42-1.42"/></svg>,
-            Moon: (p) => <svg {...p} xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>,
-            User: (p) => <svg {...p} xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>,
-            Scan: (p) => <svg {...p} xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 7V5a2 2 0 0 1 2-2h2"/><path d="M17 3h2a2 2 0 0 1 2 2v2"/><path d="M21 17v2a2 2 0 0 1-2 2h-2"/><path d="M7 21H5a2 2 0 0 1-2-2v-2"/><path d="M8 12h8"/><path d="M12 8v8"/></svg>,
-            Lock: (p) => <svg {...p} xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>,
-            File: (p) => <svg {...p} xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" x2="8" y1="13" y2="13"/><line x1="16" x2="8" y1="17" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>,
-            Book: (p) => <svg {...p} xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>,
-            CloudUpload: (p) => <svg {...p} xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M4 14.899A7 7 0 1 1 15.71 8h1.79a4.5 4.5 0 0 1 2.5 8.242"/><path d="M12 12v9"/><path d="m16 16-4-4-4 4"/></svg>,
-            Refresh: (p) => <svg {...p} xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 12a9 9 0 0 0-9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/><path d="M3 12a9 9 0 0 0 9 9 9.75 9.75 0 0 0 6.74-2.74L21 16"/><path d="M21 21v-5h-5"/></svg>,
-            Clip: (p) => <svg {...p} xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m21.44 11.05-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"/></svg>,
-            ExternalLink: (p) => <svg {...p} xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" x2="21" y1="14" y2="3"/></svg>,
-            ChevronLeft: (p) => <svg {...p} xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m15 18-6-6 6-6"/></svg>,
-            ChevronRight: (p) => <svg {...p} xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m9 18 6-6-6-6"/></svg>,
-            ZoomIn: (p) => <svg {...p} xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" x2="16.65" y1="21" y2="16.65"/><line x1="11" x2="11" y1="8" y2="14"/><line x1="8" x2="14" y1="11" y2="11"/></svg>,
-            Undo: (p) => <svg {...p} xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 7v6h6"/><path d="M21 17a9 9 0 0 0-9-9 9 9 0 0 0-6 2.3L3 13"/></svg>,
-            Sort: (p) => <svg {...p} xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="12" x2="12" y1="3" y2="21"/><polyline points="8 7 12 3 16 7"/><polyline points="8 17 12 21 16 17"/></svg>,
-            Copy: (p) => <svg {...p} xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect width="14" height="14" x="8" y="8" rx="2" ry="2"/><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/></svg>,
-            MoreVertical: (p) => <svg {...p} xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="1"/><circle cx="12" cy="5" r="1"/><circle cx="12" cy="19" r="1"/></svg>,
-            Brain: (p) => <svg {...p} xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M9.5 2A2.5 2.5 0 0 1 12 4.5v15a2.5 2.5 0 0 1-4.96.44 2.5 2.5 0 0 1-2.96-3.08 3 3 0 0 1-.34-5.58 2.5 2.5 0 0 1 1.32-4.24 2.5 2.5 0 0 1 1.98-3A2.5 2.5 0 0 1 9.5 2Z"/><path d="M14.5 2A2.5 2.5 0 0 0 12 4.5v15a2.5 2.5 0 0 0 4.96.44 2.5 2.5 0 0 0 2.96-3.08 3 3 0 0 0 .34-5.58 2.5 2.5 0 0 0-1.32-4.24 2.5 2.5 0 0 0-1.98-3A2.5 2.5 0 0 0 14.5 2Z"/></svg>
-        };
+// --- ICONS (Collapsed for space) ---
+const Icons = {
+    Plus: p=><svg {...p} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M5 12h14"/><path d="M12 5v14"/></svg>,
+    Trash: p=><svg {...p} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/></svg>,
+    Bug: p=><svg {...p} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="m8 2 1.88 1.88"/><path d="M14.12 3.88 16 2"/><path d="M9 7.13v-1a3 3 0 1 1 6 0v1"/><path d="M12 20c-3.3 0-6-2.7-6-6v-3a4 4 0 0 1 4-4h4a4 4 0 0 1 4 4v3c0 3.3-2.7 6-6 6"/><path d="M12 20v-9"/><path d="M6.53 9C4.6 8.8 3 7.1 3 5"/><path d="M6 13H2"/><path d="M3 21c0-2.1 1.7-3.9 3.8-4"/><path d="M20.97 5c0 2.1-1.6 3.8-3.5 4"/><path d="M22 13h-4"/><path d="M17.2 17c2.1.1 3.8 1.9 3.8 4"/></svg>,
+    Check: p=><svg {...p} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="20 6 9 17 4 12"/></svg>,
+    Image: p=><svg {...p} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect width="18" height="18" x="3" y="3" rx="2"/><circle cx="9" cy="9" r="2"/><path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21"/></svg>,
+    Bot: p=><svg {...p} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M12 8V4H8"/><rect width="16" height="12" x="4" y="8" rx="2"/><path d="M2 14h2"/><path d="M20 14h2"/><path d="M15 13v2"/><path d="M9 13v2"/></svg>,
+    X: p=><svg {...p} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M18 6 6 18"/><path d="m6 6 18 18"/></svg>,
+    Logout: p=><svg {...p} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" x2="9" y1="12" y2="12"/></svg>,
+    Google: p=><svg {...p} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M12 22C6.477 22 2 17.523 2 12S6.477 2 12 2s10 4.477 10 10-4.477 10-10 10z"/><path d="M12 11h9c.1 1.4.1 2.9-.4 4.3-1.1 3-4.1 5.3-7.6 5.6-5 .5-9.4-3.1-9.9-8.1C2.5 7.1 6 2.3 11 2c2.5-.1 4.9.9 6.7 2.6l-2.7 2.8c-1-.7-2.3-1.1-3.6-1-2.9.2-5.1 2.8-4.9 5.7.2 2.6 2.4 4.7 5 4.7 2 0 3.6-1.1 4.3-2.9H12v-3z" fill="currentColor"/></svg>,
+    Sun: p=><svg {...p} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="5"/><path d="M12 1v2"/><path d="M12 21v2"/><path d="M4.22 4.22l1.42 1.42"/><path d="M18.36 18.36l1.42 1.42"/><path d="M1 12h2"/><path d="M21 12h2"/><path d="M4.22 19.78l1.42-1.42"/><path d="M18.36 5.64l1.42-1.42"/></svg>,
+    Moon: p=><svg {...p} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>,
+    User: p=><svg {...p} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>,
+    Scan: p=><svg {...p} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M3 7V5a2 2 0 0 1 2-2h2"/><path d="M17 3h2a2 2 0 0 1 2 2v2"/><path d="M21 17v2a2 2 0 0 1-2 2h-2"/><path d="M7 21H5a2 2 0 0 1-2-2v-2"/><path d="M8 12h8"/><path d="M12 8v8"/></svg>,
+    File: p=><svg {...p} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" x2="8" y1="13" y2="13"/><line x1="16" x2="8" y1="17" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>,
+    Book: p=><svg {...p} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>,
+    Clip: p=><svg {...p} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="m21.44 11.05-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"/></svg>,
+    ChevronLeft: p=><svg {...p} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="m15 18-6-6 6-6"/></svg>,
+    ChevronRight: p=><svg {...p} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="m9 18 6-6-6-6"/></svg>,
+    ZoomIn: p=><svg {...p} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="11" cy="11" r="8"/><line x1="21" x2="16.65" y1="21" y2="16.65"/><line x1="11" x2="11" y1="8" y2="14"/><line x1="8" x2="14" y1="11" y2="11"/></svg>,
+    Sort: p=><svg {...p} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="12" x2="12" y1="3" y2="21"/><polyline points="8 7 12 3 16 7"/><polyline points="8 17 12 21 16 17"/></svg>,
+    Copy: p=><svg {...p} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect width="14" height="14" x="8" y="8" rx="2" ry="2"/><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/></svg>,
+    Brain: p=><svg {...p} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M9.5 2A2.5 2.5 0 0 1 12 4.5v15a2.5 2.5 0 0 1-4.96.44 2.5 2.5 0 0 1-2.96-3.08 3 3 0 0 1-.34-5.58 2.5 2.5 0 0 1 1.32-4.24 2.5 2.5 0 0 1 1.98-3A2.5 2.5 0 0 1 9.5 2Z"/><path d="M14.5 2A2.5 2.5 0 0 0 12 4.5v15a2.5 2.5 0 0 0 4.96.44 2.5 2.5 0 0 0 2.96-3.08 3 3 0 0 0 .34-5.58 2.5 2.5 0 0 0-1.32-4.24 2.5 2.5 0 0 0-1.98-3A2.5 2.5 0 0 0 14.5 2Z"/></svg>
+};
 
-        // --- GEMINI PROXY ---
-        const callGemini = async (prompt, systemInstruction = "", imageBase64 = null) => {
-            const proxyUrl = GEMINI_PROXY_URL;
-            const parts = [{ text: `${systemInstruction}\n\nUser: ${prompt}` }];
-            if (imageBase64) {
-                let mimeType = "image/png"; let data = imageBase64;
-                if (imageBase64.includes(",")) { const s = imageBase64.split(","); mimeType = s[0].match(/:(.*?);/)[1]; data = s[1]; }
-                parts.push({ inlineData: { mimeType, data } });
-            }
-            try {
-                const response = await fetch(proxyUrl, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ contents: [{ parts }] }) });
-                
-                if (!response.ok) {
-                    console.error(`Gemini Proxy Error: ${response.status} ${response.statusText}`);
-                    return `Error: API Request Failed (${response.status} - ${response.statusText})`;
-                }
+// --- GEMINI & HELPERS ---
+const callGemini = async (prompt, sysInstruction="", imgBase64=null) => {
+    const parts = [{ text: `${sysInstruction}\n\nUser: ${prompt}` }];
+    if (imgBase64) {
+        let mime="image/png", data=imgBase64;
+        if(imgBase64.includes(",")){const s=imgBase64.split(","); mime=s[0].match(/:(.*?);/)[1]; data=s[1];}
+        parts.push({ inlineData: { mimeType: mime, data } });
+    }
+    try {
+        const r = await fetch(GEMINI_PROXY_URL, {
+            method:'POST', headers:{'Content-Type':'application/json'},
+            body:JSON.stringify({contents:[{parts}]})
+        });
+        if(!r.ok) throw new Error("API Error");
+        const d = await r.json();
+        return d.candidates?.[0]?.content?.parts?.[0]?.text || "Error: Empty";
+    } catch(e) { return `Error: ${e.message}`; }
+};
 
-                const data = await response.json();
-                console.log("Gemini Raw Debug:", data); 
+const checkAndIncrementQuota = async (user, type) => {
+    if (!user) return false;
+    const limits = { chat: 5, practice: 10, ocr: 20 };
+    const field = `${type}_count`;
+    const today = new Date().toISOString().split('T')[0];
+    const ref = window.firebase.doc(window.firebase.db, 'artifacts', "darnote-app", 'users', user.uid, 'ai_usage', today);
+    try {
+        const snap = await window.firebase.getDoc(ref);
+        const count = snap.exists() ? (snap.data()[field] || 0) : 0;
+        if (count >= limits[type]) return false;
+        await window.firebase.setDoc(ref, { [field]: window.firebase.increment(1) }, { merge: true });
+        return count + 1;
+    } catch (e) { return false; }
+};
 
-                if (data.error) return `API Error: ${data.error.message}`;
-                
-                const candidate = data.candidates?.[0];
-                if (!candidate) return "Error: No candidates returned";
-                
-                if (candidate.finishReason && candidate.finishReason !== "STOP") {
-                    return `Error: Response blocked due to ${candidate.finishReason}`;
-                }
-
-                return candidate.content?.parts?.[0]?.text || "Error: Empty response text.";
-            } catch (error) { return `Error: ${error.message}`; }
-        };
-
-        // --- SMART QUOTA MANAGER ---
-        const checkAndIncrementQuota = async (user, type) => {
-            if (!user) return false;
-            // LIMITS CONFIG
-            const limits = { chat: 5, practice: 10, ocr: 20 };
-            const fieldMap = { chat: 'chat_count', practice: 'practice_count', ocr: 'ocr_count' };
-            
-            const limit = limits[type];
-            const field = fieldMap[type];
-            if (!limit || !field) return false;
-
-            const today = new Date().toISOString().split('T')[0];
-            const ref = window.firebase.doc(window.firebase.db, 'artifacts', "darnote-app", 'users', user.uid, 'ai_usage', today);
-            
-            try {
-                const snap = await window.firebase.getDoc(ref);
-                let count = 0; 
-                if (snap.exists()) {
-                    count = snap.data()[field] || 0;
-                }
-                
-                if (count >= limit) return false;
-                
-                if (snap.exists()) {
-                    await window.firebase.updateDoc(ref, { [field]: window.firebase.increment(1) });
-                } else {
-                    await window.firebase.setDoc(ref, { [field]: 1 }, { merge: true });
-                }
-                return count + 1; // Return new count
-            } catch (e) { console.error("Quota check failed:", e); return false; }
-        };
-
-        // --- GDRIVE HOOK ---
-        const useGoogleDrive = () => {
-            const [tokenClient, setTokenClient] = useState(null);
-            useEffect(() => {
-                if(!GDRIVE_API_KEY || !GDRIVE_CLIENT_ID) return;
-                const load = async () => {
-                    try {
-                        if (window.gapi) { await new Promise(r => window.gapi.load('client', r)); await window.gapi.client.init({ apiKey: GDRIVE_API_KEY, discoveryDocs: ['https://www.googleapis.com/discovery/v1/apis/drive/v3/rest'] }); }
-                        if (window.google) setTokenClient(window.google.accounts.oauth2.initTokenClient({ client_id: GDRIVE_CLIENT_ID, scope: 'https://www.googleapis.com/auth/drive.file', callback: () => {} }));
-                    } catch(e) { console.error("Drive API Init Failed:", e); }
-                };
-                load();
-            }, []);
-            const getAccessToken = () => new Promise((resolve, reject) => {
-                if (!tokenClient) return reject("Auth not initialized");
-                const existing = window.gapi.client.getToken();
-                if (existing && Date.now() < existing.expiry) return resolve(existing.access_token);
-                tokenClient.callback = (resp) => { if (resp.error) reject(resp); resolve(resp.access_token); };
-                tokenClient.requestAccessToken({ prompt: '' });
+const useGoogleDrive = () => {
+    const [client, setClient] = useState(null);
+    useEffect(() => {
+        if(!GDRIVE_API_KEY) return;
+        const init = async () => {
+            if(window.gapi) { await new Promise(r=>window.gapi.load('client',r)); await window.gapi.client.init({apiKey:GDRIVE_API_KEY, discoveryDocs:['https://www.googleapis.com/discovery/v1/apis/drive/v3/rest']}); }
+            if(window.google) setClient(window.google.accounts.oauth2.initTokenClient({client_id:GDRIVE_CLIENT_ID, scope:'https://www.googleapis.com/auth/drive.file', callback:()=>{}}));
+        }; init();
+    }, []);
+    const saveToDrive = async (blob, name) => {
+        if (!client) throw new Error("Auth error");
+        const token = await new Promise((res, rej) => {
+            client.callback = (resp) => resp.error ? rej(resp) : res(resp.access_token);
+            client.requestAccessToken({prompt:''});
+        });
+        // Simplistic folder search/create
+        const folderUrl = `https://www.googleapis.com/drive/v3/files?q=${encodeURIComponent("mimeType='application/vnd.google-apps.folder' and name='darNote_Errors' and trashed=false")}`;
+        const search = await (await fetch(folderUrl, {headers:{Authorization:`Bearer ${token}`}})).json();
+        let folderId = search.files?.[0]?.id;
+        if (!folderId) {
+            const create = await fetch('https://www.googleapis.com/drive/v3/files', {
+                method:'POST', headers:{Authorization:`Bearer ${token}`,'Content-Type':'application/json'},
+                body:JSON.stringify({name:'darNote_Errors', mimeType:'application/vnd.google-apps.folder'})
             });
-            const saveToDrive = async (blob, filename) => {
-                try {
-                    const token = await getAccessToken();
-                    let folderId;
-                    const q = `mimeType='application/vnd.google-apps.folder' and name='darNote_Errors' and trashed=false`;
-                    const search = await fetch(`https://www.googleapis.com/drive/v3/files?q=${encodeURIComponent(q)}`, { headers: { Authorization: `Bearer ${token}` } });
-                    const searchData = await search.json();
-                    if (searchData.files?.length) folderId = searchData.files[0].id;
-                    else {
-                        const create = await fetch('https://www.googleapis.com/drive/v3/files', { method: 'POST', headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' }, body: JSON.stringify({ name: 'darNote_Errors', mimeType: 'application/vnd.google-apps.folder' }) });
-                        folderId = (await create.json()).id;
-                    }
-                    const metadata = { name: filename, mimeType: blob.type, parents: [folderId] };
-                    const form = new FormData();
-                    form.append('metadata', new Blob([JSON.stringify(metadata)], { type: 'application/json' }));
-                    form.append('file', blob);
-                    const upRes = await fetch('https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&fields=id', { method: 'POST', headers: { Authorization: `Bearer ${token}` }, body: form });
-                    if(!upRes.ok) throw new Error(upRes.statusText);
-                    const fileId = (await upRes.json()).id;
-                    await fetch(`https://www.googleapis.com/drive/v3/files/${fileId}/permissions`, { method: 'POST', headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' }, body: JSON.stringify({ role: 'reader', type: 'anyone' }) });
-                    return `https://lh3.googleusercontent.com/d/${fileId}`;
-                } catch (e) { console.error("Drive Upload Error:", e); throw e; }
-            };
-            return { saveToDrive };
-        };
-
-        // --- COMPONENTS ---
-        const Lightbox = ({ images, initialIndex, onClose }) => {
-            const [index, setIndex] = useState(initialIndex);
-            useEffect(() => {
-                const handleKeyDown = (e) => {
-                    if (e.key === 'Escape') onClose();
-                    if (e.key === 'ArrowRight') setIndex((prev) => (prev + 1) % images.length);
-                    if (e.key === 'ArrowLeft') setIndex((prev) => (prev - 1 + images.length) % images.length);
-                };
-                window.addEventListener('keydown', handleKeyDown); return () => window.removeEventListener('keydown', handleKeyDown);
-            }, [images.length, onClose]);
-            if (!images || images.length === 0) return null;
-            return (
-                <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 z-[60] bg-black/95 flex items-center justify-center backdrop-blur-sm">
-                    <button onClick={onClose} className="absolute top-4 right-4 text-white/50 hover:text-white p-2 rounded-full hover:bg-white/10 transition-colors z-50"><Icons.X className="w-8 h-8"/></button>
-                    <button onClick={(e) => { e.stopPropagation(); setIndex((prev) => (prev - 1 + images.length) % images.length); }} className="absolute left-4 text-white/50 hover:text-white p-4 rounded-full hover:bg-white/10 transition-colors z-50 hidden sm:block"><Icons.ChevronLeft className="w-8 h-8"/></button>
-                    <motion.img key={index} initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} src={images[index]} className="max-h-[90vh] max-w-[90vw] object-contain shadow-2xl rounded-lg select-none"/>
-                    <button onClick={(e) => { e.stopPropagation(); setIndex((prev) => (prev + 1) % images.length); }} className="absolute right-4 text-white/50 hover:text-white p-4 rounded-full hover:bg-white/10 transition-colors z-50 hidden sm:block"><Icons.ChevronRight className="w-8 h-8"/></button>
-                    <div className="absolute bottom-6 left-1/2 -translate-x-1/2 flex gap-2">{images.map((_, i) => (<button key={i} onClick={() => setIndex(i)} className={`w-2 h-2 rounded-full transition-all ${i === index ? 'bg-white scale-125' : 'bg-white/30 hover:bg-white/50'}`} />))}</div>
-                    <div className="absolute bottom-6 right-6 text-white/30 text-xs font-mono">{index + 1} / {images.length}</div>
-                </motion.div>
-            );
-        };
-
-        const MultiImageUploader = ({ images = [], onUpdate, label, isUploading }) => {
-            const [isDragging, setIsDragging] = useState(false);
-            const [lightboxIndex, setLightboxIndex] = useState(null);
-            const fileInputRef = useRef(null);
-            const imageList = Array.isArray(images) ? images : (images ? [images] : []);
-            const handleFiles = (files) => { Array.from(files).forEach(file => { if (file.type.startsWith('image/')) onUpdate(file, 'add'); }); };
-            const handlePasteClick = async () => { try { const items = await navigator.clipboard.read(); for (const item of items) { for (const type of item.types) { if (type.startsWith("image/")) { const blob = await item.getType(type); onUpdate(blob, 'add'); } } } } catch (err) { alert("Clipboard permission denied or no image found."); } };
-            return (
-                <div className="space-y-2">
-                    <div className="flex justify-between items-end px-1"><label className="text-sm font-bold text-zinc-700 dark:text-zinc-300 flex items-center gap-2">{label} <span className="text-[10px] font-normal text-zinc-400 bg-zinc-100 dark:bg-white/5 px-1.5 rounded">{imageList.length} files</span></label><div className="flex gap-2"><button onClick={handlePasteClick} className="text-[10px] flex items-center gap-1 text-indigo-500 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 px-2 py-1 rounded transition-colors"><Icons.Clip className="w-3 h-3"/> Paste</button><button onClick={() => fileInputRef.current.click()} className="text-[10px] flex items-center gap-1 text-zinc-500 hover:bg-zinc-100 dark:hover:bg-white/10 px-2 py-1 rounded transition-colors"><Icons.Plus className="w-3 h-3"/> Add</button></div><input type="file" multiple ref={fileInputRef} className="hidden" onChange={(e) => handleFiles(e.target.files)} accept="image/*" /></div>
-                    <div className={`w-full min-h-[120px] bg-white dark:bg-surface border-2 border-dashed rounded-xl p-3 transition-all ${isDragging ? 'border-brand bg-brand/5' : 'border-zinc-300 dark:border-zinc-700'}`} onDragOver={(e) => { e.preventDefault(); setIsDragging(true); }} onDragLeave={() => setIsDragging(false)} onDrop={(e) => { e.preventDefault(); setIsDragging(false); handleFiles(e.dataTransfer.files); }} onPaste={(e) => handleFiles(e.clipboardData.files)} tabIndex="0">
-                        {imageList.length === 0 ? (<div className="h-24 flex flex-col items-center justify-center text-zinc-400 pointer-events-none"><Icons.Image className="w-6 h-6 mb-1 opacity-50"/><span className="text-xs">Drag images or Ctrl+V</span></div>) : (
-                            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
-                                {imageList.map((url, idx) => (<div key={idx} onClick={() => setLightboxIndex(idx)} className="group relative aspect-square bg-zinc-100 dark:bg-black/20 rounded-lg overflow-hidden border border-zinc-200 dark:border-white/5 shadow-sm hover:shadow-md transition-all cursor-zoom-in"><img src={url} className="w-full h-full object-cover" /><div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2"><div className="p-1.5 bg-white/20 rounded-full text-white backdrop-blur-sm"><Icons.ZoomIn className="w-4 h-4"/></div><button onClick={(e) => { e.stopPropagation(); onUpdate(idx, 'remove'); }} className="p-1.5 bg-red-500/80 hover:bg-red-500 rounded-full text-white backdrop-blur-sm" title="Remove"><Icons.Trash className="w-4 h-4"/></button></div></div>))}
-                                {isUploading && (<div className="aspect-square rounded-lg bg-zinc-50 dark:bg-white/5 flex items-center justify-center border border-zinc-200 dark:border-white/10 animate-pulse"><div className="w-5 h-5 border-2 border-brand border-t-transparent rounded-full animate-spin"></div></div>)}
-                            </div>
-                        )}
-                    </div>
-                    <AnimatePresence>{lightboxIndex !== null && (<Lightbox images={imageList} initialIndex={lightboxIndex} onClose={() => setLightboxIndex(null)} />)}</AnimatePresence>
-                </div>
-            );
-        };
-
-        const cleanLatex = (text) => {
-            return text
-                .replace(/\$\$/g, '\n') // Block math to newline
-                .replace(/\$/g, '') // Inline math delimiters
-                .replace(/\\text\{([^}]+)\}/g, '$1') // \text{...} -> ...
-                .replace(/\\times/g, '×')
-                .replace(/\\approx/g, '≈')
-                .replace(/\\le/g, '≤')
-                .replace(/\\ge/g, '≥')
-                .replace(/\\rightarrow/g, '→')
-                .replace(/\\cdot/g, '·')
-                .replace(/\\frac\{([^}]+)\}\{([^}]+)\}/g, '($1/$2)') // \frac{a}{b} -> (a/b)
-                .replace(/\\/g, ''); // Remove remaining backslashes
+            folderId = (await create.json()).id;
         }
+        const meta = { name, mimeType: blob.type, parents: [folderId] };
+        const form = new FormData();
+        form.append('metadata', new Blob([JSON.stringify(meta)],{type:'application/json'}));
+        form.append('file', blob);
+        const up = await fetch('https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&fields=id', {
+            method:'POST', headers:{Authorization:`Bearer ${token}`}, body:form
+        });
+        const fileId = (await up.json()).id;
+        await fetch(`https://www.googleapis.com/drive/v3/files/${fileId}/permissions`, {
+            method:'POST', headers:{Authorization:`Bearer ${token}`,'Content-Type':'application/json'}, body:JSON.stringify({role:'reader',type:'anyone'})
+        });
+        return `https://lh3.googleusercontent.com/d/${fileId}`;
+    };
+    return { saveToDrive };
+};
 
-        const AIChat = ({ activeLog, onClose, user }) => {
-            const [messages, setMessages] = useState([{role: 'ai', text: "I see your failure. How can I help you understand it?"}]);
-            const [input, setInput] = useState("");
-            const [loading, setLoading] = useState(false);
-            const [quota, setQuota] = useState(0);
-            const messagesEndRef = useRef(null);
+// --- COMPONENTS ---
+const Lightbox = ({ imgs, idx, close }) => {
+    const [i, setI] = useState(idx);
+    useEffect(() => {
+        const k = (e) => {
+            if(e.key==='Escape') close();
+            if(e.key==='ArrowRight') setI((p)=>(p+1)%imgs.length);
+            if(e.key==='ArrowLeft') setI((p)=>(p-1+imgs.length)%imgs.length);
+        }; window.addEventListener('keydown', k); return ()=>window.removeEventListener('keydown',k);
+    }, [imgs]);
+    return (
+        <div className="fixed inset-0 z-[60] bg-black/95 flex items-center justify-center backdrop-blur-sm" onClick={close}>
+            <button onClick={close} className="absolute top-4 right-4 text-white/50 hover:text-white"><Icons.X className="w-8 h-8"/></button>
+            <img onClick={e=>e.stopPropagation()} src={imgs[i]} className="max-h-[90vh] max-w-[90vw] object-contain rounded-lg"/>
+            <div className="absolute bottom-6 text-white/30 font-mono text-xs">{i+1} / {imgs.length}</div>
+        </div>
+    );
+};
+
+const MultiImageUploader = ({ images=[], onUpdate, label, loading }) => {
+    const ref = useRef(null);
+    const list = Array.isArray(images) ? images : (images?[images]:[]);
+    const hFiles = (fs) => Array.from(fs).filter(f=>f.type.startsWith('image/')).forEach(f=>onUpdate(f,'add'));
+    return (
+        <div className="space-y-2">
+            <div className="flex justify-between items-center px-1">
+                <label className="text-sm font-bold text-zinc-700 dark:text-zinc-300 flex items-center gap-2">{label} <span className="bg-zinc-100 dark:bg-white/5 px-1.5 rounded text-[10px] text-zinc-400">{list.length}</span></label>
+                <div className="flex gap-2">
+                    <button onClick={async()=>{try{const items=await navigator.clipboard.read(); for(const i of items){for(const t of i.types){if(t.startsWith("image/")){onUpdate(await i.getType(t),'add');}}}}catch(e){alert("Paste image failed");}}} className="text-[10px] text-indigo-500 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 px-2 py-1 rounded flex gap-1"><Icons.Clip className="w-3 h-3"/> Paste</button>
+                    <button onClick={()=>ref.current.click()} className="text-[10px] text-zinc-500 hover:bg-zinc-100 dark:hover:bg-white/10 px-2 py-1 rounded flex gap-1"><Icons.Plus className="w-3 h-3"/> Add</button>
+                </div>
+                <input type="file" multiple ref={ref} className="hidden" onChange={e=>hFiles(e.target.files)} accept="image/*"/>
+            </div>
+            <div className="w-full min-h-[100px] bg-white dark:bg-surface border-2 border-dashed border-zinc-200 dark:border-zinc-700 rounded-xl p-3" onDrop={e=>{e.preventDefault();hFiles(e.dataTransfer.files)}} onDragOver={e=>e.preventDefault()} onPaste={e=>hFiles(e.clipboardData.files)}>
+                {list.length===0 ? <div className="h-full flex items-center justify-center text-zinc-400 text-xs"><Icons.Image className="w-5 h-5 mr-2"/> Drag or Paste</div> : 
+                <div className="grid grid-cols-3 sm:grid-cols-4 gap-2">
+                    {list.map((u,i)=>(<div key={i} className="aspect-square bg-black/20 rounded relative group overflow-hidden"><img src={u} className="w-full h-full object-cover"/><button onClick={()=>onUpdate(i,'remove')} className="absolute top-1 right-1 bg-red-500 text-white p-1 rounded-full opacity-0 group-hover:opacity-100"><Icons.Trash className="w-3 h-3"/></button></div>))}
+                    {loading && <div className="aspect-square flex items-center justify-center bg-zinc-50 dark:bg-white/5 rounded animate-pulse"><div className="w-5 h-5 border-2 border-brand border-t-transparent rounded-full animate-spin"/></div>}
+                </div>}
+            </div>
+        </div>
+    );
+};
+
+const AIChat = ({ activeLog, onClose, user }) => {
+    const [msgs, setMsgs] = useState([{role:'ai',text:"I see your failure. Ask me why."}]);
+    const [txt, setTxt] = useState("");
+    const [load, setLoad] = useState(false);
+    const [quota, setQuota] = useState(0);
+    const end = useRef(null);
+
+    useEffect(()=>{end.current?.scrollIntoView({behavior:"smooth"});},[msgs]);
+    const send = async () => {
+        if(!txt.trim()) return;
+        const nQ = await checkAndIncrementQuota(user, 'chat');
+        const userMsg = txt; setMsgs(p=>[...p,{role:'user',text:userMsg}]); setTxt("");
+        if(nQ===false) return setMsgs(p=>[...p,{role:'ai',text:"**Quota Reached.** Come back tomorrow."}]);
+        setQuota(nQ); setLoad(true);
+        let img = activeLog.questionImages?.[0] || activeLog.imageUrl;
+        if(img && img.startsWith('http')) { try{const r=await fetch(img);const b=await r.blob();img=await new Promise(res=>{const fr=new FileReader();fr.onload=()=>res(fr.result);fr.readAsDataURL(b);});}catch(e){img=null;} }
+        const h = msgs.slice(-6).map(m=>`${m.role==='user'?'S':'T'}: ${m.text}`).join('\n');
+        const sys = `Tutor. Context: ${activeLog.subject}, ${activeLog.topic}. Ans: ${activeLog.correctAnswer}. Expl: ${activeLog.explanation}. Chat: ${h}. Be concise. Markdown. No LaTeX.`;
+        const res = await callGemini(userMsg, sys, img);
+        setMsgs(p=>[...p,{role:'ai',text:res}]); setLoad(false);
+    };
+    return (
+        <div className="flex flex-col h-full bg-white dark:bg-onyx border-l border-zinc-200 dark:border-white/10 shadow-2xl">
+            <div className="p-3 border-b border-zinc-200 dark:border-white/10 flex justify-between bg-zinc-50 dark:bg-zinc-900">
+                <span className="font-bold text-xs flex items-center gap-2"><Icons.Bot className="w-4 h-4 text-brand"/> AI Tutor <span className="text-[10px] bg-indigo-500 text-white px-1.5 rounded">{quota}/5</span></span>
+                <button onClick={onClose}><Icons.X className="w-4 h-4"/></button>
+            </div>
+            <div className="flex-1 overflow-y-auto p-4 space-y-4 markdown-content text-sm">{msgs.map((m,i)=><div key={i} className={`p-3 rounded-xl max-w-[85%] ${m.role==='user'?'ml-auto bg-brand text-white':'bg-zinc-100 dark:bg-zinc-800'}`} dangerouslySetInnerHTML={{__html:marked.parse(m.text)}}/>)}{load && <div className="text-xs text-zinc-500 animate-pulse pl-2">Thinking...</div>}<div ref={end}/></div>
+            <div className="p-3 border-t border-zinc-200 dark:border-white/10 bg-white dark:bg-zinc-900 flex gap-2"><input value={txt} onChange={e=>setTxt(e.target.value)} onKeyDown={e=>e.key==='Enter'&&send()} className="flex-1 bg-zinc-100 dark:bg-white/5 border border-zinc-200 dark:border-white/10 rounded-full px-3 py-2 text-xs" placeholder="Ask..."/><button onClick={send} disabled={load} className="bg-brand text-white rounded-full p-2"><Icons.Plus className="w-4 h-4 rotate-90"/></button></div>
+        </div>
+    );
+};
+
+const PracticeModal = ({ activeLog, onClose, user }) => {
+    const [load, setLoad] = useState(true);
+    const [mode, setMode] = useState(activeLog.questionType || 'MC');
+    const [data, setData] = useState(null);
+    const [ans, setAns] = useState({});
+    const [marked, setMarked] = useState(false);
+    const [feedback, setFeedback] = useState(null);
+
+    useEffect(()=>{ gen(); },[]);
+    const gen = async () => {
+        setLoad(true);
+        if((await checkAndIncrementQuota(user,'practice'))===false) { alert("Quota Reached"); onClose(); return; }
+        let img = activeLog.questionImages?.[0] || activeLog.imageUrl;
+        if(img && img.startsWith('http')) { try{const r=await fetch(img);const b=await r.blob();img=await new Promise(re=>{const fr=new FileReader();fr.onload=()=>re(fr.result);fr.readAsDataURL(b);});}catch(e){img=null;} }
+        const p = mode==='MC' ? 'Gen 5 MCQs (ABCD). JSON array: [{"q":"..","options":["A..","B.."],"answer":"A","explanation":".."}]. No LaTeX.' : 'Gen 1 Long Q (3 parts). JSON: {"context":"..","parts":[{"id":"a","text":"..","marks":2}..]}. No LaTeX.';
+        try { const r = await callGemini(p, "JSON Generator", img); setData(JSON.parse(r.replace(/```json|```/g,''))); } catch(e){ alert("Gen Failed"); onClose(); }
+        setLoad(false);
+    };
+    const check = async () => {
+        if(mode==='MC') return setMarked(true);
+        setLoad(true);
+        const p = `Mark answer. Ctx: ${data.context}. Parts: ${JSON.stringify(data.parts)}. Ans: ${JSON.stringify(ans)}. JSON: {"totalScore":5,"maxScore":10,"generalFeedback":"..","partFeedback":{"a":{"score":1,"comment":".."}}}.`;
+        try { const r = await callGemini(p,"Examiner"); setFeedback(JSON.parse(r.replace(/```json|```/g,''))); setMarked(true); } catch(e){ alert("Marking Failed"); }
+        setLoad(false);
+    };
+
+    return (
+        <div className="fixed inset-0 z-50 bg-black/80 flex items-center justify-center p-4">
+            <div className="bg-white dark:bg-zinc-900 w-full max-w-2xl rounded-2xl flex flex-col max-h-[85vh]">
+                <div className="p-4 border-b border-zinc-200 dark:border-white/10 flex justify-between"><h3 className="font-bold flex gap-2 dark:text-white"><Icons.Brain className="w-5 h-5"/> Practice</h3><button onClick={onClose}><Icons.X/></button></div>
+                <div className="flex-1 overflow-y-auto p-6 space-y-6">
+                    {load ? <div className="text-center py-10 animate-pulse text-zinc-500">Generating Drill...</div> : mode==='MC' ? (
+                        data?.map((q,i)=><div key={i} className="space-y-2"><div className="font-bold text-sm dark:text-white">{i+1}. {q.q}</div><div className="grid grid-cols-2 gap-2">{q.options.map(o=>{
+                            const l=o[0]; const sel=ans[i]===l; const cor=q.answer===l;
+                            let bg = "bg-zinc-50 dark:bg-white/5 border-zinc-200 dark:border-white/10";
+                            if(marked){ if(cor) bg="bg-green-500/20 border-green-500"; else if(sel) bg="bg-red-500/20 border-red-500"; }
+                            else if(sel) bg="bg-brand/10 border-brand";
+                            return <button key={o} onClick={()=>!marked&&setAns({...ans,[i]:l})} className={`p-2 rounded border text-xs text-left dark:text-zinc-300 ${bg}`}>{o}</button>
+                        })}</div>{marked&&<div className="text-xs bg-zinc-100 dark:bg-white/5 p-2 rounded text-zinc-600 dark:text-zinc-400"><b>Why:</b> {q.explanation}</div>}</div>)
+                    ) : (data && <div className="space-y-4"><div className="p-3 bg-zinc-50 dark:bg-white/5 rounded text-sm dark:text-zinc-200">{data.context}</div>{data.parts.map(pt=><div key={pt.id} className="space-y-1"><div className="flex justify-between text-xs font-bold dark:text-white"><span>({pt.id}) {pt.text}</span><span>[{pt.marks}]</span></div><textarea value={ans[pt.id]||''} onChange={e=>setAns({...ans,[pt.id]:e.target.value})} disabled={marked} className="w-full bg-transparent border border-zinc-200 dark:border-white/10 rounded p-2 text-xs dark:text-white"/><div className="text-xs text-right text-brand">{marked && `${feedback?.partFeedback[pt.id]?.score}/${pt.marks} - ${feedback?.partFeedback[pt.id]?.comment}`}</div></div>)}<div className="text-center font-bold text-xl text-brand">{marked && `${feedback?.totalScore} / ${feedback?.maxScore}`}</div></div>)}
+                </div>
+                <div className="p-4 border-t border-zinc-200 dark:border-white/10 flex justify-end gap-2">
+                    {!marked ? <button onClick={check} className="bg-brand text-white px-4 py-2 rounded-lg font-bold text-sm">Submit</button> : <button onClick={onClose} className="bg-zinc-200 dark:bg-white/10 px-4 py-2 rounded-lg font-bold text-sm dark:text-white">Done</button>}
+                </div>
+            </div>
+        </div>
+    );
+};
+
+// --- APP ---
+const App = () => {
+    const [user, setUser] = useState(null);
+    const [logs, setLogs] = useState([]);
+    const [subs, setSubs] = useState([]);
+    const [activeId, setActiveId] = useState(()=>new URLSearchParams(window.location.search).get('log'));
+    const [filter, setFilter] = useState('all'); // all, active, mastered, subject:X
+    const [qType, setQType] = useState('ALL');   // ALL, MC, LQ
+    const [sortBy, setSortBy] = useState('date-desc');
+    const [search, setSearch] = useState('');
+    const [aiOpen, setAiOpen] = useState(false);
+    const [pracOpen, setPracOpen] = useState(false);
+    const [dark, setDark] = useState(true);
+    const [loading, setLoading] = useState(false);
+    
+    // Pagination
+    const [last, setLast] = useState(null);
+    const [more, setMore] = useState(true);
+
+    const { saveToDrive } = useGoogleDrive();
+    const saveTimer = useRef(null);
+
+    // Auth & Init
+    useEffect(() => {
+        return window.firebase.onAuthStateChanged(window.firebase.auth, u => {
+            if(u) {
+                setUser(u); fetchLogs(false, u.uid);
+                window.firebase.getDocs(window.firebase.collection(window.firebase.db,'artifacts',"darnote-app",'users',u.uid,'subjects')).then(s=>setSubs(s.docs.map(d=>({id:d.id,...d.data()})).sort((a,b)=>a.name.localeCompare(b.name))));
+            } else setUser(null);
+        });
+    }, []);
+
+    useEffect(()=>{ document.documentElement.className = dark ? 'dark' : ''; },[dark]);
+    
+    // RE-FETCH ON FILTER CHANGE (Fixes pagination bug)
+    useEffect(() => { if(user) { setLogs([]); setLast(null); fetchLogs(false); } }, [filter, qType, sortBy]);
+
+    const fetchLogs = async (isMore=false, uid=user?.uid) => {
+        if(!uid) return;
+        setLoading(true);
+        try {
+            const db = window.firebase.db;
+            let q = window.firebase.collection(db, 'artifacts', "darnote-app", 'users', uid, 'error_logs');
             
-            useEffect(() => { messagesEndRef.current?.scrollIntoView({ behavior: "smooth" }); }, [messages]);
-            useEffect(() => { const fetchQuota = async () => { if (!user) return; const today = new Date().toISOString().split('T')[0]; const ref = window.firebase.doc(window.firebase.db, 'artifacts', "darnote-app", 'users', user.uid, 'ai_usage', today); const snap = await window.firebase.getDoc(ref); if (snap.exists()) setQuota(snap.data().chat_count || 0); else setQuota(0); }; fetchQuota(); }, [user]);
+            // 1. DATABASE FILTERING (Crucial for correct pagination)
+            if (filter === 'active') q = window.firebase.query(q, window.firebase.where('mastered', '==', false));
+            else if (filter === 'mastered') q = window.firebase.query(q, window.firebase.where('mastered', '==', true));
+            else if (filter.startsWith('subject:')) q = window.firebase.query(q, window.firebase.where('subject', '==', filter.split(':')[1]));
             
-            const handleSend = async () => {
-                if(!input.trim()) return;
-                const newQuota = await checkAndIncrementQuota(user, 'chat');
-                const userMsg = input; setMessages(prev => [...prev, {role: 'user', text: userMsg}]); setInput(""); 
-                if (newQuota === false) { setMessages(prev => [...prev, {role: 'ai', text: "🛑 **Daily Chat Limit (5/5) Reached**\n\nCome back tomorrow!"}]); return; }
-                setQuota(newQuota);
+            if (qType !== 'ALL') q = window.firebase.query(q, window.firebase.where('questionType', '==', qType));
 
-                setLoading(true);
-                let imgCtx = (activeLog.questionImages && activeLog.questionImages.length > 0) ? activeLog.questionImages[0] : (activeLog.imageUrl || null);
-                
-                if (imgCtx && (imgCtx.startsWith('http') || imgCtx.startsWith('https'))) {
-                    try { const res = await fetch(imgCtx); const blob = await res.blob(); imgCtx = await new Promise((resolve) => { const reader = new FileReader(); reader.onloadend = () => resolve(reader.result); reader.readAsDataURL(blob); }); } catch (e) { console.error("Image conversion failed", e); imgCtx = null; }
-                }
+            // 2. SORTING
+            q = window.firebase.query(q, window.firebase.orderBy('createdAt', sortBy==='date-desc'?'desc':'asc'));
 
-                const historyText = messages.slice(Math.max(messages.length - 6, 1)).map(m => `${m.role === 'user' ? 'Student' : 'Tutor'}: ${m.text}`).join('\n');
-                const context = `Subject: ${activeLog.subject}, Topic: ${activeLog.topic}, Type: ${activeLog.questionType}, Student Answer: ${activeLog.correctAnswer}, Explanation: ${activeLog.explanation}`;
-                // SHORT RESPONSE SYSTEM PROMPT
-                const systemPrompt = `You are a tutor. Context: ${context}. \nPREVIOUS CHAT (Last 3 turns):\n${historyText}\n\nINSTRUCTIONS:\n1. Be CONCISE (TL;DR style).\n2. Use standard MARKDOWN for tables, bolding, and lists.\n3. Put new logic/steps on new lines.\n4. STRICTLY NO LaTeX or '$' signs. Use Unicode math (e.g. "θ", "×", "≈", "²"). Write formulas in plain text.`;
-                const fullUserPrompt = `Student Question: ${userMsg}`;
+            // 3. PAGINATION
+            if(isMore && last) q = window.firebase.query(q, window.firebase.startAfter(last));
+            q = window.firebase.query(q, window.firebase.limit(10));
 
-                let response = await callGemini(fullUserPrompt, systemPrompt, imgCtx);
-                response = cleanLatex(response); // Safety Net
-                setMessages(prev => [...prev, {role: 'ai', text: response}]); setLoading(false);
-            };
+            const snap = await window.firebase.getDocs(q);
+            const data = snap.docs.map(d=>({id:d.id, ...d.data(), questionImages:d.data().questionImages||(d.data().imageUrl?[d.data().imageUrl]:[]), schemeImages:d.data().schemeImages||(d.data().markingSchemeUrl?[d.data().markingSchemeUrl]:[])}));
+            
+            setLogs(p => isMore ? [...p, ...data] : data);
+            setLast(snap.docs[snap.docs.length-1]);
+            setMore(snap.docs.length === 10);
+        } catch(e) { 
+            console.error(e);
+            if(e.message.includes("index")) alert("⚠️ INDEX MISSING: Open Console (F12) & Click the Firebase Link!");
+        }
+        setLoading(false);
+    };
 
-            return (
-                <div className="flex flex-col h-full bg-white dark:bg-onyx border-l border-zinc-200 dark:border-white/10 shadow-2xl">
-                    <div className="p-4 border-b border-zinc-200 dark:border-white/10 flex justify-between items-center bg-zinc-50 dark:bg-zinc-900">
-                        <span className="font-bold text-sm flex items-center gap-2"><Icons.Bot className="w-4 h-4 text-brand"/> Tutor AI <span className="text-[10px] bg-gradient-to-r from-blue-600 to-indigo-600 text-white px-2 py-0.5 rounded shadow-sm tracking-wide">GEMINI 3</span> <span className={`text-[10px] px-1.5 py-0.5 rounded-full ${quota >= 5 ? 'bg-red-100 text-red-600' : 'bg-zinc-200 dark:bg-white/10 text-zinc-500'}`}>{quota}/5</span></span>
-                        <button onClick={onClose}><Icons.X className="w-4 h-4 hover:text-red-500"/></button>
+    const updateLog = (id, up) => {
+        const u = { ...up, lastModified: new Date().toISOString() };
+        setLogs(p=>p.map(l=>l.id===id?{...l,...u}:l));
+        clearTimeout(saveTimer.current);
+        saveTimer.current = setTimeout(() => window.firebase.updateDoc(window.firebase.doc(window.firebase.db,'artifacts',"darnote-app",'users',user.uid,'error_logs',id), u), 2000);
+    };
+
+    const activeLog = logs.find(l=>l.id===activeId);
+    
+    // Login Screen
+    if(!user) return <div className="h-screen w-full flex flex-col items-center justify-center bg-zinc-950 text-white gap-4"><img src="https://raw.githubusercontent.com/darren6251/darnote/refs/heads/main/darNote%20logo.png" className="w-20"/><h1 className="text-2xl font-bold">Error Log Pro</h1><button onClick={()=>window.firebase.signInWithPopup(window.firebase.auth, new window.firebase.GoogleAuthProvider())} className="bg-white text-black px-6 py-2 rounded-full font-bold flex gap-2"><Icons.Google className="w-5"/> Sign In</button></div>;
+
+    return (
+        <div className="flex h-screen w-full transition-colors duration-300 dark:bg-onyx bg-[#f4f4f5]">
+            {/* SIDEBAR */}
+            <div className="w-[240px] hidden md:flex flex-col glass-panel p-4 z-20">
+                <div className="flex items-center gap-2 mb-6"><img src="https://raw.githubusercontent.com/darren6251/darnote/refs/heads/main/darNote%20logo.png" className="w-6"/><span className="font-bold text-sm dark:text-white">darNote</span></div>
+                <nav className="space-y-1">
+                    <a href="note.html" className="btn-ghost flex items-center gap-3 px-3 py-2 rounded-lg text-xs mb-4"><Icons.Book className="w-4"/> Back to Notes</a>
+                    {[{id:'all',l:'All Errors',i:Icons.Bug},{id:'active',l:'Needs Review',i:Icons.X},{id:'mastered',l:'Mastered',i:Icons.Check}].map(x=><button key={x.id} onClick={()=>setFilter(x.id)} className={`w-full flex gap-3 px-3 py-2 rounded-lg text-xs font-medium ${filter===x.id?'bg-zinc-200 dark:bg-white/10 dark:text-white':'btn-ghost'}`}><x.i className="w-4"/> {x.l}</button>)}
+                </nav>
+                <div className="mt-4 pt-4 border-t border-zinc-200 dark:border-white/10"><div className="text-[10px] font-bold text-zinc-400 mb-2 px-2">SUBJECTS</div><div className="space-y-0.5 overflow-y-auto max-h-[200px]">{subs.map(s=><button key={s.id} onClick={()=>setFilter(`subject:${s.name}`)} className="w-full text-left px-3 py-1.5 rounded-lg text-xs btn-ghost truncate">{s.name}</button>)}</div></div>
+                <div className="mt-auto pt-4 border-t border-zinc-200 dark:border-white/10 flex items-center gap-2"><img src={user.photoURL} className="w-8 h-8 rounded-full"/><div className="overflow-hidden"><div className="text-xs font-bold dark:text-white truncate">{user.displayName}</div></div><button onClick={()=>setDark(!dark)} className="ml-auto btn-ghost p-1 rounded"><Icons.Sun className="w-4"/></button></div>
+            </div>
+
+            {/* LIST */}
+            <div className="w-full md:w-[300px] flex-shrink-0 bg-white dark:bg-surface border-r border-zinc-200 dark:border-white/5 flex flex-col z-10">
+                <div className="p-3 border-b border-zinc-200 dark:border-white/5 space-y-2">
+                    <div className="flex gap-2">
+                        <input value={search} onChange={e=>setSearch(e.target.value)} placeholder="Search..." className="input-field"/>
+                        <select value={qType} onChange={e=>setQType(e.target.value)} className="w-20 bg-zinc-50 dark:bg-zinc-900 border border-zinc-200 dark:border-white/10 rounded-lg text-xs px-1"><option value="ALL">All</option><option value="MC">MC</option><option value="LQ">LQ</option></select>
                     </div>
-                    <div className="flex-1 overflow-y-auto p-4 space-y-4 markdown-content">{messages.map((m, i) => <div key={i} className={`flex ${m.role==='user'?'justify-end':'justify-start'}`}><div className={`max-w-[85%] p-3 rounded-2xl text-sm ${m.role==='user'?'bg-brand text-white rounded-br-none':'bg-zinc-100 dark:bg-zinc-800 rounded-bl-none text-zinc-900 dark:text-zinc-200'}`} dangerouslySetInnerHTML={{ __html: marked.parse(m.text, {breaks: true, gfm: true}) }} /></div>)}{loading && <div className="text-xs text-zinc-500 animate-pulse pl-2">Thinking...</div>} <div ref={messagesEndRef}/></div>
-                    <div className="p-4 border-t border-zinc-200 dark:border-white/10 bg-white dark:bg-zinc-900 flex gap-2"><input value={input} onChange={e=>setInput(e.target.value)} onKeyDown={e=>e.key==='Enter'&&handleSend()} className="flex-1 bg-zinc-100 dark:bg-black/30 border border-zinc-200 dark:border-white/10 rounded-full px-4 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-brand dark:text-white" placeholder="Ask Tutor..."/><button onClick={handleSend} disabled={loading} className="bg-brand text-white rounded-full p-2 hover:bg-indigo-600 disabled:opacity-50 disabled:cursor-not-allowed"><Icons.Plus className="w-4 h-4 rotate-90"/></button></div>
+                    <button onClick={async()=>{const r=await window.firebase.addDoc(window.firebase.collection(window.firebase.db,'artifacts',"darnote-app",'users',user.uid,'error_logs'),{title:'New Mistake',subject:'General',createdAt:new Date().toISOString(),mastered:false,questionType:'MC'}); setActiveId(r.id); fetchLogs();}} className="w-full bg-brand text-white py-2 rounded-lg text-xs font-bold flex justify-center gap-2"><Icons.Plus className="w-4"/> New Log</button>
                 </div>
-            );
-        };
-
-        const PracticeModal = ({ activeLog, onClose, user }) => {
-            const [loading, setLoading] = useState(true);
-            const [mode, setMode] = useState(activeLog.questionType || 'MC'); // MC or LQ
-            const [questions, setQuestions] = useState([]); // For MC
-            const [lqData, setLqData] = useState(null); // For LQ {context, parts:[]}
-            const [userAnswers, setUserAnswers] = useState({}); // {0: 'A', 1: 'B'} or {partId: 'text'}
-            const [marked, setMarked] = useState(false);
-            const [lqFeedback, setLqFeedback] = useState(null);
-            const [quota, setQuota] = useState(0);
-            
-            useEffect(() => {
-                const fetchQuota = async () => { if (!user) return; const today = new Date().toISOString().split('T')[0]; const ref = window.firebase.doc(window.firebase.db, 'artifacts', "darnote-app", 'users', user.uid, 'ai_usage', today); const snap = await window.firebase.getDoc(ref); if (snap.exists()) setQuota(snap.data().practice_count || 0); else setQuota(0); }; 
-                fetchQuota();
-                generatePractice();
-            }, []);
-
-            const generatePractice = async () => {
-                setLoading(true);
-                const newQuota = await checkAndIncrementQuota(user, 'practice');
-                if (newQuota === false) { alert("Daily Practice Limit (10/10) Reached!"); onClose(); return; }
-                setQuota(newQuota);
-
-                // Get Image
-                let imgCtx = (activeLog.questionImages && activeLog.questionImages.length > 0) ? activeLog.questionImages[0] : (activeLog.imageUrl || null);
-                if (imgCtx && (imgCtx.startsWith('http') || imgCtx.startsWith('https'))) {
-                    try { const res = await fetch(imgCtx); const blob = await res.blob(); imgCtx = await new Promise((r) => { const reader = new FileReader(); reader.onloadend = () => r(reader.result); reader.readAsDataURL(blob); }); } catch (e) { console.error(e); imgCtx = null; }
-                }
-
-                if (mode === 'MC') {
-                    const prompt = `Generate 5 Multiple Choice Questions (ABCD) based on the concept in the image/text. Return STRICTLY a JSON array: [{"q": "Question text", "options": ["A. ...", "B. ...", "C. ...", "D. ..."], "answer": "A", "explanation": "..."}]. Plain text only, NO LaTeX.`;
-                    const res = await callGemini(prompt, "You are a JSON generator.", imgCtx);
-                    try {
-                        const json = JSON.parse(res.replace(/```json|```/g, ''));
-                        setQuestions(json);
-                    } catch(e) { alert("AI generation failed. Try again."); onClose(); }
-                } else {
-                    const prompt = `Generate 1 structured Long Question with 3 sub-parts based on the concept. Return STRICTLY JSON: {"context": "Main question text...", "parts": [{"id": "a", "text": "Sub-question A", "marks": 2}, {"id": "b", "text": "...", "marks": 4}, {"id": "c", "text": "...", "marks": 4}]}. Plain text only, NO LaTeX.`;
-                    const res = await callGemini(prompt, "You are a JSON generator.", imgCtx);
-                    try {
-                        const json = JSON.parse(res.replace(/```json|```/g, ''));
-                        setLqData(json);
-                    } catch(e) { alert("AI generation failed. Try again."); onClose(); }
-                }
-                setLoading(false);
-            };
-
-            const handleLqMark = async () => {
-                setLoading(true);
-                // NOTE: Marking is FREE because it's part of the single interaction quota paid at generation.
-                const prompt = `Mark this student's answer. \nContext: ${lqData.context}\nParts: ${JSON.stringify(lqData.parts)}\nStudent Answers: ${JSON.stringify(userAnswers)}\n\nReturn STRICTLY JSON: {"totalScore": 5, "maxScore": 10, "generalFeedback": "...", "partFeedback": {"a": {"score": 1, "comment": "..."}, "b": {"score": 4, "comment": "..."}}}. Plain text only, NO LaTeX.`;
-                const res = await callGemini(prompt, "You are a strict examiner. Return JSON only.");
-                try {
-                    const json = JSON.parse(res.replace(/```json|```/g, ''));
-                    setLqFeedback(json);
-                    setMarked(true);
-                } catch(e) { alert("Marking failed."); }
-                setLoading(false);
-            };
-
-            return (
-                <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
-                    <div className="bg-white dark:bg-zinc-900 w-full max-w-2xl rounded-2xl shadow-2xl flex flex-col max-h-[85vh]">
-                        <div className="p-4 border-b border-zinc-200 dark:border-white/10 flex justify-between items-center">
-                            <h3 className="font-bold flex items-center gap-2 text-lg dark:text-white"><Icons.Brain className="w-5 h-5 text-brand"/> Practice Mode <span className={`text-xs ml-2 px-2 py-0.5 rounded-full ${quota >= 10 ? 'bg-red-100 text-red-600' : 'bg-zinc-100 dark:bg-white/10 text-zinc-500'}`}>{quota}/10 Today</span></h3>
-                            <button onClick={onClose}><Icons.X className="w-6 h-6 text-zinc-400 hover:text-white"/></button>
+                <div className="flex-1 overflow-y-auto p-2 space-y-2">
+                    {logs.filter(l=>l.title.toLowerCase().includes(search.toLowerCase())).map(l=>(
+                        <div key={l.id} onClick={()=>setActiveId(l.id)} className={`p-3 rounded-xl cursor-pointer border transition-all ${activeId===l.id?'bg-zinc-100 dark:bg-white/10 border-zinc-300 dark:border-white/20':'border-transparent hover:bg-zinc-50 dark:hover:bg-white/5'}`}>
+                            <div className="flex justify-between mb-1"><div className="font-semibold text-xs truncate dark:text-zinc-200">{l.title}</div>{l.mastered&&<Icons.Check className="w-3 text-green-500"/>}</div>
+                            <div className="flex justify-between items-center"><span className="text-[10px] bg-zinc-200 dark:bg-white/10 px-1.5 py-0.5 rounded text-zinc-500">{l.subject}</span><span className={`text-[10px] font-bold ${l.mastered?'text-green-600':'text-red-500'}`}>{l.questionType}</span></div>
                         </div>
-                        
-                        <div className="flex-1 overflow-y-auto p-6 space-y-6">
-                            {loading ? (
-                                <div className="flex flex-col items-center justify-center py-10 space-y-4">
-                                    <div className="w-10 h-10 border-4 border-brand border-t-transparent rounded-full animate-spin"></div>
-                                    <p className="text-zinc-500 animate-pulse">Gemini 3 is crafting your drill...</p>
-                                </div>
-                            ) : mode === 'MC' ? (
-                                <div className="space-y-8">
-                                    {questions.map((q, idx) => (
-                                        <div key={idx} className="space-y-3">
-                                            <div className="font-semibold text-zinc-900 dark:text-zinc-100">{idx+1}. {q.q}</div>
-                                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                                                {q.options.map((opt) => {
-                                                    const letter = opt.charAt(0);
-                                                    const isSelected = userAnswers[idx] === letter;
-                                                    const isCorrect = q.answer === letter;
-                                                    let bg = "bg-zinc-50 dark:bg-white/5 border-zinc-200 dark:border-white/10 hover:border-brand";
-                                                    
-                                                    if (marked) {
-                                                        if (isCorrect) bg = "bg-green-500/20 border-green-500";
-                                                        else if (isSelected) bg = "bg-red-500/20 border-red-500";
-                                                    } else if (isSelected) {
-                                                        bg = "bg-brand/10 border-brand";
-                                                    }
-
-                                                    return (
-                                                        <button key={opt} onClick={() => !marked && setUserAnswers({...userAnswers, [idx]: letter})} className={`text-left p-3 rounded-lg border text-sm transition-all dark:text-zinc-300 ${bg}`}>
-                                                            {opt}
-                                                        </button>
-                                                    );
-                                                })}
-                                            </div>
-                                            {marked && (
-                                                <div className="text-xs p-3 rounded bg-zinc-100 dark:bg-white/5 text-zinc-600 dark:text-zinc-400">
-                                                    <span className="font-bold">Explanation:</span> {q.explanation}
-                                                </div>
-                                            )}
-                                        </div>
-                                    ))}
-                                </div>
-                            ) : (
-                                lqData && (
-                                    <div className="space-y-6">
-                                        <div className="p-4 bg-zinc-50 dark:bg-white/5 rounded-lg text-zinc-800 dark:text-zinc-200 font-medium">
-                                            {lqData.context}
-                                        </div>
-                                        {lqData.parts.map((part) => (
-                                            <div key={part.id} className="space-y-2">
-                                                <div className="flex justify-between text-sm">
-                                                    <span className="font-bold dark:text-white">({part.id}) {part.text}</span>
-                                                    <span className="text-zinc-500">[{part.marks} marks]</span>
-                                                </div>
-                                                <textarea 
-                                                    value={userAnswers[part.id] || ''} 
-                                                    onChange={e => setUserAnswers({...userAnswers, [part.id]: e.target.value})}
-                                                    disabled={marked}
-                                                    className="w-full bg-transparent border border-zinc-200 dark:border-white/10 rounded-lg p-3 text-sm focus:ring-1 focus:ring-brand outline-none dark:text-white"
-                                                    rows="3"
-                                                    placeholder="Type your answer here..."
-                                                />
-                                                {marked && lqFeedback?.partFeedback[part.id] && (
-                                                    <div className={`text-xs p-2 rounded flex justify-between ${lqFeedback.partFeedback[part.id].score === part.marks ? 'bg-green-500/10 text-green-500' : 'bg-red-500/10 text-red-400'}`}>
-                                                        <span>{lqFeedback.partFeedback[part.id].comment}</span>
-                                                        <span className="font-bold">{lqFeedback.partFeedback[part.id].score}/{part.marks}</span>
-                                                    </div>
-                                                )}
-                                            </div>
-                                        ))}
-                                        {marked && (
-                                            <div className="p-4 rounded-lg bg-brand/10 border border-brand/20 text-center">
-                                                <div className="text-2xl font-bold text-brand">{lqFeedback.totalScore} / {lqFeedback.maxScore}</div>
-                                                <div className="text-sm text-brand/80">{lqFeedback.generalFeedback}</div>
-                                            </div>
-                                        )}
-                                    </div>
-                                )
-                            )}
-                        </div>
-
-                        <div className="p-4 border-t border-zinc-200 dark:border-white/10 bg-zinc-50 dark:bg-zinc-900/50 flex justify-end gap-3 rounded-b-2xl">
-                            {!marked ? (
-                                <button 
-                                    onClick={() => mode === 'MC' ? setMarked(true) : handleLqMark()} 
-                                    className="px-6 py-2 bg-brand text-white font-bold rounded-lg hover:bg-indigo-600 transition-colors shadow-lg"
-                                >
-                                    {mode === 'MC' ? 'Check Answers' : 'Submit for Grading'}
-                                </button>
-                            ) : (
-                                <button onClick={onClose} className="px-6 py-2 bg-zinc-200 dark:bg-white/10 text-zinc-900 dark:text-white font-bold rounded-lg hover:bg-zinc-300 transition-colors">Close</button>
-                            )}
-                        </div>
-                    </div>
+                    ))}
+                    {more && <button onClick={()=>fetchLogs(true)} className="w-full py-2 text-xs text-zinc-400 border border-dashed rounded dark:border-zinc-700">{loading?'Loading...':'Load More'}</button>}
                 </div>
-            );
-        };
+            </div>
 
-        const ContextMenu = ({ visible, x, y, logId, onDuplicate, onDelete, onCopy, onPaste }) => {
-            if (!visible) return null;
-            return (
-                <div className="fixed z-50 bg-white dark:bg-zinc-800 border border-zinc-200 dark:border-white/10 rounded-lg shadow-xl py-1 w-40 context-menu" style={{ top: y, left: x }}>
-                    <button onClick={() => onDuplicate(logId)} className="w-full text-left px-3 py-2 text-xs hover:bg-zinc-100 dark:hover:bg-white/5 flex items-center gap-2"><Icons.Plus className="w-3 h-3"/> Duplicate</button>
-                    <button onClick={() => onCopy(logId)} className="w-full text-left px-3 py-2 text-xs hover:bg-zinc-100 dark:hover:bg-white/5 flex items-center gap-2"><Icons.Copy className="w-3 h-3"/> Copy Data</button>
-                    <button onClick={onPaste} className="w-full text-left px-3 py-2 text-xs hover:bg-zinc-100 dark:hover:bg-white/5 flex items-center gap-2"><Icons.Clip className="w-3 h-3"/> Paste Log</button>
-                    <div className="h-px bg-zinc-200 dark:bg-white/10 my-1"></div>
-                    <button onClick={() => onDelete(logId)} className="w-full text-left px-3 py-2 text-xs text-red-500 hover:bg-red-50 dark:hover:bg-red-900/10 flex items-center gap-2"><Icons.Trash className="w-3 h-3"/> Delete</button>
-                </div>
-            );
-        };
-
-        // --- MAIN APP ---
-        const App = () => {
-            const [user, setUser] = useState(null);
-            const [logs, setLogs] = useState([]);
-            const [subjects, setSubjects] = useState([]);
-            const [activeLogId, setActiveLogId] = useState(() => new URLSearchParams(window.location.search).get('log'));
-            const [filter, setFilter] = useState('all');
-            const [searchQuery, setSearchQuery] = useState('');
-            const [isAiOpen, setIsAiOpen] = useState(false);
-            const [isDarkMode, setIsDarkMode] = useState(true);
-            const [isAutoTitleLoading, setIsAutoTitleLoading] = useState(false);
-            const [isLoadingLogs, setIsLoadingLogs] = useState(false);
-            
-            // Practice Mode State
-            const [isPracticeOpen, setIsPracticeOpen] = useState(false);
-
-            const { saveToDrive } = useGoogleDrive();
-            
-            // Upload States
-            const [uploadingQ, setUploadingQ] = useState(false);
-            const [uploadingS, setUploadingS] = useState(false);
-
-            // Pagination
-            const [lastDoc, setLastDoc] = useState(null);
-            const [hasMore, setHasMore] = useState(true);
-            const [sortBy, setSortBy] = useState('date-desc');
-            const [typeFilter, setTypeFilter] = useState('ALL'); // NEW: Type Filter
-            const [showSortMenu, setShowSortMenu] = useState(false);
-
-            // Context Menu
-            const [contextMenu, setContextMenu] = useState({ visible: false, x: 0, y: 0, logId: null });
-
-            // Preview Feature
-            const [previewLog, setPreviewLog] = useState(null);
-            const hoverTimeoutRef = useRef(null);
-
-            const pendingUpdatesRef = useRef({});
-            const saveTimeoutRef = useRef(null);
-
-            // 1. AUTH & INITIAL FETCH
-            useEffect(() => {
-                const unsub = window.firebase.onAuthStateChanged(window.firebase.auth, async (u) => {
-                    if (u) {
-                        setUser(u);
-                        fetchLogs(false, u.uid);
-                        // Fetch Subjects
-                        const db = window.firebase.db;
-                        window.firebase.getDocs(window.firebase.collection(db, 'artifacts', "darnote-app", 'users', u.uid, 'subjects')).then(snap => {
-                            setSubjects(snap.docs.map(d => ({id: d.id, name: d.data().name, topics: d.data().topics || []})).sort((a,b)=>a.name.localeCompare(b.name)));
-                        });
-                    } else setUser(null);
-                });
-                return () => unsub();
-            }, []);
-
-            useEffect(() => { if(isDarkMode) document.documentElement.classList.add('dark'); else document.documentElement.classList.remove('dark'); }, [isDarkMode]);
-            useEffect(() => { const url = new URL(window.location); if (activeLogId) url.searchParams.set('log', activeLogId); else url.searchParams.delete('log'); window.history.pushState({}, '', url); }, [activeLogId]);
-            useEffect(() => { const handleClick = () => setContextMenu({ ...contextMenu, visible: false }); window.addEventListener('click', handleClick); return () => window.removeEventListener('click', handleClick); }, [contextMenu]);
-
-            // FETCH LOGS (Safety Net Sorting)
-            const fetchLogs = async (isLoadMore = false, uid = user?.uid) => {
-                if (!uid) return;
-                setIsLoadingLogs(true);
-                try {
-                    const db = window.firebase.db;
-                    const logsRef = window.firebase.collection(db, 'artifacts', "darnote-app", 'users', uid, 'error_logs');
-                    let q = window.firebase.query(logsRef); // Start fresh
-                    let fallbackSort = false;
-
-                    // 1. FILTER: Apply Type Filter if set
-                    if (typeFilter !== 'ALL') {
-                        q = window.firebase.query(q, window.firebase.where('questionType', '==', typeFilter));
-                    }
-
-                    // 2. SORT: Date
-                    const dir = sortBy === 'date-desc' ? 'desc' : 'asc';
-                    q = window.firebase.query(q, window.firebase.orderBy('createdAt', dir));
-
-                    // 3. PAGINATE
-                    if (isLoadMore && lastDoc) q = window.firebase.query(q, window.firebase.startAfter(lastDoc), window.firebase.limit(10));
-                    else q = window.firebase.query(q, window.firebase.limit(10));
-
-                    let snapshot;
-                    try {
-                        snapshot = await window.firebase.getDocs(q);
-                    } catch (error) {
-                        // Catch missing index error here
-                        if (error.code === 'failed-precondition' || error.message.includes('index')) {
-                            console.warn("Firestore index missing for sort + filter. Falling back to simple sort.");
-                            fallbackSort = true;
-                            // Fallback: Just fetch by Date Descending (ignoring filter to prevent crash)
-                            q = window.firebase.query(logsRef, window.firebase.orderBy('createdAt', 'desc'));
-                            if (isLoadMore && lastDoc) q = window.firebase.query(q, window.firebase.startAfter(lastDoc), window.firebase.limit(10));
-                            else q = window.firebase.query(q, window.firebase.limit(10));
-                            snapshot = await window.firebase.getDocs(q);
-                        } else {
-                            throw error;
-                        }
-                    }
-
-                    const newLogs = snapshot.docs.map(d => {
-                        const data = d.data();
-                        return { id: d.id, ...data, questionImages: data.questionImages || (data.imageUrl ? [data.imageUrl] : []), schemeImages: data.schemeImages || (data.markingSchemeUrl ? [data.markingSchemeUrl] : []) };
-                    });
-
-                    // NO Client Side Sort needed for Type anymore as we filter strictly
-
-                    if (isLoadMore) setLogs(prev => [...prev, ...newLogs]);
-                    else setLogs(newLogs);
-
-                    setLastDoc(snapshot.docs[snapshot.docs.length - 1]);
-                    setHasMore(snapshot.docs.length === 10);
-                } catch(e) { console.error("Fetch Error", e); }
-                setIsLoadingLogs(false);
-            };
-
-            // Trigger re-fetch on sort OR filter change
-            useEffect(() => { 
-                if(user) {
-                    setLastDoc(null); // Reset pagination
-                    setLogs([]); // Clear for visual clarity
-                    fetchLogs(false); 
-                }
-            }, [sortBy, typeFilter]); // Added typeFilter dependency
-
-            const createLog = async () => {
-                const newLog = { title: 'Untitled Mistake', subject: 'General', topic: '', questionImages: [], schemeImages: [], questionType: 'MC', correctAnswer: '', marks: '', explanation: '', mastered: false, createdAt: new Date().toISOString(), lastModified: new Date().toISOString() };
-                const docRef = await window.firebase.addDoc(window.firebase.collection(window.firebase.db, 'artifacts', "darnote-app", 'users', user.uid, 'error_logs'), newLog);
-                setLogs(prev => [{...newLog, id: docRef.id}, ...prev]); setActiveLogId(docRef.id);
-            };
-
-            // DEBOUNCED UPDATE (10s)
-            const updateLog = (id, updates) => {
-                const timestampedUpdates = { ...updates, lastModified: new Date().toISOString() };
-                setLogs(prev => prev.map(l => l.id === id ? { ...l, ...timestampedUpdates } : l));
-                if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
-                pendingUpdatesRef.current[id] = { ...(pendingUpdatesRef.current[id] || {}), ...timestampedUpdates };
-                saveTimeoutRef.current = setTimeout(async () => {
-                    const ids = Object.keys(pendingUpdatesRef.current);
-                    for (const logId of ids) {
-                        const payload = pendingUpdatesRef.current[logId]; delete pendingUpdatesRef.current[logId];
-                        await window.firebase.updateDoc(window.firebase.doc(window.firebase.db, 'artifacts', "darnote-app", 'users', user.uid, 'error_logs', logId), payload);
-                    }
-                }, 10000);
-            };
-
-            const handleContextMenu = (e, logId) => { e.preventDefault(); setContextMenu({ visible: true, x: e.clientX, y: e.clientY, logId }); };
-            const handleDuplicate = async (id) => { const original = logs.find(l => l.id === id); if (!original) return; const { id: _, ...data } = original; const newLog = { ...data, title: `${data.title} (Copy)`, createdAt: new Date().toISOString(), lastModified: new Date().toISOString() }; const docRef = await window.firebase.addDoc(window.firebase.collection(window.firebase.db, 'artifacts', "darnote-app", 'users', user.uid, 'error_logs'), newLog); setLogs(prev => [{...newLog, id: docRef.id}, ...prev]); };
-            const handleDelete = async (id) => { if(!confirm("Delete this log permanently?")) return; setLogs(prev => prev.filter(l => l.id !== id)); if (activeLogId === id) setActiveLogId(null); await window.firebase.deleteDoc(window.firebase.doc(window.firebase.db, 'artifacts', "darnote-app", 'users', user.uid, 'error_logs', id)); };
-            const handleCopy = (id) => { const original = logs.find(l => l.id === id); if (original) navigator.clipboard.writeText(JSON.stringify(original)); };
-            const handlePaste = async () => { try { const text = await navigator.clipboard.readText(); const data = JSON.parse(text); if (data.title && data.createdAt) { const { id, ...cleanData } = data; const newLog = { ...cleanData, title: `${cleanData.title} (Pasted)`, createdAt: new Date().toISOString(), lastModified: new Date().toISOString() }; const docRef = await window.firebase.addDoc(window.firebase.collection(window.firebase.db, 'artifacts', "darnote-app", 'users', user.uid, 'error_logs'), newLog); setLogs(prev => [{...newLog, id: docRef.id}, ...prev]); } } catch(e) { alert("Invalid log data in clipboard"); } };
-
-            const addTopicToSubject = async (subjectName) => {
-                const subjectDoc = subjects.find(s => s.name === subjectName); if (!subjectDoc) { alert("Cannot add topic to General."); return; }
-                const newTopic = prompt(`Add topic for ${subjectName}:`); if (!newTopic) return;
-                setSubjects(prev => prev.map(s => s.id === subjectDoc.id ? {...s, topics: [...s.topics, newTopic]} : s));
-                const docRef = window.firebase.doc(window.firebase.db, 'artifacts', 'darnote-app', 'users', user.uid, 'subjects', subjectDoc.id);
-                await window.firebase.updateDoc(docRef, { topics: window.firebase.arrayUnion(newTopic) });
-            };
-
-            const handleImageUpdate = async (data, action, type) => {
-                if (!activeLogId) return;
-                const isQ = type === 'question'; const setSpinner = isQ ? setUploadingQ : setUploadingS; const targetField = isQ ? 'questionImages' : 'schemeImages'; const currentImages = isQ ? activeLog.questionImages : activeLog.schemeImages;
-                if (action === 'remove') { const newArr = currentImages.filter((_, i) => i !== data); updateLog(activeLogId, { [targetField]: newArr }); return; }
-                setSpinner(true);
-                try {
-                    const blob = data instanceof Blob ? data : new Blob([data]); 
-                    const finalUrl = await saveToDrive(blob, `ErrorLog_${type}_${Date.now()}.png`);
-                    const newArr = [...currentImages, finalUrl]; 
-                    updateLog(activeLogId, { [targetField]: newArr });
-                } catch(e) { alert("Upload Failed: " + e.message); } setSpinner(false);
-            };
-
-            const handleAutoTitle = async () => {
-                if (!activeLog.questionImages?.length && !activeLog.imageUrl) { alert("Paste image first!"); return; } 
-                const newQuota = await checkAndIncrementQuota(user, 'ocr');
-                if (newQuota === false) { alert("Daily OCR/Auto-Title Limit (20/20) Reached!"); return; }
-                setIsAutoTitleLoading(true);
-                try {
-                    let url = activeLog.questionImages?.[0] || activeLog.imageUrl; let base64 = url;
-                    if(!url.startsWith('data:')) { const res = await fetch(url); const b = await res.blob(); base64 = await new Promise(r=>{const rd=new FileReader(); rd.onload=()=>r(rd.result); rd.readAsDataURL(b);}); }
-                    const title = await callGemini("Analyze image. Identify core question concept. Generate SHORT title (max 6 words). Return ONLY title.", "Concise Summarizer", base64);
-                    updateLog(activeLogId, { title: title.replace(/^["']|["']$/g, '').trim() });
-                } catch(e) { alert("OCR Failed"); } setIsAutoTitleLoading(false);
-            }
-
-            const handleMouseEnter = (log) => { if (hoverTimeoutRef.current) clearTimeout(hoverTimeoutRef.current); hoverTimeoutRef.current = setTimeout(() => { const img = (log.questionImages && log.questionImages.length > 0) ? log.questionImages[0] : log.imageUrl; if (img) setPreviewLog(log); }, 600); };
-            const handleMouseLeave = () => { if (hoverTimeoutRef.current) clearTimeout(hoverTimeoutRef.current); setPreviewLog(null); };
-
-            const activeLog = logs.find(l => l.id === activeLogId);
-            const filteredLogs = logs.filter(l => {
-                if (filter === 'mastered') return l.mastered; if (filter === 'active') return !l.mastered;
-                if (filter.startsWith('subject:')) return l.subject === filter.split(':')[1];
-                return true;
-            }).filter(l => (l.title || '').toLowerCase().includes(searchQuery.toLowerCase()));
-            const currentSub = activeLog ? subjects.find(s=>s.name===activeLog.subject) : null;
-
-            if (!user) return (
-                <div className="h-screen w-full flex items-center justify-center bg-zinc-950 text-white flex-col gap-6">
-                    <img src="https://raw.githubusercontent.com/darren6251/darnote/refs/heads/main/darNote%20logo.png" className="w-20 h-20 mb-4 drop-shadow-[0_0_15px_rgba(99,102,241,0.5)]"/>
-                    <h1 className="text-3xl font-bold">darNote Error Log</h1>
-                    <button onClick={() => window.firebase.signInWithPopup(window.firebase.auth, new window.firebase.GoogleAuthProvider())} className="bg-white text-black px-8 py-3 rounded-full font-bold flex gap-2 items-center hover:scale-105 transition-transform shadow-xl w-64 justify-center"><Icons.Google className="w-5 h-5"/> Sign In</button>
-                </div>
-            );
-
-            return (
-                <div className={`flex h-screen w-full transition-colors duration-300 ${isDarkMode ? 'dark bg-onyx' : 'bg-[#f4f4f5]'}`}>
-                    <ContextMenu visible={contextMenu.visible} x={contextMenu.x} y={contextMenu.y} logId={contextMenu.logId} onDuplicate={handleDuplicate} onDelete={handleDelete} onCopy={handleCopy} onPaste={handlePaste}/>
-                    
-                    {/* PREVIEW CARD */}
-                    <AnimatePresence>
-                        {previewLog && (
-                            <div className="fixed z-[100] top-0 bottom-0 left-[340px] md:left-[600px] pointer-events-none flex flex-col justify-center p-4">
-                                <motion.div 
-                                    initial={{ opacity: 0, x: -20, scale: 0.95 }} animate={{ opacity: 1, x: 0, scale: 1 }} exit={{ opacity: 0, scale: 0.95 }}
-                                    className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-white/10 rounded-xl shadow-2xl p-2 max-w-lg max-h-[80vh] overflow-hidden flex flex-col"
-                                >
-                                    <div className="text-[10px] font-bold px-2 py-1 text-zinc-400 uppercase tracking-wider flex justify-between"><span>Quick Preview</span><span className={previewLog.questionType === 'MC' ? 'text-indigo-500' : 'text-orange-500'}>{previewLog.questionType}</span></div>
-                                    <img src={previewLog.questionImages?.[0] || previewLog.imageUrl} className="rounded-lg object-contain max-h-[60vh] bg-zinc-100 dark:bg-black/50" />
-                                    <div className="mt-2 px-2 pb-1"><div className="font-bold text-sm truncate text-zinc-900 dark:text-zinc-100">{previewLog.title}</div><div className="text-[10px] text-zinc-500 truncate">{previewLog.subject} • {previewLog.topic || 'No Topic'}</div></div>
-                                </motion.div>
-                            </div>
-                        )}
-                    </AnimatePresence>
-
-                    {/* SIDEBAR */}
-                    <div className="w-[260px] flex-shrink-0 glass-panel flex flex-col justify-between p-5 z-20 hidden md:flex transition-colors duration-300">
-                        <div className="space-y-6">
-                            <div className="flex items-center gap-3 px-1"><img src="https://raw.githubusercontent.com/darren6251/darnote/refs/heads/main/darNote%20logo.png" className="w-8 h-8"/><div><div className="font-bold text-sm tracking-tight text-zinc-900 dark:text-white">darNote</div><div className="text-[10px] text-zinc-500 font-medium uppercase tracking-wider">Error Log</div></div></div>
-                            <nav className="space-y-1">
-                                <a href="note.html" className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-zinc-500 dark:text-zinc-400 hover:bg-zinc-100 dark:hover:bg-white/5 hover:text-zinc-900 dark:hover:text-white mb-4 border border-transparent hover:border-zinc-200 dark:hover:border-white/10 transition-all"><Icons.Book className="w-4 h-4"/> Back to Notes</a>
-                                {[{id: 'all', icon: Icons.Bug, label: 'All Errors'}, {id: 'active', icon: Icons.X, label: 'Needs Review'}, {id: 'mastered', icon: Icons.Check, label: 'Mastered'}].map(item => (<button key={item.id} onClick={()=>setFilter(item.id)} className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all ${filter===item.id ? 'bg-zinc-200 dark:bg-white/10 text-zinc-900 dark:text-white shadow-sm' : 'text-zinc-500 dark:text-zinc-400 hover:bg-zinc-100 dark:hover:bg-white/5 hover:text-zinc-900 dark:hover:text-white'}`}><item.icon className="w-4 h-4"/> {item.label}</button>))}
-                            </nav>
-                            <div className="pt-4 border-t border-zinc-200 dark:border-white/10"><div className="px-2 text-[10px] font-bold text-zinc-400 mb-2 uppercase tracking-widest">Subjects</div><div className="space-y-0.5 max-h-[250px] overflow-y-auto">{subjects.map(s => (<button key={s.id} onClick={()=>setFilter(`subject:${s.name}`)} className="w-full text-left px-3 py-2 rounded-lg text-sm transition-colors text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white hover:bg-zinc-100 dark:hover:bg-white/5">{s.name}</button>))}</div></div>
-                        </div>
-                        <div className="space-y-3 pt-4 border-t border-zinc-200 dark:border-white/10"><div className="flex items-center gap-3 px-2 py-1"><>{user.photoURL ? <img src={user.photoURL} className="w-8 h-8 rounded-full border border-zinc-200 dark:border-white/10"/> : <div className="w-8 h-8 rounded-full bg-zinc-200 dark:bg-white/10 flex items-center justify-center"><Icons.User className="w-4 h-4 text-zinc-500"/></div>}<div className="overflow-hidden"><div className="text-xs font-bold text-zinc-900 dark:text-white truncate w-32">{user.displayName}</div><div className="text-[10px] text-zinc-500 truncate">{user.email}</div></div></></div><div className="flex gap-2"><button onClick={()=>setIsDarkMode(!isDarkMode)} className="flex-1 btn-ghost py-2 rounded-lg flex items-center justify-center gap-2 text-xs font-medium border border-zinc-200 dark:border-white/5 bg-white dark:bg-white/5 shadow-sm">{isDarkMode ? <><Icons.Sun className="w-3 h-3"/> Light</> : <><Icons.Moon className="w-3 h-3"/> Dark</>}</button><button onClick={()=>window.firebase.signOut(window.firebase.auth)} className="px-3 btn-ghost py-2 rounded-lg text-red-500 border border-transparent"><Icons.Logout className="w-4 h-4"/></button></div></div>
-                    </div>
-
-                    {/* LIST */}
-                    <div className="w-[320px] flex-shrink-0 border-r border-zinc-200 dark:border-white/5 bg-white dark:bg-surface flex flex-col z-10 shadow-lg">
-                        <div className="p-4 border-b border-zinc-200 dark:border-white/5 space-y-3 bg-white dark:bg-surface z-20">
+            {/* EDITOR */}
+            <main className="flex-1 bg-[#f4f4f5] dark:bg-onyx relative flex flex-col min-w-0">
+                {activeLog ? (
+                    <div className="flex flex-col h-full">
+                        <header className="h-14 flex items-center justify-between px-4 bg-white dark:bg-surface border-b border-zinc-200 dark:border-white/5 shrink-0">
+                            <input value={activeLog.title} onChange={e=>updateLog(activeId,{title:e.target.value})} className="bg-transparent text-lg font-bold w-full outline-none dark:text-white"/>
                             <div className="flex gap-2">
-                                <input type="text" placeholder="Search..." value={searchQuery} onChange={e=>setSearchQuery(e.target.value)} className="input-field pl-9 bg-[url('data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIGZpbGw9Im5vbmUiIHZpZXdCb3g9IjAgMCAyNCAyNCIgc3Ryb2tlPSIjNzE3MTdhIiBzdHJva2Utd2lkdGg9IjIiPjxjaXJjbGUgY3g9IjExIiBjeT0iMTEiIHI9IjgiLz48cGF0aCBkPSJtMjEgMjEtNC4zLTQuMyIvPjwvc3ZnPg==')] bg-no-repeat bg-[length:16px] bg-[12px_center]"/>
-                                <div className="relative">
-                                    <button onClick={()=>setShowSortMenu(!showSortMenu)} className={`p-2 rounded-lg border border-zinc-200 dark:border-white/10 hover:bg-zinc-100 dark:hover:bg-white/5 transition-colors ${typeFilter !== 'ALL' ? 'text-brand border-brand' : 'text-zinc-500'}`} title="Sort & Filter Logs"><Icons.Sort className="w-4 h-4"/></button>
-                                    {showSortMenu && (
-                                        <div className="absolute right-0 top-full mt-2 w-40 bg-white dark:bg-zinc-800 border border-zinc-200 dark:border-white/10 rounded-lg shadow-xl z-50 py-1">
-                                            <div className="px-3 py-1.5 text-[10px] font-bold text-zinc-400 uppercase tracking-wider">Sort Order</div>
-                                            <button onClick={()=>{setSortBy('date-desc'); setShowSortMenu(false)}} className={`w-full text-left px-3 py-2 text-xs hover:bg-zinc-100 dark:hover:bg-white/5 ${sortBy==='date-desc'?'text-indigo-500 font-bold':''}`}>Date (Newest)</button>
-                                            <button onClick={()=>{setSortBy('date-asc'); setShowSortMenu(false)}} className={`w-full text-left px-3 py-2 text-xs hover:bg-zinc-100 dark:hover:bg-white/5 ${sortBy==='date-asc'?'text-indigo-500 font-bold':''}`}>Date (Oldest)</button>
-                                            <div className="h-px bg-zinc-200 dark:bg-white/10 my-1"></div>
-                                            <div className="px-3 py-1.5 text-[10px] font-bold text-zinc-400 uppercase tracking-wider">Filter Type</div>
-                                            <button onClick={()=>{setTypeFilter('ALL'); setShowSortMenu(false)}} className={`w-full text-left px-3 py-2 text-xs hover:bg-zinc-100 dark:hover:bg-white/5 ${typeFilter==='ALL'?'text-indigo-500 font-bold':''}`}>All Types</button>
-                                            <button onClick={()=>{setTypeFilter('MC'); setShowSortMenu(false)}} className={`w-full text-left px-3 py-2 text-xs hover:bg-zinc-100 dark:hover:bg-white/5 ${typeFilter==='MC'?'text-indigo-500 font-bold':''}`}>MC Only</button>
-                                            <button onClick={()=>{setTypeFilter('LQ'); setShowSortMenu(false)}} className={`w-full text-left px-3 py-2 text-xs hover:bg-zinc-100 dark:hover:bg-white/5 ${typeFilter==='LQ'?'text-indigo-500 font-bold':''}`}>LQ Only</button>
-                                        </div>
-                                    )}
-                                </div>
+                                <button onClick={()=>setPracOpen(true)} className="btn-ghost px-3 py-1.5 rounded-lg text-xs font-bold bg-zinc-100 dark:bg-white/10 hover:bg-orange-500 hover:text-white flex gap-1"><Icons.Brain className="w-3"/> Drill</button>
+                                <button onClick={()=>setAiOpen(!aiOpen)} className={`px-2 rounded-lg ${aiOpen?'text-brand bg-brand/10':'btn-ghost'}`}><Icons.Bot className="w-5"/></button>
+                                <button onClick={async()=>{if(confirm("Delete?")){await window.firebase.deleteDoc(window.firebase.doc(window.firebase.db,'artifacts',"darnote-app",'users',user.uid,'error_logs',activeId));setActiveId(null);setLogs(logs.filter(l=>l.id!==activeId));}}} className="text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 p-2 rounded-lg"><Icons.Trash className="w-4"/></button>
                             </div>
-                            <button onClick={createLog} className="w-full bg-brand text-white py-2.5 rounded-lg font-bold text-sm hover:bg-indigo-600 shadow-lg transition-all flex justify-center items-center gap-2"><Icons.Plus className="w-4 h-4"/> Log New Error</button>
-                        </div>
-                        <div className="flex-1 overflow-y-auto p-2 space-y-2">
-                            {filteredLogs.map(l => (
-                                <motion.div 
-                                    key={l.id} 
-                                    onClick={()=>setActiveLogId(l.id)} 
-                                    onContextMenu={(e) => handleContextMenu(e, l.id)}
-                                    onMouseEnter={() => handleMouseEnter(l)}
-                                    onMouseLeave={handleMouseLeave}
-                                    className={`p-3.5 rounded-xl cursor-pointer border transition-all ${activeLogId===l.id ? 'bg-zinc-100 dark:bg-white/10 border-zinc-300 dark:border-white/20' : 'bg-transparent border-transparent hover:bg-zinc-50 dark:hover:bg-white/5'}`}
-                                >
-                                    <div className="flex justify-between items-start mb-1"><div className="font-semibold text-sm truncate pr-2 text-zinc-800 dark:text-zinc-200 w-full">{l.title}</div>{l.mastered && <Icons.Check className="w-4 h-4 text-green-500"/>}</div>
-                                    <div className="flex justify-between items-center mt-2"><div className="flex gap-2"><span className="text-[10px] font-medium px-2 py-0.5 rounded bg-zinc-200 dark:bg-white/10 text-zinc-600 dark:text-zinc-400">{l.subject}</span>{l.topic && <span className="text-[10px] font-medium px-2 py-0.5 rounded border border-zinc-200 dark:border-white/10 text-zinc-500 truncate max-w-[80px]">{l.topic}</span>}</div><span className={`text-[10px] font-bold ${l.mastered ? 'text-green-600' : 'text-red-500'}`}>{l.mastered ? 'SOLVED' : 'REVIEW'}</span></div>
-                                    <div className="mt-2 text-[9px] text-zinc-400 dark:text-zinc-500 text-right">{new Date(l.lastModified || l.createdAt).toLocaleDateString()}</div>
-                                </motion.div>
-                            ))}
-                            {hasMore && !isLoadingLogs && (
-                                <button onClick={() => fetchLogs(true)} className="w-full py-2 text-xs text-indigo-500 hover:text-indigo-400 font-bold mt-2 border border-dashed border-zinc-300 dark:border-zinc-700 rounded-lg hover:bg-zinc-50 dark:hover:bg-white/5 transition-colors">
-                                    Load More (+10)
-                                </button>
-                            )}
-                            {isLoadingLogs && <div className="text-center text-zinc-400 py-4 text-xs animate-pulse">Loading Logs...</div>}
+                        </header>
+                        <div className="flex-1 overflow-y-auto p-4 md:p-8 space-y-6">
+                            <div className="bg-white dark:bg-surface p-4 rounded-xl border border-zinc-200 dark:border-white/5 grid grid-cols-2 md:grid-cols-4 gap-4">
+                                <div><div className="text-[10px] font-bold text-zinc-400 uppercase mb-1">Subject</div><select value={activeLog.subject} onChange={e=>updateLog(activeId,{subject:e.target.value})} className="input-field bg-zinc-50 dark:bg-black/20 text-xs"><option>General</option>{subs.map(s=><option key={s.id}>{s.name}</option>)}</select></div>
+                                <div><div className="text-[10px] font-bold text-zinc-400 uppercase mb-1">Topic</div><input value={activeLog.topic||''} onChange={e=>updateLog(activeId,{topic:e.target.value})} className="input-field bg-zinc-50 dark:bg-black/20 text-xs"/></div>
+                                <div><div className="text-[10px] font-bold text-zinc-400 uppercase mb-1">Type</div><div className="flex bg-zinc-100 dark:bg-black/20 p-1 rounded-lg border border-zinc-200 dark:border-white/5">{['MC','LQ'].map(t=><button key={t} onClick={()=>updateLog(activeId,{questionType:t})} className={`flex-1 text-[10px] font-bold rounded py-1 ${activeLog.questionType===t?'bg-white dark:bg-zinc-700 shadow dark:text-white':'text-zinc-500'}`}>{t}</button>)}</div></div>
+                                <div><div className="text-[10px] font-bold text-zinc-400 uppercase mb-1">Status</div><button onClick={()=>updateLog(activeId,{mastered:!activeLog.mastered})} className={`w-full py-1.5 rounded-lg text-xs font-bold border ${activeLog.mastered?'bg-green-500/10 border-green-500 text-green-600':'bg-red-500/10 border-red-500 text-red-600'}`}>{activeLog.mastered?'Mastered':'Review'}</button></div>
+                            </div>
+                            <div className="space-y-4">
+                                <MultiImageUploader images={activeLog.questionImages} label="Question" onUpdate={async(d,a)=>{ if(a==='remove'){updateLog(activeId,{questionImages:activeLog.questionImages.filter((_,i)=>i!==d)});return;} try{const u=await saveToDrive(d,'Q.png'); updateLog(activeId,{questionImages:[...activeLog.questionImages,u]});}catch(e){alert("Upload Fail");} }}/>
+                                <MultiImageUploader images={activeLog.schemeImages} label="Marking Scheme" onUpdate={async(d,a)=>{ if(a==='remove'){updateLog(activeId,{schemeImages:activeLog.schemeImages.filter((_,i)=>i!==d)});return;} try{const u=await saveToDrive(d,'S.png'); updateLog(activeId,{schemeImages:[...activeLog.schemeImages,u]});}catch(e){alert("Upload Fail");} }}/>
+                            </div>
+                            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                <div className="space-y-4">
+                                    <div className="bg-white dark:bg-surface p-4 rounded-xl border border-zinc-200 dark:border-white/5"><div className="text-[10px] font-bold text-zinc-400 uppercase mb-2">Answer</div><input value={activeLog.correctAnswer} onChange={e=>updateLog(activeId,{correctAnswer:e.target.value})} className="w-full bg-green-50 dark:bg-green-900/10 border-green-200 dark:border-green-900/30 border rounded px-3 py-2 font-mono font-bold text-green-700 dark:text-green-400 outline-none"/></div>
+                                    <div className="bg-white dark:bg-surface p-4 rounded-xl border border-zinc-200 dark:border-white/5"><div className="text-[10px] font-bold text-zinc-400 uppercase mb-2">Marks Lost</div><input value={activeLog.marks} onChange={e=>updateLog(activeId,{marks:e.target.value})} className="w-full bg-red-50 dark:bg-red-900/10 border-red-200 dark:border-red-900/30 border rounded px-3 py-2 font-bold text-red-700 dark:text-red-400 outline-none"/></div>
+                                </div>
+                                <div className="md:col-span-2 bg-white dark:bg-surface rounded-xl border border-zinc-200 dark:border-white/5 flex flex-col min-h-[200px]"><div className="px-4 py-2 border-b border-zinc-200 dark:border-white/5 bg-zinc-50 dark:bg-white/5 text-[10px] font-bold text-zinc-500 uppercase">Analysis / Logic Gap</div><textarea value={activeLog.explanation} onChange={e=>updateLog(activeId,{explanation:e.target.value})} className="flex-1 w-full p-4 bg-transparent outline-none resize-none text-sm dark:text-zinc-300" placeholder="Why did I fail?"/></div>
+                            </div>
                         </div>
                     </div>
-
-                    {/* EDITOR */}
-                    <main className="flex-1 flex flex-col min-w-0 bg-[#f4f4f5] dark:bg-onyx relative transition-colors duration-300">
-                        {activeLog ? (
-                            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="flex flex-col h-full">
-                                <header className="h-16 flex items-center justify-between px-6 border-b border-zinc-200 dark:border-white/5 bg-white dark:bg-surface shrink-0 z-10">
-                                    <div className="flex-1 flex items-center gap-2 mr-4">
-                                        <input value={activeLog.title} onChange={e=>updateLog(activeLog.id, {title:e.target.value})} className="bg-transparent text-xl font-bold outline-none w-full text-zinc-900 dark:text-white placeholder-zinc-400" placeholder="Untitled Mistake"/>
-                                        <button onClick={handleAutoTitle} disabled={isAutoTitleLoading || (!activeLog.questionImages?.length && !activeLog.imageUrl)} className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${isAutoTitleLoading ? 'bg-indigo-100 text-indigo-500 animate-pulse' : 'bg-zinc-100 dark:bg-white/10 text-zinc-600 dark:text-zinc-400 hover:bg-brand hover:text-white'}`}>{isAutoTitleLoading ? <div className="w-3 h-3 border-2 border-current border-t-transparent rounded-full animate-spin"/> : <><Icons.Scan className="w-3 h-3"/><span className="hidden sm:inline">Auto-Title</span></>}</button>
-                                        
-                                        {/* NEW PRACTICE BUTTON */}
-                                        <button onClick={() => setIsPracticeOpen(true)} className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold bg-zinc-100 dark:bg-white/10 text-zinc-600 dark:text-zinc-400 hover:bg-orange-500 hover:text-white transition-all ml-1" title="Generate Drill Questions">
-                                            <Icons.Brain className="w-3 h-3"/> <span className="hidden sm:inline">Practice</span>
-                                        </button>
-                                    </div>
-                                    <div className="flex items-center gap-3">
-                                        <button onClick={()=>updateLog(activeLog.id, {mastered: !activeLog.mastered})} className={`px-4 py-1.5 rounded-full text-xs font-bold border transition-all ${activeLog.mastered ? 'bg-green-500/10 border-green-500 text-green-600' : 'bg-red-500/10 border-red-500 text-red-600'}`}>{activeLog.mastered ? 'Mastered' : 'Needs Review'}</button>
-                                        <div className="h-6 w-px bg-zinc-200 dark:bg-white/10 mx-2"></div>
-                                        <button onClick={()=> user ? setIsAiOpen(!isAiOpen) : null} disabled={!user} className={`p-2 rounded-lg transition-colors ${!user ? 'cursor-not-allowed opacity-50 bg-zinc-100 dark:bg-white/5 text-zinc-400' : isAiOpen ? 'bg-brand/10 text-brand' : 'hover:bg-zinc-100 dark:hover:bg-white/5 text-zinc-500'}`} title={user ? "Open AI Tutor" : "Login required for AI Tutor"}><Icons.Bot className="w-5 h-5"/></button>
-                                        <button onClick={() => handleDelete(activeLog.id)} className="p-2 rounded-lg hover:bg-red-50 dark:hover:bg-red-900/20 text-zinc-400 hover:text-red-500 transition-colors"><Icons.Trash className="w-5 h-5"/></button>
-                                    </div>
-                                </header>
-
-                                <div className="flex-1 overflow-y-auto p-6 md:p-10 scroll-smooth">
-                                    <div className="max-w-5xl mx-auto space-y-8">
-                                        <div className="bg-white dark:bg-surface p-5 rounded-2xl shadow-sm border border-zinc-200 dark:border-white/5 grid grid-cols-1 md:grid-cols-3 gap-6">
-                                            <div><label className="text-[11px] font-bold text-zinc-400 uppercase tracking-wider mb-1 block">Subject</label><select value={activeLog.subject} onChange={e=>updateLog(activeLog.id, {subject:e.target.value, topic: ''})} className="input-field bg-zinc-50 dark:bg-black/20"><option>General</option>{subjects.map(s=><option key={s.id} value={s.name}>{s.name}</option>)}</select></div>
-                                            <div>
-                                                <label className="text-[11px] font-bold text-zinc-400 uppercase tracking-wider mb-1 block">Topic</label>
-                                                <div className="flex gap-2">
-                                                    {activeLog.subject !== 'General' && currentSub ? (
-                                                        <>
-                                                            <select value={activeLog.topic || ''} onChange={e=>updateLog(activeLog.id, {topic:e.target.value})} className="input-field bg-zinc-50 dark:bg-black/20 flex-1">
-                                                                <option value="">-- Select --</option>
-                                                                {currentSub.topics.map(t => <option key={t} value={t}>{t}</option>)}
-                                                            </select>
-                                                            <button onClick={() => addTopicToSubject(activeLog.subject)} className="px-3 rounded-lg bg-zinc-100 dark:bg-white/5 hover:bg-brand hover:text-white transition-colors text-zinc-500 border border-zinc-200 dark:border-white/10" title="Add New Topic">
-                                                                <Icons.Plus className="w-4 h-4"/>
-                                                            </button>
-                                                        </>
-                                                    ) : (
-                                                        <input value={activeLog.topic || ''} onChange={e=>updateLog(activeLog.id, {topic:e.target.value})} className="input-field bg-zinc-50 dark:bg-black/20 flex-1" placeholder="Custom" disabled={activeLog.subject !== 'General'}/>
-                                                    )}
-                                                </div>
-                                            </div>
-                                            <div><label className="text-[11px] font-bold text-zinc-400 uppercase tracking-wider mb-1 block">Type</label><div className="flex bg-zinc-100 dark:bg-black/20 p-1 rounded-lg border border-zinc-200 dark:border-white/5">{['MC', 'LQ'].map(t => (<button key={t} onClick={()=>updateLog(activeLog.id, {questionType: t})} className={`flex-1 py-1.5 rounded-md text-xs font-bold transition-all ${activeLog.questionType===t ? 'bg-white dark:bg-zinc-700 shadow-sm text-black dark:text-white' : 'text-zinc-500'}`}>{t}</button>))}</div></div>
-                                        </div>
-                                        <div className="space-y-6">
-                                            <MultiImageUploader images={activeLog.questionImages} onUpdate={(d, a) => handleImageUpdate(d, a, 'question')} label="Question Evidence" isUploading={uploadingQ}/>
-                                            <MultiImageUploader images={activeLog.schemeImages} onUpdate={(d, a) => handleImageUpdate(d, a, 'scheme')} label="Marking Scheme" isUploading={uploadingS}/>
-                                        </div>
-                                        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                                            <div className="lg:col-span-1 space-y-6"><div className="bg-white dark:bg-surface p-5 rounded-2xl shadow-sm border border-zinc-200 dark:border-white/5"><label className="text-[11px] font-bold text-zinc-400 uppercase tracking-wider mb-2 block">Correct Answer</label><input value={activeLog.correctAnswer} onChange={e=>updateLog(activeLog.id, {correctAnswer:e.target.value})} className="w-full bg-green-50 dark:bg-green-900/10 border border-green-200 dark:border-green-900/30 rounded-lg px-4 py-3 font-mono text-lg font-bold text-green-700 dark:text-green-400 focus:outline-none" placeholder="Ans"/></div><div className="bg-white dark:bg-surface p-5 rounded-2xl shadow-sm border border-zinc-200 dark:border-white/5"><label className="text-[11px] font-bold text-zinc-400 uppercase tracking-wider mb-2 block">Marks Lost</label><input value={activeLog.marks} onChange={e=>updateLog(activeLog.id, {marks:e.target.value})} className="w-full bg-red-50 dark:bg-red-900/10 border border-red-200 dark:border-red-900/30 rounded-lg px-4 py-3 font-bold text-red-700 dark:text-red-400 focus:outline-none" placeholder="-2"/></div></div>
-                                            <div className="lg:col-span-2 bg-white dark:bg-surface rounded-2xl border border-zinc-200 dark:border-white/5 shadow-sm overflow-hidden flex flex-col min-h-[250px]"><div className="px-5 py-3 border-b border-zinc-200 dark:border-white/5 bg-zinc-50/50 dark:bg-white/5 flex justify-between items-center"><span className="text-xs font-bold text-zinc-500 uppercase tracking-wider">Analysis / Logic Gap</span><span className="text-[10px] text-zinc-400">Markdown supported</span></div><textarea className="flex-1 w-full p-5 bg-transparent outline-none resize-none text-sm leading-7 text-zinc-700 dark:text-zinc-300 placeholder-zinc-300 dark:placeholder-zinc-600" placeholder="• Why did I get this wrong?&#10;• What was the trap?&#10;• How do I solve it next time?" value={activeLog.explanation} onChange={e=>updateLog(activeLog.id, {explanation:e.target.value})}/></div>
-                                        </div>
-                                    </div>
-                                </div>
-                            </motion.div>
-                        ) : (
-                            <div className="flex-1 flex flex-col items-center justify-center text-zinc-400 h-full">
-                                <motion.div initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} className="text-center"><div className="w-20 h-20 bg-zinc-100 dark:bg-white/5 rounded-3xl flex items-center justify-center mb-6 mx-auto shadow-inner"><Icons.Bug className="w-10 h-10 opacity-30"/></div><h2 className="text-xl font-bold text-zinc-700 dark:text-zinc-200 mb-2">No Mistake Selected</h2><p className="text-sm max-w-xs mx-auto">Select a log from the sidebar or create a new one to start documenting your learning journey.</p></motion.div>
-                            </div>
-                        )}
-                        <AnimatePresence>{isAiOpen && activeLog && user && (<div className="absolute top-0 right-0 bottom-0 w-[400px] z-30"><AIChat activeLog={activeLog} onClose={()=>setIsAiOpen(false)} user={user}/></div>)}</AnimatePresence>
-                        
-                        {/* PRACTICE MODAL */}
-                        {isPracticeOpen && activeLog && <PracticeModal activeLog={activeLog} onClose={() => setIsPracticeOpen(false)} user={user} />}
-                    </main>
-                </div>
-            );
-        };
-        const root = ReactDOM.createRoot(document.getElementById('root'));
-        root.render(<App />);
-    </script>
+                ) : (
+                    <div className="flex flex-col items-center justify-center h-full text-zinc-400"><Icons.Bug className="w-16 h-16 opacity-20 mb-4"/><div className="text-lg font-bold">No Mistake Selected</div></div>
+                )}
+                <AnimatePresence>{aiOpen && activeLog && <div className="absolute top-0 right-0 bottom-0 w-[350px] z-30"><AIChat activeLog={activeLog} onClose={()=>setAiOpen(false)} user={user}/></div>}</AnimatePresence>
+                {pracOpen && activeLog && <PracticeModal activeLog={activeLog} onClose={()=>setPracOpen(false)} user={user}/>}
+            </main>
+        </div>
+    );
+};
+const root = ReactDOM.createRoot(document.getElementById('root'));
+root.render(<App />);
+</script>
 </body>
 </html>
+
