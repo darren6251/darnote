@@ -221,7 +221,7 @@
                     const res = await callGemini(prompt, "You are a JSON generator.", imgCtx);
                     try { setQuestions(JSON.parse(res.replace(/```json|```/g, ''))); } catch(e) { alert("Generation failed."); onClose(); }
                 } else {
-                    const prompt = `Generate 1 structured Long Question with 2 sub-parts. Return STRICTLY JSON: {"context": "...", "parts": [{"id": "a", "text": "...", "marks": 2}, {"id": "b", "text": "...", "marks": 4}]}. Plain text only, NO LaTeX.`;
+                    const prompt = `Generate 1 structured long question with two sub-parts. Use the core concept of the provided question but change the numerical values.. Return STRICTLY JSON: {"context": "...", "parts": [{"id": "a", "text": "...", "marks": 2}, {"id": "b", "text": "...", "marks": 4}]}. Plain text only, NO LaTeX.`;
                     const res = await callGemini(prompt, "You are a JSON generator.", imgCtx);
                     try { setLqData(JSON.parse(res.replace(/```json|```/g, ''))); } catch(e) { alert("Generation failed."); onClose(); }
                 }
