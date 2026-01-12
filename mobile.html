@@ -82,15 +82,23 @@
             } catch(e) { return "Error: " + e.message; }
         };
 
-        const checkAndIncrementQuota = async (user) => {
+        // --- NEW QUOTA LOGIC (SEPARATE BUCKETS) ---
+        const checkAndIncrementQuota = async (user, type) => {
             if (!user) return false;
             const today = new Date().toISOString().split('T')[0];
+            // Limits: Chat=5, Practice=10, OCR=20
+            const limits = { chat: 5, practice: 10, ocr: 20 };
+            const limit = limits[type] || 0;
+            
             const ref = window.firebase.doc(window.firebase.db, 'artifacts', "darnote-app", 'users', user.uid, 'ai_usage', today);
             try {
                 const snap = await window.firebase.getDoc(ref);
-                let count = 0; if (snap.exists()) count = snap.data().count || 0;
-                if (count >= 10) return false;
-                await window.firebase.setDoc(ref, { count: window.firebase.increment(1), date: today }, { merge: true });
+                let data = snap.exists() ? snap.data() : {};
+                let count = data[type] || 0;
+                
+                if (count >= limit) return false;
+                
+                await window.firebase.setDoc(ref, { [type]: window.firebase.increment(1), date: today }, { merge: true });
                 return true;
             } catch (e) { console.error("Quota check failed:", e); return false; }
         };
@@ -179,14 +187,24 @@
             const [userAnswers, setUserAnswers] = useState({});
             const [marked, setMarked] = useState(false);
             const [lqFeedback, setLqFeedback] = useState(null);
+            const [quota, setQuota] = useState(0);
             const mode = activeLog.questionType || 'MC';
+
+            // Watch Practice Quota
+            useEffect(() => {
+                const today = new Date().toISOString().split('T')[0];
+                return window.firebase.onSnapshot(window.firebase.doc(window.firebase.db, 'artifacts', "darnote-app", 'users', user.uid, 'ai_usage', today), s => {
+                    setQuota(s.exists() ? (s.data().practice || 0) : 0);
+                });
+            }, [user]);
 
             useEffect(() => { generatePractice(); }, []);
 
             const generatePractice = async () => {
                 setLoading(true);
-                const hasQuota = await checkAndIncrementQuota(user);
-                if (!hasQuota) { alert("Daily quota reached! (10/10)"); onClose(); return; }
+                // CHARGE PRACTICE QUOTA HERE (10 limit)
+                const hasQuota = await checkAndIncrementQuota(user, 'practice');
+                if (!hasQuota) { alert("Daily Practice Limit Reached (10/10)!"); onClose(); return; }
 
                 let imgCtx = (activeLog.questionImages && activeLog.questionImages.length > 0) ? activeLog.questionImages[0] : (activeLog.imageUrl || null);
                 if (imgCtx && (imgCtx.startsWith('http') || imgCtx.startsWith('https'))) {
@@ -207,8 +225,7 @@
 
             const handleLqMark = async () => {
                 setLoading(true);
-                const hasQuota = await checkAndIncrementQuota(user);
-                if (!hasQuota) { alert("Daily quota reached!"); setLoading(false); return; }
+                // FREE TO MARK (Part of the flow) - No quota check here
                 const prompt = `Mark answer. Context: ${lqData.context}. Answers: ${JSON.stringify(userAnswers)}. Return JSON: {"totalScore": 5, "maxScore": 6, "generalFeedback": "...", "partFeedback": {"a": {"score": 1, "comment": "..."}, "b": {"score": 4, "comment": "..."}}}.`;
                 const res = await callGemini(prompt, "Strict examiner. JSON only.");
                 try { setLqFeedback(JSON.parse(res.replace(/```json|```/g, ''))); setMarked(true); } catch(e) { alert("Marking failed."); }
@@ -218,7 +235,10 @@
             return (
                 <div className="fixed inset-0 z-[100] bg-white dark:bg-onyx flex flex-col">
                     <div className="p-4 border-b border-zinc-200 dark:border-white/10 flex justify-between items-center bg-zinc-50 dark:bg-black/20">
-                        <span className="font-bold text-zinc-900 dark:text-white flex items-center gap-2"><Icons.Brain className="w-5 h-5 text-brand"/> Practice: <span className="text-brand font-extrabold">{mode}</span></span>
+                        <div className="flex flex-col">
+                            <span className="font-bold text-zinc-900 dark:text-white flex items-center gap-2"><Icons.Brain className="w-5 h-5 text-brand"/> Practice: <span className="text-brand font-extrabold">{mode}</span></span>
+                            <span className="text-[10px] text-zinc-500">{quota}/10 Daily Limit</span>
+                        </div>
                         <button onClick={onClose}><Icons.X className="w-6 h-6 text-zinc-400"/></button>
                     </div>
                     <div className="flex-1 overflow-y-auto p-4 space-y-6">
@@ -237,13 +257,19 @@
             const [load, setLoad] = useState(false);
             const [quotaCount, setQuotaCount] = useState(0);
             const endRef=useRef(null), today=new Date().toISOString().split('T')[0];
-            useEffect(()=>{if(user)return window.firebase.onSnapshot(window.firebase.doc(window.firebase.db,'artifacts','darnote-app','users',user.uid,'ai_usage',today),d=>setQuotaCount(d.exists()?d.data().count:0))},[user,today]);
+            
+            // Watch Chat Quota
+            useEffect(()=>{if(user)return window.firebase.onSnapshot(window.firebase.doc(window.firebase.db,'artifacts','darnote-app','users',user.uid,'ai_usage',today),d=>setQuotaCount(d.exists()?(d.data().chat || 0):0))},[user,today]);
+            
             useEffect(()=>{endRef.current?.scrollIntoView({behavior:"smooth"})},[msgs]);
+            
             const send = async () => {
                 if(!inp.trim()) return;
                 const uMsg=inp; setMsgs(p=>[...p,{role:'user',text:uMsg}]); setInp(""); 
-                const hasQuota = await checkAndIncrementQuota(user);
-                if(!hasQuota) { setMsgs(p=>[...p,{role:'ai',text:"<span class='text-red-500'>DAILY LIMIT REACHED (10/10).</span>"}]); return; }
+                // CHARGE CHAT QUOTA (5 limit)
+                const hasQuota = await checkAndIncrementQuota(user, 'chat');
+                if(!hasQuota) { setMsgs(p=>[...p,{role:'ai',text:"<span class='text-red-500'>DAILY CHAT LIMIT REACHED (5/5).</span>"}]); return; }
+                
                 setLoad(true);
                 const ctx = activeLog ? `Sub:${activeLog.subject}, Q:${activeLog.explanation}, Answer:${activeLog.correctAnswer}` : 'General Chat';
                 let imgCtx = null;
@@ -255,10 +281,10 @@
             return (
                 <div className="flex flex-col w-full bg-zinc-50 dark:bg-surface fixed inset-0 z-[80] h-[100dvh]">
                     <div className="p-4 border-b border-zinc-200 dark:border-white/10 flex justify-between items-center bg-zinc-100 dark:bg-black/20 shrink-0">
-                        <div className="flex flex-col"><span className="font-bold text-sm text-zinc-800 dark:text-white flex items-center gap-2"><Icons.Bot className="w-4 h-4 text-brand"/> Gemini <span className="text-[10px] uppercase font-black bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500 bg-clip-text text-transparent tracking-widest">3 PRO</span></span><span className="text-[10px] text-zinc-500">{quotaCount}/10 Used • Experimental Build</span></div><button onClick={onClose}><Icons.ChevronLeft className="w-6 h-6 rotate-[-90deg] text-zinc-400"/></button>
+                        <div className="flex flex-col"><span className="font-bold text-sm text-zinc-800 dark:text-white flex items-center gap-2"><Icons.Bot className="w-4 h-4 text-brand"/> Gemini <span className="text-[10px] uppercase font-black bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500 bg-clip-text text-transparent tracking-widest">3 PRO</span></span><span className="text-[10px] text-zinc-500">{quotaCount}/5 Chats Used</span></div><button onClick={onClose}><Icons.ChevronLeft className="w-6 h-6 rotate-[-90deg] text-zinc-400"/></button>
                     </div>
                     <div className="flex-1 overflow-y-auto p-4 space-y-4">{msgs.map((m,i)=><div key={i} className={`flex ${m.role==='user'?'justify-end':'justify-start'}`}><div className={`max-w-[85%] p-3 rounded-2xl text-sm ${m.role==='user'?'bg-brand text-white rounded-br-none':'bg-zinc-200 dark:bg-zinc-800 text-zinc-800 dark:text-zinc-200 rounded-bl-none'}`} dangerouslySetInnerHTML={{__html:window.marked?window.marked.parse(m.text):m.text}}/></div>)}{load && <div className="text-xs text-zinc-500 animate-pulse pl-2">Thinking...</div>}<div ref={endRef}/></div>
-                    <div className="p-4 border-t border-zinc-200 dark:border-white/10 bg-white dark:bg-black flex gap-2"><input value={inp} onChange={e=>setInp(e.target.value)} onKeyDown={e=>e.key==='Enter'&&send()} placeholder="Ask..." className="flex-1 bg-zinc-100 dark:bg-zinc-900 border border-zinc-200 dark:border-white/10 rounded-full px-4 py-3 text-sm text-zinc-900 dark:text-white"/><button onClick={send} disabled={quotaCount>=10} className="bg-brand text-white rounded-full p-3 disabled:opacity-50"><Icons.Plus className="w-5 h-5 rotate-90"/></button></div>
+                    <div className="p-4 border-t border-zinc-200 dark:border-white/10 bg-white dark:bg-black flex gap-2"><input value={inp} onChange={e=>setInp(e.target.value)} onKeyDown={e=>e.key==='Enter'&&send()} placeholder="Ask..." className="flex-1 bg-zinc-100 dark:bg-zinc-900 border border-zinc-200 dark:border-white/10 rounded-full px-4 py-3 text-sm text-zinc-900 dark:text-white"/><button onClick={send} disabled={quotaCount>=5} className="bg-brand text-white rounded-full p-3 disabled:opacity-50"><Icons.Plus className="w-5 h-5 rotate-90"/></button></div>
                 </div>
             );
         };
@@ -400,7 +426,7 @@
                 if (candidates.length === 0) return alert(`No ${type} logs found to study!`);
                 const rand = candidates[Math.floor(Math.random() * candidates.length)];
                 setShowRandomPicker(false);
-                onEdit('edit_error', rand.id); // FIXED: Pass ID
+                onEdit('edit_error', rand.id); 
             };
 
             return (
@@ -439,48 +465,35 @@
             useEffect(()=>window.firebase.onAuthStateChanged(window.firebase.auth, setUser), []);
             const {data:errors} = useData(user,'error_logs'), {data:notes} = useData(user,'notes'), subjects = useSubjects(user);
             
-            // --- DEEP LINKING LOGIC ---
             const getParams = () => { const p = new URLSearchParams(window.location.search); return { view: p.get('view') || 'home', id: p.get('id') }; };
-            
-            // Sync URL on Mount & Popstate
             useEffect(() => {
                 const handleNav = () => { const { view } = getParams(); setTab(view); };
                 window.addEventListener('popstate', handleNav);
-                handleNav(); // Run once on mount
+                handleNav();
                 return () => window.removeEventListener('popstate', handleNav);
             }, []);
-
-            // HYDRATION: Restore 'sel' (selected item) when data arrives if URL has an ID
             useEffect(() => {
                 const { view, id } = getParams();
-                if (!id || sel?.id === id) return; // already set or no id
-                if (view === 'edit_error' && errors.length > 0) {
-                    const found = errors.find(e => e.id === id);
-                    if(found) setSel(found);
-                } else if (view === 'edit_note' && notes.length > 0) {
-                    const found = notes.find(n => n.id === id);
-                    if(found) setSel(found);
-                }
+                if (!id || sel?.id === id) return; 
+                if (view === 'edit_error' && errors.length > 0) { const found = errors.find(e => e.id === id); if(found) setSel(found); } 
+                else if (view === 'edit_note' && notes.length > 0) { const found = notes.find(n => n.id === id); if(found) setSel(found); }
             }, [errors, notes, tab]);
 
             const navigate = (newTab, id=null) => {
                 const url = id ? `?view=${newTab}&id=${id}` : `?view=${newTab}`;
                 window.history.pushState({ tab: newTab, id }, '', url);
                 setTab(newTab);
-                // If we are navigating to add, clear selection
                 if(newTab.startsWith('add')) setSel(null); 
-                // If we are navigating to edit/list without ID, we handle 'sel' via props/click
             };
 
             const goBack = () => {
                 if (tab.includes('edit') || tab.includes('add')) {
                     const dest = tab.includes('error') ? 'errors' : 'notes';
-                    navigate(dest); // Use navigate to clear ID param from URL
+                    navigate(dest); 
                 } else {
                     if (window.history.length > 1) window.history.back(); else navigate('home');
                 }
             };
-            // --------------------------
 
             useEffect(() => {
                 if(!user) return;
@@ -514,11 +527,7 @@
                                 <div className="grid grid-cols-2 gap-4"><button onClick={()=>{setSel(null);navigate('add_error')}} className="bg-white dark:bg-surface p-4 rounded-2xl border border-zinc-200 dark:border-zinc-800 flex flex-col items-center gap-2"><div className="w-10 h-10 bg-red-500/10 rounded-full flex items-center justify-center text-red-500"><Icons.Bug className="w-5 h-5"/></div><span className="text-sm font-bold">Log Error</span></button><button onClick={()=>{setSel(null);navigate('add_note')}} className="bg-white dark:bg-surface p-4 rounded-2xl border border-zinc-200 dark:border-zinc-800 flex flex-col items-center gap-2"><div className="w-10 h-10 bg-blue-500/10 rounded-full flex items-center justify-center text-blue-500"><Icons.Book className="w-5 h-5"/></div><span className="text-sm font-bold">New Note</span></button></div>
                                 <div><div className="flex justify-between items-end mb-4"><h3 className="font-bold text-lg">Recent Failures</h3><button onClick={()=>navigate('errors')} className="text-xs text-brand">View All</button></div><div className="space-y-3">{errors.slice(0,3).map(e=><div key={e.id} onClick={()=>{setSel(e);navigate('edit_error', e.id)}} className="bg-white dark:bg-surface p-4 rounded-2xl border border-zinc-200 dark:border-zinc-800 flex items-center gap-4"><div className={`w-2 h-10 rounded-full ${e.mastered?'bg-green-500':'bg-red-500'}`}></div><div className="flex-1 overflow-hidden"><div className="font-bold truncate">{e.title}</div><div className="text-xs text-zinc-500">{e.subject} • {new Date(e.createdAt||0).toLocaleDateString()}</div></div></div>)}</div></div>
                             </div>}
-                            {tab==='errors' && <ErrorList key="e" items={errors} onEdit={(m,id)=>{ 
-                                const it = errors.find(x=>x.id===id); 
-                                setSel(it); 
-                                navigate(m, id); 
-                            }} subjects={subjects} />}
+                            {tab==='errors' && <ErrorList key="e" items={errors} onEdit={(m,id)=>{ const it = errors.find(x=>x.id===id); setSel(it); navigate(m, id); }} subjects={subjects} />}
                             {tab==='notes' && <div key="n" className="p-6 pb-24 min-h-screen"><h2 className="text-3xl font-bold mb-6">Notes</h2><div className="space-y-3">{notes.map(n=><div key={n.id} onClick={()=>{setSel(n);navigate('edit_note',n.id)}} className="bg-white dark:bg-surface p-4 rounded-2xl border border-zinc-200 dark:border-zinc-800 flex justify-between"><div><div className="font-bold">{n.title||'Untitled'}</div><div className="text-xs text-zinc-500">{new Date(n.createdAt||0).toLocaleDateString()}</div></div><Icons.ChevronLeft className="w-5 h-5 rotate-180"/></div>)}</div></div>}
                             
                             {tab==='profile' && <div key="p" className="p-6 pb-24 h-full flex flex-col">
@@ -557,3 +566,5 @@
     </script>
 </body>
 </html>
+
+
