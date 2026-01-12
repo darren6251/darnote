@@ -1,677 +1,234 @@
 <!DOCTYPE html>
 <html lang="en" class="dark">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>darNote Ultimate</title>
-    <meta name="theme-color" content="#09090b">
-    <link rel="icon" type="image/png" href="https://raw.githubusercontent.com/darren6251/darnote/refs/heads/main/darNote%20logo.png">
-    <script crossorigin src="https://unpkg.com/react@18/umd/react.development.js"></script>
-    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
-    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <script src="https://unpkg.com/framer-motion@10.16.4/dist/framer-motion.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/spark-md5/3.0.2/spark-md5.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/marked/4.0.2/marked.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/tinymce/6.8.2/tinymce.min.js" referrerpolicy="origin"></script>
-    <script src="https://apis.google.com/js/api.js" async defer></script>
-    <script src="https://accounts.google.com/gsi/client" async defer></script>
+    <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover"><title>darNote Ultimate</title>
+    <meta name="theme-color" content="#09090b"><link rel="icon" type="image/png" href="https://raw.githubusercontent.com/darren6251/darnote/refs/heads/main/darNote%20logo.png">
+    <script crossorigin src="https://unpkg.com/react@18/umd/react.development.js"></script><script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script><script src="https://cdn.tailwindcss.com"></script><script src="https://unpkg.com/framer-motion@10.16.4/dist/framer-motion.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/marked/4.0.2/marked.min.js"></script><script src="https://cdnjs.cloudflare.com/ajax/libs/tinymce/6.8.2/tinymce.min.js" referrerpolicy="origin"></script>
+    <script src="https://apis.google.com/js/api.js" async defer></script><script src="https://accounts.google.com/gsi/client" async defer></script>
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-app.js";
         import { getAuth, signInWithPopup, GoogleAuthProvider, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-auth.js";
         import { getFirestore, collection, doc, addDoc, updateDoc, deleteDoc, onSnapshot, getDoc, setDoc, arrayUnion, increment, query, where, orderBy, limit, startAfter, getDocs, getCountFromServer } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-firestore.js";
         const app=initializeApp({apiKey:"AIzaSyAvPEac-03kE4oazvaq8K3T2gxLPsnZO20",authDomain:"darnote625.firebaseapp.com",projectId:"darnote625",storageBucket:"darnote625.firebasestorage.app",messagingSenderId:"16458322562",appId:"1:16458322562:web:8894d71f3e6c326eba1a9b"});
-        window.firebase={app,auth:getAuth(app),db:getFirestore(app),signInWithPopup,GoogleAuthProvider,signOut,onAuthStateChanged,collection,doc,addDoc,updateDoc,deleteDoc,onSnapshot,getDoc,setDoc,arrayUnion,increment,query,where,orderBy,limit,startAfter,getDocs,getCountFromServer};
+        window.fb={app,auth:getAuth(app),db:getFirestore(app),signInWithPopup,GoogleAuthProvider,signOut,onAuthStateChanged,collection,doc,addDoc,updateDoc,deleteDoc,onSnapshot,getDoc,setDoc,arrayUnion,increment,query,where,orderBy,limit,startAfter,getDocs,getCountFromServer};
     </script>
-    <script>tailwind.config={darkMode:'class',theme:{extend:{colors:{onyx:'#09090b',surface:'#18181b',border:'#27272a',brand:'#6366f1','brand-dark':'#4338ca','mistake-red':'#7f1d1d'},fontFamily:{sans:['Inter','sans-serif']},boxShadow:{'glow':'0 0 20px rgba(99, 102, 241, 0.3)'}}}}</script>
+    <script>tailwind.config={darkMode:'class',theme:{extend:{colors:{onyx:'#09090b',surface:'#18181b',border:'#27272a',brand:'#6366f1','brand-dark':'#4338ca'},fontFamily:{sans:['Inter','sans-serif']},boxShadow:{'glow':'0 0 20px rgba(99, 102, 241, 0.3)'}}}}</script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
-    <style>
-        body { font-family:'Inter',sans-serif; overflow:hidden; -webkit-tap-highlight-color:transparent; overscroll-behavior-x: none; touch-action: pan-y; width: 100vw; height: 100dvh; }
-        ::-webkit-scrollbar{width:4px}::-webkit-scrollbar-track{background:0 0}::-webkit-scrollbar-thumb{background:#71717a;border-radius:2px}
-        .glass{background:rgba(255,255,255,.85);backdrop-filter:blur(16px);border-top:1px solid rgba(0,0,0,.05)}
-        .dark .glass{background:rgba(24,24,27,.85);border-top:1px solid rgba(255,255,255,.05)}
-        .tox-tinymce{border:none!important}.tox .tox-toolbar{background:#f4f4f5!important;border-bottom:1px solid #e4e4e7!important}
-        .dark .tox .tox-toolbar{background:#18181b!important;border-bottom:1px solid #27272a!important}
-        .tox .tox-edit-area__iframe{background:#fff!important}.dark .tox .tox-edit-area__iframe{background:#09090b!important}
-        .tox .tox-statusbar{display:none!important}
-        .loader{width:48px;height:48px;border:5px solid #a1a1aa;border-bottom-color:#6366f1;border-radius:50%;display:inline-block;animation:r 1s linear infinite}
-        @keyframes r{0%{transform:rotate(0)}100%{transform:rotate(360deg)}}
-        .no-scrollbar::-webkit-scrollbar{display:none}.no-scrollbar{-ms-overflow-style:none;scrollbar-width:none}
-    </style>
+    <style>body{font-family:'Inter',sans-serif;overflow:hidden;touch-action:pan-y;width:100vw;height:100dvh}::-webkit-scrollbar{width:4px}::-webkit-scrollbar-thumb{background:#71717a;border-radius:2px}.glass{background:rgba(255,255,255,.85);backdrop-filter:blur(16px);border-top:1px solid rgba(0,0,0,.05)}.dark .glass{background:rgba(24,24,27,.85);border-top:1px solid rgba(255,255,255,.05)}.loader{width:48px;height:48px;border:5px solid #a1a1aa;border-bottom-color:#6366f1;border-radius:50%;display:inline-block;animation:r 1s linear infinite}@keyframes r{0%{transform:rotate(0)}100%{transform:rotate(360deg)}}.no-scrollbar::-webkit-scrollbar{display:none}</style>
 </head>
 <body class="bg-zinc-50 text-zinc-900 dark:bg-onyx dark:text-zinc-100 transition-colors duration-300">
     <div id="root"></div>
     <script type="text/babel">
-        const GDRIVE_API_KEY="AIzaSyCScFR_D0snZ6hrHob5fUQM7Y2NhK-kTIA",GDRIVE_CLIENT_ID="256215327792-oglegui0q8qj507oao2c2733thcl9lrc.apps.googleusercontent.com"; 
-        const GEMINI_PROXY_URL = "https://gemini-proxy-513372702506.us-central1.run.app/proxy";
-
         const {useState,useEffect,useRef,useMemo,useCallback}=React,{motion,AnimatePresence}=window.Motion;
+        const Icons={Home:p=><svg {...p} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>,Book:p=><svg {...p} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>,Bug:p=><svg {...p} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="1" y="1" width="22" height="22" rx="5"/><path d="M12 1v22"/><path d="M1 12h22"/></svg>,Plus:p=><svg {...p} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>,User:p=><svg {...p} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>,Chevron:p=><svg {...p} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="15 18 9 12 15 6"/></svg>,Check:p=><svg {...p} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="20 6 9 17 4 12"/></svg>,X:p=><svg {...p} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>,Camera:p=><svg {...p} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>,Bot:p=><svg {...p} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="1" y="4" width="22" height="16" rx="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg>,Google:p=><svg {...p} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M12 22C6.477 22 2 17.523 2 12S6.477 2 12 2s10 4.477 10 10-4.477 10-10 10z"/><path d="M12 11h9c.1 1.4.1 2.9-.4 4.3-1.1 3-4.1 5.3-7.6 5.6-5 .5-9.4-3.1-9.9-8.1C2.5 7.1 6 2.3 11 2c2.5-.1 4.9.9 6.7 2.6l-2.7 2.8c-1-.7-2.3-1.1-3.6-1-2.9.2-5.1 2.8-4.9 5.7.2 2.6 2.4 4.7 5 4.7 2 0 3.6-1.1 4.3-2.9H12v-3z" fill="currentColor"/></svg>,Sort:p=><svg {...p} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="12" y1="5" x2="12" y2="19"/><polyline points="19 12 12 19 5 12"/></svg>,Brain:p=><svg {...p} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M9.5 2A2.5 2.5 0 0 1 12 4.5v15a2.5 2.5 0 0 1-4.96.44 2.5 2.5 0 0 1-2.96-3.08 3 3 0 0 1-.34-5.58 2.5 2.5 0 0 1 1.32-4.24 2.5 2.5 0 0 1 1.98-3A2.5 2.5 0 0 1 9.5 2Z"/><path d="M14.5 2A2.5 2.5 0 0 0 12 4.5v15a2.5 2.5 0 0 0 4.96.44 2.5 2.5 0 0 0 2.96-3.08 3 3 0 0 0 .34-5.58 2.5 2.5 0 0 0-1.32-4.24 2.5 2.5 0 0 0-1.98-3A2.5 2.5 0 0 0 14.5 2Z"/></svg>,Dice:p=><svg {...p} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="2" y="2" width="20" height="20" rx="5"/><path d="M16 8h.01"/><path d="M8 8h.01"/><path d="M8 16h.01"/><path d="M16 16h.01"/><path d="M12 12h.01"/></svg>};
         
-        const Icons={
-            Home:p=><svg {...p} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>,
-            Book:p=><svg {...p} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>,
-            Bug:p=><svg {...p} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="1" y="1" width="22" height="22" rx="5" ry="5"/><path d="M12 1v22"/><path d="M1 12h22"/></svg>,
-            Plus:p=><svg {...p} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>,
-            User:p=><svg {...p} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>,
-            ChevronLeft:p=><svg {...p} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="15 18 9 12 15 6"/></svg>,
-            Check:p=><svg {...p} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>,
-            X:p=><svg {...p} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>,
-            Camera:p=><svg {...p} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>,
-            Bot:p=><svg {...p} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="1" y="4" width="22" height="16" rx="2" ry="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg>,
-            Google:p=><svg {...p} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 22C6.477 22 2 17.523 2 12S6.477 2 12 2s10 4.477 10 10-4.477 10-10 10z"/><path d="M12 11h9c.1 1.4.1 2.9-.4 4.3-1.1 3-4.1 5.3-7.6 5.6-5 .5-9.4-3.1-9.9-8.1C2.5 7.1 6 2.3 11 2c2.5-.1 4.9.9 6.7 2.6l-2.7 2.8c-1-.7-2.3-1.1-3.6-1-2.9.2-5.1 2.8-4.9 5.7.2 2.6 2.4 4.7 5 4.7 2 0 3.6-1.1 4.3-2.9H12v-3z" fill="currentColor"/></svg>,
-            Lock:p=><svg {...p} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>,
-            Sun:p=><svg {...p} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>,
-            Moon:p=><svg {...p} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>,
-            Sort:p=><svg {...p} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><polyline points="19 12 12 19 5 12"/></svg>,
-            Brain: p=><svg {...p} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M9.5 2A2.5 2.5 0 0 1 12 4.5v15a2.5 2.5 0 0 1-4.96.44 2.5 2.5 0 0 1-2.96-3.08 3 3 0 0 1-.34-5.58 2.5 2.5 0 0 1 1.32-4.24 2.5 2.5 0 0 1 1.98-3A2.5 2.5 0 0 1 9.5 2Z"/><path d="M14.5 2A2.5 2.5 0 0 0 12 4.5v15a2.5 2.5 0 0 0 4.96.44 2.5 2.5 0 0 0 2.96-3.08 3 3 0 0 0 .34-5.58 2.5 2.5 0 0 0-1.32-4.24 2.5 2.5 0 0 0-1.98-3A2.5 2.5 0 0 0 14.5 2Z"/></svg>,
-            Dice: p=><svg {...p} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="2" y="2" width="20" height="20" rx="5" ry="5"/><path d="M16 8h.01"/><path d="M8 8h.01"/><path d="M8 16h.01"/><path d="M16 16h.01"/><path d="M12 12h.01"/></svg>
+        const callGemini=async(p,s="",b=null)=>{
+            const pts=[{text:`${s}\n\nUser: ${p}`}];
+            if(b){let m="image/png",d=b;if(b.includes(",")){const x=b.split(",");m=x[0].match(/:(.*?);/)[1];d=x[1]}pts.push({inlineData:{mimeType:m,data:d}})}
+            try{const r=await fetch("https://gemini-proxy-513372702506.us-central1.run.app/proxy",{method:'POST',body:JSON.stringify({contents:[{parts:pts}]}),headers:{'Content-Type':'application/json'}});if(!r.ok)throw 0;return(await r.json())?.candidates?.[0]?.content?.parts?.[0]?.text||"No response.";}catch(e){return "Error: "+e.message}
         };
 
-        const callGemini = async (prompt, sys="", imageBase64=null) => {
-            const proxyUrl = GEMINI_PROXY_URL;
-            const parts = [{ text: `${sys}\n\nUser: ${prompt}` }];
-            if (imageBase64) {
-                let mimeType = "image/png"; let data = imageBase64;
-                if (imageBase64.includes(",")) { const s = imageBase64.split(","); mimeType = s[0].match(/:(.*?);/)[1]; data = s[1]; }
-                parts.push({ inlineData: { mimeType, data } });
-            }
-            try {
-                const res = await fetch(proxyUrl, {method:'POST', body:JSON.stringify({contents:[{parts}]}), headers:{'Content-Type':'application/json'}});
-                if(!res.ok) throw new Error("API Error");
-                return (await res.json()).candidates?.[0]?.content?.parts?.[0]?.text || "No response.";
-            } catch(e) { return "Error: " + e.message; }
+        const checkQuota=async(u,t)=>{
+            if(!u)return false;
+            const lim={chat:5,practice:10},fld={chat:'chat_count',practice:'practice_count'}[t],td=new Date().toISOString().split('T')[0];
+            const ref=window.fb.doc(window.fb.db,'artifacts',"darnote-app",'users',u.uid,'ai_usage',td);
+            try{const s=await window.fb.getDoc(ref);let c=s.exists()?(s.data()[fld]||0):0;if(c>=lim[t])return false;await window.fb.setDoc(ref,{[fld]:window.fb.increment(1),date:td},{merge:true});return c+1;}catch(e){return false}
         };
 
-        // --- SMART QUOTA MANAGER ---
-        const checkAndIncrementQuota = async (user, type) => {
-            if (!user) return false;
-            const limits = { chat: 5, practice: 10, ocr: 20 };
-            const fieldMap = { chat: 'chat_count', practice: 'practice_count', ocr: 'ocr_count' };
-            const limit = limits[type];
-            const field = fieldMap[type];
-            const today = new Date().toISOString().split('T')[0];
-            const ref = window.firebase.doc(window.firebase.db, 'artifacts', "darnote-app", 'users', user.uid, 'ai_usage', today);
-            try {
-                const snap = await window.firebase.getDoc(ref);
-                let count = snap.exists() ? (snap.data()[field] || 0) : 0;
-                if (count >= limit) return false;
-                await window.firebase.setDoc(ref, { [field]: window.firebase.increment(1), date: today }, { merge: true });
-                return count + 1;
-            } catch (e) { console.error("Quota check failed:", e); return false; }
-        };
-
-        const cleanLatex = (text) => text.replace(/\$\$/g, '\n').replace(/\$/g, '').replace(/\\text\{([^}]+)\}/g, '$1').replace(/\\times/g, '×').replace(/\\approx/g, '≈').replace(/\\le/g, '≤').replace(/\\ge/g, '≥').replace(/\\rightarrow/g, '→').replace(/\\cdot/g, '·').replace(/\\frac\{([^}]+)\}\{([^}]+)\}/g, '($1/$2)').replace(/\\/g, '');
-
-        const useGoogleDrive = () => {
-            const [tClient, setTClient] = useState(null);
-            useEffect(() => {
-                const init = async () => {
-                    if (window.gapi) { await new Promise(r=>window.gapi.load('client',r)); await window.gapi.client.init({apiKey:GDRIVE_API_KEY,discoveryDocs:['https://www.googleapis.com/discovery/v1/apis/drive/v3/rest']}); }
-                    if (window.google) setTClient(window.google.accounts.oauth2.initTokenClient({client_id:GDRIVE_CLIENT_ID,scope:'https://www.googleapis.com/auth/drive.file',callback:()=>{}}));
-                }; init();
-            }, []);
-            const saveToDrive = async (blob, name) => {
-                const token = await new Promise((res, rej) => {
-                    if (!tClient) return rej("Auth fail");
-                    const ext = window.gapi.client.getToken();
-                    if (ext && Date.now()<ext.expiry) return res(ext.access_token);
-                    tClient.callback=r=>{if(r.error)rej(r);res(r.access_token)}; tClient.requestAccessToken({prompt:''});
-                });
+        const useDrive=()=>{
+            const [c,sC]=useState(null);
+            useEffect(()=>{
+                const i=async()=>{if(window.gapi){await new Promise(r=>window.gapi.load('client',r));await window.gapi.client.init({apiKey:"AIzaSyCScFR_D0snZ6hrHob5fUQM7Y2NhK-kTIA",discoveryDocs:['https://www.googleapis.com/discovery/v1/apis/drive/v3/rest']})}if(window.google)sC(window.google.accounts.oauth2.initTokenClient({client_id:"256215327792-oglegui0q8qj507oao2c2733thcl9lrc.apps.googleusercontent.com",scope:'https://www.googleapis.com/auth/drive.file',callback:()=>{}}))};i();
+            },[]);
+            return {saveToDrive:async(b,n)=>{
+                const t=await new Promise((rs,rj)=>{if(!c)rj();const e=window.gapi.client.getToken();if(e&&Date.now()<e.expiry)rs(e.access_token);c.callback=r=>{if(r.error)rj();rs(r.access_token)};c.requestAccessToken({prompt:''})});
                 const q=`mimeType='application/vnd.google-apps.folder' and name='darNote_Images' and trashed=false`;
-                const search=await fetch(`https://www.googleapis.com/drive/v3/files?q=${encodeURIComponent(q)}`,{headers:{Authorization:`Bearer ${token}`}});
-                let pId=(await search.json()).files?.[0]?.id;
-                if(!pId){const c=await fetch('https://www.googleapis.com/drive/v3/files',{method:'POST',headers:{Authorization:`Bearer ${token}`,'Content-Type':'application/json'},body:JSON.stringify({name:'darNote_Images',mimeType:'application/vnd.google-apps.folder'})}); pId=(await c.json()).id;}
-                const meta={name,mimeType:blob.type,parents:[pId]}, form=new FormData();
-                form.append('metadata',new Blob([JSON.stringify(meta)],{type:'application/json'})); form.append('file',blob);
-                const up=await fetch('https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&fields=id',{method:'POST',headers:{Authorization:`Bearer ${token}`},body:form});
-                const fId=(await up.json()).id;
-                await fetch(`https://www.googleapis.com/drive/v3/files/${fId}/permissions`,{method:'POST',headers:{Authorization:`Bearer ${token}`,'Content-Type':'application/json'},body:JSON.stringify({role:'reader',type:'anyone'})});
-                return `https://lh3.googleusercontent.com/d/${fId}`;
-            };
-            return {saveToDrive};
+                const s=await fetch(`https://www.googleapis.com/drive/v3/files?q=${encodeURIComponent(q)}`,{headers:{Authorization:`Bearer ${t}`}});
+                let p=(await s.json()).files?.[0]?.id;
+                if(!p){const cr=await fetch('https://www.googleapis.com/drive/v3/files',{method:'POST',headers:{Authorization:`Bearer ${t}`,'Content-Type':'application/json'},body:JSON.stringify({name:'darNote_Images',mimeType:'application/vnd.google-apps.folder'})});p=(await cr.json()).id}
+                const m={name:n,mimeType:b.type,parents:[p]},f=new FormData();f.append('metadata',new Blob([JSON.stringify(m)],{type:'application/json'}));f.append('file',b);
+                const u=await fetch('https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&fields=id',{method:'POST',headers:{Authorization:`Bearer ${t}`},body:f});
+                const id=(await u.json()).id;
+                await fetch(`https://www.googleapis.com/drive/v3/files/${id}/permissions`,{method:'POST',headers:{Authorization:`Bearer ${t}`,'Content-Type':'application/json'},body:JSON.stringify({role:'reader',type:'anyone'})});
+                return `https://lh3.googleusercontent.com/d/${id}`;
+            }};
         };
 
-        const useData = (user, type) => {
-            const [data, setData] = useState([]);
-            useEffect(() => {
-                if(!user) return;
-                const q = window.firebase.collection(window.firebase.db, 'artifacts', 'darnote-app', 'users', user.uid, type);
-                return window.firebase.onSnapshot(q, s => setData(s.docs.map(d=>({id:d.id,...d.data()})).sort((a,b)=>new Date(b.createdAt||0)-new Date(a.createdAt||0))));
-            }, [user, type]);
-            return { data };
+        const useData=(u,t)=>{const[d,sD]=useState([]);useEffect(()=>{if(!u)return;return window.fb.onSnapshot(window.fb.collection(window.fb.db,'artifacts','darnote-app','users',u.uid,t),s=>sD(s.docs.map(x=>({id:x.id,...x.data()})).sort((a,b)=>new Date(b.createdAt||0)-new Date(a.createdAt||0))))},[u,t]);return{data:d}};
+        const useDash=(u)=>{
+            const [rec,sR]=useState([]),[cnt,sC]=useState({total:0,mastered:0,notes:0});
+            useEffect(()=>{if(!u)return;return window.fb.onSnapshot(window.fb.query(window.fb.collection(window.fb.db,'artifacts','darnote-app','users',u.uid,'error_logs'),window.fb.orderBy('createdAt','desc'),window.fb.limit(3)),s=>sR(s.docs.map(d=>({id:d.id,...d.data()}))))},[u]);
+            useEffect(()=>{if(!u)return;const f=async()=>{const db=window.fb.db,c=window.fb.collection(db,'artifacts','darnote-app','users',u.uid,'error_logs'),nc=window.fb.collection(db,'artifacts','darnote-app','users',u.uid,'notes');try{const[tc,mc,ncC]=await Promise.all([window.fb.getCountFromServer(c),window.fb.getCountFromServer(window.fb.query(c,window.fb.where('mastered','==',true))),window.fb.getCountFromServer(nc)]);sC({total:tc.data().count,mastered:mc.data().count,notes:ncC.data().count})}catch(e){}};f()},[u]);
+            return {recentErrors:rec,counts:cnt};
+        };
+        const useSub=(u)=>{const[s,sS]=useState([]);useEffect(()=>{if(!u)return;return window.fb.onSnapshot(window.fb.collection(window.fb.db,'artifacts','darnote-app','users',u.uid,'subjects'),n=>sS(n.docs.map(d=>({id:d.id,name:d.data().name,topics:d.data().topics||[]})).sort((a,b)=>a.name.localeCompare(b.name))))},[u]);return s};
+
+        const TouchWrap=({onBack,children,cls})=>{
+            const sX=useRef(null),sY=useRef(null);
+            return <div onTouchStart={e=>{sX.current=e.touches[0].clientX;sY.current=e.touches[0].clientY}} onTouchEnd={e=>{if(!sX.current)return;const dX=e.changedTouches[0].clientX-sX.current,dY=Math.abs(e.changedTouches[0].clientY-sY.current);if(sX.current<30&&dX>60&&dY<30)onBack();sX.current=null}} className={cls}>{children}</div>;
         };
 
-        const useDashboardData = (user) => {
-            const [recentErrors, setRecentErrors] = useState([]);
-            const [counts, setCounts] = useState({ total: 0, mastered: 0, notes: 0 });
-            
-            // 1. Fetch Recent Errors (Limit 3)
-            useEffect(() => {
-                if (!user) return;
-                const db = window.firebase.db;
-                const q = window.firebase.query(
-                    window.firebase.collection(db, 'artifacts', 'darnote-app', 'users', user.uid, 'error_logs'),
-                    window.firebase.orderBy('createdAt', 'desc'),
-                    window.firebase.limit(3)
-                );
-                return window.firebase.onSnapshot(q, (snap) => {
-                    setRecentErrors(snap.docs.map(d => ({id: d.id, ...d.data()})));
-                });
-            }, [user]);
-
-            // 2. Fetch Aggregates (One-off)
-            useEffect(() => {
-                if (!user) return;
-                const fetchCounts = async () => {
-                    const db = window.firebase.db;
-                    const errColl = window.firebase.collection(db, 'artifacts', 'darnote-app', 'users', user.uid, 'error_logs');
-                    const noteColl = window.firebase.collection(db, 'artifacts', 'darnote-app', 'users', user.uid, 'notes');
-                    try {
-                        // Total Errors
-                        const errSnap = await window.firebase.getCountFromServer(errColl);
-                        // Mastered Errors
-                        const masteredQ = window.firebase.query(errColl, window.firebase.where('mastered', '==', true));
-                        const masSnap = await window.firebase.getCountFromServer(masteredQ);
-                        // Notes
-                        const noteSnap = await window.firebase.getCountFromServer(noteColl);
-                        
-                        setCounts({
-                            total: errSnap.data().count,
-                            mastered: masSnap.data().count,
-                            notes: noteSnap.data().count
-                        });
-                    } catch(e) { console.error("Aggregation failed", e); }
-                };
-                fetchCounts();
-            }, [user]);
-
-            return { recentErrors, counts };
-        };
-
-        const useSubjects = (user) => {
-            const [s, setS] = useState([]);
-            useEffect(() => {
-                if (!user) return;
-                return window.firebase.onSnapshot(window.firebase.collection(window.firebase.db, 'artifacts', 'darnote-app', 'users', user.uid, 'subjects'), 
-                    sn => setS(sn.docs.map(d=>({id:d.id,name:d.data().name,topics:d.data().topics||[]})).sort((a,b)=>a.name.localeCompare(b.name))));
-            }, [user]);
-            return s;
-        };
-
-        const TouchWrapper = ({ onBack, children, className }) => {
-            const startX = useRef(null);
-            const startY = useRef(null);
-            const handleTouchStart = (e) => { startX.current = e.touches[0].clientX; startY.current = e.touches[0].clientY; };
-            const handleTouchEnd = (e) => {
-                if (!startX.current) return;
-                const diffX = e.changedTouches[0].clientX - startX.current;
-                const diffY = Math.abs(e.changedTouches[0].clientY - startY.current);
-                if (startX.current < 30 && diffX > 60 && diffY < 30) { onBack(); }
-                startX.current = null;
-            };
-            return <div onTouchStart={handleTouchStart} onTouchEnd={handleTouchEnd} className={className}>{children}</div>;
-        };
-
-        const Splash = ({ onLogin }) => (
-            <div className="h-screen w-full flex flex-col items-center justify-center bg-onyx relative overflow-hidden px-6">
-                <div className="absolute top-[-20%] right-[-20%] w-[80%] h-[80%] bg-brand/20 rounded-full blur-[100px] animate-pulse"></div>
-                <motion.div initial={{y:20,opacity:0}} animate={{y:0,opacity:1}} className="z-10 text-center">
-                    <img src="https://raw.githubusercontent.com/darren6251/darnote/refs/heads/main/darNote%20logo.png" className="w-24 h-24 mx-auto mb-8 drop-shadow-glow" />
-                    <h1 className="text-4xl font-bold mb-2 tracking-tight text-white">darNote <span className="text-brand">Ultimate</span></h1>
-                    <p className="text-zinc-400 mb-10 text-lg">Your Second Brain.<br/>Now with fewer excuses.</p>
-                    <motion.button whileTap={{scale:0.95}} onClick={onLogin} className="w-full bg-white text-black py-4 rounded-2xl font-bold text-lg flex items-center justify-center gap-3 shadow-xl"><Icons.Google className="w-6 h-6"/> Sign In</motion.button>
-                </motion.div>
-            </div>
-        );
-
-        const PracticeModal = ({ activeLog, onClose, user }) => {
-            const [loading, setLoading] = useState(true);
-            const [questions, setQuestions] = useState([]);
-            const [lqData, setLqData] = useState(null);
-            const [userAnswers, setUserAnswers] = useState({});
-            const [marked, setMarked] = useState(false);
-            const [lqFeedback, setLqFeedback] = useState(null);
-            const [quota, setQuota] = useState(0);
-            const mode = activeLog.questionType || 'MC';
-
-            useEffect(() => {
-                const today = new Date().toISOString().split('T')[0];
-                return window.firebase.onSnapshot(window.firebase.doc(window.firebase.db, 'artifacts', "darnote-app", 'users', user.uid, 'ai_usage', today), s => {
-                    setQuota(s.exists() ? (s.data().practice_count || 0) : 0);
-                });
-            }, [user]);
-
-            useEffect(() => { generatePractice(); }, []);
-
-            const generatePractice = async () => {
-                setLoading(true);
-                const newQuota = await checkAndIncrementQuota(user, 'practice');
-                if (newQuota === false) { alert("Daily Practice Limit Reached (10/10)!"); onClose(); return; }
-
-                let imgCtx = (activeLog.questionImages && activeLog.questionImages.length > 0) ? activeLog.questionImages[0] : (activeLog.imageUrl || null);
-                if (imgCtx && (imgCtx.startsWith('http') || imgCtx.startsWith('https'))) {
-                    try { const res = await fetch(imgCtx); const blob = await res.blob(); imgCtx = await new Promise((r) => { const reader = new FileReader(); reader.onloadend = () => r(reader.result); reader.readAsDataURL(blob); }); } catch (e) { console.error(e); imgCtx = null; }
+        const PracticeM=({log,close,user})=>{
+            const [ld,sLd]=useState(true),[qs,sQs]=useState([]),[lq,sLq]=useState(null),[ans,sAns]=useState({}),[mk,sMk]=useState(false),[fb,sFb]=useState(null),[qt,sQt]=useState(0);
+            const mode=log.questionType||'MC';
+            useEffect(()=>{window.fb.onSnapshot(window.fb.doc(window.fb.db,'artifacts',"darnote-app",'users',user.uid,'ai_usage',new Date().toISOString().split('T')[0]),s=>sQt(s.exists()?(s.data().practice_count||0):0))},[user]);
+            useEffect(()=>{gen()},[]);
+            const gen=async()=>{
+                if(await checkQuota(user,'practice')===false){alert("Daily Limit (10/10)");close();return}
+                let im=(log.questionImages?.[0])||log.imageUrl;
+                if(im&&im.startsWith('http')){try{const r=await fetch(im),b=await r.blob();im=await new Promise(res=>{const fr=new FileReader();fr.onloadend=()=>res(fr.result);fr.readAsDataURL(b)})}catch(e){im=null}}
+                if(mode==='MC'){
+                    const r=await callGemini(`Gen 3 MCQs (ABCD) concept-based. JSON Array: [{"q":"...","options":["A..."],"answer":"A","explanation":"..."}]. No LaTeX.`, "JSON Gen", im);
+                    try{sQs(JSON.parse(r.replace(/```json|```/g,'')))}catch(e){close()}
+                }else{
+                    const r=await callGemini(`Gen 1 long Q with 2 parts based on concept. JSON: {"context":"...","parts":[{"id":"a","text":"...","marks":2}]}. No LaTeX.`,"JSON Gen",im);
+                    try{sLq(JSON.parse(r.replace(/```json|```/g,'')))}catch(e){close()}
                 }
-
-                if (mode === 'MC') {
-                    const prompt = `Generate 3 Multiple Choice Questions (ABCD) based on the concept. Return STRICTLY JSON array: [{"q": "Question", "options": ["A. x", "B. y", "C. z", "D. w"], "answer": "A", "explanation": "..."}]. Plain text only, NO LaTeX.`;
-                    const res = await callGemini(prompt, "You are a JSON generator.", imgCtx);
-                    try { setQuestions(JSON.parse(res.replace(/```json|```/g, ''))); } catch(e) { alert("Generation failed."); onClose(); }
-                } else {
-                    const prompt = `Generate 1 structured long question with two sub-parts. Use the core concept of the provided question but change the numerical values.. Return STRICTLY JSON: {"context": "...", "parts": [{"id": "a", "text": "...", "marks": 2}, {"id": "b", "text": "...", "marks": 4}]}. Plain text only, NO LaTeX.`;
-                    const res = await callGemini(prompt, "You are a JSON generator.", imgCtx);
-                    try { setLqData(JSON.parse(res.replace(/```json|```/g, ''))); } catch(e) { alert("Generation failed."); onClose(); }
-                }
-                setLoading(false);
+                sLd(false);
             };
-
-            const handleLqMark = async () => {
-                setLoading(true);
-                const prompt = `Mark answer. Context: ${lqData.context}. Answers: ${JSON.stringify(userAnswers)}. Return JSON: {"totalScore": 5, "maxScore": 6, "generalFeedback": "...", "partFeedback": {"a": {"score": 1, "comment": "..."}, "b": {"score": 4, "comment": "..."}}}.`;
-                const res = await callGemini(prompt, "Strict examiner. JSON only.");
-                try { setLqFeedback(JSON.parse(res.replace(/```json|```/g, ''))); setMarked(true); } catch(e) { alert("Marking failed."); }
-                setLoading(false);
+            const mark=async()=>{
+                sLd(true);
+                const r=await callGemini(`Mark. Ctx:${lq.context}. Ans:${JSON.stringify(ans)}. JSON: {"totalScore":5,"maxScore":6,"partFeedback":{"a":{"score":1,"comment":"..."}}}.`,"Strict Examiner");
+                try{sFb(JSON.parse(r.replace(/```json|```/g,'')));sMk(true)}catch(e){alert('Error')}
+                sLd(false);
             };
-
-            return (
-                <div className="fixed inset-0 z-[100] bg-white dark:bg-onyx flex flex-col">
-                    <div className="p-4 border-b border-zinc-200 dark:border-white/10 flex justify-between items-center bg-zinc-50 dark:bg-black/20">
-                        <div className="flex flex-col">
-                            <span className="font-bold text-zinc-900 dark:text-white flex items-center gap-2"><Icons.Brain className="w-5 h-5 text-brand"/> Practice: <span className="text-brand font-extrabold">{mode}</span></span>
-                            <span className="text-[10px] text-zinc-500">{quota}/10 Daily Limit</span>
-                        </div>
-                        <button onClick={onClose}><Icons.X className="w-6 h-6 text-zinc-400"/></button>
-                    </div>
-                    <div className="flex-1 overflow-y-auto p-4 space-y-6">
-                        {loading ? <div className="flex flex-col items-center justify-center h-64 space-y-4"><div className="loader"></div><p className="text-zinc-500 animate-pulse text-sm">Constructing pain...</p></div> : mode === 'MC' ? (
-                            <div className="space-y-8 pb-20">{questions.map((q, idx) => (<div key={idx} className="space-y-3"><div className="font-bold text-zinc-900 dark:text-zinc-100">{idx+1}. {q.q}</div><div className="grid grid-cols-1 gap-2">{q.options.map((opt) => { const letter = opt.charAt(0); const isSelected = userAnswers[idx] === letter; const isCorrect = q.answer === letter; let bg = "bg-zinc-50 dark:bg-zinc-800 border-zinc-200 dark:border-zinc-700"; if (marked) { if (isCorrect) bg = "bg-green-500/20 border-green-500"; else if (isSelected) bg = "bg-red-500/20 border-red-500"; } else if (isSelected) bg = "bg-brand/20 border-brand"; return (<button key={opt} onClick={() => !marked && setUserAnswers({...userAnswers, [idx]: letter})} className={`text-left p-3 rounded-lg border text-sm ${bg} dark:text-zinc-200`}>{opt}</button>); })}</div>{marked && <div className="text-xs p-3 rounded bg-zinc-100 dark:bg-white/5 text-zinc-600 dark:text-zinc-400"><span className="font-bold">Explanation:</span> {q.explanation}</div>}</div>))}</div>
-                        ) : (lqData && <div className="space-y-6 pb-20"><div className="p-3 bg-zinc-100 dark:bg-white/5 rounded-lg text-sm text-zinc-800 dark:text-zinc-200">{lqData.context}</div>{lqData.parts.map((part) => (<div key={part.id} className="space-y-2"><div className="flex justify-between text-sm"><span className="font-bold dark:text-white">({part.id}) {part.text}</span><span className="text-zinc-500">[{part.marks}m]</span></div><textarea value={userAnswers[part.id] || ''} onChange={e => setUserAnswers({...userAnswers, [part.id]: e.target.value})} disabled={marked} className="w-full bg-transparent border border-zinc-200 dark:border-white/10 rounded-lg p-3 text-sm dark:text-white" rows="3" placeholder="Answer..."/>{marked && lqFeedback?.partFeedback[part.id] && (<div className={`text-xs p-2 rounded flex justify-between ${lqFeedback.partFeedback[part.id].score === part.marks ? 'bg-green-500/10 text-green-500' : 'bg-red-500/10 text-red-400'}`}><span>{lqFeedback.partFeedback[part.id].comment}</span><span className="font-bold">{lqFeedback.partFeedback[part.id].score}/{part.marks}</span></div>)}</div>))}{marked && <div className="p-4 rounded-lg bg-brand/10 border border-brand/20 text-center"><div className="text-2xl font-bold text-brand">{lqFeedback.totalScore} / {lqFeedback.maxScore}</div></div>}</div>)}
-                    </div>
-                    <div className="p-4 border-t border-zinc-200 dark:border-white/10 bg-white dark:bg-onyx">{!marked ? <button onClick={() => mode === 'MC' ? setMarked(true) : handleLqMark()} disabled={loading} className="w-full py-3 bg-brand text-white font-bold rounded-xl shadow-lg">Submit</button> : <button onClick={onClose} className="w-full py-3 bg-zinc-200 dark:bg-white/10 text-zinc-900 dark:text-white font-bold rounded-xl">Close</button>}</div>
-                </div>
-            );
+            return <div className="fixed inset-0 z-[100] bg-zinc-50 dark:bg-onyx flex flex-col"><div className="p-4 border-b border-zinc-200 dark:border-white/10 flex justify-between bg-white dark:bg-black/20"><div className="flex flex-col"><span className="font-bold flex gap-2"><Icons.Brain className="w-5 h-5 text-brand"/> {mode}</span><span className="text-[10px] text-zinc-500">{qt}/10 Used</span></div><button onClick={close}><Icons.X className="w-6 h-6 text-zinc-400"/></button></div><div className="flex-1 overflow-y-auto p-4 space-y-6">{ld?<div className="loader mx-auto mt-20"/>:mode==='MC'?qs.map((q,i)=><div key={i} className="space-y-3"><div className="font-bold">{i+1}. {q.q}</div><div className="grid gap-2">{q.options.map(o=>{const l=o[0],s=ans[i]===l,c=q.answer===l;let b="bg-white dark:bg-zinc-800 border-zinc-200 dark:border-zinc-700";if(mk){b=c?"bg-green-500/20 border-green-500":s?"bg-red-500/20 border-red-500":b}else if(s)b="bg-brand/20 border-brand";return<button key={o} onClick={()=>!mk&&sAns({...ans,[i]:l})} className={`text-left p-3 rounded-lg border text-sm ${b}`}>{o}</button>})}</div>{mk&&<div className="text-xs p-3 bg-zinc-100 dark:bg-white/5">{q.explanation}</div>}</div>):(lq&&<div className="space-y-6 pb-20"><div className="p-3 bg-zinc-100 dark:bg-white/5 rounded-lg text-sm">{lq.context}</div>{lq.parts.map(p=><div key={p.id} className="space-y-2"><div className="flex justify-between text-sm"><span className="font-bold">({p.id}) {p.text}</span><span>[{p.marks}m]</span></div><textarea value={ans[p.id]||''} onChange={e=>sAns({...ans,[p.id]:e.target.value})} disabled={mk} className="w-full bg-transparent border border-zinc-200 dark:border-white/10 rounded-lg p-3 text-sm" rows="3"/>{mk&&fb?.partFeedback[p.id]&&<div className="text-xs p-2 rounded flex justify-between bg-zinc-100 dark:bg-white/5"><span>{fb.partFeedback[p.id].comment}</span><b>{fb.partFeedback[p.id].score}/{p.marks}</b></div>}</div>)}{mk&&<div className="text-center text-2xl font-bold text-brand">{fb.totalScore}/{fb.maxScore}</div>}</div>)}</div><div className="p-4 border-t border-zinc-200 dark:border-white/10 bg-white dark:bg-onyx">{!mk?<button onClick={()=>mode==='MC'?sMk(true):mark()} disabled={ld} className="w-full py-3 bg-brand text-white font-bold rounded-xl shadow-lg">Submit</button>:<button onClick={close} className="w-full py-3 bg-zinc-200 dark:bg-white/10 text-zinc-900 dark:text-white font-bold rounded-xl">Close</button>}</div></div>;
         };
 
-        const AIChat = ({ activeLog, onClose, user }) => {
-            const [msgs, setMsgs] = useState([{role:'ai',text:"How can I help you understand this failure?"}]);
-            const [inp, setInp] = useState("");
-            const [load, setLoad] = useState(false);
-            const [quotaCount, setQuotaCount] = useState(0);
-            const endRef=useRef(null), today=new Date().toISOString().split('T')[0];
-            
-            useEffect(()=>{if(user)return window.firebase.onSnapshot(window.firebase.doc(window.firebase.db,'artifacts','darnote-app','users',user.uid,'ai_usage',today),d=>setQuotaCount(d.exists()?(d.data().chat_count || 0):0))},[user,today]);
-            
-            useEffect(()=>{endRef.current?.scrollIntoView({behavior:"smooth"})},[msgs]);
-            
-            const send = async () => {
-                if(!inp.trim()) return;
-                const newQuota = await checkAndIncrementQuota(user, 'chat');
-                const uMsg=inp; setMsgs(p=>[...p,{role:'user',text:uMsg}]); setInp(""); 
-                if(newQuota === false) { setMsgs(p=>[...p,{role:'ai',text:"<span class='text-red-500'>DAILY CHAT LIMIT REACHED (5/5).</span>"}]); return; }
-                
-                setLoad(true);
-                const ctx = activeLog ? `Sub:${activeLog.subject}, Q:${activeLog.explanation}, Answer:${activeLog.correctAnswer}` : 'General Chat';
-                let imgCtx = null;
-                if(activeLog) { let url = (activeLog.questionImages && activeLog.questionImages.length > 0) ? activeLog.questionImages[0] : activeLog.imageUrl; if(url && (url.startsWith('http'))) { try { const r=await fetch(url); const b=await r.blob(); imgCtx=await new Promise(res=>{const fr=new FileReader();fr.onloadend=()=>res(fr.result);fr.readAsDataURL(b)}); } catch(e){} } }
-                let res = await callGemini(uMsg, `Roast-heavy tutor. Context: ${ctx}`, imgCtx);
-                res = cleanLatex(res);
-                setMsgs(p=>[...p,{role:'ai',text:res}]); setLoad(false);
+        const AIChat=({log,close,user})=>{
+            const [ms,sMs]=useState([{role:'ai',text:"How can I help?"}]),[inp,sInp]=useState(""),[ld,sLd]=useState(false),[qc,sQc]=useState(0),ref=useRef(null);
+            useEffect(()=>{window.fb.onSnapshot(window.fb.doc(window.fb.db,'artifacts','darnote-app','users',user.uid,'ai_usage',new Date().toISOString().split('T')[0]),d=>sQc(d.exists()?(d.data().chat_count||0):0))},[user]);
+            useEffect(()=>{ref.current?.scrollIntoView({behavior:"smooth"})},[ms]);
+            const snd=async()=>{
+                if(!inp.trim())return;
+                if(await checkQuota(user,'chat')===false){sMs(p=>[...p,{role:'ai',text:"Daily Limit Reached."}]);return}
+                const u=inp;sMs(p=>[...p,{role:'user',text:u}]);sInp("");sLd(true);
+                let im=null; if(log){let l=(log.questionImages?.[0])||log.imageUrl;if(l&&l.startsWith('http')){try{const r=await fetch(l),b=await r.blob();im=await new Promise(r=>{const f=new FileReader();f.onloadend=()=>r(f.result);f.readAsDataURL(b)})}catch(e){}}}
+                const r=await callGemini(u,`Tutor. Ctx: ${log?log.explanation:'General'}`,im);
+                sMs(p=>[...p,{role:'ai',text:r.replace(/\$\$/g,'\n').replace(/\$/g,'')}]);sLd(false);
             };
-            return (
-                <div className="flex flex-col w-full bg-zinc-50 dark:bg-surface fixed inset-0 z-[80] h-[100dvh]">
-                    <div className="p-4 border-b border-zinc-200 dark:border-white/10 flex justify-between items-center bg-zinc-100 dark:bg-black/20 shrink-0">
-                        <div className="flex flex-col"><span className="font-bold text-sm text-zinc-800 dark:text-white flex items-center gap-2"><Icons.Bot className="w-4 h-4 text-brand"/> Gemini <span className="text-[10px] uppercase font-black bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500 bg-clip-text text-transparent tracking-widest">3 PRO</span></span><span className="text-[10px] text-zinc-500">{quotaCount}/5 Chats Used</span></div><button onClick={onClose}><Icons.ChevronLeft className="w-6 h-6 rotate-[-90deg] text-zinc-400"/></button>
-                    </div>
-                    <div className="flex-1 overflow-y-auto p-4 space-y-4">{msgs.map((m,i)=><div key={i} className={`flex ${m.role==='user'?'justify-end':'justify-start'}`}><div className={`max-w-[85%] p-3 rounded-2xl text-sm ${m.role==='user'?'bg-brand text-white rounded-br-none':'bg-zinc-200 dark:bg-zinc-800 text-zinc-800 dark:text-zinc-200 rounded-bl-none'}`} dangerouslySetInnerHTML={{__html:window.marked?window.marked.parse(m.text):m.text}}/></div>)}{load && <div className="text-xs text-zinc-500 animate-pulse pl-2">Thinking...</div>}<div ref={endRef}/></div>
-                    <div className="p-4 border-t border-zinc-200 dark:border-white/10 bg-white dark:bg-black flex gap-2"><input value={inp} onChange={e=>setInp(e.target.value)} onKeyDown={e=>e.key==='Enter'&&send()} placeholder="Ask..." className="flex-1 bg-zinc-100 dark:bg-zinc-900 border border-zinc-200 dark:border-white/10 rounded-full px-4 py-3 text-sm text-zinc-900 dark:text-white"/><button onClick={send} disabled={quotaCount>=5} className="bg-brand text-white rounded-full p-3 disabled:opacity-50"><Icons.Plus className="w-5 h-5 rotate-90"/></button></div>
-                </div>
-            );
+            return <div className="flex flex-col w-full fixed inset-0 z-[80] h-[100dvh] bg-zinc-50 dark:bg-surface"><div className="p-4 border-b border-zinc-200 dark:border-white/10 flex justify-between items-center bg-zinc-100 dark:bg-black/20"><span className="font-bold text-sm flex gap-2"><Icons.Bot className="w-4 h-4 text-brand"/>Gemini 3 PRO</span><button onClick={close}><Icons.Chevron className="w-6 h-6 rotate-[-90deg]"/></button></div><div className="flex-1 overflow-y-auto p-4 space-y-4">{ms.map((m,i)=><div key={i} className={`flex ${m.role==='user'?'justify-end':'justify-start'}`}><div className={`max-w-[85%] p-3 rounded-2xl text-sm ${m.role==='user'?'bg-brand text-white':'bg-zinc-200 dark:bg-zinc-800'}`}>{m.text}</div></div>)}{ld&&<div className="text-xs animate-pulse">Thinking...</div>}<div ref={ref}/></div><div className="p-4 border-t bg-white dark:bg-black flex gap-2"><input value={inp} onChange={e=>sInp(e.target.value)} onKeyDown={e=>e.key==='Enter'&&snd()} className="flex-1 bg-zinc-100 dark:bg-zinc-900 border border-zinc-200 dark:border-white/10 rounded-full px-4 py-3 text-sm"/><button onClick={snd} disabled={qc>=5} className="bg-brand text-white rounded-full p-3"><Icons.Plus className="w-5 h-5 rotate-90"/></button></div></div>;
         };
 
-        const ErrorEditor = ({ item, onSave, onBack, onDelete, user, subjects }) => {
-            const [data, setData] = useState(() => {
-                const i = item || {};
-                return {
-                    title: i.title||'', subject: i.subject||'General', topic: i.topic||'', mastered: i.mastered||false, explanation: i.explanation||'', 
-                    questionType: i.questionType||'MC', correctAnswer: i.correctAnswer||'',
-                    questionImages: i.questionImages || (i.imageUrl ? [i.imageUrl] : []),
-                    schemeImages: i.schemeImages || (i.markingSchemeUrl ? [i.markingSchemeUrl] : []),
-                    imageUrl: i.imageUrl||'', markingSchemeUrl: i.markingSchemeUrl||''
-                };
-            });
-            const [aiOpen, setAiOpen] = useState(false);
-            const [practiceOpen, setPracticeOpen] = useState(false);
-            const { saveToDrive } = useGoogleDrive();
-            const [upQ, setUpQ] = useState(false);
-            const [upS, setUpS] = useState(false);
-            
-            const curSub = subjects.find(s=>s.name===data.subject), topics = curSub?.topics||[];
-
-            const handleImg = async (e, type) => {
-                const f = e.target.files[0]; if(!f)return;
-                const isQ = type==='evidence'; isQ ? setUpQ(true) : setUpS(true);
-                try {
-                    const url = await saveToDrive(f, `${type}_${Date.now()}.png`);
-                    if(isQ) setData({...data, questionImages: [...(data.questionImages||[]), url], imageUrl: url});
-                    else setData({...data, schemeImages: [...(data.schemeImages||[]), url], markingSchemeUrl: url});
-                } catch(e){ alert(e); }
-                isQ ? setUpQ(false) : setUpS(false);
+        const ErrEd=({item,save,back,del,user,subs})=>{
+            const [d,sD]=useState(()=>{const i=item||{};return{title:i.title||'',subject:i.subject||'General',topic:i.topic||'',mastered:i.mastered||false,explanation:i.explanation||'',questionType:i.questionType||'MC',correctAnswer:i.correctAnswer||'',questionImages:i.questionImages||(i.imageUrl?[i.imageUrl]:[]),schemeImages:i.schemeImages||(i.markingSchemeUrl?[i.markingSchemeUrl]:[]),imageUrl:i.imageUrl||'',markingSchemeUrl:i.markingSchemeUrl||''}});
+            const [ao,sAo]=useState(false),[po,sPo]=useState(false),[uq,sUq]=useState(false),[us,sUs]=useState(false);
+            const {saveToDrive}=useDrive(), cur=subs.find(s=>s.name===d.subject), tops=cur?.topics||[];
+            const hImg=async(e,t)=>{
+                const f=e.target.files[0];if(!f)return;const q=t==='evidence';q?sUq(1):sUs(1);
+                try{const u=await saveToDrive(f,`${t}_${Date.now()}.png`);if(q)sD({...d,questionImages:[...(d.questionImages||[]),u],imageUrl:u});else sD({...d,schemeImages:[...(d.schemeImages||[]),u],markingSchemeUrl:u});}catch(e){alert(e)}q?sUq(0):sUs(0);
             };
-
-            const addTopic = async () => {
-                const t = prompt(`New topic for ${curSub.name}:`); if(!t||!curSub)return;
-                await window.firebase.updateDoc(window.firebase.doc(window.firebase.db,'artifacts','darnote-app','users',user.uid,'subjects',curSub.id),{topics:window.firebase.arrayUnion(t)});
-                setData({...data, topic: t});
-            };
-
-            return (
-                <TouchWrapper onBack={onBack} className="fixed inset-0 bg-zinc-50 dark:bg-onyx z-[60] overflow-y-auto flex flex-col">
-                    <motion.div initial={{x:'100%'}} animate={{x:0}} exit={{x:'100%'}} transition={{type:'spring',damping:25,stiffness:300}} className="flex-1 flex flex-col">
-                        <div className="sticky top-0 bg-white/90 dark:bg-onyx/90 backdrop-blur-md p-4 border-b border-zinc-200 dark:border-zinc-800 flex justify-between items-center z-10 shrink-0">
-                            <button onClick={onBack} className="p-2 rounded-full bg-zinc-100 dark:bg-zinc-800"><Icons.ChevronLeft className="w-6 h-6 text-zinc-700 dark:text-zinc-300"/></button>
-                            <span className="font-bold text-zinc-900 dark:text-white">Failure Log</span>
-                            <div className="flex gap-2">
-                                 {item && <button onClick={()=>setPracticeOpen(true)} className="p-2 bg-orange-500/10 text-orange-500 rounded-full"><Icons.Brain className="w-5 h-5"/></button>}
-                                 {item && <button onClick={()=>setAiOpen(true)} className="p-2 bg-brand/10 text-brand rounded-full"><Icons.Bot className="w-5 h-5"/></button>}
-                                 <button onClick={()=>onSave({...data, id: item?.id})} className="px-4 py-2 bg-brand rounded-full text-sm font-bold text-white">Save</button>
-                            </div>
-                        </div>
-                        <div className="p-6 space-y-6 flex-1 overflow-y-auto pb-20">
-                            <div className="flex gap-2 p-1 bg-zinc-200 dark:bg-zinc-900 rounded-xl">
-                                <button onClick={()=>setData({...data,mastered:false})} className={`flex-1 py-3 rounded-lg text-sm font-bold ${!data.mastered?'bg-red-500/20 text-red-500':'text-zinc-500'}`}>Review</button>
-                                <button onClick={()=>setData({...data,mastered:true})} className={`flex-1 py-3 rounded-lg text-sm font-bold ${data.mastered?'bg-green-500/20 text-green-500':'text-zinc-500'}`}>Mastered</button>
-                            </div>
-                            <input placeholder="What went wrong?" className="w-full bg-transparent text-2xl font-bold placeholder-zinc-400 dark:placeholder-zinc-600 focus:outline-none text-zinc-900 dark:text-white" value={data.title} onChange={e=>setData({...data,title:e.target.value})} />
-                            
-                            <div className="bg-white dark:bg-surface rounded-2xl p-4 border border-zinc-200 dark:border-zinc-800">
-                                 <label className="text-[10px] text-zinc-500 uppercase font-bold mb-2 block">Correct Answer</label>
-                                 <input placeholder="e.g. A, B, or 'Mitochondria'" value={data.correctAnswer} onChange={e=>setData({...data,correctAnswer:e.target.value})} className="w-full bg-zinc-100 dark:bg-zinc-900 p-3 rounded-xl focus:outline-none text-zinc-900 dark:text-white text-sm"/>
-                            </div>
-                            <div className="relative w-full aspect-video bg-zinc-100 dark:bg-zinc-900 rounded-2xl border border-dashed border-zinc-300 dark:border-zinc-700 flex flex-col items-center justify-center overflow-hidden">
-                                {upQ ? <span className="loader"></span> : (data.questionImages?.[0]) ? <img src={data.questionImages[0]} className="w-full h-full object-contain"/> : (
-                                    <><Icons.Camera className="w-8 h-8 text-zinc-400 dark:text-zinc-600 mb-2"/><span className="text-xs text-zinc-500">Upload Question</span><input type="file" accept="image/*" onChange={e=>handleImg(e,'evidence')} className="absolute inset-0 opacity-0 cursor-pointer"/></>
-                                )}
-                            </div>
-                            <div className="relative w-full aspect-video bg-zinc-100 dark:bg-zinc-900 rounded-2xl border border-dashed border-blue-300 dark:border-blue-900 flex flex-col items-center justify-center overflow-hidden">
-                                {upS ? <span className="loader"></span> : (data.schemeImages?.[0]) ? <img src={data.schemeImages[0]} className="w-full h-full object-contain"/> : (
-                                    <><Icons.Check className="w-8 h-8 text-blue-400 mb-2"/><span className="text-xs text-blue-500 font-bold">Upload Marking Scheme</span><input type="file" accept="image/*" onChange={e=>handleImg(e,'scheme')} className="absolute inset-0 opacity-0 cursor-pointer"/></>
-                                )}
-                            </div>
-                            <div className="bg-white dark:bg-surface rounded-2xl p-4 min-h-[150px] border border-zinc-200 dark:border-zinc-800">
-                                <textarea className="w-full h-full bg-transparent resize-none focus:outline-none text-zinc-800 dark:text-zinc-300 min-h-[150px]" placeholder="Explain why you failed..." value={data.explanation} onChange={e=>setData({...data,explanation:e.target.value})}/>
-                            </div>
-                            <div className="grid grid-cols-2 gap-4">
-                                <div>
-                                    <label className="text-[10px] text-zinc-500 uppercase font-bold">Subject</label>
-                                    <select value={data.subject} onChange={e=>setData({...data,subject:e.target.value,topic:''})} className="w-full bg-zinc-100 dark:bg-zinc-900 p-3 rounded-xl mt-1 focus:outline-none text-zinc-900 dark:text-white text-sm appearance-none">
-                                        <option value="General">General</option>{subjects.map(s=><option key={s.id} value={s.name}>{s.name}</option>)}
-                                    </select>
-                                </div>
-                                <div><label className="text-[10px] text-zinc-500 uppercase font-bold">Type</label><select value={data.questionType} onChange={e=>setData({...data,questionType:e.target.value})} className="w-full bg-zinc-100 dark:bg-zinc-900 p-3 rounded-xl mt-1 focus:outline-none text-zinc-900 dark:text-white text-sm"><option value="MC">MC</option><option value="LQ">Long Question</option></select></div>
-                            </div>
-                            <div className="bg-white dark:bg-surface rounded-2xl p-4 border border-zinc-200 dark:border-zinc-800">
-                                 <label className="text-[10px] text-zinc-500 uppercase font-bold mb-2 block">Topic</label>
-                                 <div className="flex gap-2">
-                                    {data.subject !== 'General' && curSub ? (
-                                        <select value={data.topic} onChange={e=>setData({...data,topic:e.target.value})} className="w-full bg-zinc-100 dark:bg-zinc-900 p-3 rounded-xl focus:outline-none text-zinc-900 dark:text-white text-sm">
-                                            <option value="">-- Select --</option>{topics.map(t=><option key={t} value={t}>{t}</option>)}
-                                        </select>
-                                    ) : <input placeholder="e.g. Algebra" value={data.topic} onChange={e=>setData({...data,topic:e.target.value})} className="w-full bg-zinc-100 dark:bg-zinc-900 p-3 rounded-xl focus:outline-none text-zinc-900 dark:text-white text-sm"/>}
-                                    {data.subject !== 'General' && <button onClick={addTopic} className="p-3 bg-zinc-100 dark:bg-zinc-900 rounded-xl text-zinc-500"><Icons.Plus className="w-5 h-5"/></button>}
-                                </div>
-                            </div>
-                            {item && <button onClick={()=>{if(confirm('Delete?')){onDelete(item.id);onBack()}}} className="w-full py-4 text-red-500 font-bold text-sm bg-zinc-100 dark:bg-zinc-900 rounded-xl">Delete Log</button>}
-                        </div>
-                    </motion.div>
-                    <AnimatePresence>{aiOpen && <motion.div initial={{y:"100%"}} animate={{y:"0%"}} exit={{y:"100%"}} className="fixed inset-0 z-[70] bg-white dark:bg-surface rounded-t-3xl shadow-2xl overflow-hidden"><AIChat activeLog={data} onClose={()=>setAiOpen(false)} user={user} /></motion.div>}</AnimatePresence>
-                    <AnimatePresence>{practiceOpen && <motion.div initial={{y:"100%"}} animate={{y:"0%"}} exit={{y:"100%"}} className="fixed inset-0 z-[70] bg-white dark:bg-surface rounded-t-3xl shadow-2xl overflow-hidden"><PracticeModal activeLog={data} onClose={()=>setPracticeOpen(false)} user={user} /></motion.div>}</AnimatePresence>
-                </TouchWrapper>
-            );
+            return <TouchWrap onBack={back} cls="fixed inset-0 bg-zinc-50 dark:bg-onyx z-[60] overflow-y-auto flex flex-col"><motion.div initial={{x:'100%'}} animate={{x:0}} exit={{x:'100%'}} transition={{type:'spring',damping:25,stiffness:300}} className="flex-1 flex flex-col">
+                <div className="sticky top-0 bg-white/90 dark:bg-onyx/90 backdrop-blur-md p-4 border-b flex justify-between items-center z-10 shrink-0"><button onClick={back} className="p-2 rounded-full bg-zinc-100 dark:bg-zinc-800"><Icons.Chevron className="w-6 h-6 rotate-180"/></button><span className="font-bold">Failure Log</span><div className="flex gap-2">{item&&<><button onClick={()=>sPo(1)} className="p-2 bg-orange-500/10 text-orange-500 rounded-full"><Icons.Brain className="w-5 h-5"/></button><button onClick={()=>sAo(1)} className="p-2 bg-brand/10 text-brand rounded-full"><Icons.Bot className="w-5 h-5"/></button></>}<button onClick={()=>save({...d,id:item?.id})} className="px-4 py-2 bg-brand rounded-full text-sm font-bold text-white">Save</button></div></div>
+                <div className="p-6 space-y-6 flex-1 overflow-y-auto pb-20">
+                    <div className="flex gap-2 p-1 bg-zinc-200 dark:bg-zinc-900 rounded-xl"><button onClick={()=>sD({...d,mastered:false})} className={`flex-1 py-3 rounded-lg text-sm font-bold ${!d.mastered?'bg-red-500/20 text-red-500':'text-zinc-500'}`}>Review</button><button onClick={()=>sD({...d,mastered:true})} className={`flex-1 py-3 rounded-lg text-sm font-bold ${d.mastered?'bg-green-500/20 text-green-500':'text-zinc-500'}`}>Mastered</button></div>
+                    <input placeholder="What went wrong?" className="w-full bg-transparent text-2xl font-bold placeholder-zinc-400 focus:outline-none" value={d.title} onChange={e=>sD({...d,title:e.target.value})}/>
+                    <div className="bg-white dark:bg-surface rounded-2xl p-4 border border-zinc-200 dark:border-zinc-800"><label className="text-[10px] text-zinc-500 uppercase font-bold mb-2 block">Answer</label><input placeholder="Correct Answer" value={d.correctAnswer} onChange={e=>sD({...d,correctAnswer:e.target.value})} className="w-full bg-zinc-100 dark:bg-zinc-900 p-3 rounded-xl focus:outline-none text-sm"/></div>
+                    <div className="relative w-full aspect-video bg-zinc-100 dark:bg-zinc-900 rounded-2xl border border-dashed flex flex-col items-center justify-center overflow-hidden">{uq?<span className="loader"/>:(d.questionImages?.[0])?<img src={d.questionImages[0]} className="w-full h-full object-contain"/>:<><Icons.Camera className="w-8 h-8 text-zinc-400 mb-2"/><span className="text-xs text-zinc-500">Question</span><input type="file" onChange={e=>hImg(e,'evidence')} className="absolute inset-0 opacity-0"/></>}</div>
+                    <div className="relative w-full aspect-video bg-zinc-100 dark:bg-zinc-900 rounded-2xl border border-dashed border-blue-300 flex flex-col items-center justify-center overflow-hidden">{us?<span className="loader"/>:(d.schemeImages?.[0])?<img src={d.schemeImages[0]} className="w-full h-full object-contain"/>:<><Icons.Check className="w-8 h-8 text-blue-400 mb-2"/><span className="text-xs text-blue-500 font-bold">Marking Scheme</span><input type="file" onChange={e=>hImg(e,'scheme')} className="absolute inset-0 opacity-0"/></>}</div>
+                    <div className="bg-white dark:bg-surface rounded-2xl p-4 min-h-[150px] border border-zinc-200 dark:border-zinc-800"><textarea className="w-full h-full bg-transparent resize-none focus:outline-none min-h-[150px]" placeholder="Explain why you failed..." value={d.explanation} onChange={e=>sD({...d,explanation:e.target.value})}/></div>
+                    <div className="grid grid-cols-2 gap-4"><div><label className="text-[10px] text-zinc-500 uppercase font-bold">Subject</label><select value={d.subject} onChange={e=>sD({...d,subject:e.target.value,topic:''})} className="w-full bg-zinc-100 dark:bg-zinc-900 p-3 rounded-xl mt-1 text-sm"><option value="General">General</option>{subs.map(s=><option key={s.id} value={s.name}>{s.name}</option>)}</select></div><div><label className="text-[10px] text-zinc-500 uppercase font-bold">Type</label><select value={d.questionType} onChange={e=>sD({...d,questionType:e.target.value})} className="w-full bg-zinc-100 dark:bg-zinc-900 p-3 rounded-xl mt-1 text-sm"><option value="MC">MC</option><option value="LQ">Long Question</option></select></div></div>
+                    <div className="bg-white dark:bg-surface rounded-2xl p-4 border border-zinc-200 dark:border-zinc-800"><label className="text-[10px] text-zinc-500 uppercase font-bold mb-2 block">Topic</label><div className="flex gap-2">{d.subject!=='General'&&cur?<select value={d.topic} onChange={e=>sD({...d,topic:e.target.value})} className="w-full bg-zinc-100 dark:bg-zinc-900 p-3 rounded-xl text-sm"><option value="">-- Select --</option>{tops.map(t=><option key={t} value={t}>{t}</option>)}</select>:<input placeholder="e.g. Algebra" value={d.topic} onChange={e=>sD({...d,topic:e.target.value})} className="w-full bg-zinc-100 dark:bg-zinc-900 p-3 rounded-xl text-sm"/>}</div></div>
+                    {item&&<button onClick={()=>{if(confirm('Delete?')){del(item.id);back()}}} className="w-full py-4 text-red-500 font-bold text-sm bg-zinc-100 dark:bg-zinc-900 rounded-xl">Delete Log</button>}
+                </div></motion.div><AnimatePresence>{ao&&<motion.div initial={{y:"100%"}} animate={{y:"0%"}} exit={{y:"100%"}} className="fixed inset-0 z-[70] bg-white dark:bg-surface rounded-t-3xl shadow-2xl overflow-hidden"><AIChat log={d} close={()=>sAo(0)} user={user}/></motion.div>}</AnimatePresence><AnimatePresence>{po&&<motion.div initial={{y:"100%"}} animate={{y:"0%"}} exit={{y:"100%"}} className="fixed inset-0 z-[70] bg-white dark:bg-surface rounded-t-3xl shadow-2xl overflow-hidden"><PracticeM log={d} close={()=>sPo(0)} user={user}/></motion.div>}</AnimatePresence></TouchWrap>;
         };
 
-        const NoteEditor = ({ item, onSave, onBack, onDelete }) => {
-            const [title, setTitle] = useState(item?.title||''), ref=useRef(null), isDark=document.documentElement.classList.contains('dark');
-            useEffect(() => { if(window.tinymce){window.tinymce.init({selector:'#mobile-editor',height:'100%',menubar:false,toolbar:'bold italic bullist | h1 h2',skin:isDark?'oxide-dark':'oxide',content_css:isDark?'dark':'default',setup:ed=>{ref.current=ed;ed.on('init',()=>{if(item?.content)ed.setContent(item.content)})}}); return ()=>window.tinymce.remove()} }, []);
-            return (
-                <TouchWrapper onBack={onBack} className="fixed inset-0 bg-zinc-50 dark:bg-onyx z-[60] flex flex-col">
-                    <motion.div initial={{y:'100%'}} animate={{y:0}} exit={{y:'100%'}} className="flex-1 flex flex-col">
-                        <div className="p-4 flex items-center justify-between border-b border-zinc-200 dark:border-zinc-800 bg-white dark:bg-onyx shrink-0">
-                            <button onClick={onBack}><Icons.X className="w-6 h-6 text-zinc-400"/></button>
-                            <input value={title} onChange={e=>setTitle(e.target.value)} placeholder="Untitled Note" className="bg-transparent font-bold text-center focus:outline-none text-zinc-900 dark:text-white w-full mx-4"/>
-                            <button onClick={()=>{onSave({...item,title,content:ref.current?ref.current.getContent():''});onBack()}} className="text-brand font-bold">Done</button>
-                        </div>
-                        <div className="flex-1 relative"><textarea id="mobile-editor"></textarea></div>
-                        {item && <div className="p-4 border-t border-zinc-200 dark:border-zinc-800 bg-white dark:bg-onyx"><button onClick={()=>{onDelete(item.id);onBack()}} className="text-red-500 w-full text-center text-sm font-bold">Delete Note</button></div>}
-                    </motion.div>
-                </TouchWrapper>
-            );
+        const NoteEd=({item,save,back,del})=>{
+            const [t,sT]=useState(item?.title||''),r=useRef(null);
+            useEffect(()=>{if(window.tinymce){window.tinymce.init({selector:'#m-ed',height:'100%',menubar:false,toolbar:'bold italic bullist | h1 h2',skin:document.documentElement.classList.contains('dark')?'oxide-dark':'oxide',content_css:document.documentElement.classList.contains('dark')?'dark':'default',setup:e=>{r.current=e;e.on('init',()=>{if(item?.content)e.setContent(item.content)})}});return ()=>window.tinymce.remove()}},[]);
+            return <TouchWrap onBack={back} cls="fixed inset-0 bg-zinc-50 dark:bg-onyx z-[60] flex flex-col"><motion.div initial={{y:'100%'}} animate={{y:0}} exit={{y:'100%'}} className="flex-1 flex flex-col"><div className="p-4 flex items-center justify-between border-b border-zinc-200 dark:border-zinc-800 bg-white dark:bg-onyx shrink-0"><button onClick={back}><Icons.X className="w-6 h-6 text-zinc-400"/></button><input value={t} onChange={e=>sT(e.target.value)} placeholder="Untitled" className="bg-transparent font-bold text-center focus:outline-none w-full mx-4"/><button onClick={()=>{save({...item,title:t,content:r.current?r.current.getContent():''});back()}} className="text-brand font-bold">Done</button></div><div className="flex-1 relative"><textarea id="m-ed"></textarea></div>{item&&<div className="p-4 border-t bg-white dark:bg-onyx"><button onClick={()=>{del(item.id);back()}} className="text-red-500 w-full text-center text-sm font-bold">Delete Note</button></div>}</motion.div></TouchWrap>;
         }
 
-        const ErrorList = ({ onEdit, subjects, user }) => {
-            const [logs, setLogs] = useState([]);
-            const [lastDoc, setLastDoc] = useState(null);
-            const [loading, setLoading] = useState(false);
-            const [hasMore, setHasMore] = useState(true);
-
-            // Filter states matching UI
-            const [mode, setMode] = useState('date'), [sub, setSub] = useState(null), [top, setTop] = useState(null), [sort, setSort] = useState('desc');
-            const [typeFilter, setTypeFilter] = useState('all');
-            const [showRandomPicker, setShowRandomPicker] = useState(false);
-
-            // Server-Side Fetch Logic (The "Logic by indexing")
-            const fetchLogs = useCallback(async (isLoadMore = false) => {
-                if (!user) return;
-                setLoading(true);
-                try {
-                    let constraints = [];
-                    const logsRef = window.firebase.collection(window.firebase.db, 'artifacts', "darnote-app", 'users', user.uid, 'error_logs');
-
-                    // 1. Type Filter
-                    if (typeFilter !== 'all') constraints.push(window.firebase.where('questionType', '==', typeFilter));
-                    
-                    // 2. Category Filter (Subject + Topic)
-                    if (mode === 'category') {
-                        if (sub && sub !== 'General') constraints.push(window.firebase.where('subject', '==', sub));
-                        else if (sub === 'General') constraints.push(window.firebase.where('subject', '==', 'General'));
-                        
-                        // NOTE: Compound queries (Subject + Topic) require composite index in Firebase Console
-                        if (top) constraints.push(window.firebase.where('topic', '==', top));
-                    }
-
-                    // 3. Sort
-                    constraints.push(window.firebase.orderBy('createdAt', sort));
-
-                    // 4. Pagination
-                    if (isLoadMore && lastDoc) constraints.push(window.firebase.startAfter(lastDoc));
-                    constraints.push(window.firebase.limit(10));
-
-                    const q = window.firebase.query(logsRef, ...constraints);
-                    
-                    // Fetch
-                    const snap = await window.firebase.getDocs(q);
-                    
-                    const newLogs = snap.docs.map(d => ({ id: d.id, ...d.data() }));
-                    
-                    if (isLoadMore) setLogs(prev => [...prev, ...newLogs]);
-                    else setLogs(newLogs);
-                    
-                    setLastDoc(snap.docs[snap.docs.length - 1]);
-                    setHasMore(snap.docs.length === 10);
-                } catch (error) {
-                    console.error("Firestore Error:", error);
-                    if (error.message.includes('index')) alert("System: A new index is required for this specific sort/filter combination. Please open Console (F12) to see the creation link.");
-                }
-                setLoading(false);
-            }, [user, mode, sub, top, typeFilter, sort, lastDoc]);
-
-            // Trigger fetch on filter change
-            useEffect(() => {
-                setLastDoc(null);
-                setHasMore(true);
-                fetchLogs(false);
-            }, [user, mode, sub, top, typeFilter, sort]);
-
-            const topics = (subjects.find(s=>s.name===sub)?.topics||[]).sort();
+        const ErrList=({onEdit,subs,user,state,setState})=>{
+            const {logs,last,hasMore,loading,mode,sub,top,sort,type,rand}=state;
+            useEffect(()=>{
+                const scroller = document.getElementById('main-scroller');
+                if(scroller) scroller.scrollTop = state.scroll || 0;
+                return () => { if(scroller) setState(s=>({...s, scroll: scroller.scrollTop})); }
+            },[]);
             
-            const handleRandom = (type) => {
-                // Since we don't have all docs, we pick from the currently loaded batch
-                const candidates = logs.filter(i => (i.questionType || 'MC') === type);
-                if (candidates.length === 0) return alert(`No ${type} logs visible. Try loading more!`);
-                const rand = candidates[Math.floor(Math.random() * candidates.length)];
-                setShowRandomPicker(false);
-                onEdit('edit_error', rand.id); 
+            const fetchL=async(more=false)=>{
+                if(!user)return; setState(s=>({...s,loading:true}));
+                try{
+                    const ref=window.fb.collection(window.fb.db,'artifacts',"darnote-app",'users',user.uid,'error_logs');
+                    let c=[];
+                    if(type!=='all')c.push(window.fb.where('questionType','==',type));
+                    if(mode==='cat'){
+                        if(sub&&sub!=='General')c.push(window.fb.where('subject','==',sub));
+                        else if(sub==='General')c.push(window.fb.where('subject','==', 'General'));
+                        if(top)c.push(window.fb.where('topic','==',top));
+                    }
+                    c.push(window.fb.orderBy('createdAt',sort));
+                    if(more&&last)c.push(window.fb.startAfter(last));
+                    c.push(window.fb.limit(10));
+                    const s=await window.fb.getDocs(window.fb.query(ref,...c));
+                    const n=s.docs.map(d=>({id:d.id,...d.data()}));
+                    setState(p=>({...p,logs:more?[...p.logs,...n]:n,last:s.docs[s.docs.length-1],hasMore:s.docs.length===10,loading:false}));
+                }catch(e){console.error(e);setState(s=>({...s,loading:false}));if(e.message.includes('index'))alert("Missing Index")}
+            };
+            useEffect(()=>{if(logs.length===0) fetchL()},[user,mode,sub,top,type,sort]); 
+
+            const tops=(subs.find(s=>s.name===sub)?.topics||[]).sort();
+            const pickR=(t)=>{
+                const c=logs.filter(i=>(i.questionType||'MC')===t);
+                if(c.length===0)return alert(`No ${t} visible.`);
+                setState(s=>({...s,rand:false})); onEdit('edit_error',c[Math.floor(Math.random()*c.length)].id);
             };
 
-            return (
-                <div className="p-6 pb-24 min-h-screen flex flex-col relative">
-                    <div className="flex flex-col gap-4 mb-6">
-                        <div className="flex justify-between items-end">
-                            <h2 className="text-3xl font-bold text-zinc-900 dark:text-white">Error Logs</h2>
-                            <div className="flex gap-2">
-                                <button onClick={()=>setShowRandomPicker(!showRandomPicker)} className="p-2 bg-orange-500 text-white rounded-lg shadow-lg relative"><Icons.Dice className="w-5 h-5"/></button>
-                                <div className="flex bg-zinc-200 dark:bg-zinc-800 rounded-lg p-1 gap-1">
-                                    <button onClick={()=>{setMode('date');setSub(null)}} className={`px-3 py-1 rounded-md text-[10px] font-bold transition-all ${mode==='date'?'bg-white dark:bg-zinc-600 shadow-sm text-black dark:text-white':'text-zinc-500'}`}>All</button>
-                                    <button onClick={()=>setMode('category')} className={`px-3 py-1 rounded-md text-[10px] font-bold transition-all ${mode==='category'?'bg-white dark:bg-zinc-600 shadow-sm text-black dark:text-white':'text-zinc-500'}`}>Filter</button>
-                                </div>
-                            </div>
-                        </div>
-                        <div className="flex justify-between items-center">
-                            <div className="flex bg-zinc-100 dark:bg-zinc-800/50 p-1 rounded-lg">
-                                {['all', 'MC', 'LQ'].map(t => (<button key={t} onClick={()=>setTypeFilter(t)} className={`px-3 py-1 rounded-md text-[10px] font-bold uppercase transition-all ${typeFilter===t ? 'bg-white dark:bg-zinc-700 shadow-sm text-brand' : 'text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-300'}`}>{t}</button>))}
-                            </div>
-                            <button onClick={()=>setSort(p=>p==='desc'?'asc':'desc')} className="flex items-center gap-1 text-xs font-bold text-zinc-500 hover:text-brand"><Icons.Sort className="w-4 h-4"/>{sort==='desc'?'Newest':'Oldest'}</button>
-                        </div>
-                    </div>
-                    <AnimatePresence>{showRandomPicker && (<motion.div initial={{opacity:0, scale:0.9}} animate={{opacity:1, scale:1}} exit={{opacity:0, scale:0.9}} className="absolute top-16 right-6 z-20 bg-white dark:bg-zinc-800 border border-zinc-200 dark:border-white/10 shadow-xl rounded-xl p-3 w-48 origin-top-right"><div className="text-xs font-bold text-zinc-500 mb-2 uppercase tracking-wider">Pick Random (Visible)</div><div className="space-y-2"><button onClick={()=>handleRandom('MC')} className="w-full text-left p-2 hover:bg-zinc-100 dark:hover:bg-white/5 rounded-lg text-sm flex justify-between"><span>Random MC</span> <span className="text-xs bg-indigo-500 text-white px-1.5 rounded">?</span></button><button onClick={()=>handleRandom('LQ')} className="w-full text-left p-2 hover:bg-zinc-100 dark:hover:bg-white/5 rounded-lg text-sm flex justify-between"><span>Random LQ</span> <span className="text-xs bg-orange-500 text-white px-1.5 rounded">?</span></button></div></motion.div>)}</AnimatePresence>
-                    {mode === 'category' && (<div className="mb-4 space-y-4"><div className="overflow-x-auto no-scrollbar pb-2"><div className="flex gap-2"><button onClick={()=>{setSub(sub==='General'?null:'General');setTop(null)}} className={`px-4 py-2 rounded-full text-xs font-bold whitespace-nowrap ${sub==='General'?'bg-brand text-white':'bg-zinc-100 dark:bg-zinc-800 text-zinc-500'}`}>General</button>{subjects.map(s=><button key={s.name} onClick={()=>{setSub(sub===s.name?null:s.name);setTop(null)}} className={`px-4 py-2 rounded-full text-xs font-bold whitespace-nowrap ${sub===s.name?'bg-brand text-white':'bg-zinc-100 dark:bg-zinc-800 text-zinc-500'}`}>{s.name}</button>)}</div></div><AnimatePresence>{sub && topics.length>0 && <motion.div initial={{height:0}} animate={{height:'auto'}} className="overflow-x-auto no-scrollbar pb-2"><div className="flex gap-2"><button onClick={()=>setTop(null)} className={`px-3 py-1 rounded-lg text-[10px] font-bold border ${!top?'border-brand text-brand':'border-zinc-200 dark:border-zinc-700 text-zinc-500'}`}>All</button>{topics.map(t=><button key={t} onClick={()=>setTop(top===t?null:t)} className={`px-3 py-1 rounded-lg text-[10px] font-bold border ${top===t?'bg-brand border-brand text-white':'border-zinc-200 dark:border-zinc-700 text-zinc-500'}`}>{t}</button>)}</div></motion.div>}</AnimatePresence></div>)}
-                    <div className="space-y-3 flex-1">
-                        {mode==='category' && !sub ? <div className="h-40 flex items-center justify-center text-zinc-400 text-sm italic">Select a Subject</div> : logs.length===0 && !loading ? <div className="h-40 flex items-center justify-center text-zinc-400 text-sm italic">No errors found.</div> : logs.map((item,i) => (<motion.div key={item.id} initial={{opacity:0,y:10}} animate={{opacity:1,y:0}} transition={{delay:i*0.05}} onClick={()=>onEdit('edit_error',item.id)} className="bg-white dark:bg-surface p-4 rounded-2xl border border-zinc-200 dark:border-zinc-800 flex justify-between items-center active:scale-[0.98] transition-transform"><div><div className="font-bold text-zinc-800 dark:text-zinc-200 mb-1">{item.title||'Untitled'}</div><div className="flex items-center gap-2"><span className={`text-[10px] font-bold px-2 py-0.5 rounded ${item.mastered?"bg-green-500/20 text-green-500":"bg-red-500/20 text-red-500"}`}>{item.mastered?'SOLVED':'REVIEW'}</span><span className="text-[10px] text-zinc-400 uppercase tracking-wider">{item.subject}</span><span className={`text-[10px] font-bold px-1.5 py-0.5 rounded border ${item.questionType==='LQ'?'border-orange-500 text-orange-500':'border-indigo-500 text-indigo-500'}`}>{item.questionType||'MC'}</span>{item.topic && <span className="text-[10px] text-zinc-500 bg-zinc-100 dark:bg-zinc-800 px-2 py-0.5 rounded-md hidden sm:inline">{item.topic}</span>}</div></div><div className="text-right"><div className="text-[10px] text-zinc-500 mb-1">{new Date(item.createdAt||0).toLocaleDateString()}</div><Icons.ChevronLeft className="w-5 h-5 text-zinc-600 rotate-180 ml-auto"/></div></motion.div>))}
-                        {loading && <div className="text-center py-4 text-xs text-zinc-500 animate-pulse">Fetching Logs...</div>}
-                        {!loading && hasMore && logs.length > 0 && <button onClick={()=>fetchLogs(true)} className="w-full py-3 mt-4 text-xs font-bold text-brand bg-brand/5 rounded-xl">Load More</button>}
-                    </div>
-                </div>
-            );
+            return <div className="p-6 pb-24 min-h-screen flex flex-col relative">
+                <div className="flex flex-col gap-4 mb-6"><div className="flex justify-between items-end"><h2 className="text-3xl font-bold">Error Logs</h2><div className="flex gap-2"><button onClick={()=>setState(s=>({...s,rand:!rand}))} className="p-2 bg-orange-500 text-white rounded-lg shadow-lg"><Icons.Dice className="w-5 h-5"/></button><div className="flex bg-zinc-200 dark:bg-zinc-800 rounded-lg p-1 gap-1"><button onClick={()=>setState(s=>({...s,mode:'date',sub:null}))} className={`px-3 py-1 rounded-md text-[10px] font-bold ${mode==='date'?'bg-white dark:bg-zinc-600 shadow-sm':'text-zinc-500'}`}>All</button><button onClick={()=>setState(s=>({...s,mode:'cat'}))} className={`px-3 py-1 rounded-md text-[10px] font-bold ${mode==='cat'?'bg-white dark:bg-zinc-600 shadow-sm':'text-zinc-500'}`}>Filter</button></div></div></div><div className="flex justify-between items-center"><div className="flex bg-zinc-100 dark:bg-zinc-800/50 p-1 rounded-lg">{['all','MC','LQ'].map(t=><button key={t} onClick={()=>setState(s=>({...s,type:t,last:null,logs:[]}))} className={`px-3 py-1 rounded-md text-[10px] font-bold uppercase ${type===t?'bg-white dark:bg-zinc-700 shadow-sm text-brand':'text-zinc-400'}`}>{t}</button>)}</div><button onClick={()=>setState(s=>({...s,sort:sort==='desc'?'asc':'desc',last:null,logs:[]}))} className="flex items-center gap-1 text-xs font-bold text-zinc-500"><Icons.Sort className="w-4 h-4"/>{sort==='desc'?'Newest':'Oldest'}</button></div></div>
+                <AnimatePresence>{rand&&<motion.div initial={{opacity:0,scale:0.9}} animate={{opacity:1,scale:1}} exit={{opacity:0}} className="absolute top-16 right-6 z-20 bg-white dark:bg-zinc-800 border border-zinc-200 dark:border-white/10 shadow-xl rounded-xl p-3 w-48"><div className="text-xs font-bold text-zinc-500 mb-2 uppercase">Pick Random</div><div className="space-y-2"><button onClick={()=>pickR('MC')} className="w-full text-left p-2 hover:bg-zinc-100 dark:hover:bg-white/5 rounded-lg text-sm flex justify-between"><span>Random MC</span><span className="text-xs bg-indigo-500 text-white px-1 rounded">?</span></button><button onClick={()=>pickR('LQ')} className="w-full text-left p-2 hover:bg-zinc-100 dark:hover:bg-white/5 rounded-lg text-sm flex justify-between"><span>Random LQ</span><span className="text-xs bg-orange-500 text-white px-1 rounded">?</span></button></div></motion.div>}</AnimatePresence>
+                {mode==='cat'&&<div className="mb-4 space-y-4"><div className="overflow-x-auto no-scrollbar pb-2"><div className="flex gap-2"><button onClick={()=>setState(s=>({...s,sub:sub==='General'?null:'General',top:null,last:null,logs:[]}))} className={`px-4 py-2 rounded-full text-xs font-bold whitespace-nowrap ${sub==='General'?'bg-brand text-white':'bg-zinc-100 dark:bg-zinc-800 text-zinc-500'}`}>General</button>{subs.map(sb=><button key={sb.name} onClick={()=>setState(s=>({...s,sub:sub===sb.name?null:sb.name,top:null,last:null,logs:[]}))} className={`px-4 py-2 rounded-full text-xs font-bold whitespace-nowrap ${sub===sb.name?'bg-brand text-white':'bg-zinc-100 dark:bg-zinc-800 text-zinc-500'}`}>{sb.name}</button>)}</div></div>{sub&&tops.length>0&&<div className="overflow-x-auto no-scrollbar pb-2"><div className="flex gap-2"><button onClick={()=>setState(s=>({...s,top:null,last:null,logs:[]}))} className={`px-3 py-1 rounded-lg text-[10px] font-bold border ${!top?'border-brand text-brand':'border-zinc-200 text-zinc-500'}`}>All</button>{tops.map(t=><button key={t} onClick={()=>setState(s=>({...s,top:top===t?null:t,last:null,logs:[]}))} className={`px-3 py-1 rounded-lg text-[10px] font-bold border ${top===t?'bg-brand border-brand text-white':'border-zinc-200 text-zinc-500'}`}>{t}</button>)}</div></div>}</div>}
+                <div className="space-y-3 flex-1">{logs.length===0&&!loading?<div className="h-40 flex items-center justify-center text-zinc-400 text-sm italic">No errors found.</div>:logs.map((i,x)=><motion.div key={i.id} initial={{opacity:0,y:10}} animate={{opacity:1,y:0}} transition={{delay:x*0.05}} onClick={()=>onEdit('edit_error',i.id)} className="bg-white dark:bg-surface p-4 rounded-2xl border border-zinc-200 dark:border-zinc-800 flex justify-between items-center active:scale-[0.98]"><div><div className="font-bold mb-1">{i.title||'Untitled'}</div><div className="flex items-center gap-2"><span className={`text-[10px] font-bold px-2 py-0.5 rounded ${i.mastered?"bg-green-500/20 text-green-500":"bg-red-500/20 text-red-500"}`}>{i.mastered?'SOLVED':'REVIEW'}</span><span className="text-[10px] text-zinc-400 uppercase">{i.subject}</span><span className={`text-[10px] font-bold px-1.5 py-0.5 rounded border ${i.questionType==='LQ'?'border-orange-500 text-orange-500':'border-indigo-500 text-indigo-500'}`}>{i.questionType||'MC'}</span>{i.topic&&<span className="text-[10px] text-zinc-500 bg-zinc-100 dark:bg-zinc-800 px-2 py-0.5 rounded hidden sm:inline">{i.topic}</span>}</div></div><div className="text-right"><div className="text-[10px] text-zinc-500 mb-1">{new Date(i.createdAt||0).toLocaleDateString()}</div><Icons.Chevron className="w-5 h-5 text-zinc-600 rotate-180 ml-auto"/></div></motion.div>)}
+                {loading&&<div className="text-center py-4 text-xs text-zinc-500 animate-pulse">Fetching...</div>}{!loading&&hasMore&&logs.length>0&&<button onClick={()=>fetchL(true)} className="w-full py-3 mt-4 text-xs font-bold text-brand bg-brand/5 rounded-xl">Load More</button>}</div>
+            </div>;
         };
 
-        const App = () => {
-            const [user, setUser] = useState(null), [tab, setTab] = useState('home'), [sel, setSel] = useState(null), [sheet, setSheet] = useState(false);
-            const [settings, setSettings] = useState({theme:'dark', bio:''});
-
-            useEffect(()=>window.firebase.onAuthStateChanged(window.firebase.auth, setUser), []);
-            
-            // Replaced full useData hook with lightweight Dashboard Hook
-            const { recentErrors, counts } = useDashboardData(user);
-            const { data:notes } = useData(user,'notes');
-            const subjects = useSubjects(user);
-            
-            const getParams = () => { const p = new URLSearchParams(window.location.search); return { view: p.get('view') || 'home', id: p.get('id') }; };
-            useEffect(() => {
-                const handleNav = () => { const { view } = getParams(); setTab(view); };
-                window.addEventListener('popstate', handleNav);
-                handleNav();
-                return () => window.removeEventListener('popstate', handleNav);
-            }, []);
-            
-            // Logic to hydrate 'sel' if navigating directly to ID (Simplified for server-side world)
-            // Note: Since we don't fetch all errors, we might need to fetch single if ID present but not in recent.
-            // For mobile simplicity, we skip complex hydration here.
-            
-            const navigate = (newTab, id=null) => {
-                const url = id ? `?view=${newTab}&id=${id}` : `?view=${newTab}`;
-                window.history.pushState({ tab: newTab, id }, '', url);
-                setTab(newTab);
-                if(newTab.startsWith('add')) setSel(null); 
+        const App=()=>{
+            const [u,sU]=useState(null),[tab,sTab]=useState('home'),[sel,sSel]=useState(null),[sht,sSht]=useState(false),[set,sSet]=useState({theme:'dark',bio:''});
+            const [eSt,sEst]=useState({logs:[],last:null,hasMore:true,loading:false,mode:'date',sub:null,top:null,sort:'desc',type:'all',rand:false,scroll:0});
+            useEffect(()=>window.fb.onAuthStateChanged(window.fb.auth,sU),[]);
+            const {recentErrors,counts}=useDash(u), {data:notes}=useData(u,'notes'), subs=useSub(u);
+            const getP=()=>{const p=new URLSearchParams(window.location.search);return{view:p.get('view')||'home',id:p.get('id')}};
+            useEffect(()=>{const h=()=>{const{view}=getP();sTab(view)};window.addEventListener('popstate',h);h();return()=>window.removeEventListener('popstate',h)},[]);
+            const nav=(t,id=null)=>{
+                const u=id?`?view=${t}&id=${id}`:`?view=${t}`;
+                window.history.pushState({tab:t,id,fromApp:true},'',u);sTab(t);
+                if(t.startsWith('add'))sSel(null);
             };
-
-            const goBack = () => {
-                if (tab.includes('edit') || tab.includes('add')) {
-                    const dest = tab.includes('error') ? 'errors' : 'notes';
-                    navigate(dest); 
+            const goBack=()=>{
+                if((tab.includes('edit')||tab.includes('add')) && window.history.state?.fromApp){
+                     window.history.back(); // THE UPGRADE: Pop exact state if we pushed it
                 } else {
-                    if (window.history.length > 1) window.history.back(); else navigate('home');
+                     if(tab.includes('edit')||tab.includes('add')){const d=tab.includes('error')?'errors':'notes';nav(d)}
+                     else if(window.history.length>1)window.history.back();else nav('home');
                 }
             };
-
-            useEffect(() => {
-                if(!user) return;
-                const setRef = window.firebase.doc(window.firebase.db,'artifacts','darnote-app','users',user.uid,'settings','profile');
-                return window.firebase.onSnapshot(setRef,d=>{ 
-                    const dat = d.data() || {theme:'dark', bio:''};
-                    setSettings(dat);
-                    if(dat.theme==='dark') document.documentElement.classList.add('dark');
-                    else document.documentElement.classList.remove('dark'); 
-                });
-            }, [user]);
-
-            const updateSettings = async (newS) => await window.firebase.setDoc(window.firebase.doc(window.firebase.db,'artifacts','darnote-app','users',user.uid,'settings','profile'), newS, {merge:true});
-
-            const save = async (col, d) => {
-                const c = window.firebase.collection(window.firebase.db,'artifacts','darnote-app','users',user.uid,col);
-                if(d.id) await window.firebase.updateDoc(window.firebase.doc(c,d.id),d); else await window.firebase.addDoc(c,{...d,createdAt:new Date().toISOString()});
-                goBack();
-            };
-            const del = async (id, col) => await window.firebase.deleteDoc(window.firebase.doc(window.firebase.db,'artifacts','darnote-app','users',user.uid,col,id));
-
-            if(!user) return <Splash onLogin={()=>window.firebase.signInWithPopup(window.firebase.auth, new window.firebase.GoogleAuthProvider())} />;
-
-            return (
-                <div className="h-[100dvh] w-full bg-zinc-50 dark:bg-onyx text-zinc-900 dark:text-zinc-100 flex flex-col overflow-hidden">
-                    <div className="flex-1 overflow-y-auto">
-                        <AnimatePresence mode="wait">
-                            {tab==='home' && <div key="h" className="p-6 pb-24 space-y-8">
-                                <div className="flex justify-between items-center"><div><div className="text-zinc-500 text-sm">Welcome Back,</div><div className="text-2xl font-bold">{user.displayName?.split(' ')[0]}</div></div><img src={user.photoURL} className="w-10 h-10 rounded-full"/></div>
-                                <div className="bg-gradient-to-br from-brand to-brand-dark p-6 rounded-3xl text-white shadow-glow"><div className="text-sm opacity-80">Total Failures</div><div className="text-4xl font-bold mb-4">{counts.total}</div><div className="flex gap-4"><div className="bg-white/20 px-3 py-1 rounded text-xs"><b>{counts.mastered}</b> Mastered</div><div className="bg-white/20 px-3 py-1 rounded text-xs"><b>{counts.notes}</b> Notes</div></div></div>
-                                <div className="grid grid-cols-2 gap-4"><button onClick={()=>{setSel(null);navigate('add_error')}} className="bg-white dark:bg-surface p-4 rounded-2xl border border-zinc-200 dark:border-zinc-800 flex flex-col items-center gap-2"><div className="w-10 h-10 bg-red-500/10 rounded-full flex items-center justify-center text-red-500"><Icons.Bug className="w-5 h-5"/></div><span className="text-sm font-bold">Log Error</span></button><button onClick={()=>{setSel(null);navigate('add_note')}} className="bg-white dark:bg-surface p-4 rounded-2xl border border-zinc-200 dark:border-zinc-800 flex flex-col items-center gap-2"><div className="w-10 h-10 bg-blue-500/10 rounded-full flex items-center justify-center text-blue-500"><Icons.Book className="w-5 h-5"/></div><span className="text-sm font-bold">New Note</span></button></div>
-                                <div><div className="flex justify-between items-end mb-4"><h3 className="font-bold text-lg">Recent Failures</h3><button onClick={()=>navigate('errors')} className="text-xs text-brand">View All</button></div><div className="space-y-3">{recentErrors.length===0?<div className="text-zinc-500 text-sm italic">No recent errors.</div>:recentErrors.map(e=><div key={e.id} onClick={()=>{setSel(e);navigate('edit_error', e.id)}} className="bg-white dark:bg-surface p-4 rounded-2xl border border-zinc-200 dark:border-zinc-800 flex items-center gap-4"><div className={`w-2 h-10 rounded-full ${e.mastered?'bg-green-500':'bg-red-500'}`}></div><div className="flex-1 overflow-hidden"><div className="font-bold truncate">{e.title}</div><div className="text-xs text-zinc-500">{e.subject} • {new Date(e.createdAt||0).toLocaleDateString()}</div></div></div>)}</div></div>
-                            </div>}
-                            
-                            {/* ERROR LIST now handles its own fetching */}
-                            {tab==='errors' && <ErrorList key="e" onEdit={(m,id)=>{ 
-                                // Try to find in recent list first to avoid extra fetch, otherwise ErrorList will have it
-                                const it = recentErrors.find(x=>x.id===id); 
-                                if (it) setSel(it); 
-                                // If not in recent, ErrorList will handle selection via context if needed, 
-                                // but for now we rely on the click passing the ID.
-                                // NOTE: In a full server-side app, we'd fetch the single doc if setSel is null.
-                                navigate(m, id); 
-                            }} subjects={subjects} user={user} />}
-                            
-                            {tab==='notes' && <div key="n" className="p-6 pb-24 min-h-screen"><h2 className="text-3xl font-bold mb-6">Notes</h2><div className="space-y-3">{notes.map(n=><div key={n.id} onClick={()=>{setSel(n);navigate('edit_note',n.id)}} className="bg-white dark:bg-surface p-4 rounded-2xl border border-zinc-200 dark:border-zinc-800 flex justify-between"><div><div className="font-bold">{n.title||'Untitled'}</div><div className="text-xs text-zinc-500">{new Date(n.createdAt||0).toLocaleDateString()}</div></div><Icons.ChevronLeft className="w-5 h-5 rotate-180"/></div>)}</div></div>}
-                            
-                            {tab==='profile' && <div key="p" className="p-6 pb-24 h-full flex flex-col">
-                                <h2 className="text-3xl font-bold mb-6">Settings</h2>
-                                <div className="flex flex-col items-center mb-8"><img src={user.photoURL} className="w-24 h-24 rounded-full border-4 border-brand mb-4"/><h3 className="text-xl font-bold">{user.displayName}</h3></div>
-                                
-                                <div className="space-y-4 mb-8">
-                                    <div className="bg-white dark:bg-surface p-4 rounded-2xl border border-zinc-200 dark:border-zinc-800 flex justify-between items-center">
-                                        <span className="font-bold flex items-center gap-3"><Icons.Sun className="w-5 h-5"/> Appearance</span>
-                                        <button onClick={()=>updateSettings({theme:settings.theme==='dark'?'light':'dark'})} className="bg-zinc-100 dark:bg-zinc-900 px-4 py-2 rounded-lg text-xs font-bold flex items-center gap-2 border border-zinc-200 dark:border-zinc-700">
-                                            {settings.theme==='dark' ? <><Icons.Moon className="w-4 h-4"/> Dark</> : <><Icons.Sun className="w-4 h-4"/> Light</>}
-                                        </button>
-                                    </div>
-                                    <div className="bg-white dark:bg-surface p-4 rounded-2xl border border-zinc-200 dark:border-zinc-800">
-                                         <label className="text-xs font-bold text-zinc-500 uppercase mb-2 block">Bio</label>
-                                         <textarea value={settings.bio||''} onChange={e=>updateSettings({bio:e.target.value})} placeholder="I make mistakes..." className="w-full bg-zinc-100 dark:bg-zinc-900 rounded-lg p-3 text-sm focus:outline-none resize-none h-20 text-zinc-900 dark:text-white"/>
-                                    </div>
-                                </div>
-                                
-                                <button onClick={()=>window.firebase.signOut(window.firebase.auth)} className="w-full py-4 bg-zinc-200 dark:bg-zinc-800 rounded-xl font-bold text-red-500 mt-auto">Sign Out</button>
-                            </div>}
-                        </AnimatePresence>
-                    </div>
-                    <div className="fixed bottom-0 w-full h-[80px] glass z-50 px-6 pb-2 flex items-center justify-between">
-                        {[{id:'home',I:Icons.Home,l:'Home'},{id:'errors',I:Icons.Bug,l:'Mistakes'},{id:'add',I:Icons.Plus,l:'',s:1},{id:'notes',I:Icons.Book,l:'Notes'},{id:'profile',I:Icons.User,l:'Settings'}].map(t=>t.s?<motion.button key={t.id} whileTap={{scale:0.9}} onClick={()=>setSheet(true)} className="w-14 h-14 bg-brand rounded-full flex items-center justify-center text-white shadow-glow mb-6"><t.I className="w-8 h-8"/></motion.button>:<button key={t.id} onClick={()=>navigate(t.id)} className={`flex flex-col items-center gap-1 ${tab===t.id?'text-brand':'text-zinc-500'}`}><t.I className="w-6 h-6"/><span className="text-[10px] font-medium">{t.l}</span></button>)}
-                    </div>
-                    {sheet && <div className="fixed inset-0 bg-black/80 z-[70] flex items-end justify-center" onClick={()=>setSheet(false)}><motion.div initial={{y:100}} animate={{y:0}} className="bg-white dark:bg-surface w-full max-w-md rounded-t-3xl p-6 space-y-4" onClick={e=>e.stopPropagation()}><div className="w-12 h-1 bg-zinc-300 rounded-full mx-auto mb-4"/><button onClick={()=>{setSheet(false);setSel(null);navigate('add_error')}} className="w-full p-4 bg-zinc-100 dark:bg-zinc-800 rounded-2xl flex items-center gap-4"><div className="p-2 bg-red-500/20 rounded-full text-red-500"><Icons.Bug className="w-6 h-6"/></div><span className="font-bold">Log Failure</span></button><button onClick={()=>{setSheet(false);setSel(null);navigate('add_note')}} className="w-full p-4 bg-zinc-100 dark:bg-zinc-800 rounded-2xl flex items-center gap-4"><div className="p-2 bg-blue-500/20 rounded-full text-blue-500"><Icons.Book className="w-6 h-6"/></div><span className="font-bold">New Note</span></button></motion.div></div>}
-                    <AnimatePresence>
-                        {/* Note: We pass a simple object if sel is missing but we're in add mode */}
-                        {(tab==='add_error'||tab==='edit_error') && <ErrorEditor item={sel || (tab==='edit_error'?recentErrors.find(e=>e.id===getParams().id):null)} onSave={d=>save('error_logs',d)} onBack={goBack} onDelete={id=>del(id,'error_logs')} user={user} subjects={subjects}/>}
-                        {(tab==='add_note'||tab==='edit_note') && <NoteEditor item={sel} onSave={d=>save('notes',d)} onBack={goBack} onDelete={id=>del(id,'notes')}/>}
+            useEffect(()=>{if(!u)return;const r=window.fb.doc(window.fb.db,'artifacts','darnote-app','users',u.uid,'settings','profile');return window.fb.onSnapshot(r,d=>{const D=d.data()||{theme:'dark',bio:''};sSet(D);document.documentElement.className=D.theme})},[u]);
+            const sv=async(c,d)=>{const r=window.fb.collection(window.fb.db,'artifacts','darnote-app','users',u.uid,c);if(d.id)await window.fb.updateDoc(window.fb.doc(r,d.id),d);else await window.fb.addDoc(r,{...d,createdAt:new Date().toISOString()});goBack()};
+            const dl=async(id,c)=>await window.fb.deleteDoc(window.fb.doc(window.fb.db,'artifacts','darnote-app','users',u.uid,c,id));
+            if(!u)return <div className="h-screen w-full flex flex-col items-center justify-center bg-onyx relative overflow-hidden"><div className="absolute top-[-20%] right-[-20%] w-[80%] h-[80%] bg-brand/20 rounded-full blur-[100px] animate-pulse"></div><motion.div initial={{y:20,opacity:0}} animate={{y:0,opacity:1}} className="z-10 text-center"><img src="https://raw.githubusercontent.com/darren6251/darnote/refs/heads/main/darNote%20logo.png" className="w-24 h-24 mx-auto mb-8 drop-shadow-glow"/><h1 className="text-4xl font-bold mb-2 tracking-tight text-white">darNote <span className="text-brand">Ultimate</span></h1><motion.button whileTap={{scale:0.95}} onClick={()=>window.fb.signInWithPopup(window.fb.auth,new window.fb.GoogleAuthProvider())} className="w-full bg-white text-black py-4 rounded-2xl font-bold text-lg flex items-center justify-center gap-3 shadow-xl mt-10"><Icons.Google className="w-6 h-6"/> Sign In</motion.button></motion.div></div>;
+            return <div className="h-[100dvh] w-full bg-zinc-50 dark:bg-onyx text-zinc-900 dark:text-zinc-100 flex flex-col overflow-hidden">
+                <div id="main-scroller" className="flex-1 overflow-y-auto">
+                    <AnimatePresence mode="wait">
+                        {tab==='home'&&<div key="h" className="p-6 pb-24 space-y-8"><div className="flex justify-between items-center"><div><div className="text-zinc-500 text-sm">Welcome Back,</div><div className="text-2xl font-bold">{u.displayName?.split(' ')[0]}</div></div><img src={u.photoURL} className="w-10 h-10 rounded-full"/></div><div className="bg-gradient-to-br from-brand to-brand-dark p-6 rounded-3xl text-white shadow-glow"><div className="text-sm opacity-80">Failures</div><div className="text-4xl font-bold mb-4">{counts.total}</div><div className="flex gap-4"><div className="bg-white/20 px-3 py-1 rounded text-xs"><b>{counts.mastered}</b> Mastered</div><div className="bg-white/20 px-3 py-1 rounded text-xs"><b>{counts.notes}</b> Notes</div></div></div><div className="grid grid-cols-2 gap-4"><button onClick={()=>{sSel(null);nav('add_error')}} className="bg-white dark:bg-surface p-4 rounded-2xl border border-zinc-200 dark:border-zinc-800 flex flex-col items-center gap-2"><div className="w-10 h-10 bg-red-500/10 rounded-full flex items-center justify-center text-red-500"><Icons.Bug className="w-5 h-5"/></div><span className="text-sm font-bold">Log Failure</span></button><button onClick={()=>{sSel(null);nav('add_note')}} className="bg-white dark:bg-surface p-4 rounded-2xl border border-zinc-200 dark:border-zinc-800 flex flex-col items-center gap-2"><div className="w-10 h-10 bg-blue-500/10 rounded-full flex items-center justify-center text-blue-500"><Icons.Book className="w-5 h-5"/></div><span className="text-sm font-bold">New Note</span></button></div><div><div className="flex justify-between items-end mb-4"><h3 className="font-bold text-lg">Recent</h3><button onClick={()=>nav('errors')} className="text-xs text-brand">View All</button></div><div className="space-y-3">{recentErrors.length===0?<div className="text-zinc-500 text-sm italic">No recent errors.</div>:recentErrors.map(e=><div key={e.id} onClick={()=>{sSel(e);nav('edit_error',e.id)}} className="bg-white dark:bg-surface p-4 rounded-2xl border border-zinc-200 dark:border-zinc-800 flex items-center gap-4"><div className={`w-2 h-10 rounded-full ${e.mastered?'bg-green-500':'bg-red-500'}`}></div><div className="flex-1 truncate"><div className="font-bold truncate">{e.title}</div><div className="text-xs text-zinc-500">{e.subject} • {new Date(e.createdAt||0).toLocaleDateString()}</div></div></div>)}</div></div></div>}
+                        {tab==='errors'&&<ErrList key="e" onEdit={(m,id)=>{const it=recentErrors.find(x=>x.id===id)||eSt.logs.find(x=>x.id===id);if(it)sSel(it);nav(m,id)}} subs={subs} user={u} state={eSt} setState={sEst}/>}
+                        {tab==='notes'&&<div key="n" className="p-6 pb-24 min-h-screen"><h2 className="text-3xl font-bold mb-6">Notes</h2><div className="space-y-3">{notes.map(n=><div key={n.id} onClick={()=>{sSel(n);nav('edit_note',n.id)}} className="bg-white dark:bg-surface p-4 rounded-2xl border border-zinc-200 dark:border-zinc-800 flex justify-between"><div><div className="font-bold">{n.title||'Untitled'}</div><div className="text-xs text-zinc-500">{new Date(n.createdAt||0).toLocaleDateString()}</div></div><Icons.Chevron className="w-5 h-5 rotate-180"/></div>)}</div></div>}
+                        {tab==='profile'&&<div key="p" className="p-6 pb-24 h-full flex flex-col"><h2 className="text-3xl font-bold mb-6">Settings</h2><div className="flex flex-col items-center mb-8"><img src={u.photoURL} className="w-24 h-24 rounded-full border-4 border-brand mb-4"/><h3 className="text-xl font-bold">{u.displayName}</h3></div><div className="space-y-4 mb-8"><div className="bg-white dark:bg-surface p-4 rounded-2xl border border-zinc-200 dark:border-zinc-800 flex justify-between items-center"><span className="font-bold flex items-center gap-3">Appearance</span><button onClick={()=>window.fb.setDoc(window.fb.doc(window.fb.db,'artifacts','darnote-app','users',u.uid,'settings','profile'),{theme:set.theme==='dark'?'light':'dark'},{merge:true})} className="bg-zinc-100 dark:bg-zinc-900 px-4 py-2 rounded-lg text-xs font-bold border border-zinc-200 dark:border-zinc-700">{set.theme==='dark'?'Dark':'Light'}</button></div><div className="bg-white dark:bg-surface p-4 rounded-2xl border border-zinc-200 dark:border-zinc-800"><label className="text-xs font-bold text-zinc-500 uppercase mb-2 block">Bio</label><textarea value={set.bio||''} onChange={e=>window.fb.setDoc(window.fb.doc(window.fb.db,'artifacts','darnote-app','users',u.uid,'settings','profile'),{bio:e.target.value},{merge:true})} className="w-full bg-zinc-100 dark:bg-zinc-900 rounded-lg p-3 text-sm focus:outline-none resize-none h-20"/></div></div><button onClick={()=>window.fb.signOut(window.fb.auth)} className="w-full py-4 bg-zinc-200 dark:bg-zinc-800 rounded-xl font-bold text-red-500 mt-auto">Sign Out</button></div>}
                     </AnimatePresence>
                 </div>
-            );
+                <div className="fixed bottom-0 w-full h-[80px] glass z-50 px-6 pb-2 flex items-center justify-between">{[{id:'home',I:Icons.Home,l:'Home'},{id:'errors',I:Icons.Bug,l:'Mistakes'},{id:'add',I:Icons.Plus,l:'',s:1},{id:'notes',I:Icons.Book,l:'Notes'},{id:'profile',I:Icons.User,l:'Settings'}].map(t=>t.s?<motion.button key={t.id} whileTap={{scale:0.9}} onClick={()=>sSht(true)} className="w-14 h-14 bg-brand rounded-full flex items-center justify-center text-white shadow-glow mb-6"><t.I className="w-8 h-8"/></motion.button>:<button key={t.id} onClick={()=>nav(t.id)} className={`flex flex-col items-center gap-1 ${tab===t.id?'text-brand':'text-zinc-500'}`}><t.I className="w-6 h-6"/><span className="text-[10px] font-medium">{t.l}</span></button>)}</div>
+                {sht&&<div className="fixed inset-0 bg-black/80 z-[70] flex items-end justify-center" onClick={()=>sSht(false)}><motion.div initial={{y:100}} animate={{y:0}} className="bg-white dark:bg-surface w-full max-w-md rounded-t-3xl p-6 space-y-4" onClick={e=>e.stopPropagation()}><div className="w-12 h-1 bg-zinc-300 rounded-full mx-auto mb-4"/><button onClick={()=>{sSht(false);sSel(null);nav('add_error')}} className="w-full p-4 bg-zinc-100 dark:bg-zinc-800 rounded-2xl flex items-center gap-4"><div className="p-2 bg-red-500/20 rounded-full text-red-500"><Icons.Bug className="w-6 h-6"/></div><span className="font-bold">Log Failure</span></button><button onClick={()=>{sSht(false);sSel(null);nav('add_note')}} className="w-full p-4 bg-zinc-100 dark:bg-zinc-800 rounded-2xl flex items-center gap-4"><div className="p-2 bg-blue-500/20 rounded-full text-blue-500"><Icons.Book className="w-6 h-6"/></div><span className="font-bold">New Note</span></button></motion.div></div>}
+                <AnimatePresence>
+                    {(tab==='add_error'||tab==='edit_error')&&<ErrEd item={sel||(tab==='edit_error'?recentErrors.find(e=>e.id===getP().id):null)} save={d=>sv('error_logs',d)} back={goBack} del={id=>dl(id,'error_logs')} user={u} subs={subs}/>}
+                    {(tab==='add_note'||tab==='edit_note')&&<NoteEd item={sel} save={d=>sv('notes',d)} back={goBack} del={id=>dl(id,'notes')}/>}
+                </AnimatePresence>
+            </div>;
         };
-        ReactDOM.createRoot(document.getElementById('root')).render(<App />);
+        ReactDOM.createRoot(document.getElementById('root')).render(<App/>);
     </script>
 </body>
 </html>
+```
