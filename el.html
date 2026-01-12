@@ -40,11 +40,11 @@
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-app.js";
         import { getAuth, signInWithPopup, GoogleAuthProvider, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-auth.js";
-        import { getFirestore, collection, doc, addDoc, updateDoc, deleteDoc, getDocs, getDoc, setDoc, increment, arrayUnion, writeBatch, query, limit, orderBy, startAfter } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-firestore.js";
+        import { getFirestore, collection, doc, addDoc, updateDoc, deleteDoc, getDocs, getDoc, setDoc, increment, arrayUnion, writeBatch, query, limit, orderBy, startAfter, where } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-firestore.js";
         
         const firebaseConfig = { apiKey: "AIzaSyAvPEac-03kE4oazvaq8K3T2gxLPsnZO20", authDomain: "darnote625.firebaseapp.com", projectId: "darnote625", storageBucket: "darnote625.firebasestorage.app", messagingSenderId: "16458322562", appId: "1:16458322562:web:8894d71f3e6c326eba1a9b" };
         const app = initializeApp(firebaseConfig);
-        window.firebase = { app, auth: getAuth(app), db: getFirestore(app), signInWithPopup, GoogleAuthProvider, signOut, onAuthStateChanged, collection, doc, addDoc, updateDoc, deleteDoc, getDocs, getDoc, setDoc, increment, arrayUnion, writeBatch, query, limit, orderBy, startAfter };
+        window.firebase = { app, auth: getAuth(app), db: getFirestore(app), signInWithPopup, GoogleAuthProvider, signOut, onAuthStateChanged, collection, doc, addDoc, updateDoc, deleteDoc, getDocs, getDoc, setDoc, increment, arrayUnion, writeBatch, query, limit, orderBy, startAfter, where };
     </script>
     
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
@@ -536,6 +536,7 @@
             const [lastDoc, setLastDoc] = useState(null);
             const [hasMore, setHasMore] = useState(true);
             const [sortBy, setSortBy] = useState('date-desc');
+            const [typeFilter, setTypeFilter] = useState('ALL'); // NEW: Type Filter
             const [showSortMenu, setShowSortMenu] = useState(false);
 
             // Context Menu
@@ -575,34 +576,38 @@
                 try {
                     const db = window.firebase.db;
                     const logsRef = window.firebase.collection(db, 'artifacts', "darnote-app", 'users', uid, 'error_logs');
-                    let q;
+                    let q = window.firebase.query(logsRef); // Start fresh
                     let fallbackSort = false;
 
-                    // Sort Logic with Fallback Protection
-                    if (sortBy.startsWith('date')) {
-                        const dir = sortBy === 'date-desc' ? 'desc' : 'asc';
-                        q = window.firebase.query(logsRef, window.firebase.orderBy('createdAt', dir));
-                        if (isLoadMore && lastDoc) q = window.firebase.query(q, window.firebase.startAfter(lastDoc), window.firebase.limit(10));
-                        else q = window.firebase.query(q, window.firebase.limit(10));
-                    } else if (sortBy.startsWith('type')) {
-                        const typeDir = sortBy === 'type-mc' ? 'desc' : 'asc';
-                        try {
-                           let complexQ = window.firebase.query(logsRef, window.firebase.orderBy('questionType', typeDir), window.firebase.orderBy('createdAt', 'desc'));
-                           if (isLoadMore && lastDoc) complexQ = window.firebase.query(complexQ, window.firebase.startAfter(lastDoc), window.firebase.limit(10));
-                           else complexQ = window.firebase.query(complexQ, window.firebase.limit(10));
-                           q = complexQ;
-                        } catch(e) { fallbackSort = true; }
+                    // 1. FILTER: Apply Type Filter if set
+                    if (typeFilter !== 'ALL') {
+                        q = window.firebase.query(q, window.firebase.where('questionType', '==', typeFilter));
                     }
 
+                    // 2. SORT: Date
+                    const dir = sortBy === 'date-desc' ? 'desc' : 'asc';
+                    q = window.firebase.query(q, window.firebase.orderBy('createdAt', dir));
+
+                    // 3. PAGINATE
+                    if (isLoadMore && lastDoc) q = window.firebase.query(q, window.firebase.startAfter(lastDoc), window.firebase.limit(10));
+                    else q = window.firebase.query(q, window.firebase.limit(10));
+
                     let snapshot;
-                    try { snapshot = await window.firebase.getDocs(q); } catch (error) {
+                    try {
+                        snapshot = await window.firebase.getDocs(q);
+                    } catch (error) {
+                        // Catch missing index error here
                         if (error.code === 'failed-precondition' || error.message.includes('index')) {
+                            console.warn("Firestore index missing for sort + filter. Falling back to simple sort.");
                             fallbackSort = true;
+                            // Fallback: Just fetch by Date Descending (ignoring filter to prevent crash)
                             q = window.firebase.query(logsRef, window.firebase.orderBy('createdAt', 'desc'));
                             if (isLoadMore && lastDoc) q = window.firebase.query(q, window.firebase.startAfter(lastDoc), window.firebase.limit(10));
                             else q = window.firebase.query(q, window.firebase.limit(10));
                             snapshot = await window.firebase.getDocs(q);
-                        } else { throw error; }
+                        } else {
+                            throw error;
+                        }
                     }
 
                     const newLogs = snapshot.docs.map(d => {
@@ -610,21 +615,25 @@
                         return { id: d.id, ...data, questionImages: data.questionImages || (data.imageUrl ? [data.imageUrl] : []), schemeImages: data.schemeImages || (data.markingSchemeUrl ? [data.markingSchemeUrl] : []) };
                     });
 
-                    if (fallbackSort && sortBy.startsWith('type')) {
-                        newLogs.sort((a, b) => {
-                            const tA = (a.questionType || '').toLowerCase(); const tB = (b.questionType || '').toLowerCase();
-                            if (sortBy === 'type-mc') return tB.localeCompare(tA); return tA.localeCompare(tB); 
-                        });
-                    }
+                    // NO Client Side Sort needed for Type anymore as we filter strictly
 
-                    if (isLoadMore) setLogs(prev => [...prev, ...newLogs]); else setLogs(newLogs);
-                    setLastDoc(snapshot.docs[snapshot.docs.length - 1]); setHasMore(snapshot.docs.length === 10);
+                    if (isLoadMore) setLogs(prev => [...prev, ...newLogs]);
+                    else setLogs(newLogs);
+
+                    setLastDoc(snapshot.docs[snapshot.docs.length - 1]);
+                    setHasMore(snapshot.docs.length === 10);
                 } catch(e) { console.error("Fetch Error", e); }
                 setIsLoadingLogs(false);
             };
 
-            // Trigger re-fetch on sort
-            useEffect(() => { if(user) { setLastDoc(null); setLogs([]); fetchLogs(false); } }, [sortBy]);
+            // Trigger re-fetch on sort OR filter change
+            useEffect(() => { 
+                if(user) {
+                    setLastDoc(null); // Reset pagination
+                    setLogs([]); // Clear for visual clarity
+                    fetchLogs(false); 
+                }
+            }, [sortBy, typeFilter]); // Added typeFilter dependency
 
             const createLog = async () => {
                 const newLog = { title: 'Untitled Mistake', subject: 'General', topic: '', questionImages: [], schemeImages: [], questionType: 'MC', correctAnswer: '', marks: '', explanation: '', mastered: false, createdAt: new Date().toISOString(), lastModified: new Date().toISOString() };
@@ -676,11 +685,8 @@
 
             const handleAutoTitle = async () => {
                 if (!activeLog.questionImages?.length && !activeLog.imageUrl) { alert("Paste image first!"); return; } 
-                
-                // OCR QUOTA CHECK
                 const newQuota = await checkAndIncrementQuota(user, 'ocr');
                 if (newQuota === false) { alert("Daily OCR/Auto-Title Limit (20/20) Reached!"); return; }
-                
                 setIsAutoTitleLoading(true);
                 try {
                     let url = activeLog.questionImages?.[0] || activeLog.imageUrl; let base64 = url;
@@ -748,13 +754,17 @@
                             <div className="flex gap-2">
                                 <input type="text" placeholder="Search..." value={searchQuery} onChange={e=>setSearchQuery(e.target.value)} className="input-field pl-9 bg-[url('data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIGZpbGw9Im5vbmUiIHZpZXdCb3g9IjAgMCAyNCAyNCIgc3Ryb2tlPSIjNzE3MTdhIiBzdHJva2Utd2lkdGg9IjIiPjxjaXJjbGUgY3g9IjExIiBjeT0iMTEiIHI9IjgiLz48cGF0aCBkPSJtMjEgMjEtNC4zLTQuMyIvPjwvc3ZnPg==')] bg-no-repeat bg-[length:16px] bg-[12px_center]"/>
                                 <div className="relative">
-                                    <button onClick={()=>setShowSortMenu(!showSortMenu)} className="p-2 rounded-lg border border-zinc-200 dark:border-white/10 hover:bg-zinc-100 dark:hover:bg-white/5 text-zinc-500" title="Sort Logs"><Icons.Sort className="w-4 h-4"/></button>
+                                    <button onClick={()=>setShowSortMenu(!showSortMenu)} className={`p-2 rounded-lg border border-zinc-200 dark:border-white/10 hover:bg-zinc-100 dark:hover:bg-white/5 transition-colors ${typeFilter !== 'ALL' ? 'text-brand border-brand' : 'text-zinc-500'}`} title="Sort & Filter Logs"><Icons.Sort className="w-4 h-4"/></button>
                                     {showSortMenu && (
-                                        <div className="absolute right-0 top-full mt-2 w-32 bg-white dark:bg-zinc-800 border border-zinc-200 dark:border-white/10 rounded-lg shadow-xl z-50 py-1">
+                                        <div className="absolute right-0 top-full mt-2 w-40 bg-white dark:bg-zinc-800 border border-zinc-200 dark:border-white/10 rounded-lg shadow-xl z-50 py-1">
+                                            <div className="px-3 py-1.5 text-[10px] font-bold text-zinc-400 uppercase tracking-wider">Sort Order</div>
                                             <button onClick={()=>{setSortBy('date-desc'); setShowSortMenu(false)}} className={`w-full text-left px-3 py-2 text-xs hover:bg-zinc-100 dark:hover:bg-white/5 ${sortBy==='date-desc'?'text-indigo-500 font-bold':''}`}>Date (Newest)</button>
                                             <button onClick={()=>{setSortBy('date-asc'); setShowSortMenu(false)}} className={`w-full text-left px-3 py-2 text-xs hover:bg-zinc-100 dark:hover:bg-white/5 ${sortBy==='date-asc'?'text-indigo-500 font-bold':''}`}>Date (Oldest)</button>
-                                            <button onClick={()=>{setSortBy('type-mc'); setShowSortMenu(false)}} className={`w-full text-left px-3 py-2 text-xs hover:bg-zinc-100 dark:hover:bg-white/5 ${sortBy==='type-mc'?'text-indigo-500 font-bold':''}`}>MC First</button>
-                                            <button onClick={()=>{setSortBy('type-lq'); setShowSortMenu(false)}} className={`w-full text-left px-3 py-2 text-xs hover:bg-zinc-100 dark:hover:bg-white/5 ${sortBy==='type-lq'?'text-indigo-500 font-bold':''}`}>LQ First</button>
+                                            <div className="h-px bg-zinc-200 dark:bg-white/10 my-1"></div>
+                                            <div className="px-3 py-1.5 text-[10px] font-bold text-zinc-400 uppercase tracking-wider">Filter Type</div>
+                                            <button onClick={()=>{setTypeFilter('ALL'); setShowSortMenu(false)}} className={`w-full text-left px-3 py-2 text-xs hover:bg-zinc-100 dark:hover:bg-white/5 ${typeFilter==='ALL'?'text-indigo-500 font-bold':''}`}>All Types</button>
+                                            <button onClick={()=>{setTypeFilter('MC'); setShowSortMenu(false)}} className={`w-full text-left px-3 py-2 text-xs hover:bg-zinc-100 dark:hover:bg-white/5 ${typeFilter==='MC'?'text-indigo-500 font-bold':''}`}>MC Only</button>
+                                            <button onClick={()=>{setTypeFilter('LQ'); setShowSortMenu(false)}} className={`w-full text-left px-3 py-2 text-xs hover:bg-zinc-100 dark:hover:bg-white/5 ${typeFilter==='LQ'?'text-indigo-500 font-bold':''}`}>LQ Only</button>
                                         </div>
                                     )}
                                 </div>
