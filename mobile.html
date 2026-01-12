@@ -34,7 +34,7 @@
     <script type="text/babel">
         const GDRIVE_API_KEY="AIzaSyCScFR_D0snZ6hrHob5fUQM7Y2NhK-kTIA",GDRIVE_CLIENT_ID="256215327792-oglegui0q8qj507oao2c2733thcl9lrc.apps.googleusercontent.com"; 
         
-        // --- UPDATED PROXY ---
+        // --- PROXY ---
         const GEMINI_PROXY_URL = "https://gemini-proxy-513372702506.us-central1.run.app/proxy";
 
         const {useState,useEffect,useRef,useMemo}=React,{motion,AnimatePresence}=window.Motion;
@@ -55,7 +55,8 @@
             Sun:p=><svg {...p} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>,
             Moon:p=><svg {...p} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>,
             Sort:p=><svg {...p} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><polyline points="19 12 12 19 5 12"/></svg>,
-            Brain: p=><svg {...p} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M9.5 2A2.5 2.5 0 0 1 12 4.5v15a2.5 2.5 0 0 1-4.96.44 2.5 2.5 0 0 1-2.96-3.08 3 3 0 0 1-.34-5.58 2.5 2.5 0 0 1 1.32-4.24 2.5 2.5 0 0 1 1.98-3A2.5 2.5 0 0 1 9.5 2Z"/><path d="M14.5 2A2.5 2.5 0 0 0 12 4.5v15a2.5 2.5 0 0 0 4.96.44 2.5 2.5 0 0 0 2.96-3.08 3 3 0 0 0 .34-5.58 2.5 2.5 0 0 0-1.32-4.24 2.5 2.5 0 0 0-1.98-3A2.5 2.5 0 0 0 14.5 2Z"/></svg>
+            Brain: p=><svg {...p} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M9.5 2A2.5 2.5 0 0 1 12 4.5v15a2.5 2.5 0 0 1-4.96.44 2.5 2.5 0 0 1-2.96-3.08 3 3 0 0 1-.34-5.58 2.5 2.5 0 0 1 1.32-4.24 2.5 2.5 0 0 1 1.98-3A2.5 2.5 0 0 1 9.5 2Z"/><path d="M14.5 2A2.5 2.5 0 0 0 12 4.5v15a2.5 2.5 0 0 0 4.96.44 2.5 2.5 0 0 0 2.96-3.08 3 3 0 0 0 .34-5.58 2.5 2.5 0 0 0-1.32-4.24 2.5 2.5 0 0 0-1.98-3A2.5 2.5 0 0 0 14.5 2Z"/></svg>,
+            Dice: p=><svg {...p} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="2" y="2" width="20" height="20" rx="5" ry="5"/><path d="M16 8h.01"/><path d="M8 8h.01"/><path d="M8 16h.01"/><path d="M16 16h.01"/><path d="M12 12h.01"/></svg>
         };
 
         const callGemini = async (prompt, sys="", imageBase64=null) => {
@@ -161,16 +162,17 @@
             </div>
         );
 
-        // --- NEW PRACTICE MODAL (MOBILE) ---
+        // --- PRACTICE MODAL ---
         const PracticeModal = ({ activeLog, onClose, user }) => {
             const [loading, setLoading] = useState(true);
-            const [mode, setMode] = useState(activeLog.questionType || 'MC');
             const [questions, setQuestions] = useState([]);
             const [lqData, setLqData] = useState(null);
             const [userAnswers, setUserAnswers] = useState({});
             const [marked, setMarked] = useState(false);
             const [lqFeedback, setLqFeedback] = useState(null);
             
+            const mode = activeLog.questionType || 'MC';
+
             useEffect(() => { generatePractice(); }, []);
 
             const generatePractice = async () => {
@@ -197,7 +199,6 @@
 
             const handleLqMark = async () => {
                 setLoading(true);
-                // Quota check for marking
                 const hasQuota = await checkAndIncrementQuota(user);
                 if (!hasQuota) { alert("Daily quota reached!"); setLoading(false); return; }
 
@@ -210,7 +211,7 @@
             return (
                 <div className="fixed inset-0 z-[100] bg-white dark:bg-onyx flex flex-col">
                     <div className="p-4 border-b border-zinc-200 dark:border-white/10 flex justify-between items-center bg-zinc-50 dark:bg-black/20">
-                        <span className="font-bold text-zinc-900 dark:text-white flex items-center gap-2"><Icons.Brain className="w-5 h-5 text-brand"/> Practice: {mode}</span>
+                        <span className="font-bold text-zinc-900 dark:text-white flex items-center gap-2"><Icons.Brain className="w-5 h-5 text-brand"/> Practice: <span className="text-brand font-extrabold">{mode}</span></span>
                         <button onClick={onClose}><Icons.X className="w-6 h-6 text-zinc-400"/></button>
                     </div>
                     <div className="flex-1 overflow-y-auto p-4 space-y-6">
@@ -287,8 +288,6 @@
             const send = async () => {
                 if(!inp.trim()) return;
                 const uMsg=inp; setMsgs(p=>[...p,{role:'user',text:uMsg}]); setInp(""); 
-                
-                // QUOTA CHECK
                 const hasQuota = await checkAndIncrementQuota(user);
                 if(!hasQuota) { setMsgs(p=>[...p,{role:'ai',text:"<span class='text-red-500'>DAILY LIMIT REACHED (10/10).</span>"}]); return; }
                 
@@ -301,7 +300,6 @@
                          try { const r=await fetch(url); const b=await r.blob(); imgCtx=await new Promise(res=>{const fr=new FileReader();fr.onloadend=()=>res(fr.result);fr.readAsDataURL(b)}); } catch(e){}
                     }
                 }
-                
                 let res = await callGemini(uMsg, `Roast-heavy tutor. Context: ${ctx}`, imgCtx);
                 res = cleanLatex(res);
                 setMsgs(p=>[...p,{role:'ai',text:res}]); setLoad(false);
@@ -310,7 +308,13 @@
             return (
                 <div className="flex flex-col w-full bg-zinc-50 dark:bg-surface fixed inset-0 z-[80] h-[100dvh]">
                     <div className="p-4 border-b border-zinc-200 dark:border-white/10 flex justify-between items-center bg-zinc-100 dark:bg-black/20 shrink-0">
-                        <div><span className="font-bold text-sm text-zinc-800 dark:text-white flex items-center gap-2"><Icons.Bot className="w-4 h-4 text-brand"/> AI Tutor</span><span className="text-[10px] text-zinc-500">{quotaCount}/10 Used</span></div>
+                        <div className="flex flex-col">
+                            <span className="font-bold text-sm text-zinc-800 dark:text-white flex items-center gap-2">
+                                <Icons.Bot className="w-4 h-4 text-brand"/> 
+                                Gemini <span className="text-[10px] uppercase font-black bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500 bg-clip-text text-transparent tracking-widest">3 PRO</span>
+                            </span>
+                            <span className="text-[10px] text-zinc-500">{quotaCount}/10 Used • Experimental Build</span>
+                        </div>
                         <button onClick={onClose}><Icons.ChevronLeft className="w-6 h-6 rotate-[-90deg] text-zinc-400"/></button>
                     </div>
                     <div className="flex-1 overflow-y-auto p-4 space-y-4">
@@ -334,7 +338,7 @@
                 };
             });
             const [aiOpen, setAiOpen] = useState(false);
-            const [practiceOpen, setPracticeOpen] = useState(false); // NEW STATE
+            const [practiceOpen, setPracticeOpen] = useState(false);
             const { saveToDrive } = useGoogleDrive();
             const [upQ, setUpQ] = useState(false);
             const [upS, setUpS] = useState(false);
@@ -364,7 +368,6 @@
                         <button onClick={onBack} className="p-2 rounded-full bg-zinc-100 dark:bg-zinc-800"><Icons.ChevronLeft className="w-6 h-6 text-zinc-700 dark:text-zinc-300"/></button>
                         <span className="font-bold text-zinc-900 dark:text-white">Failure Log</span>
                         <div className="flex gap-2">
-                             {/* ADDED PRACTICE BUTTON */}
                              {item && <button onClick={()=>setPracticeOpen(true)} className="p-2 bg-orange-500/10 text-orange-500 rounded-full"><Icons.Brain className="w-5 h-5"/></button>}
                              {item && <button onClick={()=>setAiOpen(true)} className="p-2 bg-brand/10 text-brand rounded-full"><Icons.Bot className="w-5 h-5"/></button>}
                              <button onClick={()=>onSave(data)} className="px-4 py-2 bg-brand rounded-full text-sm font-bold text-white">Save</button>
@@ -381,25 +384,19 @@
                              <label className="text-[10px] text-zinc-500 uppercase font-bold mb-2 block">Correct Answer</label>
                              <input placeholder="e.g. A, B, or 'Mitochondria'" value={data.correctAnswer} onChange={e=>setData({...data,correctAnswer:e.target.value})} className="w-full bg-zinc-100 dark:bg-zinc-900 p-3 rounded-xl focus:outline-none text-zinc-900 dark:text-white text-sm"/>
                         </div>
-
-                        {/* Question Image (Array Aware) */}
                         <div className="relative w-full aspect-video bg-zinc-100 dark:bg-zinc-900 rounded-2xl border border-dashed border-zinc-300 dark:border-zinc-700 flex flex-col items-center justify-center overflow-hidden">
                             {upQ ? <span className="loader"></span> : (data.questionImages?.[0]) ? <img src={data.questionImages[0]} className="w-full h-full object-contain"/> : (
                                 <><Icons.Camera className="w-8 h-8 text-zinc-400 dark:text-zinc-600 mb-2"/><span className="text-xs text-zinc-500">Upload Question</span><input type="file" accept="image/*" onChange={e=>handleImg(e,'evidence')} className="absolute inset-0 opacity-0 cursor-pointer"/></>
                             )}
                         </div>
-
-                        {/* Scheme Image (Array Aware) */}
-                         <div className="relative w-full aspect-video bg-zinc-100 dark:bg-zinc-900 rounded-2xl border border-dashed border-blue-300 dark:border-blue-900 flex flex-col items-center justify-center overflow-hidden">
+                        <div className="relative w-full aspect-video bg-zinc-100 dark:bg-zinc-900 rounded-2xl border border-dashed border-blue-300 dark:border-blue-900 flex flex-col items-center justify-center overflow-hidden">
                             {upS ? <span className="loader"></span> : (data.schemeImages?.[0]) ? <img src={data.schemeImages[0]} className="w-full h-full object-contain"/> : (
                                 <><Icons.Check className="w-8 h-8 text-blue-400 mb-2"/><span className="text-xs text-blue-500 font-bold">Upload Marking Scheme</span><input type="file" accept="image/*" onChange={e=>handleImg(e,'scheme')} className="absolute inset-0 opacity-0 cursor-pointer"/></>
                             )}
                         </div>
-
                         <div className="bg-white dark:bg-surface rounded-2xl p-4 min-h-[150px] border border-zinc-200 dark:border-zinc-800">
                             <textarea className="w-full h-full bg-transparent resize-none focus:outline-none text-zinc-800 dark:text-zinc-300 min-h-[150px]" placeholder="Explain why you failed..." value={data.explanation} onChange={e=>setData({...data,explanation:e.target.value})}/>
                         </div>
-
                         <div className="grid grid-cols-2 gap-4">
                             <div>
                                 <label className="text-[10px] text-zinc-500 uppercase font-bold">Subject</label>
@@ -409,7 +406,6 @@
                             </div>
                             <div><label className="text-[10px] text-zinc-500 uppercase font-bold">Type</label><select value={data.questionType} onChange={e=>setData({...data,questionType:e.target.value})} className="w-full bg-zinc-100 dark:bg-zinc-900 p-3 rounded-xl mt-1 focus:outline-none text-zinc-900 dark:text-white text-sm"><option value="MC">MC</option><option value="LQ">Long Question</option></select></div>
                         </div>
-
                         <div className="bg-white dark:bg-surface rounded-2xl p-4 border border-zinc-200 dark:border-zinc-800">
                              <label className="text-[10px] text-zinc-500 uppercase font-bold mb-2 block">Topic</label>
                              <div className="flex gap-2">
@@ -424,8 +420,6 @@
                         {item && <button onClick={()=>{if(confirm('Delete?')){onDelete(item.id);onBack()}}} className="w-full py-4 text-red-500 font-bold text-sm bg-zinc-100 dark:bg-zinc-900 rounded-xl">Delete Log</button>}
                     </div>
                     <AnimatePresence>{aiOpen && <motion.div initial={{y:"100%"}} animate={{y:"0%"}} exit={{y:"100%"}} className="fixed inset-0 z-[70] bg-white dark:bg-surface rounded-t-3xl shadow-2xl overflow-hidden"><AIChat activeLog={data} onClose={()=>setAiOpen(false)} user={user} /></motion.div>}</AnimatePresence>
-                    
-                    {/* RENDER PRACTICE MODAL */}
                     <AnimatePresence>{practiceOpen && <motion.div initial={{y:"100%"}} animate={{y:"0%"}} exit={{y:"100%"}} className="fixed inset-0 z-[70] bg-white dark:bg-surface rounded-t-3xl shadow-2xl overflow-hidden"><PracticeModal activeLog={data} onClose={()=>setPracticeOpen(false)} user={user} /></motion.div>}</AnimatePresence>
                 </motion.div>
             );
@@ -449,28 +443,71 @@
 
         const ErrorList = ({ items, onEdit, subjects }) => {
             const [mode, setMode] = useState('date'), [sub, setSub] = useState(null), [top, setTop] = useState(null), [sort, setSort] = useState('desc');
+            const [typeFilter, setTypeFilter] = useState('all'); // 'all', 'MC', 'LQ'
+            const [showRandomPicker, setShowRandomPicker] = useState(false);
+
             const filtered = useMemo(() => {
                 let res = items;
+                // Type Filter First
+                if(typeFilter !== 'all') {
+                    res = res.filter(i => (i.questionType || 'MC') === typeFilter);
+                }
+
                 if (mode==='category') { if(sub) { res=res.filter(i=>(i.subject||'General')===sub); if(top) res=res.filter(i=>i.topic===top); } else return []; }
                 return [...res].sort((a,b) => {
                     const da=new Date(a.createdAt||0), db=new Date(b.createdAt||0);
                     return sort==='desc' ? db-da : da-db;
                 });
-            }, [items, mode, sub, top, sort]);
+            }, [items, mode, sub, top, sort, typeFilter]);
+            
             const topics = (subjects.find(s=>s.name===sub)?.topics||[]).sort();
 
+            const handleRandom = (type) => {
+                const candidates = items.filter(i => (i.questionType || 'MC') === type);
+                if (candidates.length === 0) return alert(`No ${type} logs found to study!`);
+                const rand = candidates[Math.floor(Math.random() * candidates.length)];
+                setShowRandomPicker(false);
+                onEdit('edit_error', rand);
+            };
+
             return (
-                <div className="p-6 pb-24 min-h-screen flex flex-col">
+                <div className="p-6 pb-24 min-h-screen flex flex-col relative">
                     <div className="flex flex-col gap-4 mb-6">
                         <div className="flex justify-between items-end">
                             <h2 className="text-3xl font-bold text-zinc-900 dark:text-white">Error Logs</h2>
-                            <div className="flex bg-zinc-200 dark:bg-zinc-800 rounded-lg p-1 gap-1">
-                                <button onClick={()=>{setMode('date');setSub(null)}} className={`px-3 py-1 rounded-md text-[10px] font-bold transition-all ${mode==='date'?'bg-white dark:bg-zinc-600 shadow-sm text-black dark:text-white':'text-zinc-500'}`}>All</button>
-                                <button onClick={()=>setMode('category')} className={`px-3 py-1 rounded-md text-[10px] font-bold transition-all ${mode==='category'?'bg-white dark:bg-zinc-600 shadow-sm text-black dark:text-white':'text-zinc-500'}`}>Filter</button>
+                            <div className="flex gap-2">
+                                <button onClick={()=>setShowRandomPicker(!showRandomPicker)} className="p-2 bg-orange-500 text-white rounded-lg shadow-lg relative"><Icons.Dice className="w-5 h-5"/></button>
+                                <div className="flex bg-zinc-200 dark:bg-zinc-800 rounded-lg p-1 gap-1">
+                                    <button onClick={()=>{setMode('date');setSub(null)}} className={`px-3 py-1 rounded-md text-[10px] font-bold transition-all ${mode==='date'?'bg-white dark:bg-zinc-600 shadow-sm text-black dark:text-white':'text-zinc-500'}`}>All</button>
+                                    <button onClick={()=>setMode('category')} className={`px-3 py-1 rounded-md text-[10px] font-bold transition-all ${mode==='category'?'bg-white dark:bg-zinc-600 shadow-sm text-black dark:text-white':'text-zinc-500'}`}>Filter</button>
+                                </div>
                             </div>
                         </div>
-                        <div className="flex justify-end"><button onClick={()=>setSort(p=>p==='desc'?'asc':'desc')} className="flex items-center gap-1 text-xs font-bold text-zinc-500 hover:text-brand"><Icons.Sort className="w-4 h-4"/>{sort==='desc'?'Newest First':'Oldest First'}</button></div>
+                        <div className="flex justify-between items-center">
+                            {/* TYPE FILTER TOGGLE */}
+                            <div className="flex bg-zinc-100 dark:bg-zinc-800/50 p-1 rounded-lg">
+                                {['all', 'MC', 'LQ'].map(t => (
+                                    <button key={t} onClick={()=>setTypeFilter(t)} className={`px-3 py-1 rounded-md text-[10px] font-bold uppercase transition-all ${typeFilter===t ? 'bg-white dark:bg-zinc-700 shadow-sm text-brand' : 'text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-300'}`}>
+                                        {t}
+                                    </button>
+                                ))}
+                            </div>
+                            <button onClick={()=>setSort(p=>p==='desc'?'asc':'desc')} className="flex items-center gap-1 text-xs font-bold text-zinc-500 hover:text-brand"><Icons.Sort className="w-4 h-4"/>{sort==='desc'?'Newest':'Oldest'}</button>
+                        </div>
                     </div>
+
+                    {/* RANDOM POPUP */}
+                    <AnimatePresence>
+                        {showRandomPicker && (
+                            <motion.div initial={{opacity:0, scale:0.9}} animate={{opacity:1, scale:1}} exit={{opacity:0, scale:0.9}} className="absolute top-16 right-6 z-20 bg-white dark:bg-zinc-800 border border-zinc-200 dark:border-white/10 shadow-xl rounded-xl p-3 w-48 origin-top-right">
+                                <div className="text-xs font-bold text-zinc-500 mb-2 uppercase tracking-wider">Pick Random to Study</div>
+                                <div className="space-y-2">
+                                    <button onClick={()=>handleRandom('MC')} className="w-full text-left p-2 hover:bg-zinc-100 dark:hover:bg-white/5 rounded-lg text-sm flex justify-between"><span>Random MC</span> <span className="text-xs bg-indigo-500 text-white px-1.5 rounded">?</span></button>
+                                    <button onClick={()=>handleRandom('LQ')} className="w-full text-left p-2 hover:bg-zinc-100 dark:hover:bg-white/5 rounded-lg text-sm flex justify-between"><span>Random LQ</span> <span className="text-xs bg-orange-500 text-white px-1.5 rounded">?</span></button>
+                                </div>
+                            </motion.div>
+                        )}
+                    </AnimatePresence>
 
                     {mode === 'category' && (
                         <div className="mb-4 space-y-4">
@@ -495,7 +532,8 @@
                                     <div className="flex items-center gap-2">
                                         <span className={`text-[10px] font-bold px-2 py-0.5 rounded ${item.mastered?"bg-green-500/20 text-green-500":"bg-red-500/20 text-red-500"}`}>{item.mastered?'SOLVED':'REVIEW'}</span>
                                         <span className="text-[10px] text-zinc-400 uppercase tracking-wider">{item.subject}</span>
-                                        {item.topic && <span className="text-[10px] text-zinc-500 bg-zinc-100 dark:bg-zinc-800 px-2 py-0.5 rounded-md">{item.topic}</span>}
+                                        <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded border ${item.questionType==='LQ'?'border-orange-500 text-orange-500':'border-indigo-500 text-indigo-500'}`}>{item.questionType||'MC'}</span>
+                                        {item.topic && <span className="text-[10px] text-zinc-500 bg-zinc-100 dark:bg-zinc-800 px-2 py-0.5 rounded-md hidden sm:inline">{item.topic}</span>}
                                     </div>
                                 </div>
                                 <div className="text-right"><div className="text-[10px] text-zinc-500 mb-1">{new Date(item.createdAt||0).toLocaleDateString()}</div><Icons.ChevronLeft className="w-5 h-5 text-zinc-600 rotate-180 ml-auto"/></div>
