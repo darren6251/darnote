@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>darNote - Error Log</title>
+    <title>darNote - Error Log (Potato & Revenge Edition)</title>
     <link rel="icon" type="image/png" href="https://raw.githubusercontent.com/darren6251/darnote/refs/heads/main/darNote%20logo.png">
     
     <!-- React & Tailwind -->
@@ -52,6 +52,9 @@
             getDoc, setDoc, increment, arrayUnion, writeBatch, query, limit, 
             orderBy, startAfter, where 
         } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-firestore.js";
+        import { 
+            getStorage, ref, uploadBytes, getDownloadURL 
+        } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-storage.js";
         
         const firebaseConfig = { 
             apiKey: "AIzaSyAvPEac-03kE4oazvaq8K3T2gxLPsnZO20", 
@@ -63,10 +66,11 @@
         };
         const app = initializeApp(firebaseConfig);
         window.firebase = { 
-            app, auth: getAuth(app), db: getFirestore(app), signInWithPopup, 
-            GoogleAuthProvider, signOut, onAuthStateChanged, collection, doc, 
+            app, auth: getAuth(app), db: getFirestore(app), storage: getStorage(app),
+            signInWithPopup, GoogleAuthProvider, signOut, onAuthStateChanged, collection, doc, 
             addDoc, updateDoc, deleteDoc, getDocs, getDoc, setDoc, increment, 
-            arrayUnion, writeBatch, query, limit, orderBy, startAfter, where 
+            arrayUnion, writeBatch, query, limit, orderBy, startAfter, where,
+            ref, uploadBytes, getDownloadURL 
         };
     </script>
     
@@ -115,8 +119,6 @@
     <div id="root"></div>
     <script type="text/babel">
         // CONFIG
-        const GDRIVE_API_KEY = "AIzaSyCScFR_D0snZ6hrHob5fUQM7Y2NhK-kTIA"; 
-        const GDRIVE_CLIENT_ID = "256215327792-oglegui0q8qj507oao2c2733thcl9lrc.apps.googleusercontent.com"; 
         const GEMINI_PROXY_URL = "https://gemini-proxy-513372702506.us-central1.run.app/proxy";
 
         const { useState, useEffect, useRef, useMemo, useCallback } = React;
@@ -238,66 +240,6 @@
                 }, { merge: true });
                 return count + 1;
             } catch (e) { console.error("Quota check failed:", e); return false; }
-        };
-
-        // --- GDRIVE HOOK ---
-        const useGoogleDrive = () => {
-            const [tokenClient, setTokenClient] = useState(null);
-            useEffect(() => {
-                if(!GDRIVE_API_KEY || !GDRIVE_CLIENT_ID) return;
-                const load = async () => {
-                    if (window.gapi) { 
-                        await new Promise(r => window.gapi.load('client', r)); 
-                        await window.gapi.client.init({ 
-                            apiKey: GDRIVE_API_KEY, 
-                            discoveryDocs: ['https://www.googleapis.com/discovery/v1/apis/drive/v3/rest'] 
-                        }); 
-                    }
-                    if (window.google) setTokenClient(window.google.accounts.oauth2.initTokenClient({ 
-                        client_id: GDRIVE_CLIENT_ID, 
-                        scope: 'https://www.googleapis.com/auth/drive.file', callback: () => {} 
-                    }));
-                };
-                load();
-            }, []);
-            const getAccessToken = () => new Promise((resolve, reject) => {
-                if (!tokenClient) return reject("Auth not initialized");
-                const existing = window.gapi.client.getToken();
-                if (existing && Date.now() < existing.expiry) return resolve(existing.access_token);
-                tokenClient.callback = (resp) => { if (resp.error) reject(resp); resolve(resp.access_token); };
-                tokenClient.requestAccessToken({ prompt: '' });
-            });
-            const saveToDrive = async (blob, filename) => {
-                const token = await getAccessToken();
-                let folderId;
-                const q = `mimeType='application/vnd.google-apps.folder' and name='darNote_Errors' and trashed=false`;
-                const search = await fetch(`https://www.googleapis.com/drive/v3/files?q=${encodeURIComponent(q)}`, 
-                    { headers: { Authorization: `Bearer ${token}` } });
-                const searchData = await search.json();
-                if (searchData.files?.length) folderId = searchData.files[0].id;
-                else {
-                    const create = await fetch('https://www.googleapis.com/drive/v3/files', { 
-                        method: 'POST', 
-                        headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' }, 
-                        body: JSON.stringify({ name: 'darNote_Errors', mimeType: 'application/vnd.google-apps.folder' }) 
-                    });
-                    folderId = (await create.json()).id;
-                }
-                const metadata = { name: filename, mimeType: blob.type, parents: [folderId] };
-                const form = new FormData();
-                form.append('metadata', new Blob([JSON.stringify(metadata)], { type: 'application/json' }));
-                form.append('file', blob);
-                const upRes = await fetch('https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&fields=id', 
-                    { method: 'POST', headers: { Authorization: `Bearer ${token}` }, body: form });
-                if(!upRes.ok) throw new Error(upRes.statusText);
-                const fileId = (await upRes.json()).id;
-                await fetch(`https://www.googleapis.com/drive/v3/files/${fileId}/permissions`, { 
-                    method: 'POST', headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' }, 
-                    body: JSON.stringify({ role: 'reader', type: 'anyone' }) 
-                });
-                return `https://lh3.googleusercontent.com/d/${fileId}`;
-            };
-            return { saveToDrive };
         };
 
         // --- COMPONENTS ---
@@ -601,7 +543,6 @@
             const [isAutoTitleLoading, setIsAutoTitleLoading] = useState(false);
             const [isLoadingLogs, setIsLoadingLogs] = useState(false);
             const [isPracticeOpen, setIsPracticeOpen] = useState(false);
-            const { saveToDrive } = useGoogleDrive();
             const [uploadingQ, setUploadingQ] = useState(false);
             const [uploadingS, setUploadingS] = useState(false);
             
@@ -694,7 +635,13 @@
             const handleContextMenu = (e, logId) => { e.preventDefault(); setContextMenu({ visible: true, x: e.clientX, y: e.clientY, logId }); };
             const addTopicToSubject = async (subjectName) => { const subjectDoc = subjects.find(s => s.name === subjectName); if (!subjectDoc) { alert("Cannot add topic to General."); return; } const newTopic = prompt(`Add topic for ${subjectName}:`); if (!newTopic) return; setSubjects(prev => prev.map(s => s.id === subjectDoc.id ? {...s, topics: [...s.topics, newTopic]} : s)); const docRef = window.firebase.doc(window.firebase.db, 'artifacts', 'darnote-app', 'users', user.uid, 'subjects', subjectDoc.id); await window.firebase.updateDoc(docRef, { topics: window.firebase.arrayUnion(newTopic) }); };
             
-            // --- NEW: COMPRESSED UPLOAD & OCR ---
+            // --- NEW: FIREBASE STORAGE UPLOAD (NO POPUPS) ---
+            const saveToStorage = async (blob, filename) => {
+                const storageRef = window.firebase.ref(window.firebase.storage, `artifacts/darnote-app/users/${user.uid}/images/${filename}`);
+                await window.firebase.uploadBytes(storageRef, blob);
+                return await window.firebase.getDownloadURL(storageRef);
+            };
+
             const handleImageUpdate = async (data, action, type) => {
                 if (!activeLogId) return;
                 const isQ = type === 'question'; const setSpinner = isQ ? setUploadingQ : setUploadingS; const targetField = isQ ? 'questionImages' : 'schemeImages'; const currentImages = isQ ? activeLog.questionImages : activeLog.schemeImages;
@@ -709,7 +656,8 @@
                         blobToUpload = await compressImage(data);
                     }
                     
-                    const finalUrl = await saveToDrive(blobToUpload, `ErrorLog_${type}_${Date.now()}.jpg`);
+                    // UPLOAD TO FIREBASE STORAGE (Zero Popups)
+                    const finalUrl = await saveToStorage(blobToUpload, `ErrorLog_${type}_${Date.now()}.jpg`);
                     const newArr = [...currentImages, finalUrl]; 
                     
                     // If Question Image, trigger background OCR
