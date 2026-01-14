@@ -191,7 +191,7 @@
             });
         };
 
-        // --- GEMINI/GROQ PROXY ---
+        // --- GEMINI PROXY (For Chat & Practice) ---
         const callAI = async (prompt, systemInstruction = "", imageBase64 = null, apiUrl = GEMINI_PROXY_URL) => {
             const parts = [{ text: `${systemInstruction}\n\nUser: ${prompt}` }];
             if (imageBase64) {
@@ -215,6 +215,44 @@
                 const candidate = data.candidates?.[0];
                 if (!candidate) return "Error: No candidates returned";
                 return candidate.content?.parts?.[0]?.text || "Error: Empty response.";
+            } catch (error) { return `Error: ${error.message}`; }
+        };
+
+        // --- GROQ PROXY CALLER (For Auto-OCR & Auto-Title) ---
+        const callGroq = async (prompt, systemInstruction = "", imageBase64 = null) => {
+            // 1. Build the User Message Content
+            const userContent = [{ type: "text", text: prompt }];
+            
+            // 2. Add Image if present (OpenAI Format)
+            if (imageBase64) {
+                userContent.push({
+                    type: "image_url",
+                    image_url: { url: imageBase64 } 
+                });
+            }
+
+            const payload = {
+                // We let the proxy smart logic handle model selection if configured, 
+                // or you can pass "llama-3.2-90b-vision-preview" explicitly here.
+                model: "llama-3.2-90b-vision-preview", 
+                messages: [
+                    { role: "system", content: systemInstruction },
+                    { role: "user", content: userContent }
+                ]
+            };
+
+            try {
+                const response = await fetch(GROQ_PROXY_URL, { 
+                    method: 'POST', 
+                    headers: { 'Content-Type': 'application/json' }, 
+                    body: JSON.stringify(payload) 
+                });
+                
+                if (!response.ok) return `Error: API Request Failed (${response.status})`;
+                const data = await response.json();
+                
+                if (data.error) return `API Error: ${data.error.message}`;
+                return data.choices?.[0]?.message?.content || "Error: Empty response.";
             } catch (error) { return `Error: ${error.message}`; }
         };
 
@@ -738,7 +776,8 @@
                                 // Combined Prompt for Text Extraction + Title Summarization
                                 const prompt = `Analyze this image. 1. Extract the exact text from the question (OCR). 2. Generate a concise title (max 6 words) based on the concept. Return STRICTLY valid JSON: { "text": "...", "title": "..." }.`;
                                 
-                                const res = await callAI(prompt, "You are a JSON generator.", base64, GROQ_PROXY_URL);
+                                // >>>>>> USE CALLGROQ HERE INSTEAD OF CALLAI <<<<<<
+                                const res = await callGroq(prompt, "You are a JSON generator.", base64);
                                 const json = JSON.parse(res.replace(/```json|```/g, ''));
                                 
                                 // Update Log with AI results
@@ -768,9 +807,9 @@
                     let url = activeLog.questionImages?.[0] || activeLog.imageUrl; let base64 = url;
                     if(!url.startsWith('data:')) { const res = await fetch(url); const b = await res.blob(); base64 = await new Promise(r=>{const rd=new FileReader(); rd.onload=()=>r(rd.result); rd.readAsDataURL(b);}); }
                     
-                    // Use GROQ Proxy for this specific task as requested
+                    // >>>>>> USE CALLGROQ HERE INSTEAD OF CALLAI <<<<<<
                     const prompt = "1. Extract EXACT text. 2. Generate SHORT title (max 6 words). Return JSON: {title: '...', text: '...'}";
-                    const res = await callAI(prompt, "JSON Generator", base64, GROQ_PROXY_URL);
+                    const res = await callGroq(prompt, "JSON Generator", base64);
                     const json = JSON.parse(res.replace(/```json|```/g, ''));
                     updateLog(activeLogId, { title: json.title, questionText: json.text });
                 } catch(e) { alert("OCR Failed"); } setIsAutoTitleLoading(false);
