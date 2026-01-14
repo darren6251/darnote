@@ -1,0 +1,360 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>darNote - Error Log</title>
+    <link rel="icon" type="image/png" href="https://raw.githubusercontent.com/darren6251/darnote/refs/heads/main/darNote%20logo.png">
+    
+    <!-- React & Tailwind -->
+    <script crossorigin src="https://unpkg.com/react@18/umd/react.development.js"></script>
+    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: { extend: { colors: { onyx:'#09090b', surface:'#18181b', brand:'#4f46e5' }, fontFamily: { sans: ['Inter', 'sans-serif'] } } }
+        }
+    </script>
+    <script src="https://unpkg.com/framer-motion@10.16.4/dist/framer-motion.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/spark-md5/3.0.2/spark-md5.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <script src="https://apis.google.com/js/api.js" async defer></script>
+    <script src="https://accounts.google.com/gsi/client" async defer></script>
+
+    <!-- Firebase -->
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-app.js";
+        import { getAuth, signInWithPopup, GoogleAuthProvider, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-auth.js";
+        import { getFirestore, collection, doc, addDoc, updateDoc, deleteDoc, getDocs, getDoc, setDoc, increment, arrayUnion, query, limit, orderBy, startAfter, where } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-firestore.js";
+        const firebaseConfig = { apiKey: "AIzaSyAvPEac-03kE4oazvaq8K3T2gxLPsnZO20", authDomain: "darnote625.firebaseapp.com", projectId: "darnote625", storageBucket: "darnote625.firebasestorage.app", messagingSenderId: "16458322562", appId: "1:16458322562:web:8894d71f3e6c326eba1a9b" };
+        const app = initializeApp(firebaseConfig);
+        window.firebase = { app, auth: getAuth(app), db: getFirestore(app), signInWithPopup, GoogleAuthProvider, signOut, onAuthStateChanged, collection, doc, addDoc, updateDoc, deleteDoc, getDocs, getDoc, setDoc, increment, arrayUnion, query, limit, orderBy, startAfter, where };
+    </script>
+    
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        body { @apply bg-[#f4f4f5] text-zinc-900 dark:bg-onyx dark:text-zinc-100; font-family: 'Inter', sans-serif; overflow: hidden; }
+        ::-webkit-scrollbar { width: 6px; } ::-webkit-scrollbar-thumb { @apply bg-zinc-300 dark:bg-zinc-700; border-radius: 4px; }
+        .glass-panel { @apply bg-white dark:bg-surface border-r border-zinc-200 dark:border-border; }
+        .input-field { @apply w-full bg-zinc-50 dark:bg-zinc-900 border border-zinc-200 dark:border-white/10 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-brand transition-all shadow-sm; }
+        .markdown-content table { border-collapse: collapse; width: 100%; margin: 8px 0; font-size: 0.8rem; }
+        .markdown-content th, .markdown-content td { border: 1px solid #444; padding: 4px 8px; }
+        .markdown-content pre { background: #1a1a1a; padding: 8px; rounded: 4px; overflow-x: auto; margin: 8px 0; }
+    </style>
+</head>
+<body>
+    <div id="root"></div>
+    <script type="text/babel">
+        // CONFIG
+        const GDRIVE_API_KEY = "AIzaSyCScFR_D0snZ6hrHob5fUQM7Y2NhK-kTIA"; const GDRIVE_CLIENT_ID = "256215327792-oglegui0q8qj507oao2c2733thcl9lrc.apps.googleusercontent.com"; 
+        const GEMINI_PROXY_URL = "https://gemini-proxy-513372702506.us-central1.run.app/proxy"; const GROQ_PROXY_URL = "https://groq-proxy-157237873670.us-central1.run.app/chat/completions";
+
+        const { useState, useEffect, useRef } = React; const { motion, AnimatePresence } = window.Motion;
+
+        // --- ICONS ---
+        const Icons = {
+            Plus:(p)=><svg {...p} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M5 12h14"/><path d="M12 5v14"/></svg>,
+            Trash:(p)=><svg {...p} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/></svg>,
+            Bug:(p)=><svg {...p} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="m8 2 1.88 1.88"/><path d="M14.12 3.88 16 2"/><path d="M9 7.13v-1a3.003 3.003 0 1 1 6 0v1"/><path d="M12 20c-3.3 0-6-2.7-6-6v-3a4 4 0 0 1 4-4h4a4 4 0 0 1 4 4v3c0 3.3-2.7 6-6 6"/><path d="M12 20v-9"/><path d="M6.53 9C4.6 8.8 3 7.1 3 5"/><path d="M6 13H2"/><path d="M3 21c0-2.1 1.7-3.9 3.8-4"/><path d="M20.97 5c0 2.1-1.6 3.8-3.5 4"/><path d="M22 13h-4"/><path d="M17.2 17c2.1.1 3.8 1.9 3.8 4"/></svg>,
+            Check:(p)=><svg {...p} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="20 6 9 17 4 12"/></svg>,
+            Image:(p)=><svg {...p} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect width="18" height="18" x="3" y="3" rx="2" ry="2"/><circle cx="9" cy="9" r="2"/><path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21"/></svg>,
+            Bot:(p)=><svg {...p} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M12 8V4H8"/><rect width="16" height="12" x="4" y="8" rx="2"/><path d="M2 14h2"/><path d="M20 14h2"/><path d="M15 13v2"/><path d="M9 13v2"/></svg>,
+            X:(p)=><svg {...p} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M18 6 6 18"/><path d="m6 6 18 18"/></svg>,
+            Logout:(p)=><svg {...p} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" x2="9" y1="12" y2="12"/></svg>,
+            Google:(p)=><svg {...p} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M12 22C6.477 22 2 17.523 2 12S6.477 2 12 2s10 4.477 10 10-4.477 10-10 10z"/><path d="M12 11h9c.1 1.4.1 2.9-.4 4.3-1.1 3-4.1 5.3-7.6 5.6-5 .5-9.4-3.1-9.9-8.1C2.5 7.1 6 2.3 11 2c2.5-.1 4.9.9 6.7 2.6l-2.7 2.8c-1-.7-2.3-1.1-3.6-1-2.9.2-5.1 2.8-4.9 5.7.2 2.6 2.4 4.7 5 4.7 2 0 3.6-1.1 4.3-2.9H12v-3z" fill="currentColor"/></svg>,
+            Sun:(p)=><svg {...p} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="5"/><path d="M12 1v2"/><path d="M12 21v2"/><path d="M4.22 4.22l1.42 1.42"/><path d="M18.36 18.36l1.42 1.42"/><path d="M1 12h2"/><path d="M21 12h2"/><path d="M4.22 19.78l1.42-1.42"/><path d="M18.36 5.64l1.42-1.42"/></svg>,
+            Moon:(p)=><svg {...p} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>,
+            User:(p)=><svg {...p} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>,
+            Scan:(p)=><svg {...p} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M3 7V5a2 2 0 0 1 2-2h2"/><path d="M17 3h2a2 2 0 0 1 2 2v2"/><path d="M21 17v2a2 2 0 0 1-2 2h-2"/><path d="M7 21H5a2 2 0 0 1-2-2v-2"/><path d="M8 12h8"/><path d="M12 8v8"/></svg>,
+            Clip:(p)=><svg {...p} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="m21.44 11.05-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"/></svg>,
+            Brain:(p)=><svg {...p} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M9.5 2A2.5 2.5 0 0 1 12 4.5v15a2.5 2.5 0 0 1-4.96.44 2.5 2.5 0 0 1-2.96-3.08 3 3 0 0 1-.34-5.58 2.5 2.5 0 0 1 1.32-4.24 2.5 2.5 0 0 1 1.98-3A2.5 2.5 0 0 1 9.5 2Z"/><path d="M14.5 2A2.5 2.5 0 0 0 12 4.5v15a2.5 2.5 0 0 0 4.96.44 2.5 2.5 0 0 0 2.96-3.08 3 3 0 0 0 .34-5.58 2.5 2.5 0 0 0-1.32-4.24 2.5 2.5 0 0 0-1.98-3A2.5 2.5 0 0 0 14.5 2Z"/></svg>,
+            Book:(p)=><svg {...p} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>,
+            Zap:(p)=><svg {...p} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>,
+            Refresh:(p)=><svg {...p} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 12a9 9 0 0 0-9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/><path d="M3 12a9 9 0 0 0 9 9 9.75 9.75 0 0 0 6.74-2.74L21 16"/><path d="M21 21v-5h-5"/></svg>,
+        };
+
+        const compressImage = async (fileOrBlob) => {
+            return new Promise((resolve) => {
+                const img = new Image(); const reader = new FileReader();
+                reader.onload = (e) => { img.src = e.target.result; img.onload = () => {
+                    const canvas = document.createElement('canvas'); const MAX_WIDTH = 800; let w = img.width, h = img.height;
+                    if (w > MAX_WIDTH) { h *= MAX_WIDTH / w; w = MAX_WIDTH; }
+                    canvas.width = w; canvas.height = h;
+                    const ctx = canvas.getContext('2d'); ctx.drawImage(img, 0, 0, w, h);
+                    canvas.toBlob((blob) => { resolve(blob); }, 'image/jpeg', 0.6);
+                }}; reader.readAsDataURL(fileOrBlob);
+            });
+        };
+
+        const callAI = async (pmt, sys="", img=null, api=GEMINI_PROXY_URL) => {
+            const parts = [{ text: `${sys}\n\nUser: ${pmt}` }];
+            if (img) { let m="image/png",d=img; if(img.includes(",")){const s=img.split(",");m=s[0].match(/:(.*?);/)[1];d=s[1];} parts.push({inlineData:{mimeType:m,data:d}}); }
+            try { const r=await fetch(api,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({contents:[{parts}]})}); if(!r.ok)return `Err:${r.status}`; const j=await r.json(); return j.candidates?.[0]?.content?.parts?.[0]?.text||"Empty"; } catch(e){return `Err:${e.message}`;}
+        };
+        const callGroq = async (pmt, sys="", img=null) => {
+            const c=[{type:"text",text:pmt}]; if(img)c.push({type:"image_url",image_url:{url:img}});
+            try { const r=await fetch(GROQ_PROXY_URL,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({model:"llama-3.2-90b-vision-preview",messages:[{role:"system",content:sys},{role:"user",content:c}]})}); if(!r.ok)return `Err:${r.status}`; const j=await r.json(); return j.choices?.[0]?.message?.content||"Empty"; } catch(e){return `Err:${e.message}`;}
+        };
+
+        const checkAndIncrementQuota = async (user, type, subtype=null) => {
+            if (!user) return false;
+            const lim = { chat_gemini: 5, chat_groq: 20, practice: 10, ocr: 20 };
+            let f='', l=0; if (type==='chat') { f=subtype==='groq'?'chat_groq_count':'chat_count'; l=subtype==='groq'?lim.chat_groq:lim.chat_gemini; } else if (type==='practice') { f='practice_count'; l=lim.practice; } else { f='ocr_count'; l=lim.ocr; }
+            const t = new Date().toISOString().split('T')[0]; const ref = window.firebase.doc(window.firebase.db, 'artifacts', "darnote-app", 'users', user.uid, 'ai_usage', t);
+            try { const s=await window.firebase.getDoc(ref); let c=s.exists()?(s.data()[f]||0):0; if(c>=l)return false; await window.firebase.setDoc(ref,{[f]:window.firebase.increment(1)},{merge:true}); return c+1; } catch(e){return false;}
+        };
+
+        const useGoogleDrive = () => {
+            const [client, setClient] = useState(null);
+            useEffect(() => {
+                if(!GDRIVE_API_KEY || !GDRIVE_CLIENT_ID) return;
+                const load = async () => {
+                    if (window.gapi) { await new Promise(r => window.gapi.load('client', r)); await window.gapi.client.init({ apiKey: GDRIVE_API_KEY, discoveryDocs: ['https://www.googleapis.com/discovery/v1/apis/drive/v3/rest'] }); }
+                    if (window.google) setClient(window.google.accounts.oauth2.initTokenClient({ client_id: GDRIVE_CLIENT_ID, scope: 'https://www.googleapis.com/auth/drive.file', callback: () => {} }));
+                }; load();
+            }, []);
+            const getAccessToken = () => new Promise((resolve, reject) => {
+                if(window.tempDriveToken) return resolve(window.tempDriveToken);
+                if (!client) return reject("Auth not init");
+                client.callback = (resp) => { if (resp.error) reject(resp); resolve(resp.access_token); };
+                client.requestAccessToken({ prompt: '' });
+            });
+            const saveToDrive = async (blob, fname, preToken=null) => {
+                const token = preToken || await getAccessToken();
+                let folderId; const q = `mimeType='application/vnd.google-apps.folder' and name='darNote_Errors' and trashed=false`;
+                const search = await fetch(`https://www.googleapis.com/drive/v3/files?q=${encodeURIComponent(q)}`, { headers: { Authorization: `Bearer ${token}` } });
+                const sd = await search.json();
+                if (sd.files?.length) folderId = sd.files[0].id;
+                else { const c = await fetch('https://www.googleapis.com/drive/v3/files', { method: 'POST', headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' }, body: JSON.stringify({ name: 'darNote_Errors', mimeType: 'application/vnd.google-apps.folder' }) }); folderId = (await c.json()).id; }
+                const form = new FormData(); form.append('metadata', new Blob([JSON.stringify({ name: fname, mimeType: blob.type, parents: [folderId] })], { type: 'application/json' })); form.append('file', blob);
+                const up = await fetch('https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&fields=id', { method: 'POST', headers: { Authorization: `Bearer ${token}` }, body: form });
+                if(!up.ok) throw new Error(up.statusText);
+                const fid = (await up.json()).id; await fetch(`https://www.googleapis.com/drive/v3/files/${fid}/permissions`, { method: 'POST', headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' }, body: JSON.stringify({ role: 'reader', type: 'anyone' }) });
+                return `https://lh3.googleusercontent.com/d/${fid}`;
+            };
+            return { saveToDrive, getAccessToken };
+        };
+
+        const Lightbox = ({ images, initialIndex, onClose }) => {
+            const [index, setIndex] = useState(initialIndex);
+            useEffect(() => { const h = (e) => { if (e.key==='Escape') onClose(); if (e.key==='ArrowRight') setIndex((p) => (p + 1) % images.length); if (e.key==='ArrowLeft') setIndex((p) => (p - 1 + images.length) % images.length); }; window.addEventListener('keydown', h); return () => window.removeEventListener('keydown', h); }, [images.length, onClose]);
+            if (!images?.length) return null;
+            return (<motion.div initial={{opacity:0}} animate={{opacity:1}} exit={{opacity:0}} className="fixed inset-0 z-[60] bg-black/95 flex items-center justify-center backdrop-blur-sm" onClick={onClose}><button onClick={onClose} className="absolute top-4 right-4 text-white/50 hover:text-white p-2 z-50"><Icons.X className="w-8 h-8"/></button><motion.img key={index} initial={{opacity:0, scale:0.9}} animate={{opacity:1, scale:1}} src={images[index]} className="max-h-[90vh] max-w-[90vw] object-contain shadow-2xl rounded-lg select-none" onClick={(e) => e.stopPropagation()}/></motion.div>);
+        };
+
+        const MultiImageUploader = ({ images = [], onUpdate, label, isUploading }) => {
+            const [isDragging, setIsDragging] = useState(false); const [lightboxIndex, setLightboxIndex] = useState(null); const fileInputRef = useRef(null);
+            const list = Array.isArray(images) ? images : (images ? [images] : []);
+            const handleFiles = (files) => { Array.from(files).forEach(f => { if (f.type.startsWith('image/')) onUpdate(f, 'add'); }); };
+            return (
+                <div className="space-y-2">
+                    <div className="flex justify-between items-end px-1"><label className="text-sm font-bold text-zinc-700 dark:text-zinc-300 flex items-center gap-2">{label} <span className="text-[10px] bg-zinc-100 dark:bg-white/5 px-1.5 rounded text-zinc-500">{list.length}</span></label><div className="flex gap-2"><button onClick={async()=>{try{const i=await navigator.clipboard.read();for(const x of i)for(const t of x.types)if(t.startsWith("image/")){const b=await x.getType(t);onUpdate(b,'add');}}catch(e){alert("No image");}}} className="text-[10px] flex items-center gap-1 text-indigo-500 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 px-2 py-1 rounded"><Icons.Clip className="w-3 h-3"/> Paste</button><button onClick={()=>fileInputRef.current.click()} className="text-[10px] flex items-center gap-1 text-zinc-500 hover:bg-zinc-100 dark:hover:bg-white/10 px-2 py-1 rounded"><Icons.Plus className="w-3 h-3"/> Add</button></div><input type="file" multiple ref={fileInputRef} style={{display:'none'}} onChange={(e)=>handleFiles(e.target.files)} accept="image/*" /></div>
+                    <div className={`w-full min-h-[120px] bg-white dark:bg-surface border-2 border-dashed rounded-xl p-3 transition-all ${isDragging ? 'border-brand bg-brand/5' : 'border-zinc-300 dark:border-zinc-700'}`} onDragOver={(e)=>{e.preventDefault();setIsDragging(true)}} onDragLeave={()=>setIsDragging(false)} onDrop={(e)=>{e.preventDefault();setIsDragging(false);handleFiles(e.dataTransfer.files)}} tabIndex="0">
+                        {list.length===0 ? (<div className="h-24 flex flex-col items-center justify-center text-zinc-400 pointer-events-none">{isUploading?<div className="w-6 h-6 border-2 border-brand border-t-transparent rounded-full animate-spin mb-1"/>:<Icons.Image className="w-6 h-6 mb-1 opacity-50"/>}<span className="text-xs">{isUploading?"Uploading...":"Drag or Paste"}</span></div>) : (<div className="grid grid-cols-2 sm:grid-cols-4 gap-3">{list.map((url,i)=>(<div key={i} onClick={()=>setLightboxIndex(i)} className="group relative aspect-square bg-zinc-100 dark:bg-black/20 rounded-lg overflow-hidden border border-zinc-200 dark:border-white/5 cursor-zoom-in"><img src={url} className="w-full h-full object-cover"/><button onClick={(e)=>{e.stopPropagation();onUpdate(i,'remove')}} className="absolute top-1 right-1 p-1 bg-red-500 rounded-full text-white opacity-0 group-hover:opacity-100 transition-opacity"><Icons.Trash className="w-3 h-3"/></button></div>))}{isUploading&&<div className="aspect-square rounded-lg border border-zinc-200 dark:border-white/10 flex items-center justify-center animate-pulse"><div className="w-5 h-5 border-2 border-brand border-t-transparent rounded-full animate-spin"></div></div>}</div>)}
+                    </div>
+                    <AnimatePresence>{lightboxIndex!==null && <Lightbox images={list} initialIndex={lightboxIndex} onClose={()=>setLightboxIndex(null)} />}</AnimatePresence>
+                </div>
+            );
+        };
+
+        const AIChat = ({ activeLog, onClose, user, messages, setMessages }) => {
+            const [input, setInput] = useState(""); const [loading, setLoading] = useState(false); const [quota, setQuota] = useState(0); const [model, setModel] = useState('gemini'); const msgsRef = useRef(null);
+            useEffect(() => { msgsRef.current?.scrollIntoView({ behavior: "smooth" }); }, [messages]);
+            useEffect(() => { const f=async()=>{if(!user)return;const t=new Date().toISOString().split('T')[0];const r=window.firebase.doc(window.firebase.db,'artifacts',"darnote-app",'users',user.uid,'ai_usage',t);const s=await window.firebase.getDoc(r);setQuota(s.exists()?(model==='groq'?s.data().chat_groq_count:s.data().chat_count)||0:0)};f()}, [user, model]);
+            const handleSend = async () => {
+                if(!input.trim()) return; const nq=await checkAndIncrementQuota(user,'chat',model); const uMsg=input; setMessages(p=>[...p,{role:'user',text:uMsg}]); setInput(""); 
+                if(nq===false){setMessages(p=>[...p,{role:'ai',text:`🛑 Limit Reached`}]);return;} setQuota(nq); setLoading(true);
+                let imgCtx=(activeLog.questionImages?.[0])||(activeLog.imageUrl)||null; if(imgCtx?.startsWith('http')){try{const r=await fetch(imgCtx);const b=await r.blob();imgCtx=await new Promise(r=>{const rd=new FileReader();rd.onload=()=>r(rd.result);rd.readAsDataURL(b)})}catch(e){imgCtx=null}}
+                const sys=`Context: ${activeLog.subject}, ${activeLog.topic}, Ans:${activeLog.correctAnswer}, Text:"${activeLog.questionText||''}". Notes:${activeLog.explanation}. PREVIOUS:${messages.map(m=>m.text).join('|')}`;
+                let res = model==='groq' ? await callGroq(uMsg, sys, imgCtx) : await callAI(uMsg, sys, imgCtx);
+                setMessages(p=>[...p,{role:'ai',text:res.replace(/\$\$/g,'\n').replace(/\\/g,'')}]); setLoading(false);
+            };
+            return (
+                <div className="flex flex-col h-full bg-white dark:bg-onyx border-l border-zinc-200 dark:border-white/10 shadow-xl">
+                    <div className="p-3 border-b border-zinc-200 dark:border-white/10 bg-zinc-50 dark:bg-zinc-900 flex flex-col gap-2">
+                        <div className="flex justify-between items-center"><span className="font-bold text-xs flex gap-2"><Icons.Bot className="w-4 h-4 text-brand"/> Tutor AI</span><button onClick={onClose}><Icons.X className="w-4 h-4"/></button></div>
+                        <div className="flex bg-zinc-200 dark:bg-black/20 p-1 rounded"><button onClick={()=>setModel('gemini')} className={`flex-1 py-1 rounded text-[10px] font-bold ${model==='gemini'?'bg-white dark:bg-zinc-700 shadow-sm text-indigo-600 dark:text-white':'text-zinc-500'}`}>Gemini ({quota}/5)</button><button onClick={()=>setModel('groq')} className={`flex-1 py-1 rounded text-[10px] font-bold ${model==='groq'?'bg-white dark:bg-zinc-700 shadow-sm text-green-600 dark:text-white':'text-zinc-500'}`}>ChatGPT ({quota}/20)</button></div>
+                    </div>
+                    <div className="flex-1 overflow-y-auto p-4 space-y-4 markdown-content">{messages.map((m,i)=><div key={i} className={`flex ${m.role==='user'?'justify-end':'justify-start'}`}><div className={`max-w-[85%] p-3 rounded-2xl text-xs ${m.role==='user'?'bg-brand text-white':'bg-zinc-100 dark:bg-zinc-800 text-zinc-900 dark:text-zinc-200'}`} dangerouslySetInnerHTML={{__html:marked.parse(m.text)}}/></div>)}{loading&&<div className="text-xs text-zinc-500 animate-pulse pl-2">Thinking...</div>}<div ref={msgsRef}/></div>
+                    <div className="p-3 border-t bg-white dark:bg-zinc-900 flex gap-2"><input value={input} onChange={e=>setInput(e.target.value)} onKeyDown={e=>e.key==='Enter'&&handleSend()} className="flex-1 bg-zinc-100 dark:bg-black/30 border rounded-full px-4 py-2 text-xs focus:ring-1 focus:ring-brand dark:text-white" placeholder="Ask Tutor..."/><button onClick={handleSend} disabled={loading} className="bg-brand text-white rounded-full p-2"><Icons.Plus className="w-4 h-4 rotate-90"/></button></div>
+                </div>
+            );
+        };
+
+        const PracticeModal = ({ activeLog, onClose, user, subjects = [] }) => {
+            const [loading, setLoading] = useState(false); const [mode, setMode] = useState(activeLog ? 'single' : 'topic'); const [qs, setQs] = useState([]); const [lq, setLq] = useState(null); 
+            const [ans, setAns] = useState({}); const [marked, setMarked] = useState(false); const [fb, setFb] = useState(null); const [quota, setQuota] = useState(0);
+            const [selSub, setSelSub] = useState(activeLog?.subject || (subjects[0]?.name || '')); const [selTop, setSelTop] = useState(activeLog?.topic || '');
+            useEffect(() => { const f=async()=>{if(!user)return;const s=await window.firebase.getDoc(window.firebase.doc(window.firebase.db,'artifacts',"darnote-app",'users',user.uid,'ai_usage',new Date().toISOString().split('T')[0]));setQuota(s.exists()?s.data().practice_count||0:0)};f(); if(activeLog)gen('single'); }, []);
+            const gen = async (m='single') => {
+                if(m==='topic' && !selSub){alert("Select Subject");return;} setLoading(true); setMode(m); setMarked(false); setAns({}); setQs([]); setLq(null);
+                const nq=await checkAndIncrementQuota(user,'practice'); if(nq===false){alert("Limit Reached");onClose();return;} setQuota(nq);
+                let ctx="", img=null;
+                if(m==='single'&&activeLog){ ctx=`Sub:${activeLog.subject}. Top:${activeLog.topic}. Concept:${activeLog.explanation}. Q:${activeLog.questionText||"See Img"}`; img=(activeLog.questionImages?.[0])||(activeLog.imageUrl)||null; if(img?.startsWith('http')){try{const r=await fetch(img);const b=await r.blob();img=await new Promise(r=>{const rd=new FileReader();rd.onload=()=>r(rd.result);rd.readAsDataURL(b)})}catch(e){img=null}} }
+                else { try{ const q=window.firebase.query(window.firebase.collection(window.firebase.db,'artifacts',"darnote-app",'users',user.uid,'error_logs'),window.firebase.where('subject','==',selSub),window.firebase.limit(5)); const s=await window.firebase.getDocs(q); const l=s.docs.map(d=>d.data()); ctx=`Sub:${selSub}. Top:${selTop}. Past:${l.map(x=>x.explanation).join('|')}`; }catch(e){ctx=`Focus:${selSub}/${selTop}`;} }
+                const type = activeLog?.questionType || 'MC';
+                const pmt = type==='MC' ? `Ctx:${ctx}. Gen 5 MCQ JSON:[{"q":"..","options":["A.."],"answer":"A","explanation":".."}]` : `Ctx:${ctx}. Gen 1 LQ JSON:{"context":"..","parts":[{"id":"a","text":"..","marks":2}]}`;
+                const res = await callAI(pmt, "JSON Only", img); try{ const j=JSON.parse(res.replace(/```json|```/g,'')); if(type==='MC')setQs(j); else setLq(j); }catch(e){alert("Gen Failed");onClose();} setLoading(false);
+            };
+            const mark = async () => {
+                setLoading(true); const pmt=`Mark. Ctx:${lq.context}. P:${JSON.stringify(lq.parts)}. A:${JSON.stringify(ans)}. Return JSON:{"totalScore":5,"maxScore":10,"generalFeedback":"..","partFeedback":{"a":{"score":1,"comment":".."}}}`;
+                const res = await callAI(pmt,"JSON Only"); try{setFb(JSON.parse(res.replace(/```json|```/g,''))); setMarked(true);}catch(e){alert("Mark Failed");} setLoading(false);
+            };
+            return (
+                <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
+                    <div className="bg-white dark:bg-zinc-900 w-full max-w-2xl rounded-2xl shadow-2xl flex flex-col max-h-[85vh]">
+                        <div className="p-4 border-b border-zinc-200 dark:border-white/10 flex justify-between items-center bg-zinc-50 dark:bg-zinc-900 rounded-t-2xl"><h3 className="font-bold flex gap-2 dark:text-white"><Icons.Brain className="w-5 h-5 text-brand"/> Practice</h3><button onClick={onClose}><Icons.X className="w-6 h-6"/></button></div>
+                        <div className="p-2 bg-zinc-100 dark:bg-black/20 flex gap-2">{activeLog&&<button onClick={()=>gen('single')} className={`px-3 py-1 rounded text-xs font-bold ${mode==='single'?'bg-white dark:bg-zinc-700 shadow':'text-zinc-500'}`}>Drill</button>}<button onClick={()=>!activeLog?null:gen('topic')} className={`px-3 py-1 rounded text-xs font-bold ${mode==='topic'?'bg-white dark:bg-zinc-700 shadow':'text-zinc-500'}`}>Topic</button></div>
+                        <div className="flex-1 overflow-y-auto p-6 space-y-6">
+                            {loading?<div className="text-center animate-pulse text-zinc-500">Generating...</div> : qs.length>0 ? qs.map((q,i)=>(<div key={i}><div className="font-bold dark:text-white">{i+1}. {q.q}</div><div className="grid grid-cols-2 gap-2 mt-2">{q.options.map(o=>{const l=o[0];const sel=ans[i]===l;const cor=q.answer===l;let c="border dark:border-white/10";if(marked){if(cor)c="bg-green-500/20 border-green-500";else if(sel)c="bg-red-500/20 border-red-500";}else if(sel)c="border-brand bg-brand/10";return(<button key={o} onClick={()=>!marked&&setAns({...ans,[i]:l})} className={`p-2 rounded text-left text-sm ${c} dark:text-zinc-300`}>{o}</button>)})}</div>{marked&&<div className="text-xs mt-2 text-zinc-500">{q.explanation}</div>}</div>)) : lq ? <div><div className="p-3 bg-zinc-50 dark:bg-white/5 rounded mb-4 dark:text-white">{lq.context}</div>{lq.parts.map(p=>(<div key={p.id} className="mb-4"><div className="text-sm font-bold flex justify-between dark:text-white"><span>({p.id}) {p.text}</span><span>[{p.marks}]</span></div><textarea disabled={marked} value={ans[p.id]||''} onChange={e=>setAns({...ans,[p.id]:e.target.value})} className="w-full mt-1 p-2 border rounded bg-transparent dark:border-white/10 dark:text-white"/><div className="text-xs mt-1 text-zinc-500">{marked&&fb?.partFeedback[p.id]?.comment}</div></div>))}</div> : <div className="text-center text-zinc-400">Select Mode to Start</div>}
+                        </div>
+                        <div className="p-4 border-t border-zinc-200 dark:border-white/10 flex justify-between items-center"><span className="text-xs text-zinc-500">{quota}/10 Today</span>{!marked&&(qs.length||lq)?<button onClick={()=>qs.length?setMarked(true):mark()} className="bg-brand text-white px-6 py-2 rounded font-bold">Check</button>:<button onClick={onClose} className="bg-zinc-200 dark:bg-white/10 px-4 py-2 rounded">Close</button>}</div>
+                    </div>
+                </div>
+            );
+        };
+
+        const App = () => {
+            const [user, setUser] = useState(null); const [logs, setLogs] = useState([]); const [subjects, setSubjects] = useState([]); const [activeLogId, setActiveLogId] = useState(() => new URLSearchParams(window.location.search).get('log'));
+            const [filter, setFilter] = useState('all'); const [searchQuery, setSearchQuery] = useState(''); const [isAiOpen, setIsAiOpen] = useState(false); const [isDarkMode, setIsDarkMode] = useState(true);
+            const [isAutoTitleLoading, setIsAutoTitleLoading] = useState(false); const [isPracticeOpen, setIsPracticeOpen] = useState(false);
+            const { saveToDrive, getAccessToken } = useGoogleDrive(); 
+            const [uploadingQ, setUploadingQ] = useState(false); const [uploadingS, setUploadingS] = useState(false);
+            const [showOcrText, setShowOcrText] = useState(false); const [chatMessages, setChatMessages] = useState([{role: 'ai', text: "How can I help?"}]);
+
+            useEffect(() => {
+                const unsub = window.firebase.onAuthStateChanged(window.firebase.auth, async (u) => {
+                    if (u) { setUser(u); window.firebase.getDocs(window.firebase.collection(window.firebase.db, 'artifacts', "darnote-app", 'users', u.uid, 'subjects')).then(s => setSubjects(s.docs.map(d => ({id:d.id, ...d.data()})).sort((a,b)=>a.name.localeCompare(b.name)))); } else setUser(null);
+                }); return () => unsub();
+            }, []);
+            useEffect(() => { if(isDarkMode) document.documentElement.classList.add('dark'); else document.documentElement.classList.remove('dark'); }, [isDarkMode]);
+            
+            const handleLogin = async () => {
+                const provider = new window.firebase.GoogleAuthProvider(); provider.addScope('https://www.googleapis.com/auth/drive.file'); 
+                try { const res = await window.firebase.signInWithPopup(window.firebase.auth, provider); const cred = window.firebase.GoogleAuthProvider.credentialFromResult(res); if(cred?.accessToken) window.tempDriveToken = cred.accessToken; } catch(e) { console.error(e); }
+            };
+
+            const fetchLogs = async () => {
+                if (!user) return;
+                const db = window.firebase.db; let c = [window.firebase.orderBy('createdAt', 'desc'), window.firebase.limit(50)];
+                if (filter === 'active') c.push(window.firebase.where('mastered', '==', false));
+                if (filter.startsWith('subject:')) c.push(window.firebase.where('subject', '==', filter.split(':')[1]));
+                const q = window.firebase.query(window.firebase.collection(db, 'artifacts', "darnote-app", 'users', user.uid, 'error_logs'), ...c);
+                const s = await window.firebase.getDocs(q);
+                setLogs(s.docs.map(d => { const dt=d.data(); return { id:d.id, ...dt, questionImages: dt.questionImages||(dt.imageUrl?[dt.imageUrl]:[]), schemeImages: dt.schemeImages||[] }; }));
+            };
+            useEffect(() => { fetchLogs(); }, [user, filter]);
+
+            const updateLog = (id, ups) => {
+                setLogs(p => p.map(l => l.id === id ? { ...l, ...ups } : l));
+                clearTimeout(window.saveT); window.saveT = setTimeout(() => window.firebase.updateDoc(window.firebase.doc(window.firebase.db, 'artifacts', "darnote-app", 'users', user.uid, 'error_logs', id), { ...ups, lastModified: new Date().toISOString() }), 1000);
+            };
+
+            const handleImageUpdate = async (data, action, type) => {
+                const isQ = type === 'question'; const setSp = isQ ? setUploadingQ : setUploadingS; const fld = isQ ? 'questionImages' : 'schemeImages';
+                if (action === 'remove') { updateLog(activeLogId, { [fld]: activeLog[fld].filter((_, i) => i !== data) }); return; }
+                setSp(true);
+                try {
+                    let blob = data, token = null;
+                    if (data instanceof File || data instanceof Blob) {
+                        if (!window.tempDriveToken) { try { token = await getAccessToken(); } catch(e) { alert("Popup blocked. Please allow popups."); throw e; } }
+                        blob = await compressImage(data);
+                    }
+                    const url = await saveToDrive(blob, `Log_${Date.now()}.jpg`, token);
+                    updateLog(activeLogId, { [fld]: [...activeLog[fld], url] });
+                    if(isQ) {
+                        const nq = await checkAndIncrementQuota(user, 'ocr');
+                        if (nq !== false) {
+                            setIsAutoTitleLoading(true); const r = new FileReader();
+                            r.onloadend = async () => { try{ const res = await callGroq(`Extract text + Title JSON`, "JSON Only", r.result); const j=JSON.parse(res.substring(res.indexOf('{'),res.lastIndexOf('}')+1)); updateLog(activeLogId,{title:j.title,questionText:j.text}); }catch(e){} setIsAutoTitleLoading(false); };
+                            r.readAsDataURL(blob);
+                        }
+                    }
+                } catch(e) { alert("Upload Failed: " + e.message); }
+                setSp(false);
+            };
+
+            const activeLog = logs.find(l => l.id === activeLogId);
+
+            if (!user) return (
+                <div className="h-screen flex items-center justify-center bg-zinc-950 text-white flex-col gap-6">
+                    <img src="https://raw.githubusercontent.com/darren6251/darnote/refs/heads/main/darNote%20logo.png" className="w-20 h-20 mb-4 drop-shadow-[0_0_15px_rgba(99,102,241,0.5)]"/>
+                    <h1 className="text-3xl font-bold">darNote Error Log</h1>
+                    <button onClick={handleLogin} className="bg-white text-black px-8 py-3 rounded-full font-bold flex gap-2 items-center hover:scale-105 transition-transform shadow-xl"><Icons.Google className="w-5 h-5"/> Sign In with Google</button>
+                </div>
+            );
+
+            return (
+                <div className={`flex h-screen w-full transition-colors duration-300 ${isDarkMode ? 'dark bg-onyx' : 'bg-[#f4f4f5]'}`}>
+                    <div className="w-[260px] hidden md:flex flex-col p-5 glass-panel justify-between">
+                        <div>
+                            <div className="flex items-center gap-3 px-1 mb-8"><img src="https://raw.githubusercontent.com/darren6251/darnote/refs/heads/main/darNote%20logo.png" className="w-8 h-8"/><span className="font-bold text-sm dark:text-white">darNote</span></div>
+                            <nav className="space-y-1">
+                                <a href="note.html" className="flex items-center gap-3 px-3 py-2 rounded-lg text-sm text-zinc-500 hover:bg-zinc-100 dark:hover:bg-white/5 mb-4"><Icons.Book className="w-4 h-4"/> Back to Notes</a>
+                                {[{id:'all',l:'All Errors'},{id:'active',l:'Review'},{id:'mastered',l:'Mastered'}].map(i=><button key={i.id} onClick={()=>setFilter(i.id)} className={`w-full text-left px-3 py-2 rounded-lg text-sm ${filter===i.id?'bg-zinc-200 dark:bg-white/10 dark:text-white':'text-zinc-500'}`}>{i.l}</button>)}
+                                <button onClick={()=>setIsPracticeOpen(true)} className="w-full text-left px-3 py-2 rounded-lg text-sm text-orange-500 font-bold hover:bg-orange-50 dark:hover:bg-orange-900/10 mt-2 flex gap-2 items-center"><Icons.Brain className="w-4 h-4"/> Practice Arcade</button>
+                                <div className="pt-4 mt-4 border-t border-zinc-200 dark:border-white/10"><div className="px-2 text-[10px] font-bold text-zinc-400 mb-2">SUBJECTS</div>{subjects.map(s=><button key={s.id} onClick={()=>setFilter(`subject:${s.name}`)} className="w-full text-left px-3 py-2 rounded-lg text-sm text-zinc-500 hover:text-zinc-900 dark:hover:text-white">{s.name}</button>)}</div>
+                            </nav>
+                        </div>
+                        <div className="flex gap-2"><button onClick={()=>setIsDarkMode(!isDarkMode)} className="flex-1 py-2 rounded-lg text-xs bg-white dark:bg-white/5 border border-zinc-200 dark:border-white/5">{isDarkMode?'Light':'Dark'}</button><button onClick={()=>window.firebase.signOut(window.firebase.auth)} className="px-3 py-2 text-red-500"><Icons.Logout className="w-4 h-4"/></button></div>
+                    </div>
+
+                    <div className="w-[320px] flex-col border-r border-zinc-200 dark:border-white/5 bg-white dark:bg-surface shadow-lg z-10 flex">
+                        <div className="p-4 border-b border-zinc-200 dark:border-white/5 space-y-3">
+                            <input placeholder="Search..." value={searchQuery} onChange={e=>setSearchQuery(e.target.value)} className="input-field pl-8"/>
+                            <button onClick={async()=>{const n={title:'Untitled',subject:'General',questionImages:[],schemeImages:[],questionType:'MC',correctAnswer:'',marks:'',explanation:'',questionText:'',mastered:false,createdAt:new Date().toISOString()};const d=await window.firebase.addDoc(window.firebase.collection(window.firebase.db,'artifacts',"darnote-app",'users',user.uid,'error_logs'),n);setLogs(p=>[{...n,id:d.id},...p]);setActiveLogId(d.id)}} className="w-full bg-brand text-white py-2 rounded-lg font-bold text-sm hover:bg-indigo-600 flex justify-center items-center gap-2"><Icons.Plus className="w-4 h-4"/> New Log</button>
+                        </div>
+                        <div className="flex-1 overflow-y-auto p-2 space-y-2">
+                            {logs.filter(l=>(l.title||'').toLowerCase().includes(searchQuery.toLowerCase())).map(l=>(<div key={l.id} onClick={()=>setActiveLogId(l.id)} className={`p-3 rounded-xl cursor-pointer border ${activeLogId===l.id?'bg-zinc-100 dark:bg-white/10 border-zinc-300 dark:border-white/20':'border-transparent hover:bg-zinc-50 dark:hover:bg-white/5'}`}><div className="flex justify-between mb-1"><div className="font-semibold text-sm truncate w-full dark:text-zinc-200">{l.title}</div>{l.mastered&&<Icons.Check className="w-3 h-3 text-green-500"/>}</div><div className="flex gap-2"><span className="text-[10px] bg-zinc-200 dark:bg-white/10 px-1.5 rounded text-zinc-500">{l.subject}</span><span className={`text-[10px] font-bold ${l.mastered?'text-green-600':'text-red-500'}`}>{l.mastered?'SOLVED':'REVIEW'}</span></div></div>))}
+                        </div>
+                    </div>
+
+                    <main className="flex-1 flex flex-col min-w-0 bg-[#f4f4f5] dark:bg-onyx relative">
+                        {activeLog ? (
+                            <div className="flex flex-col h-full animate-fadein">
+                                <header className="h-14 flex items-center justify-between px-6 border-b border-zinc-200 dark:border-white/5 bg-white dark:bg-surface">
+                                    <div className="flex items-center gap-2 flex-1 mr-4">
+                                        <input value={activeLog.title} onChange={e=>updateLog(activeLog.id,{title:e.target.value})} className="bg-transparent text-lg font-bold outline-none w-full dark:text-white" placeholder="Untitled"/>
+                                        <button onClick={()=>updateLog(activeLog.id,{title:'Auto-Generating...',questionText:'...' }) || handleImageUpdate(null, 'ocr', 'question')} disabled={isAutoTitleLoading} className="px-2 py-1 rounded text-xs bg-zinc-100 dark:bg-white/10 dark:text-zinc-400"><Icons.Scan className="w-3 h-3"/></button>
+                                        <button onClick={()=>setIsPracticeOpen(true)} className="px-2 py-1 rounded text-xs bg-orange-100 dark:bg-orange-500/20 text-orange-600 dark:text-orange-400 font-bold ml-2">Practice</button>
+                                    </div>
+                                    <div className="flex gap-3">
+                                        <button onClick={()=>updateLog(activeLog.id,{mastered:!activeLog.mastered})} className={`px-3 py-1 rounded-full text-xs font-bold border ${activeLog.mastered?'bg-green-500/10 border-green-500 text-green-600':'bg-red-500/10 border-red-500 text-red-600'}`}>{activeLog.mastered?'Mastered':'Needs Review'}</button>
+                                        <button onClick={()=>setIsAiOpen(!isAiOpen)} className={`p-1.5 rounded ${isAiOpen?'bg-brand/10 text-brand':'text-zinc-400'}`}><Icons.Bot className="w-5 h-5"/></button>
+                                        <button onClick={async()=>{if(confirm("Delete?")){await window.firebase.deleteDoc(window.firebase.doc(window.firebase.db,'artifacts',"darnote-app",'users',user.uid,'error_logs',activeLog.id));setLogs(p=>p.filter(l=>l.id!==activeLog.id));setActiveLogId(null)}}} className="p-1.5 text-zinc-400 hover:text-red-500"><Icons.Trash className="w-5 h-5"/></button>
+                                    </div>
+                                </header>
+                                <div className="flex-1 overflow-y-auto p-6 md:p-10">
+                                    <div className="max-w-4xl mx-auto space-y-6">
+                                        <div className="bg-white dark:bg-surface p-4 rounded-xl border border-zinc-200 dark:border-white/5 grid grid-cols-3 gap-4">
+                                            <div><label className="text-[10px] font-bold text-zinc-400 uppercase">Subject</label><select value={activeLog.subject} onChange={e=>updateLog(activeLog.id,{subject:e.target.value})} className="input-field bg-zinc-50 dark:bg-black/20 mt-1"><option>General</option>{subjects.map(s=><option key={s.id} value={s.name}>{s.name}</option>)}</select></div>
+                                            <div><label className="text-[10px] font-bold text-zinc-400 uppercase">Topic</label><input value={activeLog.topic||''} onChange={e=>updateLog(activeLog.id,{topic:e.target.value})} className="input-field bg-zinc-50 dark:bg-black/20 mt-1"/></div>
+                                            <div><label className="text-[10px] font-bold text-zinc-400 uppercase">Type</label><div className="flex bg-zinc-100 dark:bg-black/20 p-1 rounded mt-1">{['MC','LQ'].map(t=><button key={t} onClick={()=>updateLog(activeLog.id,{questionType:t})} className={`flex-1 text-xs font-bold py-1 rounded ${activeLog.questionType===t?'bg-white dark:bg-zinc-700 shadow-sm dark:text-white':'text-zinc-500'}`}>{t}</button>)}</div></div>
+                                        </div>
+                                        <div className="space-y-4">
+                                            <div><MultiImageUploader images={activeLog.questionImages} onUpdate={(d,a)=>handleImageUpdate(d,a,'question')} label="Question" isUploading={uploadingQ}/><button onClick={()=>setShowOcrText(!showOcrText)} className="text-[10px] text-zinc-400 mt-1 hover:text-brand">Show Extracted Text</button>{showOcrText&&<textarea value={activeLog.questionText||''} onChange={e=>updateLog(activeLog.id,{questionText:e.target.value})} className="w-full mt-2 p-2 text-xs bg-zinc-100 dark:bg-black/20 rounded font-mono dark:text-zinc-400"/>}</div>
+                                            <MultiImageUploader images={activeLog.schemeImages} onUpdate={(d,a)=>handleImageUpdate(d,a,'scheme')} label="Marking Scheme" isUploading={uploadingS}/>
+                                        </div>
+                                        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                                            <div className="md:col-span-1 space-y-4">
+                                                <div className="bg-white dark:bg-surface p-4 rounded-xl border border-zinc-200 dark:border-white/5"><label className="text-[10px] font-bold text-zinc-400 uppercase">Correct Answer</label><input value={activeLog.correctAnswer} onChange={e=>updateLog(activeLog.id,{correctAnswer:e.target.value})} className="w-full bg-green-50 dark:bg-green-900/10 border border-green-200 dark:border-green-900/30 rounded px-3 py-2 font-mono font-bold text-green-700 dark:text-green-400 mt-1"/></div>
+                                                <div className="bg-white dark:bg-surface p-4 rounded-xl border border-zinc-200 dark:border-white/5"><label className="text-[10px] font-bold text-zinc-400 uppercase">Marks Lost</label><input value={activeLog.marks} onChange={e=>updateLog(activeLog.id,{marks:e.target.value})} className="w-full bg-red-50 dark:bg-red-900/10 border border-red-200 dark:border-red-900/30 rounded px-3 py-2 font-bold text-red-700 dark:text-red-400 mt-1"/></div>
+                                            </div>
+                                            <div className="md:col-span-2 bg-white dark:bg-surface rounded-xl border border-zinc-200 dark:border-white/5 flex flex-col min-h-[200px]"><div className="px-4 py-2 border-b border-zinc-200 dark:border-white/5 bg-zinc-50 dark:bg-white/5"><span className="text-xs font-bold text-zinc-500 uppercase">Logic Gap</span></div><textarea className="flex-1 w-full p-4 bg-transparent outline-none resize-none text-sm dark:text-zinc-300" placeholder="Why did I get this wrong?" value={activeLog.explanation} onChange={e=>updateLog(activeLog.id,{explanation:e.target.value})}/></div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        ) : (<div className="flex-1 flex flex-col items-center justify-center text-zinc-400"><Icons.Bug className="w-16 h-16 opacity-20 mb-4"/>Select a log</div>)}
+                        <AnimatePresence>{isAiOpen && activeLog && user && (<div className="absolute top-0 right-0 bottom-0 w-[350px] z-30 shadow-2xl"><AIChat activeLog={activeLog} onClose={()=>setIsAiOpen(false)} user={user} messages={chatMessages} setMessages={setChatMessages}/></div>)}</AnimatePresence>
+                        {isPracticeOpen && <PracticeModal activeLog={activeLog} onClose={() => setIsPracticeOpen(false)} user={user} subjects={subjects} />}
+                    </main>
+                </div>
+            );
+        };
+        ReactDOM.createRoot(document.getElementById('root')).render(<App />);
+    </script>
+</body>
+</html>
