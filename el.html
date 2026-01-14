@@ -693,7 +693,7 @@
                         const reader = new FileReader();
                         reader.onloadend = async () => {
                             try {
-                                const prompt = `Analyze. 1. Extract exact text (OCR). 2. Title (max 6 words). Return JSON: { "text": "...", "title": "..." }.`;
+                                const prompt = `Analyze. 1. Extract exact text of the whole question, 1:1 turn to text (OCR). 2. Title (max 6 words). Return JSON: { "text": "...", "title": "..." }.`;
                                 const res = await callGroq(prompt, "JSON", reader.result);
                                 const json = JSON.parse(res.substring(res.indexOf('{'), res.lastIndexOf('}') + 1));
                                 updateLog(activeLogId, { title: json.title || activeLog.title, questionText: json.text || "" });
