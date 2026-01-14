@@ -118,6 +118,7 @@
         const GDRIVE_API_KEY = "AIzaSyCScFR_D0snZ6hrHob5fUQM7Y2NhK-kTIA"; 
         const GDRIVE_CLIENT_ID = "256215327792-oglegui0q8qj507oao2c2733thcl9lrc.apps.googleusercontent.com"; 
         const GEMINI_PROXY_URL = "https://gemini-proxy-513372702506.us-central1.run.app/proxy";
+        const GROQ_PROXY_URL = "https://groq-proxy-157237873670.us-central1.run.app/proxy";
 
         const { useState, useEffect, useRef, useMemo, useCallback } = React;
         const { motion, AnimatePresence } = window.Motion;
@@ -190,9 +191,8 @@
             });
         };
 
-        // --- GEMINI PROXY ---
-        const callGemini = async (prompt, systemInstruction = "", imageBase64 = null) => {
-            const proxyUrl = GEMINI_PROXY_URL;
+        // --- GEMINI/GROQ PROXY ---
+        const callAI = async (prompt, systemInstruction = "", imageBase64 = null, apiUrl = GEMINI_PROXY_URL) => {
             const parts = [{ text: `${systemInstruction}\n\nUser: ${prompt}` }];
             if (imageBase64) {
                 let mimeType = "image/png"; let data = imageBase64;
@@ -203,7 +203,7 @@
                 parts.push({ inlineData: { mimeType, data } });
             }
             try {
-                const response = await fetch(proxyUrl, { 
+                const response = await fetch(apiUrl, { 
                     method: 'POST', headers: { 'Content-Type': 'application/json' }, 
                     body: JSON.stringify({ contents: [{ parts }] }) 
                 });
@@ -337,7 +337,7 @@
                 <div className="space-y-2">
                     <div className="flex justify-between items-end px-1"><label className="text-sm font-bold text-zinc-700 dark:text-zinc-300 flex items-center gap-2">{label} <span className="text-[10px] font-normal text-zinc-400 bg-zinc-100 dark:bg-white/5 px-1.5 rounded">{imageList.length} files</span></label><div className="flex gap-2"><button onClick={handlePasteClick} className="text-[10px] flex items-center gap-1 text-indigo-500 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 px-2 py-1 rounded transition-colors"><Icons.Clip className="w-3 h-3"/> Paste</button><button onClick={() => fileInputRef.current.click()} className="text-[10px] flex items-center gap-1 text-zinc-500 hover:bg-zinc-100 dark:hover:bg-white/10 px-2 py-1 rounded transition-colors"><Icons.Plus className="w-3 h-3"/> Add</button></div><input type="file" multiple ref={fileInputRef} className="hidden" onChange={(e) => handleFiles(e.target.files)} accept="image/*" /></div>
                     <div className={`w-full min-h-[120px] bg-white dark:bg-surface border-2 border-dashed rounded-xl p-3 transition-all ${isDragging ? 'border-brand bg-brand/5' : 'border-zinc-300 dark:border-zinc-700'}`} onDragOver={(e) => { e.preventDefault(); setIsDragging(true); }} onDragLeave={() => setIsDragging(false)} onDrop={(e) => { e.preventDefault(); setIsDragging(false); handleFiles(e.dataTransfer.files); }} onPaste={(e) => handleFiles(e.clipboardData.files)} tabIndex="0">
-                        {imageList.length === 0 ? (<div className="h-24 flex flex-col items-center justify-center text-zinc-400 pointer-events-none"><Icons.Image className="w-6 h-6 mb-1 opacity-50"/><span className="text-xs">Drag images or Ctrl+V</span></div>) : (
+                        {imageList.length === 0 ? (<div className="h-24 flex flex-col items-center justify-center text-zinc-400 pointer-events-none">{isUploading ? <div className="w-6 h-6 border-2 border-brand border-t-transparent rounded-full animate-spin mb-1"/> : <Icons.Image className="w-6 h-6 mb-1 opacity-50"/>}<span className="text-xs">{isUploading ? "Uploading..." : "Drag images or Ctrl+V"}</span></div>) : (
                             <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
                                 {imageList.map((url, idx) => (<div key={idx} onClick={() => setLightboxIndex(idx)} className="group relative aspect-square bg-zinc-100 dark:bg-black/20 rounded-lg overflow-hidden border border-zinc-200 dark:border-white/5 shadow-sm hover:shadow-md transition-all cursor-zoom-in"><img src={url} className="w-full h-full object-cover" /><div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2"><div className="p-1.5 bg-white/20 rounded-full text-white backdrop-blur-sm"><Icons.ZoomIn className="w-4 h-4"/></div><button onClick={(e) => { e.stopPropagation(); onUpdate(idx, 'remove'); }} className="p-1.5 bg-red-500/80 hover:bg-red-500 rounded-full text-white backdrop-blur-sm" title="Remove"><Icons.Trash className="w-4 h-4"/></button></div></div>))}
                                 {isUploading && (<div className="aspect-square rounded-lg bg-zinc-50 dark:bg-white/5 flex items-center justify-center border border-zinc-200 dark:border-white/10 animate-pulse"><div className="w-5 h-5 border-2 border-brand border-t-transparent rounded-full animate-spin"></div></div>)}
@@ -392,7 +392,7 @@
                 const systemPrompt = `You are a tutor. Context: ${context}. \nPREVIOUS CHAT (Last 3 turns):\n${historyText}\n\nINSTRUCTIONS:\n1. Be CONCISE (TL;DR style).\n2. Use standard MARKDOWN for tables, bolding, and lists.\n3. Put new logic/steps on new lines.\n4. STRICTLY NO LaTeX or '$' signs. Use Unicode math (e.g. "θ", "×", "≈", "²"). Write formulas in plain text.`;
                 const fullUserPrompt = `Student Question: ${userMsg}`;
 
-                let response = await callGemini(fullUserPrompt, systemPrompt, imgCtx);
+                let response = await callAI(fullUserPrompt, systemPrompt, imgCtx, GEMINI_PROXY_URL);
                 response = cleanLatex(response);
                 setMessages(prev => [...prev, {role: 'ai', text: response}]); setLoading(false);
             };
@@ -497,11 +497,11 @@
 
                 if (qType === 'MC') {
                     const prompt = `Context: ${contextData}\nGenerate 5 Multiple Choice Questions (ABCD). Return STRICTLY a JSON array: [{"q": "Question text", "options": ["A. ...", "B. ...", "C. ...", "D. ..."], "answer": "A", "explanation": "..."}]. Plain text only, NO LaTeX.`;
-                    const res = await callGemini(prompt, "You are a JSON generator.", imgCtx);
+                    const res = await callAI(prompt, "You are a JSON generator.", imgCtx, GEMINI_PROXY_URL);
                     try { const json = JSON.parse(res.replace(/```json|```/g, '')); setQuestions(json); } catch(e) { alert("AI generation failed. Try again."); onClose(); }
                 } else {
                     const prompt = `Context: ${contextData}\nGenerate 1 structured long question with 3 sub-parts. Return STRICTLY JSON: {"context": "Main question text...", "parts": [{"id": "a", "text": "Sub-question A", "marks": 2}, {"id": "b", "text": "...", "marks": 4}, {"id": "c", "text": "...", "marks": 4}]}. Plain text only, NO LaTeX.`;
-                    const res = await callGemini(prompt, "You are a JSON generator.", imgCtx);
+                    const res = await callAI(prompt, "You are a JSON generator.", imgCtx, GEMINI_PROXY_URL);
                     try { const json = JSON.parse(res.replace(/```json|```/g, '')); setLqData(json); } catch(e) { alert("AI generation failed. Try again."); onClose(); }
                 }
                 setLoading(false);
@@ -510,7 +510,7 @@
             const handleLqMark = async () => {
                 setLoading(true);
                 const prompt = `Mark this. Context: ${lqData.context}\nParts: ${JSON.stringify(lqData.parts)}\nAnswers: ${JSON.stringify(userAnswers)}\nReturn STRICTLY JSON: {"totalScore": 5, "maxScore": 10, "generalFeedback": "...", "partFeedback": {"a": {"score": 1, "comment": "..."}, "b": {"score": 4, "comment": "..."}}}. Plain text.`;
-                const res = await callGemini(prompt, "You are a strict examiner. Return JSON only.");
+                const res = await callAI(prompt, "You are a strict examiner. Return JSON only.", null, GEMINI_PROXY_URL);
                 try { const json = JSON.parse(res.replace(/```json|```/g, '')); setLqFeedback(json); setMarked(true); } catch(e) { alert("Marking failed."); }
                 setLoading(false);
             };
@@ -694,12 +694,19 @@
             const handleContextMenu = (e, logId) => { e.preventDefault(); setContextMenu({ visible: true, x: e.clientX, y: e.clientY, logId }); };
             const addTopicToSubject = async (subjectName) => { const subjectDoc = subjects.find(s => s.name === subjectName); if (!subjectDoc) { alert("Cannot add topic to General."); return; } const newTopic = prompt(`Add topic for ${subjectName}:`); if (!newTopic) return; setSubjects(prev => prev.map(s => s.id === subjectDoc.id ? {...s, topics: [...s.topics, newTopic]} : s)); const docRef = window.firebase.doc(window.firebase.db, 'artifacts', 'darnote-app', 'users', user.uid, 'subjects', subjectDoc.id); await window.firebase.updateDoc(docRef, { topics: window.firebase.arrayUnion(newTopic) }); };
             
-            // --- NEW: COMPRESSED UPLOAD & OCR ---
+            // --- NEW: COMPRESSED UPLOAD & AUTO OCR PIPELINE ---
             const handleImageUpdate = async (data, action, type) => {
                 if (!activeLogId) return;
-                const isQ = type === 'question'; const setSpinner = isQ ? setUploadingQ : setUploadingS; const targetField = isQ ? 'questionImages' : 'schemeImages'; const currentImages = isQ ? activeLog.questionImages : activeLog.schemeImages;
+                const isQ = type === 'question'; 
+                const setSpinner = isQ ? setUploadingQ : setUploadingS; 
+                const targetField = isQ ? 'questionImages' : 'schemeImages'; 
+                const currentImages = isQ ? activeLog.questionImages : activeLog.schemeImages;
                 
-                if (action === 'remove') { const newArr = currentImages.filter((_, i) => i !== data); updateLog(activeLogId, { [targetField]: newArr }); return; }
+                if (action === 'remove') { 
+                    const newArr = currentImages.filter((_, i) => i !== data); 
+                    updateLog(activeLogId, { [targetField]: newArr }); 
+                    return; 
+                }
                 
                 setSpinner(true);
                 try {
@@ -712,24 +719,44 @@
                     const finalUrl = await saveToDrive(blobToUpload, `ErrorLog_${type}_${Date.now()}.jpg`);
                     const newArr = [...currentImages, finalUrl]; 
                     
-                    // If Question Image, trigger background OCR
+                    // 1. SHOW IMAGE IMMEDIATELY
+                    updateLog(activeLogId, { [targetField]: newArr });
+                    setSpinner(false); // Stop "Uploading" spinner
+                    
+                    // 2. BACKGROUND AUTO-OCR & TITLE (If Question)
                     if (isQ) {
+                        const newQuota = await checkAndIncrementQuota(user, 'ocr');
+                        if (newQuota === false) { console.log("OCR limit reached"); return; }
+                        
+                        setIsAutoTitleLoading(true); // Show "Analyzing..." on the Auto-Title button
+                        
+                        // Convert blob to base64 for AI
                         const reader = new FileReader();
                         reader.onloadend = async () => {
                             const base64 = reader.result;
                             try {
-                                const ocrText = await callGemini("Extract the EXACT text from this image. Do not summarize. Return raw text only.", "OCR Machine", base64);
-                                // Append or set text
+                                // Combined Prompt for Text Extraction + Title Summarization
+                                const prompt = `Analyze this image. 1. Extract the exact text from the question (OCR). 2. Generate a concise title (max 6 words) based on the concept. Return STRICTLY valid JSON: { "text": "...", "title": "..." }.`;
+                                
+                                const res = await callAI(prompt, "You are a JSON generator.", base64, GROQ_PROXY_URL);
+                                const json = JSON.parse(res.replace(/```json|```/g, ''));
+                                
+                                // Update Log with AI results
                                 const currentText = activeLog.questionText || "";
-                                updateLog(activeLogId, { [targetField]: newArr, questionText: currentText + "\n" + ocrText });
-                            } catch (e) { console.error("OCR Failed silently", e); updateLog(activeLogId, { [targetField]: newArr }); }
+                                updateLog(activeLogId, { 
+                                    title: json.title || activeLog.title,
+                                    questionText: json.text || currentText
+                                });
+                            } catch (e) { console.error("Auto-OCR Failed", e); }
+                            setIsAutoTitleLoading(false);
                         };
                         reader.readAsDataURL(blobToUpload);
-                    } else {
-                        updateLog(activeLogId, { [targetField]: newArr });
                     }
 
-                } catch(e) { alert("Upload Failed: " + e.message); } setSpinner(false);
+                } catch(e) { 
+                    alert("Upload Failed: " + e.message); 
+                    setSpinner(false);
+                } 
             };
 
             const handleAutoTitle = async () => {
@@ -741,17 +768,11 @@
                     let url = activeLog.questionImages?.[0] || activeLog.imageUrl; let base64 = url;
                     if(!url.startsWith('data:')) { const res = await fetch(url); const b = await res.blob(); base64 = await new Promise(r=>{const rd=new FileReader(); rd.onload=()=>r(rd.result); rd.readAsDataURL(b);}); }
                     
-                    // Improved: Get Title AND Text if missing
-                    const prompt = activeLog.questionText ? "Generate SHORT title (max 6 words)." : "1. Extract EXACT text. 2. Generate SHORT title (max 6 words). Return JSON: {title: '...', text: '...'}";
-                    
-                    if (activeLog.questionText) {
-                         const title = await callGemini("Analyze image. Identify concept. Generate SHORT title (max 6 words). Return ONLY title.", "Concise Summarizer", base64);
-                         updateLog(activeLogId, { title: title.replace(/^["']|["']$/g, '').trim() });
-                    } else {
-                         const res = await callGemini(prompt, "JSON Generator", base64);
-                         const json = JSON.parse(res.replace(/```json|```/g, ''));
-                         updateLog(activeLogId, { title: json.title, questionText: json.text });
-                    }
+                    // Use GROQ Proxy for this specific task as requested
+                    const prompt = "1. Extract EXACT text. 2. Generate SHORT title (max 6 words). Return JSON: {title: '...', text: '...'}";
+                    const res = await callAI(prompt, "JSON Generator", base64, GROQ_PROXY_URL);
+                    const json = JSON.parse(res.replace(/```json|```/g, ''));
+                    updateLog(activeLogId, { title: json.title, questionText: json.text });
                 } catch(e) { alert("OCR Failed"); } setIsAutoTitleLoading(false);
             }
 
