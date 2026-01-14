@@ -661,6 +661,9 @@
                     const finalUrl = await saveToStorage(blobToUpload, `ErrorLog_${type}_${Date.now()}.jpg`);
                     const newArr = [...currentImages, finalUrl]; 
                     
+                    // UPDATE: Show image IMMEDIATELY before OCR starts
+                    updateLog(activeLogId, { [targetField]: newArr });
+                    
                     // If Question Image, trigger background OCR
                     if (isQ) {
                         const reader = new FileReader();
@@ -670,12 +673,10 @@
                                 const ocrText = await callGemini("Extract the EXACT text from this image. Do not summarize. Return raw text only.", "OCR Machine", base64, GROQ_PROXY_URL);
                                 // Append or set text
                                 const currentText = activeLog.questionText || "";
-                                updateLog(activeLogId, { [targetField]: newArr, questionText: currentText + "\n" + ocrText });
-                            } catch (e) { console.error("OCR Failed silently", e); updateLog(activeLogId, { [targetField]: newArr }); }
+                                updateLog(activeLogId, { questionText: currentText + (currentText ? "\n" : "") + ocrText });
+                            } catch (e) { console.error("OCR Failed silently", e); }
                         };
                         reader.readAsDataURL(blobToUpload);
-                    } else {
-                        updateLog(activeLogId, { [targetField]: newArr });
                     }
 
                 } catch(e) { alert("Upload Failed: " + e.message); } setSpinner(false);
