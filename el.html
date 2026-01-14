@@ -432,9 +432,9 @@
             );
         };
 
-        const PracticeModal = ({ activeLog, onClose, user, subjects = [] }) => {
+        const PracticeModal = ({ activeLog, onClose, user, subjects = [], initialMode = 'topic' }) => {
             const [loading, setLoading] = useState(false);
-            const [practiceMode, setPracticeMode] = useState(activeLog ? 'single' : 'topic'); 
+            const [practiceMode, setPracticeMode] = useState(initialMode); 
             const [questions, setQuestions] = useState([]); 
             const [lqData, setLqData] = useState(null); 
             const [userAnswers, setUserAnswers] = useState({}); 
@@ -443,11 +443,13 @@
             const [quota, setQuota] = useState(0);
             const [selectedSubject, setSelectedSubject] = useState(activeLog?.subject || (subjects.length > 0 ? subjects[0].name : ''));
             const [selectedTopic, setSelectedTopic] = useState(activeLog?.topic || '');
+            const [selectedType, setSelectedType] = useState('MC');
 
             useEffect(() => {
                 const fetchQuota = async () => { if (!user) return; const today = new Date().toISOString().split('T')[0]; const ref = window.firebase.doc(window.firebase.db, 'artifacts', "darnote-app", 'users', user.uid, 'ai_usage', today); const snap = await window.firebase.getDoc(ref); if (snap.exists()) setQuota(snap.data().practice_count || 0); else setQuota(0); }; 
                 fetchQuota();
-                if (activeLog) generatePractice('single');
+                // Only auto-generate if we are in Focus Drill mode AND have an active log
+                if (initialMode === 'single' && activeLog) generatePractice('single');
             }, []);
 
             const currentSubjectObj = subjects.find(s => s.name === selectedSubject);
@@ -479,7 +481,9 @@
                     } catch (e) { contextData = `Focus on ${top} in ${subj}`; }
                 }
 
-                const qType = activeLog ? (activeLog.questionType || 'MC') : 'MC';
+                // Determine question type based on mode and user choice
+                const qType = mode === 'single' ? (activeLog?.questionType || 'MC') : selectedType;
+                
                 if (qType === 'MC') {
                     const prompt = `Context: ${contextData}\nGenerate 5 MCQs (ABCD). Return JSON array: [{"q": "...", "options": ["A. ..."], "answer": "A", "explanation": "..."}]. Plain text only.`;
                     const res = await callAI(prompt, "JSON Generator", imgCtx, GEMINI_PROXY_URL);
@@ -504,18 +508,18 @@
                 <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
                     <div className="bg-white dark:bg-zinc-900 w-full max-w-2xl rounded-2xl shadow-2xl flex flex-col max-h-[85vh]">
                         <div className="p-4 border-b border-zinc-200 dark:border-white/10 flex flex-col gap-4 bg-zinc-50 dark:bg-zinc-900 rounded-t-2xl">
-                            <div className="flex justify-between items-center"><h3 className="font-bold flex items-center gap-2 text-lg dark:text-white"><Icons.Brain className="w-5 h-5 text-brand"/> {activeLog ? "Practice Mode" : "Arcade Mode"}</h3><button onClick={onClose}><Icons.X className="w-6 h-6 text-zinc-400 hover:text-white"/></button></div>
+                            <div className="flex justify-between items-center"><h3 className="font-bold flex items-center gap-2 text-lg dark:text-white"><Icons.Brain className="w-5 h-5 text-brand"/> {practiceMode === 'single' ? "Focus Drill" : "Arcade Mode"}</h3><button onClick={onClose}><Icons.X className="w-6 h-6 text-zinc-400 hover:text-white"/></button></div>
                             <div className="flex flex-wrap gap-3 items-center justify-between">
                                 <div className="flex bg-zinc-200 dark:bg-black/20 p-1 rounded-lg">
                                     {activeLog && (<button onClick={() => generatePractice('single')} disabled={loading} className={`px-3 py-1 text-xs font-bold rounded-md transition-all ${practiceMode==='single' ? 'bg-white dark:bg-zinc-700 shadow-sm text-black dark:text-white' : 'text-zinc-500'}`}>Focus Drill</button>)}
-                                    <button onClick={() => !activeLog ? null : generatePractice('topic')} disabled={loading || !activeLog} className={`px-3 py-1 text-xs font-bold rounded-md transition-all ${practiceMode==='topic' ? 'bg-white dark:bg-zinc-700 shadow-sm text-black dark:text-white' : 'text-zinc-500'}`}>Topic Challenge</button>
+                                    <button onClick={() => setPracticeMode('topic')} disabled={loading} className={`px-3 py-1 text-xs font-bold rounded-md transition-all ${practiceMode==='topic' ? 'bg-white dark:bg-zinc-700 shadow-sm text-black dark:text-white' : 'text-zinc-500'}`}>Topic Challenge</button>
                                 </div>
-                                {(practiceMode === 'topic' || !activeLog) && (
+                                {(practiceMode === 'topic') && (
                                     <div className="flex gap-2 flex-1 justify-end">
                                         <select value={selectedSubject} onChange={e=>setSelectedSubject(e.target.value)} className="bg-white dark:bg-black/30 border border-zinc-200 dark:border-white/10 rounded-lg px-2 py-1 text-xs max-w-[120px]">{subjects.map(s=><option key={s.id} value={s.name}>{s.name}</option>)}</select>
                                         <select value={selectedTopic} onChange={e=>setSelectedTopic(e.target.value)} className="bg-white dark:bg-black/30 border border-zinc-200 dark:border-white/10 rounded-lg px-2 py-1 text-xs max-w-[120px]"><option value="">Any Topic</option>{availableTopics.map(t=><option key={t} value={t}>{t}</option>)}</select>
-                                        {!activeLog && <button onClick={() => generatePractice('topic')} className="bg-brand text-white px-3 py-1 rounded-lg text-xs font-bold hover:bg-indigo-600">Start</button>}
-                                        {activeLog && <button onClick={() => generatePractice('topic')} className="bg-zinc-200 dark:bg-white/10 px-2 py-1 rounded-lg text-xs hover:bg-zinc-300 dark:hover:bg-white/20"><Icons.Refresh className="w-3 h-3"/></button>}
+                                        <select value={selectedType} onChange={e=>setSelectedType(e.target.value)} className="bg-white dark:bg-black/30 border border-zinc-200 dark:border-white/10 rounded-lg px-2 py-1 text-xs w-[60px] font-bold text-indigo-500"><option value="MC">MC</option><option value="LQ">LQ</option></select>
+                                        <button onClick={() => generatePractice('topic')} className="bg-brand text-white px-3 py-1 rounded-lg text-xs font-bold hover:bg-indigo-600">Start</button>
                                     </div>
                                 )}
                             </div>
@@ -526,7 +530,7 @@
                                 <div className="space-y-8">{questions.map((q, idx) => (<div key={idx} className="space-y-3"><div className="font-semibold text-zinc-900 dark:text-zinc-100">{idx+1}. {q.q}</div><div className="grid grid-cols-1 sm:grid-cols-2 gap-2">{q.options.map((opt) => { const letter = opt.charAt(0); const isSelected = userAnswers[idx] === letter; const isCorrect = q.answer === letter; let bg = "bg-zinc-50 dark:bg-white/5 border-zinc-200 dark:border-white/10 hover:border-brand"; if (marked) { if (isCorrect) bg = "bg-green-500/20 border-green-500"; else if (isSelected) bg = "bg-red-500/20 border-red-500"; } else if (isSelected) { bg = "bg-brand/10 border-brand"; } return (<button key={opt} onClick={() => !marked && setUserAnswers({...userAnswers, [idx]: letter})} className={`text-left p-3 rounded-lg border text-sm transition-all dark:text-zinc-300 ${bg}`}>{opt}</button>); })}</div>{marked && (<div className="text-xs p-3 rounded bg-zinc-100 dark:bg-white/5 text-zinc-600 dark:text-zinc-400"><span className="font-bold">Explanation:</span> {q.explanation}</div>)}</div>))}</div>) 
                             : lqData ? (
                                 <div className="space-y-6"><div className="p-4 bg-zinc-50 dark:bg-white/5 rounded-lg text-zinc-800 dark:text-zinc-200 font-medium">{lqData.context}</div>{lqData.parts.map((part) => (<div key={part.id} className="space-y-2"><div className="flex justify-between text-sm"><span className="font-bold dark:text-white">({part.id}) {part.text}</span><span className="text-zinc-500">[{part.marks} marks]</span></div><textarea value={userAnswers[part.id] || ''} onChange={e => setUserAnswers({...userAnswers, [part.id]: e.target.value})} disabled={marked} className="w-full bg-transparent border border-zinc-200 dark:border-white/10 rounded-lg p-3 text-sm focus:ring-1 focus:ring-brand outline-none dark:text-white" rows="3" placeholder="Type your answer here..."/>{marked && lqFeedback?.partFeedback[part.id] && (<div className={`text-xs p-2 rounded flex justify-between ${lqFeedback.partFeedback[part.id].score === part.marks ? 'bg-green-500/10 text-green-500' : 'bg-red-500/10 text-red-400'}`}><span>{lqFeedback.partFeedback[part.id].comment}</span><span className="font-bold">{lqFeedback.partFeedback[part.id].score}/{part.marks}</span></div>)}</div>))} {marked && (<div className="p-4 rounded-lg bg-brand/10 border border-brand/20 text-center"><div className="text-2xl font-bold text-brand">{lqFeedback.totalScore} / {lqFeedback.maxScore}</div><div className="text-sm text-brand/80">{lqFeedback.generalFeedback}</div></div>)}</div>) 
-                            : (!loading && practiceMode === 'topic' && !activeLog && <div className="flex flex-col items-center justify-center text-zinc-400 h-full"><Icons.Brain className="w-12 h-12 mb-2 opacity-20"/><p>Select a Subject & Topic to Start</p></div>)}
+                            : (!loading && practiceMode === 'topic' && questions.length === 0 && !lqData && <div className="flex flex-col items-center justify-center text-zinc-400 h-full"><Icons.Brain className="w-12 h-12 mb-2 opacity-20"/><p>Select Subject, Topic & Type above to Start</p></div>)}
                         </div>
                         <div className="p-4 border-t border-zinc-200 dark:border-white/10 bg-zinc-50 dark:bg-zinc-900/50 flex justify-between items-center rounded-b-2xl"><span className={`text-xs px-2 py-0.5 rounded-full ${quota >= 10 ? 'bg-red-100 text-red-600' : 'bg-zinc-200 dark:bg-white/10 text-zinc-500'}`}>{quota}/10 Today</span>{!marked && (questions.length > 0 || lqData) ? <button onClick={() => questions.length > 0 ? setMarked(true) : handleLqMark()} className="px-6 py-2 bg-brand text-white font-bold rounded-lg hover:bg-indigo-600 shadow-lg">{questions.length > 0 ? 'Check Answers' : 'Submit for Grading'}</button> : <button onClick={onClose} className="px-6 py-2 bg-zinc-200 dark:bg-white/10 text-zinc-900 dark:text-white font-bold rounded-lg hover:bg-zinc-300">Close</button>}</div>
                     </div>
@@ -561,7 +565,7 @@
             const [isDarkMode, setIsDarkMode] = useState(true);
             const [isAutoTitleLoading, setIsAutoTitleLoading] = useState(false);
             const [isLoadingLogs, setIsLoadingLogs] = useState(false);
-            const [isPracticeOpen, setIsPracticeOpen] = useState(false);
+            const [practiceConfig, setPracticeConfig] = useState({ isOpen: false, mode: 'topic' });
             const { saveToDrive, getAccessToken } = useGoogleDrive(); // Extract getAccessToken here
             const [uploadingQ, setUploadingQ] = useState(false);
             const [uploadingS, setUploadingS] = useState(false);
@@ -693,7 +697,7 @@
                         const reader = new FileReader();
                         reader.onloadend = async () => {
                             try {
-                                const prompt = `Analyze. 1. Extract exact text of the whole question, 1:1 turn to text (OCR). 2. Title (max 6 words). Return JSON: { "text": "...", "title": "..." }.`;
+                                const prompt = `Analyze. 1. Extract exact text (OCR). 2. Title (max 6 words). Return JSON: { "text": "...", "title": "..." }.`;
                                 const res = await callGroq(prompt, "JSON", reader.result);
                                 const json = JSON.parse(res.substring(res.indexOf('{'), res.lastIndexOf('}') + 1));
                                 updateLog(activeLogId, { title: json.title || activeLog.title, questionText: json.text || "" });
@@ -749,7 +753,7 @@
                                 <a href="note.html" className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-zinc-500 dark:text-zinc-400 hover:bg-zinc-100 dark:hover:bg-white/5 hover:text-zinc-900 dark:hover:text-white mb-4 border border-transparent hover:border-zinc-200 dark:hover:border-white/10 transition-all"><Icons.Book className="w-4 h-4"/> Back to Notes</a>
                                 {[{id: 'all', icon: Icons.Bug, label: 'All Errors'}, {id: 'active', icon: Icons.X, label: 'Needs Review'}, {id: 'mastered', icon: Icons.Check, label: 'Mastered'}].map(item => (<button key={item.id} onClick={()=>setFilter(item.id)} className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all ${filter===item.id ? 'bg-zinc-200 dark:bg-white/10 text-zinc-900 dark:text-white shadow-sm' : 'text-zinc-500 dark:text-zinc-400 hover:bg-zinc-100 dark:hover:bg-white/5 hover:text-zinc-900 dark:hover:text-white'}`}><item.icon className="w-4 h-4"/> {item.label}</button>))}
                                 <div className="h-4"></div>
-                                <button onClick={()=>setIsPracticeOpen(true)} className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-bold text-orange-600 dark:text-orange-400 bg-orange-50 dark:bg-orange-500/10 hover:bg-orange-100 dark:hover:bg-orange-500/20 transition-all border border-orange-200 dark:border-orange-500/20"><Icons.Brain className="w-4 h-4"/> Practice Arcade</button>
+                                <button onClick={()=>setPracticeConfig({ isOpen: true, mode: 'topic' })} className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-bold text-orange-600 dark:text-orange-400 bg-orange-50 dark:bg-orange-500/10 hover:bg-orange-100 dark:hover:bg-orange-500/20 transition-all border border-orange-200 dark:border-orange-500/20"><Icons.Brain className="w-4 h-4"/> Practice Arcade</button>
                             </nav>
                             <div className="pt-4 border-t border-zinc-200 dark:border-white/10"><div className="px-2 text-[10px] font-bold text-zinc-400 mb-2 uppercase tracking-widest">Subjects</div><div className="space-y-0.5 max-h-[250px] overflow-y-auto">{subjects.map(s => (<button key={s.id} onClick={()=>setFilter(`subject:${s.name}`)} className={`w-full text-left px-3 py-2 rounded-lg text-sm transition-colors hover:text-zinc-900 dark:hover:text-white hover:bg-zinc-100 dark:hover:bg-white/5 ${filter === `subject:${s.name}` ? 'bg-zinc-100 dark:bg-white/10 text-brand' : 'text-zinc-500 dark:text-zinc-400'}`}>{s.name}</button>))}</div></div>
                         </div>
@@ -793,7 +797,7 @@
                                     <div className="flex-1 flex items-center gap-2 mr-4">
                                         <input value={activeLog.title} onChange={e=>updateLog(activeLog.id, {title:e.target.value})} className="bg-transparent text-xl font-bold outline-none w-full text-zinc-900 dark:text-white placeholder-zinc-400" placeholder="Untitled Mistake"/>
                                         <button onClick={handleAutoTitle} disabled={isAutoTitleLoading || (!activeLog.questionImages?.length && !activeLog.imageUrl)} className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${isAutoTitleLoading ? 'bg-indigo-100 text-indigo-500 animate-pulse' : 'bg-zinc-100 dark:bg-white/10 text-zinc-600 dark:text-zinc-400 hover:bg-brand hover:text-white'}`}>{isAutoTitleLoading ? <div className="w-3 h-3 border-2 border-current border-t-transparent rounded-full animate-spin"/> : <><Icons.Scan className="w-3 h-3"/><span className="hidden sm:inline">Auto-Title</span></>}</button>
-                                        <button onClick={() => setIsPracticeOpen(true)} className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold bg-zinc-100 dark:bg-white/10 text-zinc-600 dark:text-zinc-400 hover:bg-orange-500 hover:text-white transition-all ml-1" title="Generate Drill Questions"><Icons.Brain className="w-3 h-3"/> <span className="hidden sm:inline">Practice</span></button>
+                                        <button onClick={() => setPracticeConfig({ isOpen: true, mode: 'single' })} className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold bg-zinc-100 dark:bg-white/10 text-zinc-600 dark:text-zinc-400 hover:bg-orange-500 hover:text-white transition-all ml-1" title="Generate Drill Questions"><Icons.Brain className="w-3 h-3"/> <span className="hidden sm:inline">Practice</span></button>
                                     </div>
                                     <div className="flex items-center gap-3">
                                         <button onClick={()=>updateLog(activeLog.id, {mastered: !activeLog.mastered})} className={`px-4 py-1.5 rounded-full text-xs font-bold border transition-all ${activeLog.mastered ? 'bg-green-500/10 border-green-500 text-green-600' : 'bg-red-500/10 border-red-500 text-red-600'}`}>{activeLog.mastered ? 'Mastered' : 'Needs Review'}</button>
@@ -844,7 +848,7 @@
                             </div>
                         )}
                         <AnimatePresence>{isAiOpen && activeLog && user && (<div className="absolute top-0 right-0 bottom-0 w-[400px] z-30"><AIChat activeLog={activeLog} onClose={()=>setIsAiOpen(false)} user={user} messages={chatMessages} setMessages={setChatMessages}/></div>)}</AnimatePresence>
-                        {isPracticeOpen && <PracticeModal activeLog={activeLog} onClose={() => setIsPracticeOpen(false)} user={user} subjects={subjects} />}
+                        {practiceConfig.isOpen && <PracticeModal activeLog={activeLog} onClose={() => setPracticeConfig({...practiceConfig, isOpen: false})} user={user} subjects={subjects} initialMode={practiceConfig.mode} />}
                     </main>
                 </div>
             );
