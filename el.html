@@ -697,7 +697,7 @@
                         const reader = new FileReader();
                         reader.onloadend = async () => {
                             try {
-                                const prompt = `Analyze. 1. Extract exact text (OCR). 2. Title (max 6 words). Return JSON: { "text": "...", "title": "..." }.`;
+                                const prompt = `Perform OCR on the image. 1. Extract the text exactly as it appears, preserving original line breaks. 2. Generate a title (max 6 words). Output strictly in JSON format: { "text": "...", "title": "..." }`;
                                 const res = await callGroq(prompt, "JSON", reader.result);
                                 const json = JSON.parse(res.substring(res.indexOf('{'), res.lastIndexOf('}') + 1));
                                 updateLog(activeLogId, { title: json.title || activeLog.title, questionText: json.text || "" });
