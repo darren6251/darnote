@@ -163,7 +163,7 @@
                     img.src = e.target.result;
                     img.onload = () => {
                         const canvas = document.createElement('canvas');
-                        const MAX_WIDTH = 2000;
+                        const MAX_WIDTH = 3000;
                         let width = img.width;
                         let height = img.height;
                         if (width > MAX_WIDTH) {
@@ -174,7 +174,7 @@
                         canvas.height = height;
                         const ctx = canvas.getContext('2d');
                         ctx.drawImage(img, 0, 0, width, height);
-                        canvas.toBlob((blob) => { resolve(blob); }, 'image/jpeg', 0.8);
+                        canvas.toBlob((blob) => { resolve(blob); }, 'image/jpeg', 1);
                     }
                 };
                 reader.readAsDataURL(fileOrBlob);
