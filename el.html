@@ -737,6 +737,36 @@
             const handlePaste = async () => { try { const text = await navigator.clipboard.readText(); const data = JSON.parse(text); if (data.title && data.createdAt) { const { id, ...cleanData } = data; const newLog = { ...cleanData, title: `${cleanData.title} (Pasted)`, createdAt: new Date().toISOString(), lastModified: new Date().toISOString() }; const docRef = await window.firebase.addDoc(window.firebase.collection(window.firebase.db, 'artifacts', "darnote-app", 'users', user.uid, 'error_logs'), newLog); setLogs(prev => [{...newLog, id: docRef.id}, ...prev]); } } catch(e) { alert("Invalid log data in clipboard"); } };
             const handleContextMenu = (e, logId) => { e.preventDefault(); setContextMenu({ visible: true, x: e.clientX, y: e.clientY, logId }); };
             const addTopicToSubject = async (subjectName) => { const subjectDoc = subjects.find(s => s.name === subjectName); if (!subjectDoc) { alert("Cannot add topic to General."); return; } const newTopic = prompt(`Add topic for ${subjectName}:`); if (!newTopic) return; setSubjects(prev => prev.map(s => s.id === subjectDoc.id ? {...s, topics: [...s.topics, newTopic]} : s)); const docRef = window.firebase.doc(window.firebase.db, 'artifacts', 'darnote-app', 'users', user.uid, 'subjects', subjectDoc.id); await window.firebase.updateDoc(docRef, { topics: window.firebase.arrayUnion(newTopic) }); };
+
+            // NEW: Unified Smart OCR Helper
+            const performSmartOCR = async (base64) => {
+                setIsAutoTitleLoading(true);
+                try {
+                    const schema = subjects.length > 0 ? subjects.map(s => `${s.name} (Topics: ${s.topics.join(', ')})`).join('\n') : "No existing subjects. Suggest 'General'.";
+                    const prompt = `Analyze this image for an error log.
+1. Extract the text exactly as it appears.
+2. Generate a short, descriptive title (max 6 words).
+3. Determine Question Type: 'MC' (Multiple Choice) or 'LQ' (Long Question).
+4. Classify into best fitting Subject and Topic from this list:\n${schema}\n
+If no exact match, use Subject: 'General'.
+Output strictly JSON: { "text": "...", "title": "...", "type": "MC"|"LQ", "subject": "...", "topic": "..." }`;
+                    
+                    const res = await callGroq(prompt, "JSON Generator", base64);
+                    const json = JSON.parse(res.substring(res.indexOf('{'), res.lastIndexOf('}') + 1));
+                    
+                    updateLog(activeLogId, { 
+                        title: json.title || activeLog.title, 
+                        questionText: json.text || "",
+                        questionType: (json.type === 'MC' || json.type === 'LQ') ? json.type : activeLog.questionType,
+                        subject: json.subject || activeLog.subject,
+                        topic: json.topic || activeLog.topic
+                    });
+                } catch (e) { 
+                    console.error("Smart OCR Failed", e); 
+                    alert("AI Classification Failed: " + e.message);
+                } 
+                setIsAutoTitleLoading(false);
+            };
             
             // --- UPDATED: IPAD SAFE UPLOAD ---
             const handleImageUpdate = async (data, action, type) => {
@@ -784,17 +814,9 @@
                     if (isQ && blobToUpload.type !== 'application/pdf') {
                         const newQuota = await checkAndIncrementQuota(user, 'ocr');
                         if (newQuota === false) { console.log("OCR limit reached"); return; }
-                        setIsAutoTitleLoading(true);
+                        
                         const reader = new FileReader();
-                        reader.onloadend = async () => {
-                            try {
-                                const prompt = `Perform OCR on the image. 1. Extract the text exactly as it appears, preserving original line breaks. 2. Generate a title (max 6 words). Output strictly in JSON format: { "text": "...", "title": "..." }`;
-                                const res = await callGroq(prompt, "JSON", reader.result);
-                                const json = JSON.parse(res.substring(res.indexOf('{'), res.lastIndexOf('}') + 1));
-                                updateLog(activeLogId, { title: json.title || activeLog.title, questionText: json.text || "" });
-                            } catch (e) { console.error("Auto-OCR Failed", e); }
-                            setIsAutoTitleLoading(false);
-                        };
+                        reader.onloadend = () => performSmartOCR(reader.result);
                         reader.readAsDataURL(blobToUpload);
                     }
                 } catch(e) { alert("Upload Failed: " + e.message); setSpinner(false); } 
@@ -804,24 +826,21 @@
                 if (!activeLog.questionImages?.length && !activeLog.imageUrl) { alert("Paste image first!"); return; } 
                 const newQuota = await checkAndIncrementQuota(user, 'ocr');
                 if (newQuota === false) { alert("Daily OCR Limit (20/20) Reached!"); return; }
-                setIsAutoTitleLoading(true);
+                
                 try {
                     let url = activeLog.questionImages?.[0] || activeLog.imageUrl; let base64 = url;
                     
                     // Skip if PDF
                     if (url.includes('drive.google.com')) {
                         alert("Auto-title not supported for PDF files yet.");
-                        setIsAutoTitleLoading(false);
                         return;
                     }
 
                     if(!url.startsWith('data:')) { const res = await fetch(url); const b = await res.blob(); base64 = await new Promise(r=>{const rd=new FileReader(); rd.onload=()=>r(rd.result); rd.readAsDataURL(b);}); }
-                    const prompt = "1. Extract EXACT text. 2. Generate SHORT title. Return JSON: {title: '...', text: '...'}";
-                    const res = await callGroq(prompt, "JSON Generator", base64);
-                    const json = JSON.parse(res.substring(res.indexOf('{'), res.lastIndexOf('}') + 1));
-                    updateLog(activeLogId, { title: json.title, questionText: json.text });
-                } catch(e) { alert("OCR Failed: " + e.message); } 
-                setIsAutoTitleLoading(false);
+                    
+                    await performSmartOCR(base64);
+
+                } catch(e) { alert("OCR Failed: " + e.message); setIsAutoTitleLoading(false); } 
             }
 
             const handleMouseEnter = (log) => { 
