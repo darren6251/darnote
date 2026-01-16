@@ -125,7 +125,7 @@
         const { useState, useEffect, useRef, useMemo, useCallback } = React;
         const { motion, AnimatePresence } = window.Motion;
 
-        // --- ICONS (Reduced for brevity) ---
+        // --- ICONS ---
         const Icons = {
             Plus: (p)=><svg {...p} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M5 12h14"/><path d="M12 5v14"/></svg>,
             Trash: (p)=><svg {...p} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/></svg>,
@@ -314,6 +314,11 @@
                     method: 'POST', headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' }, 
                     body: JSON.stringify({ role: 'reader', type: 'anyone' }) 
                 });
+
+                // PDF specific preview link vs Image direct link
+                if (blob.type === 'application/pdf') {
+                    return `https://drive.google.com/file/d/${fileId}/preview`;
+                }
                 return `https://lh3.googleusercontent.com/d/${fileId}`;
             };
             return { saveToDrive, getAccessToken };
@@ -339,6 +344,20 @@
                 return () => window.removeEventListener('keydown', handleKeyDown);
             }, [onClose]);
 
+            const renderContent = (src, i) => {
+                const isPdf = src.includes('drive.google.com');
+                return (
+                    <div key={i} className="relative group">
+                        {isPdf ? (
+                            <iframe src={src} className="w-full h-[600px] rounded-lg shadow-2xl border border-white/5 bg-white" />
+                        ) : (
+                            <img src={src} className="w-full h-auto rounded-lg shadow-2xl border border-white/5 bg-zinc-900" />
+                        )}
+                        <span className="absolute top-2 left-2 bg-black/50 text-white text-[10px] px-2 py-0.5 rounded backdrop-blur-sm">Page {i+1}</span>
+                    </div>
+                );
+            };
+
             return (
                 <motion.div initial={{opacity:0}} animate={{opacity:1}} exit={{opacity:0}} className="fixed inset-0 z-[60] bg-black/95 flex flex-col backdrop-blur-sm" onClick={onClose}>
                     {/* Header */}
@@ -358,12 +377,7 @@
                             {qImages.length === 0 ? (
                                 <div className="flex h-full items-center justify-center text-zinc-500 text-sm">No Question Images</div>
                             ) : (
-                                qImages.map((src, i) => (
-                                    <div key={i} className="relative group">
-                                        <img src={src} className="w-full h-auto rounded-lg shadow-2xl border border-white/5 bg-zinc-900" />
-                                        <span className="absolute top-2 left-2 bg-black/50 text-white text-[10px] px-2 py-0.5 rounded backdrop-blur-sm">Page {i+1}</span>
-                                    </div>
-                                ))
+                                qImages.map((src, i) => renderContent(src, i))
                             )}
                         </div>
 
@@ -372,12 +386,7 @@
                              {sImages.length === 0 ? (
                                 <div className="flex h-full items-center justify-center text-zinc-500 text-sm">No Scheme Images</div>
                             ) : (
-                                sImages.map((src, i) => (
-                                    <div key={i} className="relative group">
-                                        <img src={src} className="w-full h-auto rounded-lg shadow-2xl border border-white/5 bg-zinc-900" />
-                                        <span className="absolute top-2 left-2 bg-black/50 text-white text-[10px] px-2 py-0.5 rounded backdrop-blur-sm">Page {i+1}</span>
-                                    </div>
-                                ))
+                                sImages.map((src, i) => renderContent(src, i))
                             )}
                         </div>
                     </div>
@@ -390,16 +399,35 @@
             const fileInputRef = useRef(null);
             const imageList = Array.isArray(images) ? images : (images ? [images] : []);
             
-            const handleFiles = (files) => { Array.from(files).forEach(file => { if (file.type.startsWith('image/')) onUpdate(file, 'add'); }); };
-            const handlePasteClick = async () => { try { const items = await navigator.clipboard.read(); for (const item of items) { for (const type of item.types) { if (type.startsWith("image/")) { const blob = await item.getType(type); onUpdate(blob, 'add'); } } } } catch (err) { alert("Clipboard permission denied."); } };
+            const handleFiles = (files) => { 
+                Array.from(files).forEach(file => { 
+                    if (file.type.startsWith('image/') || file.type === 'application/pdf') onUpdate(file, 'add'); 
+                }); 
+            };
+            const handlePasteClick = async () => { try { const items = await navigator.clipboard.read(); for (const item of items) { for (const type of item.types) { if (type.startsWith("image/") || type === 'application/pdf') { const blob = await item.getType(type); onUpdate(blob, 'add'); } } } } catch (err) { alert("Clipboard permission denied."); } };
             
             return (
                 <div className="space-y-2">
-                    <div className="flex justify-between items-end px-1"><label className="text-sm font-bold text-zinc-700 dark:text-zinc-300 flex items-center gap-2">{label} <span className="text-[10px] font-normal text-zinc-400 bg-zinc-100 dark:bg-white/5 px-1.5 rounded">{imageList.length} files</span></label><div className="flex gap-2"><button onClick={handlePasteClick} className="text-[10px] flex items-center gap-1 text-indigo-500 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 px-2 py-1 rounded transition-colors"><Icons.Clip className="w-3 h-3"/> Paste</button><button onClick={() => fileInputRef.current.click()} className="text-[10px] flex items-center gap-1 text-zinc-500 hover:bg-zinc-100 dark:hover:bg-white/10 px-2 py-1 rounded transition-colors"><Icons.Plus className="w-3 h-3"/> Add</button></div><input type="file" multiple ref={fileInputRef} style={{display:'none'}} onChange={(e) => handleFiles(e.target.files)} accept="image/*" /></div>
+                    <div className="flex justify-between items-end px-1"><label className="text-sm font-bold text-zinc-700 dark:text-zinc-300 flex items-center gap-2">{label} <span className="text-[10px] font-normal text-zinc-400 bg-zinc-100 dark:bg-white/5 px-1.5 rounded">{imageList.length} files</span></label><div className="flex gap-2"><button onClick={handlePasteClick} className="text-[10px] flex items-center gap-1 text-indigo-500 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 px-2 py-1 rounded transition-colors"><Icons.Clip className="w-3 h-3"/> Paste</button><button onClick={() => fileInputRef.current.click()} className="text-[10px] flex items-center gap-1 text-zinc-500 hover:bg-zinc-100 dark:hover:bg-white/10 px-2 py-1 rounded transition-colors"><Icons.Plus className="w-3 h-3"/> Add</button></div><input type="file" multiple ref={fileInputRef} style={{display:'none'}} onChange={(e) => handleFiles(e.target.files)} accept="image/*,application/pdf" /></div>
                     <div className={`w-full min-h-[120px] bg-white dark:bg-surface border-2 border-dashed rounded-xl p-3 transition-all ${isDragging ? 'border-brand bg-brand/5' : 'border-zinc-300 dark:border-zinc-700'}`} onDragOver={(e) => { e.preventDefault(); setIsDragging(true); }} onDragLeave={() => setIsDragging(false)} onDrop={(e) => { e.preventDefault(); setIsDragging(false); handleFiles(e.dataTransfer.files); }} onPaste={(e) => handleFiles(e.clipboardData.files)} tabIndex="0">
-                        {imageList.length === 0 ? (<div className="h-24 flex flex-col items-center justify-center text-zinc-400 pointer-events-none">{isUploading ? <div className="w-6 h-6 border-2 border-brand border-t-transparent rounded-full animate-spin mb-1"/> : <Icons.Image className="w-6 h-6 mb-1 opacity-50"/>}<span className="text-xs">{isUploading ? "Uploading..." : "Drag images or Ctrl+V"}</span></div>) : (
+                        {imageList.length === 0 ? (<div className="h-24 flex flex-col items-center justify-center text-zinc-400 pointer-events-none">{isUploading ? <div className="w-6 h-6 border-2 border-brand border-t-transparent rounded-full animate-spin mb-1"/> : <Icons.Image className="w-6 h-6 mb-1 opacity-50"/>}<span className="text-xs">{isUploading ? "Uploading..." : "Drag images, PDFs or Ctrl+V"}</span></div>) : (
                             <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
-                                {imageList.map((url, idx) => (<div key={idx} onClick={() => onImageClick()} className="group relative aspect-square bg-zinc-100 dark:bg-black/20 rounded-lg overflow-hidden border border-zinc-200 dark:border-white/5 shadow-sm hover:shadow-md transition-all cursor-zoom-in"><img src={url} className="w-full h-full object-cover" /><div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2"><div className="p-1.5 bg-white/20 rounded-full text-white backdrop-blur-sm"><Icons.ZoomIn className="w-4 h-4"/></div><button onClick={(e) => { e.stopPropagation(); onUpdate(idx, 'remove'); }} className="p-1.5 bg-red-500/80 hover:bg-red-500 rounded-full text-white backdrop-blur-sm" title="Remove"><Icons.Trash className="w-4 h-4"/></button></div></div>))}
+                                {imageList.map((url, idx) => {
+                                    const isPdf = url.includes('drive.google.com');
+                                    return (
+                                        <div key={idx} onClick={() => onImageClick()} className="group relative aspect-square bg-zinc-100 dark:bg-black/20 rounded-lg overflow-hidden border border-zinc-200 dark:border-white/5 shadow-sm hover:shadow-md transition-all cursor-zoom-in">
+                                            {isPdf ? (
+                                                <div className="w-full h-full flex flex-col items-center justify-center bg-red-50 dark:bg-red-900/20 text-red-500">
+                                                    <Icons.File className="w-8 h-8"/>
+                                                    <span className="text-[8px] font-bold mt-1">PDF</span>
+                                                </div>
+                                            ) : (
+                                                <img src={url} className="w-full h-full object-cover" />
+                                            )}
+                                            <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2"><div className="p-1.5 bg-white/20 rounded-full text-white backdrop-blur-sm"><Icons.ZoomIn className="w-4 h-4"/></div><button onClick={(e) => { e.stopPropagation(); onUpdate(idx, 'remove'); }} className="p-1.5 bg-red-500/80 hover:bg-red-500 rounded-full text-white backdrop-blur-sm" title="Remove"><Icons.Trash className="w-4 h-4"/></button></div>
+                                        </div>
+                                    );
+                                })}
                                 {isUploading && (<div className="aspect-square rounded-lg bg-zinc-50 dark:bg-white/5 flex items-center justify-center border border-zinc-200 dark:border-white/10 animate-pulse"><div className="w-5 h-5 border-2 border-brand border-t-transparent rounded-full animate-spin"></div></div>)}
                             </div>
                         )}
@@ -450,7 +478,11 @@
                 setLoading(true);
                 let imgCtx = (activeLog.questionImages && activeLog.questionImages.length > 0) ? activeLog.questionImages[0] : (activeLog.imageUrl || null);
                 if (imgCtx && (imgCtx.startsWith('http') || imgCtx.startsWith('https'))) {
-                    try { const res = await fetch(imgCtx); const blob = await res.blob(); imgCtx = await new Promise((resolve) => { const reader = new FileReader(); reader.onloadend = () => resolve(reader.result); reader.readAsDataURL(blob); }); } catch (e) { imgCtx = null; }
+                    // Skip fetching context if it's a PDF for now, to avoid CORS/Processing errors in chat
+                    if (imgCtx.includes('drive.google.com')) imgCtx = null;
+                    else {
+                        try { const res = await fetch(imgCtx); const blob = await res.blob(); imgCtx = await new Promise((resolve) => { const reader = new FileReader(); reader.onloadend = () => resolve(reader.result); reader.readAsDataURL(blob); }); } catch (e) { imgCtx = null; }
+                    }
                 }
                 const qText = activeLog.questionText || "No text extracted.";
                 const historyText = messages.slice(Math.max(messages.length - 6, 1)).map(m => `${m.role === 'user' ? 'Student' : 'Tutor'}: ${m.text}`).join('\n');
@@ -512,7 +544,13 @@
                 if (mode === 'single' && activeLog) {
                     contextData = `Subject: ${activeLog.subject}. Topic: ${activeLog.topic}. Concept: ${activeLog.explanation}. Q: ${activeLog.questionText || "See Image"}`;
                     imgCtx = (activeLog.questionImages && activeLog.questionImages.length > 0) ? activeLog.questionImages[0] : (activeLog.imageUrl || null);
-                    if (imgCtx && (imgCtx.startsWith('http') || imgCtx.startsWith('https'))) { try { const res = await fetch(imgCtx); const blob = await res.blob(); imgCtx = await new Promise((r) => { const reader = new FileReader(); reader.onloadend = () => r(reader.result); reader.readAsDataURL(blob); }); } catch (e) { imgCtx = null; } }
+                    if (imgCtx && (imgCtx.startsWith('http') || imgCtx.startsWith('https'))) { 
+                        // Skip context image for PDF in practice generation for now
+                         if (imgCtx.includes('drive.google.com')) imgCtx = null;
+                         else {
+                            try { const res = await fetch(imgCtx); const blob = await res.blob(); imgCtx = await new Promise((r) => { const reader = new FileReader(); reader.onloadend = () => r(reader.result); reader.readAsDataURL(blob); }); } catch (e) { imgCtx = null; } 
+                         }
+                    }
                 } else {
                     const subj = selectedSubject; const top = selectedTopic;
                     try {
@@ -728,16 +766,22 @@
                             if (err.error === 'popup_blocked_by_browser') alert("Please allow popups for Google Drive access.");
                             throw err;
                         }
-                        blobToUpload = await compressImage(data);
+                        
+                        // Check if it's PDF -> Skip compression
+                        if (data.type === 'application/pdf') {
+                             blobToUpload = data;
+                        } else {
+                             blobToUpload = await compressImage(data);
+                        }
                     }
                     
-                    const finalUrl = await saveToDrive(blobToUpload, `ErrorLog_${type}_${Date.now()}.jpg`, preFetchedToken);
+                    const finalUrl = await saveToDrive(blobToUpload, `ErrorLog_${type}_${Date.now()}.${blobToUpload.type==='application/pdf'?'pdf':'jpg'}`, preFetchedToken);
                     const newArr = [...currentImages, finalUrl]; 
                     
                     updateLog(activeLogId, { [targetField]: newArr });
                     setSpinner(false);
                     
-                    if (isQ) {
+                    if (isQ && blobToUpload.type !== 'application/pdf') {
                         const newQuota = await checkAndIncrementQuota(user, 'ocr');
                         if (newQuota === false) { console.log("OCR limit reached"); return; }
                         setIsAutoTitleLoading(true);
@@ -763,6 +807,14 @@
                 setIsAutoTitleLoading(true);
                 try {
                     let url = activeLog.questionImages?.[0] || activeLog.imageUrl; let base64 = url;
+                    
+                    // Skip if PDF
+                    if (url.includes('drive.google.com')) {
+                        alert("Auto-title not supported for PDF files yet.");
+                        setIsAutoTitleLoading(false);
+                        return;
+                    }
+
                     if(!url.startsWith('data:')) { const res = await fetch(url); const b = await res.blob(); base64 = await new Promise(r=>{const rd=new FileReader(); rd.onload=()=>r(rd.result); rd.readAsDataURL(b);}); }
                     const prompt = "1. Extract EXACT text. 2. Generate SHORT title. Return JSON: {title: '...', text: '...'}";
                     const res = await callGroq(prompt, "JSON Generator", base64);
@@ -772,7 +824,14 @@
                 setIsAutoTitleLoading(false);
             }
 
-            const handleMouseEnter = (log) => { if (hoverTimeoutRef.current) clearTimeout(hoverTimeoutRef.current); hoverTimeoutRef.current = setTimeout(() => { const img = (log.questionImages && log.questionImages.length > 0) ? log.questionImages[0] : log.imageUrl; if (img) setPreviewLog(log); }, 600); };
+            const handleMouseEnter = (log) => { 
+                if (hoverTimeoutRef.current) clearTimeout(hoverTimeoutRef.current); 
+                hoverTimeoutRef.current = setTimeout(() => { 
+                    const img = (log.questionImages && log.questionImages.length > 0) ? log.questionImages[0] : log.imageUrl; 
+                    // Don't show preview for PDF in hover card (too heavy)
+                    if (img && !img.includes('drive.google.com')) setPreviewLog(log); 
+                }, 600); 
+            };
             const handleMouseLeave = () => { if (hoverTimeoutRef.current) clearTimeout(hoverTimeoutRef.current); setPreviewLog(null); };
 
             const activeLog = logs.find(l => l.id === activeLogId);
