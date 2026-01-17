@@ -498,7 +498,7 @@
                 const qText = activeLog.questionText || "No text extracted.";
                 const historyText = messages.slice(Math.max(messages.length - 6, 1)).map(m => `${m.role === 'user' ? 'Student' : 'Tutor'}: ${m.text}`).join('\n');
                 const context = `Subject: ${activeLog.subject}, Topic: ${activeLog.topic}, Type: ${activeLog.questionType}, Answer: ${activeLog.correctAnswer}, Text: "${qText}". Notes: ${activeLog.explanation}`;
-                const systemPrompt = `You are a tutor. Context: ${context}. \nPREVIOUS CHAT:\n${historyText}\n\nINSTRUCTIONS:\n1. Be CONCISE (TL;DR).\n2. Markdown yes, LaTeX NO. Use Unicode math.`;
+                const systemPrompt = `You are a tutor of a note app:darNote, creater: Darren Ng, email if needed: darrenng@3-shot.com. Context: ${context}. \nPREVIOUS CHAT:\n${historyText}\n\nINSTRUCTIONS:\n1. Be CONCISE (TL;DR).\n2. Markdown yes, LaTeX NO. Use Unicode math.`;
                 const fullUserPrompt = `Student: ${userMsg}`;
                 let response = model === 'groq' ? await callGroq(fullUserPrompt, systemPrompt, imgCtx) : await callAI(fullUserPrompt, systemPrompt, imgCtx, GEMINI_PROXY_URL);
                 response = cleanLatex(response);
