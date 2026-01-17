@@ -233,21 +233,32 @@
 
         // --- SMART QUOTA MANAGER (NOW WITH FIRESTORE LIMITS) ---
         
-        // Helper: Fetch limits from public config, default if missing
+        // Helper: Fetch limits from strict public config
         const getLimits = async () => {
             const defaults = { chat_gemini: 5, chat_groq: 20, practice: 10, ocr: 20 };
             try {
-                const cfgRef = window.firebase.doc(window.firebase.db, 'artifacts', "darnote-app", 'public', 'config');
+                // STRICT PATH COMPLIANCE: /artifacts/{appId}/public/data/{collection}/{doc}
+                // We use collection 'config' and doc 'main'
+                const cfgRef = window.firebase.doc(window.firebase.db, 'artifacts', "darnote-app", 'public', 'data', 'config', 'main');
                 const snap = await window.firebase.getDoc(cfgRef);
                 if (snap.exists()) return { ...defaults, ...snap.data() };
-            } catch(e) { /* ignore error, use defaults */ }
+            } catch(e) { console.warn("Using default limits (Config not found)"); }
             return defaults;
+        };
+
+        // ADMIN TOOL: Run setupConfig() in console to create the config doc
+        window.setupConfig = async () => {
+            if(!window.firebase.auth.currentUser) { console.error("Login first!"); return; }
+            const defaults = { chat_gemini: 5, chat_groq: 20, practice: 10, ocr: 20 };
+            try {
+                const cfgRef = window.firebase.doc(window.firebase.db, 'artifacts', "darnote-app", 'public', 'data', 'config', 'main');
+                await window.firebase.setDoc(cfgRef, defaults, {merge: true});
+                console.log("%cConfig created successfully! Limits set:", "color: green; font-weight: bold;", defaults);
+            } catch(e) { console.error("Setup failed:", e); }
         };
 
         const checkAndIncrementQuota = async (user, type, subtype = null) => {
             if (!user) return false;
-            
-            // 1. Fetch Limits from Firestore (Source of Truth)
             const limits = await getLimits();
 
             let field = '', limit = 0;
@@ -261,14 +272,11 @@
             const ref = window.firebase.doc(window.firebase.db, 'artifacts', "darnote-app", 'users', user.uid, 'ai_usage', today);
             
             try {
-                // 2. Fetch Usage from Firestore
                 const snap = await window.firebase.getDoc(ref);
                 let count = snap.exists() ? (snap.data()[field] || 0) : 0;
                 
-                // 3. Client-Side Check (Bruh, if you F12 this, you win... for now)
                 if (count >= limit) return false;
                 
-                // 4. Increment in Firestore
                 await window.firebase.setDoc(ref, { [field]: window.firebase.increment(1) }, { merge: true });
                 return count + 1;
             } catch (e) { console.error("Quota check failed:", e); return false; }
