@@ -762,7 +762,7 @@
                 try {
                     const schema = subjects.length > 0 ? subjects.map(s => `${s.name} (Topics: ${s.topics.join(', ')})`).join('\n') : "No existing subjects. Suggest 'General'.";
                     const prompt = `Analyze this image for an error log.
-1. Extract the text exactly as it appears.
+1. Extract the text exactly as it appears, remain the layout and formate exactly identical.
 2. Generate a short, descriptive title (max 6 words).
 3. Determine Question Type: 'MC' (Multiple Choice) or 'LQ' (Long Question).
 4. Classify into best fitting Subject and Topic from this list:\n${schema}\n
