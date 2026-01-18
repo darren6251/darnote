@@ -103,11 +103,12 @@
                     }catch(e){ctx=`Sub:${ss}.Top:${st}`}
                 }
                 const tp=pm==='drill'?log.questionType:stp;
+                const proxy = pm === 'arcade' ? GROQ_PROXY_URL : GEMINI_PROXY_URL;
                 if(tp==='MC'){
-                    const r=await callAI(`Gen 5 MCQs (ABCD). Context:${ctx}. JSON Array: [{"q":"...","options":["A..."],"answer":"A","explanation":"..."}]. Plain text only.`,"JSON Gen",im,GEMINI_PROXY_URL);
+                    const r=await callAI(`Gen 5 MCQs (ABCD). Context:${ctx}. JSON Array: [{"q":"...","options":["A..."],"answer":"A","explanation":"..."}]. Plain text only.`,"JSON Gen",im,proxy);
                     try{sQs(JSON.parse(r.replace(/```json|```/g,'')))}catch(e){alert('Err');close()}
                 }else{
-                    const r=await callAI(`Gen 1 long Q with 3 sub-parts. Context:${ctx}. JSON: {"context":"...","parts":[{"id":"a","text":"...","marks":2}]}. Plain text.`,"JSON Gen",im,GEMINI_PROXY_URL);
+                    const r=await callAI(`Gen 1 long Q with 3 sub-parts. Context:${ctx}. JSON: {"context":"...","parts":[{"id":"a","text":"...","marks":2}]}. Plain text.`,"JSON Gen",im,proxy);
                     try{sLq(JSON.parse(r.replace(/```json|```/g,'')))}catch(e){alert('Err');close()}
                 }
                 sLd(false);
@@ -141,7 +142,11 @@
                 const lim=mod==='groq'?20:5;
                 if(await checkQuota(user,'chat',mod)===false){sMs(p=>[...p,{role:'ai',text:`Limit (${lim}) Reached.`}]);return}
                 const u=inp;sMs(p=>[...p,{role:'user',text:u}]);sInp("");sLd(true);
-                let im=null; if(log){let l=(log.questionImages?.[0])||log.imageUrl;if(l&&l.startsWith('http')){try{const r=await fetch(l),b=await r.blob();im=await new Promise(r=>{const f=new FileReader();f.onloadend=()=>r(f.result);f.readAsDataURL(b)})}catch(e){}}}
+                let im=null; 
+                if(log && mod !== 'groq'){
+                    let l=(log.questionImages?.[0])||log.imageUrl;
+                    if(l&&l.startsWith('http')){try{const r=await fetch(l),b=await r.blob();im=await new Promise(r=>{const f=new FileReader();f.onloadend=()=>r(f.result);f.readAsDataURL(b)})}catch(e){}}
+                }
                 const r=await callAI(u,`Tutor. Ctx: ${log?log.explanation:'General'}`,im, mod==='groq'?GROQ_PROXY_URL:GEMINI_PROXY_URL);
                 sMs(p=>[...p,{role:'ai',text:r.replace(/\$\$/g,'\n').replace(/\$/g,'')}]);sLd(false);
             };
