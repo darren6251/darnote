@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>darNote - Error Log</title>
+    <title>darNote - Error Log (v8 Smart)</title>
     <link rel="icon" type="image/png" href="https://raw.githubusercontent.com/darren6251/darnote/refs/heads/main/darNote%20logo.png">
     
     <!-- React & Tailwind -->
@@ -187,16 +187,24 @@
             });
         };
 
-        // --- GEMINI PROXY ---
-        const callAI = async (prompt, systemInstruction = "", imageBase64 = null, apiUrl = GEMINI_PROXY_URL) => {
+        // --- GEMINI PROXY (MULTI-IMAGE UPGRADE) ---
+        const callAI = async (prompt, systemInstruction = "", images = [], apiUrl = GEMINI_PROXY_URL) => {
             const parts = [{ text: `${systemInstruction}\n\nUser: ${prompt}` }];
-            if (imageBase64) {
-                let mimeType = "image/png"; let data = imageBase64;
-                if (imageBase64.includes(",")) { 
-                    const s = imageBase64.split(","); mimeType = s[0].match(/:(.*?);/)[1]; data = s[1]; 
-                }
-                parts.push({ inlineData: { mimeType, data } });
+            
+            // Handle multiple images for Gemini
+            if (images && images.length > 0) {
+                images.forEach(img => {
+                    let mimeType = "image/png"; 
+                    let data = img;
+                    if (img.includes(",")) { 
+                        const s = img.split(","); 
+                        mimeType = s[0].match(/:(.*?);/)[1]; 
+                        data = s[1]; 
+                    }
+                    parts.push({ inlineData: { mimeType, data } });
+                });
             }
+
             try {
                 const response = await fetch(apiUrl, { 
                     method: 'POST', headers: { 'Content-Type': 'application/json' }, 
@@ -209,14 +217,22 @@
             } catch (error) { return `Error: ${error.message}`; }
         };
 
-        // --- GROQ PROXY ---
-        const callGroq = async (prompt, systemInstruction = "", imageBase64 = null) => {
+        // --- GROQ PROXY (MULTI-IMAGE + MODEL SWITCHING) ---
+        const callGroq = async (prompt, systemInstruction = "", images = []) => {
             const userContent = [{ type: "text", text: prompt }];
-            if (imageBase64) {
-                userContent.push({ type: "image_url", image_url: { url: imageBase64 } });
+            
+            // Handle multiple images for Llama Vision
+            if (images && images.length > 0) {
+                images.forEach(img => {
+                     userContent.push({ type: "image_url", image_url: { url: img } });
+                });
             }
+
+            // SMART SWITCH: If images exist -> Llama Vision. If NO images -> openai/gpt-oss-120b
+            const modelToUse = (images && images.length > 0) ? "llama-3.2-90b-vision-preview" : "openai/gpt-oss-120b";
+            
             const payload = {
-                model: "llama-3.2-90b-vision-preview", 
+                model: modelToUse, 
                 messages: [ { role: "system", content: systemInstruction }, { role: "user", content: userContent } ]
             };
             try {
@@ -231,14 +247,10 @@
             } catch (error) { return `Error: ${error.message}`; }
         };
 
-        // --- SMART QUOTA MANAGER (NOW WITH FIRESTORE LIMITS) ---
-        
-        // Helper: Fetch limits from strict public config
+        // --- SMART QUOTA MANAGER ---
         const getLimits = async () => {
             const defaults = { chat_gemini: 5, chat_groq: 20, practice: 10, ocr: 20 };
             try {
-                // STRICT PATH COMPLIANCE: /artifacts/{appId}/public/data/{collection}/{doc}
-                // We use collection 'config' and doc 'main'
                 const cfgRef = window.firebase.doc(window.firebase.db, 'artifacts', "darnote-app", 'public', 'data', 'config', 'main');
                 const snap = await window.firebase.getDoc(cfgRef);
                 if (snap.exists()) return { ...defaults, ...snap.data() };
@@ -246,7 +258,6 @@
             return defaults;
         };
 
-        // ADMIN TOOL: Run setupConfig() in console to create the config doc
         window.setupConfig = async () => {
             if(!window.firebase.auth.currentUser) { console.error("Login first!"); return; }
             const defaults = { chat_gemini: 5, chat_groq: 20, practice: 10, ocr: 20 };
@@ -488,19 +499,52 @@
                 if (newQuota === false) { setMessages(prev => [...prev, {role: 'ai', text: `🛑 **Daily Limit (${limit}/${limit}) Reached**\n\nCome back tomorrow!`}]); return; }
                 setQuota(newQuota);
                 setLoading(true);
-                let imgCtx = (activeLog.questionImages && activeLog.questionImages.length > 0) ? activeLog.questionImages[0] : (activeLog.imageUrl || null);
-                if (imgCtx && (imgCtx.startsWith('http') || imgCtx.startsWith('https'))) {
-                    if (imgCtx.includes('drive.google.com')) imgCtx = null;
-                    else {
-                        try { const res = await fetch(imgCtx); const blob = await res.blob(); imgCtx = await new Promise((resolve) => { const reader = new FileReader(); reader.onloadend = () => resolve(reader.result); reader.readAsDataURL(blob); }); } catch (e) { imgCtx = null; }
+
+                // --- MULTI-IMAGE GATHERING ---
+                let imgContexts = [];
+                // If model is Gemini (Vision) or Groq (Vision enabled by presence of images), gather images
+                // Note: Groq mode here is "ChatGPT", which usually implies text-only gpt-oss-120b.
+                // However, if user wants vision in Groq, they need Llama. 
+                // BUT, the requirement says "Chat (ChatGPT Mode): Use openai/gpt-oss-120b (text-only)".
+                // So if model === 'groq', we send EMPTY images to force text model.
+                
+                if (model === 'gemini') {
+                    const rawImages = activeLog.questionImages && activeLog.questionImages.length > 0 
+                        ? activeLog.questionImages 
+                        : (activeLog.imageUrl ? [activeLog.imageUrl] : []);
+                    
+                    for (const rawUrl of rawImages) {
+                        if (rawUrl.startsWith('http')) {
+                            if (!rawUrl.includes('drive.google.com')) {
+                                try {
+                                    const res = await fetch(rawUrl);
+                                    const blob = await res.blob();
+                                    const base64 = await new Promise((resolve) => {
+                                        const reader = new FileReader();
+                                        reader.onloadend = () => resolve(reader.result);
+                                        reader.readAsDataURL(blob);
+                                    });
+                                    imgContexts.push(base64);
+                                } catch(e) { console.error("Failed to fetch image for chat", e); }
+                            }
+                        } else if (rawUrl.startsWith('data:')) {
+                            imgContexts.push(rawUrl);
+                        }
                     }
                 }
+                
+                // If model is 'groq', imgContexts stays empty [], triggering gpt-oss-120b.
+
                 const qText = activeLog.questionText || "No text extracted.";
                 const historyText = messages.slice(Math.max(messages.length - 6, 1)).map(m => `${m.role === 'user' ? 'Student' : 'Tutor'}: ${m.text}`).join('\n');
                 const context = `Subject: ${activeLog.subject}, Topic: ${activeLog.topic}, Type: ${activeLog.questionType}, Answer: ${activeLog.correctAnswer}, Text: "${qText}". Notes: ${activeLog.explanation}`;
                 const systemPrompt = `You are a tutor of a note app:darNote, creater: Darren Ng, email if needed: darrenng@3-shot.com. Context: ${context}. \nPREVIOUS CHAT:\n${historyText}\n\nINSTRUCTIONS:\n1. Be CONCISE (TL;DR).\n2. Markdown yes, LaTeX NO. Use Unicode math.`;
                 const fullUserPrompt = `Student: ${userMsg}`;
-                let response = model === 'groq' ? await callGroq(fullUserPrompt, systemPrompt, imgCtx) : await callAI(fullUserPrompt, systemPrompt, imgCtx, GEMINI_PROXY_URL);
+                
+                let response = model === 'groq' 
+                    ? await callGroq(fullUserPrompt, systemPrompt, imgContexts) 
+                    : await callAI(fullUserPrompt, systemPrompt, imgContexts, GEMINI_PROXY_URL);
+                
                 response = cleanLatex(response);
                 setMessages(prev => [...prev, {role: 'ai', text: response}]); 
                 setLoading(false);
@@ -562,17 +606,40 @@
                 if (newQuota === false) { alert(`Daily Practice Limit (${limit}/${limit}) Reached!`); onClose(); return; }
                 setQuota(newQuota);
 
-                let contextData = "", imgCtx = null;
+                let contextData = "", imgCtx = [];
+                let useGroqTextModel = false;
+
                 if (mode === 'single' && activeLog) {
+                    // Single Drill - Uses Gemini with Vision
                     contextData = `Subject: ${activeLog.subject}. Topic: ${activeLog.topic}. Concept: ${activeLog.explanation}. Q: ${activeLog.questionText || "See Image"}`;
-                    imgCtx = (activeLog.questionImages && activeLog.questionImages.length > 0) ? activeLog.questionImages[0] : (activeLog.imageUrl || null);
-                    if (imgCtx && (imgCtx.startsWith('http') || imgCtx.startsWith('https'))) { 
-                         if (imgCtx.includes('drive.google.com')) imgCtx = null;
-                         else {
-                            try { const res = await fetch(imgCtx); const blob = await res.blob(); imgCtx = await new Promise((r) => { const reader = new FileReader(); reader.onloadend = () => r(reader.result); reader.readAsDataURL(blob); }); } catch (e) { imgCtx = null; } 
+                    // Use just one image for drill for simplicity, or we could send all. 
+                    // Let's stick to previous single image logic for drill OR upgrade it.
+                    // Let's upgrade it to multi-image safely.
+                    if (activeLog.questionImages && activeLog.questionImages.length > 0) {
+                         // Fetch blobs... (Simplified for now, assuming Gemini handles arrays of data uris)
+                        // For simplicity in this specific "Focus Drill", let's use the first image 
+                        // as context to avoid complex fetching unless really needed.
+                         const rawUrl = activeLog.questionImages[0];
+                         if (rawUrl && !rawUrl.includes('drive.google.com')) {
+                             try {
+                                const res = await fetch(rawUrl);
+                                const blob = await res.blob();
+                                const base64 = await new Promise((r) => { const reader = new FileReader(); reader.onloadend = () => r(reader.result); reader.readAsDataURL(blob); });
+                                imgCtx = [base64];
+                             } catch(e) {}
                          }
+                    } else if (activeLog.imageUrl && !activeLog.imageUrl.includes('drive.google.com')) {
+                        // Legacy single image
+                         try {
+                                const res = await fetch(activeLog.imageUrl);
+                                const blob = await res.blob();
+                                const base64 = await new Promise((r) => { const reader = new FileReader(); reader.onloadend = () => r(reader.result); reader.readAsDataURL(blob); });
+                                imgCtx = [base64];
+                         } catch(e) {}
                     }
                 } else {
+                    // TOPIC CHALLENGE - TEXT ONLY MODE
+                    useGroqTextModel = true;
                     const subj = selectedSubject; const top = selectedTopic;
                     try {
                         const db = window.firebase.db;
@@ -581,21 +648,35 @@
                         const q = window.firebase.query(window.firebase.collection(db, 'artifacts', "darnote-app", 'users', user.uid, 'error_logs'), ...constraints);
                         const snap = await window.firebase.getDocs(q);
                         const logs = snap.docs.map(d => d.data());
-                        if (logs.length === 0) contextData = `Subject: ${subj}. Topic: ${top}. (Generate general hard practice).`;
-                        else contextData = `Subject: ${subj}. Topic: ${top}. Past mistakes:\n${logs.map((l, i) => `Mistake ${i+1}: ${l.questionText || l.explanation || "Visual"}`).join('\n')}`;
+                        if (logs.length === 0) contextData = `Subject: ${subj}. Topic: ${top}. (Generate hard practice questions).`;
+                        else contextData = `Subject: ${subj}. Topic: ${top}. Past mistakes context (TEXT ONLY):\n${logs.map((l, i) => `Mistake ${i+1}: ${l.questionText || l.explanation || "(Visual Question - Logic Hidden)"}`).join('\n')}`;
                     } catch (e) { contextData = `Focus on ${top} in ${subj}`; }
                 }
 
                 const qType = mode === 'single' ? (activeLog?.questionType || 'MC') : selectedType;
+                const promptSuffix = qType === 'MC' 
+                    ? `Generate 5 MCQs (ABCD). Return JSON array: [{"q": "...", "options": ["A. ..."], "answer": "A", "explanation": "..."}]. Plain text only.`
+                    : `Generate 1 long Q with 3 sub-parts. Return JSON: {"context": "...", "parts": [{"id": "a", "text": "...", "marks": 2}]}. Plain text.`;
                 
-                if (qType === 'MC') {
-                    const prompt = `Context: ${contextData}\nGenerate 5 MCQs (ABCD). Return JSON array: [{"q": "...", "options": ["A. ..."], "answer": "A", "explanation": "..."}]. Plain text only.`;
-                    const res = await callAI(prompt, "JSON Generator", imgCtx, GEMINI_PROXY_URL);
-                    try { const json = JSON.parse(res.replace(/```json|```/g, '')); setQuestions(json); } catch(e) { alert("Generation failed."); onClose(); }
+                const prompt = `Context: ${contextData}\n${promptSuffix}`;
+                
+                // SWITCH: If Topic Challenge -> callGroq with empty images (forces gpt-oss-120b)
+                // If Single Drill -> callAI with images (uses Gemini)
+                let res;
+                if (useGroqTextModel) {
+                    res = await callGroq(prompt, "JSON Generator", []); // Empty images forces text model
                 } else {
-                    const prompt = `Context: ${contextData}\nGenerate 1 long Q with 3 sub-parts. Return JSON: {"context": "...", "parts": [{"id": "a", "text": "...", "marks": 2}]}. Plain text.`;
-                    const res = await callAI(prompt, "JSON Generator", imgCtx, GEMINI_PROXY_URL);
-                    try { const json = JSON.parse(res.replace(/```json|```/g, '')); setLqData(json); } catch(e) { alert("Generation failed."); onClose(); }
+                    res = await callAI(prompt, "JSON Generator", imgCtx, GEMINI_PROXY_URL);
+                }
+
+                try { 
+                    const json = JSON.parse(res.replace(/```json|```/g, '')); 
+                    if (qType === 'MC') setQuestions(json); 
+                    else setLqData(json);
+                } catch(e) { 
+                    console.error(e);
+                    alert("Generation failed. Try again."); 
+                    onClose(); 
                 }
                 setLoading(false);
             };
@@ -603,7 +684,7 @@
             const handleLqMark = async () => {
                 setLoading(true);
                 const prompt = `Mark this. Context: ${lqData.context}\nParts: ${JSON.stringify(lqData.parts)}\nAnswers: ${JSON.stringify(userAnswers)}\nReturn JSON: {"totalScore": 5, "maxScore": 10, "generalFeedback": "...", "partFeedback": {"a": {"score": 1, "comment": "..."}, "b": {"score": 4, "comment": "..."}}}.`;
-                const res = await callAI(prompt, "Examiner JSON Only", null, GEMINI_PROXY_URL);
+                const res = await callAI(prompt, "Examiner JSON Only", [], GEMINI_PROXY_URL);
                 try { const json = JSON.parse(res.replace(/```json|```/g, '')); setLqFeedback(json); setMarked(true); } catch(e) { alert("Marking failed."); }
                 setLoading(false);
             };
@@ -683,6 +764,11 @@
             const saveTimeoutRef = useRef(null);
             const [showOcrText, setShowOcrText] = useState(false);
             const [compareMode, setCompareMode] = useState(false);
+            
+            // --- NEW: AUTO-OCR BATCHING STATE ---
+            const ocrTimerRef = useRef(null);
+            const [ocrPendingToast, setOcrPendingToast] = useState(null);
+            const pendingOcrBlobs = useRef([]); // To store fresh blobs for batching
 
             useEffect(() => {
                 const unsub = window.firebase.onAuthStateChanged(window.firebase.auth, async (u) => {
@@ -757,11 +843,13 @@
             const handleContextMenu = (e, logId) => { e.preventDefault(); setContextMenu({ visible: true, x: e.clientX, y: e.clientY, logId }); };
             const addTopicToSubject = async (subjectName) => { const subjectDoc = subjects.find(s => s.name === subjectName); if (!subjectDoc) { alert("Cannot add topic to General."); return; } const newTopic = prompt(`Add topic for ${subjectName}:`); if (!newTopic) return; setSubjects(prev => prev.map(s => s.id === subjectDoc.id ? {...s, topics: [...s.topics, newTopic]} : s)); const docRef = window.firebase.doc(window.firebase.db, 'artifacts', 'darnote-app', 'users', user.uid, 'subjects', subjectDoc.id); await window.firebase.updateDoc(docRef, { topics: window.firebase.arrayUnion(newTopic) }); };
 
-            const performSmartOCR = async (base64) => {
+            const performSmartOCR = async (images) => {
                 setIsAutoTitleLoading(true);
+                setOcrPendingToast(null);
+                
                 try {
                     const schema = subjects.length > 0 ? subjects.map(s => `${s.name} (Topics: ${s.topics.join(', ')})`).join('\n') : "No existing subjects. Suggest 'General'.";
-                    const prompt = `Analyze this image for an error log.
+                    const prompt = `Analyze these images for an error log.
 1. Extract the text exactly as it appears, remain the layout and formate exactly identical.
 2. Generate a short, descriptive title (max 6 words).
 3. Determine Question Type: 'MC' (Multiple Choice) or 'LQ' (Long Question).
@@ -769,7 +857,8 @@
 If no exact match, use Subject: 'General'.
 Output strictly JSON: { "text": "...", "title": "...", "type": "MC"|"LQ", "subject": "...", "topic": "..." }`;
                     
-                    const res = await callGroq(prompt, "JSON Generator", base64);
+                    // Use callGroq directly with image array - logic inside callGroq will switch to Llama Vision
+                    const res = await callGroq(prompt, "JSON Generator", images);
                     const json = JSON.parse(res.substring(res.indexOf('{'), res.lastIndexOf('}') + 1));
                     
                     updateLog(activeLogId, { 
@@ -784,6 +873,7 @@ Output strictly JSON: { "text": "...", "title": "...", "type": "MC"|"LQ", "subje
                     alert("AI Classification Failed: " + e.message);
                 } 
                 setIsAutoTitleLoading(false);
+                pendingOcrBlobs.current = []; // Clear pending after success
             };
             
             const handleImageUpdate = async (data, action, type) => {
@@ -819,38 +909,80 @@ Output strictly JSON: { "text": "...", "title": "...", "type": "MC"|"LQ", "subje
                         }
                     }
                     
+                    // --- BATCH OCR LOGIC ---
+                    if (isQ && blobToUpload.type !== 'application/pdf') {
+                        // Store the base64 for the pending batch immediately
+                        const reader = new FileReader();
+                        reader.onloadend = () => {
+                             pendingOcrBlobs.current.push(reader.result);
+                        };
+                        reader.readAsDataURL(blobToUpload);
+
+                        // Reset Timer
+                        if (ocrTimerRef.current) clearTimeout(ocrTimerRef.current);
+                        setOcrPendingToast(8); // 8 seconds countdown
+                        
+                        ocrTimerRef.current = setTimeout(async () => {
+                             // Timeout fired: check quota and run OCR
+                             const newQuota = await checkAndIncrementQuota(user, 'ocr');
+                             if (newQuota === false) { console.log("OCR limit reached"); return; }
+                             
+                             if (pendingOcrBlobs.current.length > 0) {
+                                 performSmartOCR([...pendingOcrBlobs.current]);
+                             }
+                        }, 8000);
+                    }
+                    // -----------------------
+
                     const finalUrl = await saveToDrive(blobToUpload, `ErrorLog_${type}_${Date.now()}.${blobToUpload.type==='application/pdf'?'pdf':'jpg'}`, preFetchedToken);
                     const newArr = [...currentImages, finalUrl]; 
                     
                     updateLog(activeLogId, { [targetField]: newArr });
                     setSpinner(false);
-                    
-                    if (isQ && blobToUpload.type !== 'application/pdf') {
-                        const newQuota = await checkAndIncrementQuota(user, 'ocr');
-                        if (newQuota === false) { console.log("OCR limit reached"); return; }
-                        
-                        const reader = new FileReader();
-                        reader.onloadend = () => performSmartOCR(reader.result);
-                        reader.readAsDataURL(blobToUpload);
-                    }
                 } catch(e) { alert("Upload Failed: " + e.message); setSpinner(false); } 
             };
+            
+            // Countdown Effect
+            useEffect(() => {
+                if (ocrPendingToast !== null && ocrPendingToast > 0) {
+                    const timer = setTimeout(() => setOcrPendingToast(ocrPendingToast - 1), 1000);
+                    return () => clearTimeout(timer);
+                }
+            }, [ocrPendingToast]);
 
             const handleAutoTitle = async () => {
+                // Manual Trigger
                 if (!activeLog.questionImages?.length && !activeLog.imageUrl) { alert("Paste image first!"); return; } 
                 const newQuota = await checkAndIncrementQuota(user, 'ocr');
                 if (newQuota === false) { alert("Daily OCR Limit Reached!"); return; }
                 
                 try {
-                    let url = activeLog.questionImages?.[0] || activeLog.imageUrl; let base64 = url;
-                    
-                    if (url.includes('drive.google.com')) {
-                        alert("Auto-title not supported for PDF files yet.");
-                        return;
+                    // Try to use pending if available, otherwise fetch from URLs (best effort)
+                    let imagesToProcess = [];
+                    if (pendingOcrBlobs.current.length > 0) {
+                        imagesToProcess = [...pendingOcrBlobs.current];
+                    } else {
+                        const rawImages = activeLog.questionImages && activeLog.questionImages.length > 0 
+                            ? activeLog.questionImages 
+                            : (activeLog.imageUrl ? [activeLog.imageUrl] : []);
+                        
+                        for (const url of rawImages) {
+                             if (url.includes('drive.google.com')) continue; // Skip PDFs/Drive for manual trigger if not in cache
+                             if (!url.startsWith('data:')) {
+                                try {
+                                    const res = await fetch(url);
+                                    const b = await res.blob();
+                                    const base64 = await new Promise(r=>{const rd=new FileReader(); rd.onload=()=>r(rd.result); rd.readAsDataURL(b);});
+                                    imagesToProcess.push(base64);
+                                } catch(e) {}
+                             } else {
+                                imagesToProcess.push(url);
+                             }
+                        }
                     }
-
-                    if(!url.startsWith('data:')) { const res = await fetch(url); const b = await res.blob(); base64 = await new Promise(r=>{const rd=new FileReader(); rd.onload=()=>r(rd.result); rd.readAsDataURL(b);}); }
-                    await performSmartOCR(base64);
+                    
+                    if(imagesToProcess.length === 0) { alert("No valid images found for OCR (PDFs not supported)."); return; }
+                    await performSmartOCR(imagesToProcess);
                 } catch(e) { alert("OCR Failed: " + e.message); setIsAutoTitleLoading(false); } 
             }
 
@@ -936,7 +1068,17 @@ Output strictly JSON: { "text": "...", "title": "...", "type": "MC"|"LQ", "subje
                                 <header className="h-16 flex items-center justify-between px-6 border-b border-zinc-200 dark:border-white/5 bg-white dark:bg-surface shrink-0 z-10">
                                     <div className="flex-1 flex items-center gap-2 mr-4">
                                         <input value={activeLog.title} onChange={e=>updateLog(activeLog.id, {title:e.target.value})} className="bg-transparent text-xl font-bold outline-none w-full text-zinc-900 dark:text-white placeholder-zinc-400" placeholder="Untitled Mistake"/>
-                                        <button onClick={handleAutoTitle} disabled={isAutoTitleLoading || (!activeLog.questionImages?.length && !activeLog.imageUrl)} className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${isAutoTitleLoading ? 'bg-indigo-100 text-indigo-500 animate-pulse' : 'bg-zinc-100 dark:bg-white/10 text-zinc-600 dark:text-zinc-400 hover:bg-brand hover:text-white'}`}>{isAutoTitleLoading ? <div className="w-3 h-3 border-2 border-current border-t-transparent rounded-full animate-spin"/> : <><Icons.Scan className="w-3 h-3"/><span className="hidden sm:inline">Auto-Title</span></>}</button>
+                                        <div className="flex items-center gap-2">
+                                            <button onClick={handleAutoTitle} disabled={isAutoTitleLoading || (!activeLog.questionImages?.length && !activeLog.imageUrl)} className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${isAutoTitleLoading ? 'bg-indigo-100 text-indigo-500 animate-pulse' : 'bg-zinc-100 dark:bg-white/10 text-zinc-600 dark:text-zinc-400 hover:bg-brand hover:text-white'}`}>{isAutoTitleLoading ? <div className="w-3 h-3 border-2 border-current border-t-transparent rounded-full animate-spin"/> : <><Icons.Scan className="w-3 h-3"/><span className="hidden sm:inline">Auto-Title</span></>}</button>
+                                            <AnimatePresence>
+                                                {ocrPendingToast > 0 && (
+                                                    <motion.div initial={{opacity:0, scale:0.8}} animate={{opacity:1, scale:1}} exit={{opacity:0}} className="bg-orange-500/10 border border-orange-500/20 text-orange-500 text-[10px] font-bold px-2 py-1 rounded-md flex items-center gap-1">
+                                                        <div className="w-1.5 h-1.5 rounded-full bg-orange-500 animate-pulse"/>
+                                                        Auto-OCR in {ocrPendingToast}s
+                                                    </motion.div>
+                                                )}
+                                            </AnimatePresence>
+                                        </div>
                                         <button onClick={() => setPracticeConfig({ isOpen: true, mode: 'single' })} className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold bg-zinc-100 dark:bg-white/10 text-zinc-600 dark:text-zinc-400 hover:bg-orange-500 hover:text-white transition-all ml-1" title="Generate Drill Questions"><Icons.Brain className="w-3 h-3"/> <span className="hidden sm:inline">Practice</span></button>
                                     </div>
                                     <div className="flex items-center gap-3">
