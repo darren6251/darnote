@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="en" class="dark">
 <head>
@@ -105,10 +104,10 @@
                 }
                 const tp=pm==='drill'?log.questionType:stp;
                 if(tp==='MC'){
-                    const r=await callAI(`Gen 3 MCQs (ABCD). Context:${ctx}. JSON Array: [{"q":"...","options":["A..."],"answer":"A","explanation":"..."}]. No LaTeX.`,"JSON Gen",im,GEMINI_PROXY_URL);
+                    const r=await callAI(`Gen 5 MCQs (ABCD). Context:${ctx}. JSON Array: [{"q":"...","options":["A..."],"answer":"A","explanation":"..."}]. Plain text only.`,"JSON Gen",im,GEMINI_PROXY_URL);
                     try{sQs(JSON.parse(r.replace(/```json|```/g,'')))}catch(e){alert('Err');close()}
                 }else{
-                    const r=await callAI(`Gen 1 long Q (2 parts). Context:${ctx}. JSON: {"context":"...","parts":[{"id":"a","text":"...","marks":2}]}. No LaTeX.`,"JSON Gen",im,GEMINI_PROXY_URL);
+                    const r=await callAI(`Gen 1 long Q with 3 sub-parts. Context:${ctx}. JSON: {"context":"...","parts":[{"id":"a","text":"...","marks":2}]}. Plain text.`,"JSON Gen",im,GEMINI_PROXY_URL);
                     try{sLq(JSON.parse(r.replace(/```json|```/g,'')))}catch(e){alert('Err');close()}
                 }
                 sLd(false);
