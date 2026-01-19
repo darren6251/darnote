@@ -315,11 +315,35 @@
             }, []);
 
             const getAccessToken = () => new Promise((resolve, reject) => {
+                // 1. Check LocalStorage for valid token
+                try {
+                    const stored = localStorage.getItem('darnote_gdrive_token');
+                    if (stored) {
+                        const { token, expiry } = JSON.parse(stored);
+                        // Buffer of 5 mins (300000ms)
+                        if (Date.now() < expiry - 300000) {
+                            // Inject into gapi client if available (safe fallback)
+                            if (window.gapi && window.gapi.client) {
+                                window.gapi.client.setToken({ access_token: token });
+                            }
+                            return resolve(token);
+                        }
+                    }
+                } catch(e) { localStorage.removeItem('darnote_gdrive_token'); }
+
                 if (!tokenClient) return reject("Auth not initialized");
+                
+                // 2. Fallback to GAPI memory check (redundant mostly if LS works, but good for safety)
                 const existing = window.gapi.client.getToken();
                 if (existing && Date.now() < existing.expiry) return resolve(existing.access_token);
+                
+                // 3. Request New Token
                 tokenClient.callback = (resp) => { 
                     if (resp.error) reject(resp); 
+                    // Save to LocalStorage (Tokens usually last 1h / 3600s. We set expiry manually)
+                    // Use 55 mins to be safe
+                    const expiry = Date.now() + (3300 * 1000); 
+                    localStorage.setItem('darnote_gdrive_token', JSON.stringify({ token: resp.access_token, expiry }));
                     resolve(resp.access_token); 
                 };
                 tokenClient.requestAccessToken({ prompt: '' });
@@ -346,7 +370,7 @@
                 form.append('metadata', new Blob([JSON.stringify(metadata)], { type: 'application/json' }));
                 form.append('file', blob);
                 const upRes = await fetch('https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&fields=id', 
-                    { method: 'POST', headers: { Authorization: `Bearer ${token}` }, body: form });
+                    { method: 'POST', headers: { Authorization: `Bearer ${token}` } });
                 if(!upRes.ok) throw new Error(upRes.statusText);
                 const fileId = (await upRes.json()).id;
                 await fetch(`https://www.googleapis.com/drive/v3/files/${fileId}/permissions`, { 
@@ -999,11 +1023,32 @@ Output strictly JSON: { "text": "...", "title": "...", "type": "MC"|"LQ", "subje
             const filteredLogs = logs.filter(l => (l.title || '').toLowerCase().includes(searchQuery.toLowerCase()) || (l.questionText || '').toLowerCase().includes(searchQuery.toLowerCase()));
             const currentSub = activeLog ? subjects.find(s=>s.name===activeLog.subject) : null;
 
+            const handleGlobalLogin = async () => {
+                try {
+                    // 1. Firebase Login
+                    const cred = await window.firebase.signInWithPopup(window.firebase.auth, new window.firebase.GoogleAuthProvider());
+                    
+                    if (cred.user) {
+                        // 2. Immediately Trigger Drive Auth (Chained Event)
+                        // This relies on the browser seeing this async continuation as part of the user gesture.
+                        // Ideally, this slips past Safari's popup blocker.
+                        getAccessToken().catch(e => {
+                            console.warn("Drive preload blocked/failed:", e);
+                            // We don't alert here to avoid annoying the user if they just wanted to check logs.
+                            // They will be prompted again on upload if needed.
+                        });
+                    }
+                } catch (e) {
+                    console.error("Login failed", e);
+                    alert("Login failed: " + e.message);
+                }
+            };
+
             if (!user) return (
                 <div className="h-screen w-full flex items-center justify-center bg-zinc-950 text-white flex-col gap-6">
                     <img src="https://raw.githubusercontent.com/darren6251/darnote/refs/heads/main/darNote%20logo.png" className="w-20 h-20 mb-4 drop-shadow-[0_0_15px_rgba(99,102,241,0.5)]"/>
                     <h1 className="text-3xl font-bold">darNote Error Log</h1>
-                    <button onClick={() => window.firebase.signInWithPopup(window.firebase.auth, new window.firebase.GoogleAuthProvider())} className="bg-white text-black px-8 py-3 rounded-full font-bold flex gap-2 items-center hover:scale-105 transition-transform shadow-xl w-64 justify-center"><Icons.Google className="w-5 h-5"/> Sign In</button>
+                    <button onClick={handleGlobalLogin} className="bg-white text-black px-8 py-3 rounded-full font-bold flex gap-2 items-center hover:scale-105 transition-transform shadow-xl w-64 justify-center"><Icons.Google className="w-5 h-5"/> Sign In</button>
                 </div>
             );
 
