@@ -650,7 +650,7 @@
             return (
                 <div className="flex flex-col h-full bg-white dark:bg-onyx" onPaste={handlePaste}>
                     <div className="p-4 border-b border-zinc-200 dark:border-white/10 flex flex-col gap-3 bg-zinc-50 dark:bg-zinc-900">
-                         <div className="flex justify-between items-center"><span className="font-semibold text-sm flex items-center gap-2"><Icons.Bot className="w-4 h-4 text-indigo-500"/> AI Assistant</span><button onClick={onClose}><Icons.X className="w-4 h-4"/></button></div>
+                         <div className="flex justify-between items-center"><span className="font-semibold text-sm flex items-center gap-2"><Icons.Bot className="w-4 h-4 text-indigo-500"/> AI Assistant (Use official AIs if possible)</span><button onClick={onClose}><Icons.X className="w-4 h-4"/></button></div>
                          <div className="flex bg-zinc-200 dark:bg-black/20 p-1 rounded-lg">
                             <button onClick={()=>setModel('gemini')} className={`flex-1 flex items-center justify-center gap-1.5 py-1.5 rounded-md text-[10px] font-bold ${model==='gemini' ? 'bg-white dark:bg-zinc-700 shadow-sm text-indigo-600 dark:text-white' : 'text-zinc-500'}`}><Icons.Zap className="w-3 h-3"/> Gemini ({quota}/{limits.chat_gemini})</button>
                             <button onClick={()=>setModel('groq')} className={`flex-1 flex items-center justify-center gap-1.5 py-1.5 rounded-md text-[10px] font-bold ${model==='groq' ? 'bg-white dark:bg-zinc-700 shadow-sm text-green-600 dark:text-white' : 'text-zinc-500'}`}><Icons.Brain className="w-3 h-3"/> ChatGPT ({quota}/{limits.chat_groq})</button>
