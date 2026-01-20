@@ -586,7 +586,7 @@
         };
 
         const AIChatInterface = ({ activeNote, initialQuery, onClose, user }) => {
-            const [messages, setMessages] = useState([{role: 'ai', text: 'Hi! Ask me anything or paste an image (Ctrl+V) to analyze.Please note that it is recommended to use offical Ais if possible. AI could provide wrong info, so please verify', type: 'text'}]);
+            const [messages, setMessages] = useState([{role: 'ai', text: 'Hi! Ask me anything or paste an image (Ctrl+V) to analyze. Please note that it is recommended to use offical Ais if possible. AI could provide wrong info, so please verify.', type: 'text'}]);
             const [input, setInput] = useState(initialQuery || ''); const [loading, setLoading] = useState(false); const [droppedImage, setDroppedImage] = useState(null);
             const [quota, setQuota] = useState(0); const [limits, setLimits] = useState({ chat_gemini: 5, chat_groq: 20 }); const [model, setModel] = useState('gemini');
             const fileInputRef = useRef(null);
