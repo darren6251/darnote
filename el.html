@@ -920,7 +920,7 @@ Output strictly JSON: { "text": "...", "title": "...", "type": "MC"|"LQ", "subje
 
                         // Reset Timer
                         if (ocrTimerRef.current) clearTimeout(ocrTimerRef.current);
-                        setOcrPendingToast(8); // 8 seconds countdown
+                        setOcrPendingToast(15); // 8 seconds countdown
                         
                         ocrTimerRef.current = setTimeout(async () => {
                              // Timeout fired: check quota and run OCR
