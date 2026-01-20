@@ -825,6 +825,54 @@
                 setIsLoadingNotes(false);
             };
 
+            // SHARED NOTES FETCHING (LAZY LOAD + STINGY READS)
+            useEffect(() => {
+                if (!user || filter !== 'shared' || !user.email) return;
+                
+                const fetchShared = async () => {
+                    setIsLoadingNotes(true);
+                    setSharedNotes([]); 
+                    setSharedError(null);
+                    try {
+                         const db = window.firebase.db;
+                         // Stingy Query: Collection Group + Array Contains + Limit (25)
+                         // Note: We try with sort first, but it requires a composite index.
+                         const q = window.firebase.query(
+                             window.firebase.collectionGroup(db, 'notes'), 
+                             window.firebase.where('sharedWith', 'array-contains', user.email.toLowerCase()),
+                             window.firebase.orderBy('updatedAt', 'desc'),
+                             window.firebase.limit(25)
+                         );
+                         
+                         const snap = await window.firebase.getDocs(q);
+                         const fetched = snap.docs.map(d => ({id: d.id, ...d.data(), isShared: true}));
+                         setSharedNotes(fetched);
+                    } catch (e) {
+                         console.error("Shared Fetch Error:", e);
+                         if(e.code === 'failed-precondition') {
+                             setSharedError('INDEX_MISSING'); 
+                             const link = e.message.match(/https:\/\/console\.firebase\.google\.com[^\s]*/);
+                             if(link) console.log("%c🔥 CREATE SHARED INDEX HERE: " + link[0], "color: orange; font-weight: bold; font-size: 16px; background: #333; padding: 10px;");
+                             
+                             // FALLBACK: Try without sort so the user sees SOMETHING
+                             try {
+                                 const qFallback = window.firebase.query(
+                                     window.firebase.collectionGroup(db, 'notes'), 
+                                     window.firebase.where('sharedWith', 'array-contains', user.email.toLowerCase()),
+                                     window.firebase.limit(25)
+                                 );
+                                 const snap = await window.firebase.getDocs(qFallback);
+                                 setSharedNotes(snap.docs.map(d => ({id: d.id, ...d.data(), isShared: true})));
+                             } catch (e2) { setSharedError('PERMISSION_OR_OTHER'); }
+                         } else {
+                             setSharedError('PERMISSION_OR_OTHER');
+                         }
+                    }
+                    setIsLoadingNotes(false);
+                };
+                fetchShared();
+            }, [user, filter]);
+
             // Trigger fetch on filter/sort change
             useEffect(() => { 
                 if(user && filter !== 'shared') { // Shared handled separately
@@ -850,13 +898,15 @@
 
             const filteredNotes = useMemo(() => { 
                 // Client-side search on fetched buffer
-                let result = notes; 
+                // LOGIC UPDATE: Switch buffer based on filter
+                let result = filter === 'shared' ? sharedNotes : notes; 
+                
                 if (searchQuery.trim()) { 
                     const q = searchQuery.toLowerCase(); 
                     result = result.filter(n => n.title.toLowerCase().includes(q) || (n.content && n.content.toLowerCase().includes(q))); 
                 } 
                 return result; 
-            }, [notes, searchQuery]);
+            }, [notes, sharedNotes, searchQuery, filter]);
 
 
             const handleGlobalLogin = async () => {
