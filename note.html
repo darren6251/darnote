@@ -309,7 +309,7 @@
             );
         };
 
-        const useDebouncedSave = (initialData, onSave, delay = 2000) => {
+        const useDebouncedSave = (initialData, onSave, delay = 5000) => {
             const [localData, setLocalData] = useState(initialData); const debounceTimer = useRef(null);
             useEffect(() => { setLocalData(initialData); }, [initialData]);
             const updateData = useCallback((newData) => { setLocalData(newData); if (debounceTimer.current) clearTimeout(debounceTimer.current); debounceTimer.current = setTimeout(() => { onSave(newData); }, delay); }, [onSave, delay]);
