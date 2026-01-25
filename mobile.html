@@ -42,7 +42,7 @@
 
         const checkQuota=async(u,t,sub=null)=>{
             if(!u)return false;
-            const lim={chat_gemini:5,chat_groq:20,practice:10,ocr:20},fld=t==='chat'?sub==='groq'?'chat_groq_count':'chat_count':t==='practice'?'practice_count':'ocr_count';
+            const lim={chat_gemini:5,chat_groq:20,practice:15,ocr:20},fld=t==='chat'?sub==='groq'?'chat_groq_count':'chat_count':t==='practice'?'practice_count':'ocr_count';
             const l=t==='chat'?sub==='groq'?lim.chat_groq:lim.chat_gemini:lim[t];
             const td=new Date().toISOString().split('T')[0],ref=window.fb.doc(window.fb.db,'artifacts',"darnote-app",'users',u.uid,'ai_usage',td);
             try{const s=await window.fb.getDoc(ref);let c=s.exists()?(s.data()[fld]||0):0;if(c>=l)return false;await window.fb.setDoc(ref,{[fld]:window.fb.increment(1),date:td},{merge:true});return c+1;}catch(e){return false}
