@@ -1,95 +1,107 @@
-darNote 🚀
-The "Second Brain" for Students who hate losing papers.
+# darNote 🚀
+
+> **The "Second Brain" for Students who hate losing papers.**
 
 Built by a 2026 DSE Retaker because I was tired of scattering my notes across 5 different apps.
 
-🧐 What is this?
-darNote is a web-based workspace designed to handle the specific chaos of student life. It combines note-taking, error logging, and file storage into one dashboard.
+## 🧐 What is this?
 
-Unlike standard note apps, this is built for "Survival":
+**darNote** is a web-based workspace designed to handle the specific chaos of student life. It combines note-taking, error logging, and file storage into one dashboard.
 
-Error Logs: Specifically designed to track mistakes, upload marking schemes, and toggle "Mastered" status.
+Unlike standard note apps, this is built for **"Survival"**:
 
-Unlimited Storage: Integrates directly with your Google Drive, so you never hit a storage cap on the app itself.
+* **Error Logs:** Specifically designed to track mistakes, upload marking schemes, and toggle "Mastered" status.
 
-Lazy AI: Uses Gemini to auto-title screenshots (OCR) and fix grammar, because typing titles manually is a waste of time.
+* **Unlimited Storage:** Integrates directly with your Google Drive, so you never hit a storage cap on the app itself.
 
-✨ Features
-📝 Rich Text Editor: Powered by TinyMCE with export to PDF/PNG.
+* **Lazy AI:** Uses Gemini to auto-title screenshots (OCR) and fix grammar, because typing titles manually is a waste of time.
 
-❌ Error Logging System: dedicated UI for tracking DSE past paper mistakes.
+## ✨ Features
 
-🧠 Mind Maps: Visual node-based learning tool.
+* **📝 Rich Text Editor:** Powered by TinyMCE with export to PDF/PNG.
 
-🤖 AI Integration:
+* **❌ Error Logging System:** Dedicated UI for tracking DSE past paper mistakes.
 
-Auto-titling for uploaded images (OCR).
+* **🧠 Mind Maps:** Visual node-based learning tool.
 
-AI Chat Assistant for quick questions.
+* **🤖 AI Integration:**
 
-Grammar & Summary tools.
+  * Auto-titling for uploaded images (OCR).
 
-📱 Mobile Optimized: A dedicated mobile.html view for reviewing notes on the go.
+  * AI Chat Assistant for quick questions.
 
-☁️ Cloud Sync: Firebase for database (text/metadata) + Google Drive API for heavy media.
+  * Grammar & Summary tools.
 
-🌙 Dark Mode: Because we study at 2 AM.
+* **📱 Mobile Optimized:** A dedicated `mobile.html` view for reviewing notes on the go.
 
-🛠 Tech Stack
+* **☁️ Cloud Sync:** Firebase for database (text/metadata) + Google Drive API for heavy media.
+
+* **🌙 Dark Mode:** Because we study at 2 AM.
+
+## 🛠 Tech Stack
+
 I kept it raw and simple to avoid "Dependency Hell":
 
-Frontend: HTML5 + React 18 (via CDN) + Babel Standalone.
+* **Frontend:** HTML5 + React 18 (via CDN) + Babel Standalone.
 
-Styling: Tailwind CSS (via CDN).
+* **Styling:** Tailwind CSS (via CDN).
 
-Backend: Google Firebase (Authentication & Firestore).
+* **Backend:** Google Firebase (Authentication & Firestore).
 
-Storage: Google Drive API v3 (Client-side Auth).
+* **Storage:** Google Drive API v3 (Client-side Auth).
 
-AI: Google Gemini Pro (via Proxy).
+* **AI:** Google Gemini Pro (via Proxy).
 
-🚀 How to Run Locally
-Since this uses CDN links, you don't need npm or node_modules.
+## 🚀 How to Run Locally
 
-Clone the repo:
+Since this uses CDN links, you don't need `npm` or `node_modules`.
 
-Bash
+### 1. Clone the repo
 
-git clone https://github.com/darren6251/darnote.git
-Configuration:
+```bash
+git clone [https://github.com/darren6251/darnote.git](https://github.com/darren6251/darnote.git)
+```
 
-You will need your own Firebase Config and Google Drive API Client ID.
+### 2. Configuration
 
-Look for the firebaseConfig and GDRIVE_CLIENT_ID variables in the HTML files and replace them with your own if you are forking this.
+You will need your own **Firebase Config** and **Google Drive API Client ID**.
+Look for the `firebaseConfig` and `GDRIVE_CLIENT_ID` variables in the HTML files and replace them with your own if you are forking this.
 
-Run:
+### 3. Run
 
-You cannot just double-click the HTML file (CORS issues).
+**Important:** You cannot just double-click the HTML file due to CORS issues. You must use a local server.
 
-Use a simple local server.
+* **VS Code:** Right-click `index.html` -> "Open with Live Server".
 
-VS Code: Right-click index.html -> "Open with Live Server".
+* **Python:**
 
-Python: python -m http.server 8000
+  ```bash
+  python -m http.server 8000
+  ```
 
-📂 File Structure
-index.html: Landing page & Login logic.
+## 📂 File Structure
 
-home.html: Main Dashboard (Calendar, Quick Tasks, Stats).
+* `index.html`: Landing page & Login logic.
 
-note.html: The core workspace (Editor, Mind Map, AI Chat).
+* `home.html`: Main Dashboard (Calendar, Quick Tasks, Stats).
 
-el.html: Error Log specific dashboard.
+* `note.html`: The core workspace (Editor, Mind Map, AI Chat).
 
-mobile.html: Optimized UI for phone screens.
+* `el.html`: Error Log specific dashboard.
 
-🤖 The "Confession"
-I didn't write every line of code alone. I used Gemini AI to help me debug React components, handle the logic for the Google Drive API, and fix CSS when things broke.
+* `mobile.html`: Optimized UI for phone screens.
+
+## 🤖 The "Confession"
+
+I didn't write every line of code alone. I used **Gemini AI** to help me debug React components, handle the logic for the Google Drive API, and fix CSS when things broke.
 
 I’m a student, not a senior software engineer. Think of this code as "AI-assisted engineering." It works, it's secure, but don't expect enterprise-level architecture.
 
-📄 License
+## 📄 License
+
 Feel free to fork it, break it, or use it to study.
 
-📧 Contact
-Found a bug? (There are probably a few). Email: darrenng@3-shot.com
+## 📧 Contact
+
+Found a bug? (There are probably a few).
+Email: darrenng@3-shot.com
