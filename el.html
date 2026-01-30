@@ -502,11 +502,6 @@
 
                 // --- MULTI-IMAGE GATHERING ---
                 let imgContexts = [];
-                // If model is Gemini (Vision) or Groq (Vision enabled by presence of images), gather images
-                // Note: Groq mode here is "ChatGPT", which usually implies text-only gpt-oss-120b.
-                // However, if user wants vision in Groq, they need Llama. 
-                // BUT, the requirement says "Chat (ChatGPT Mode): Use openai/gpt-oss-120b (text-only)".
-                // So if model === 'groq', we send EMPTY images to force text model.
                 
                 if (model === 'gemini') {
                     const rawImages = activeLog.questionImages && activeLog.questionImages.length > 0 
@@ -581,6 +576,7 @@
             const [selectedSubject, setSelectedSubject] = useState(activeLog?.subject || (subjects.length > 0 ? subjects[0].name : ''));
             const [selectedTopic, setSelectedTopic] = useState(activeLog?.topic || '');
             const [selectedType, setSelectedType] = useState('MC');
+            const [customInstructions, setCustomInstructions] = useState("");
 
             useEffect(() => {
                 const fetchQuotaAndLimit = async () => { 
@@ -610,15 +606,8 @@
                 let useGroqTextModel = false;
 
                 if (mode === 'single' && activeLog) {
-                    // Single Drill - Uses Gemini with Vision
                     contextData = `Subject: ${activeLog.subject}. Topic: ${activeLog.topic}. Concept: ${activeLog.explanation}. Q: ${activeLog.questionText || "See Image"}`;
-                    // Use just one image for drill for simplicity, or we could send all. 
-                    // Let's stick to previous single image logic for drill OR upgrade it.
-                    // Let's upgrade it to multi-image safely.
                     if (activeLog.questionImages && activeLog.questionImages.length > 0) {
-                         // Fetch blobs... (Simplified for now, assuming Gemini handles arrays of data uris)
-                        // For simplicity in this specific "Focus Drill", let's use the first image 
-                        // as context to avoid complex fetching unless really needed.
                          const rawUrl = activeLog.questionImages[0];
                          if (rawUrl && !rawUrl.includes('drive.google.com')) {
                              try {
@@ -629,7 +618,6 @@
                              } catch(e) {}
                          }
                     } else if (activeLog.imageUrl && !activeLog.imageUrl.includes('drive.google.com')) {
-                        // Legacy single image
                          try {
                                 const res = await fetch(activeLog.imageUrl);
                                 const blob = await res.blob();
@@ -653,6 +641,11 @@
                     } catch (e) { contextData = `Focus on ${top} in ${subj}`; }
                 }
 
+                // Append user instructions if present
+                if (customInstructions.trim()) {
+                    contextData += `\n\nUSER CONSTRAINT: ${customInstructions}`;
+                }
+
                 const qType = mode === 'single' ? (activeLog?.questionType || 'MC') : selectedType;
                 const promptSuffix = qType === 'MC' 
                     ? `Generate 5 MCQs (ABCD). Return JSON array: [{"q": "...", "options": ["A. ..."], "answer": "A", "explanation": "..."}]. Plain text only.`
@@ -660,11 +653,9 @@
                 
                 const prompt = `Context: ${contextData}\n${promptSuffix}`;
                 
-                // SWITCH: If Topic Challenge -> callGroq with empty images (forces gpt-oss-120b)
-                // If Single Drill -> callAI with images (uses Gemini)
                 let res;
                 if (useGroqTextModel) {
-                    res = await callGroq(prompt, "JSON Generator", []); // Empty images forces text model
+                    res = await callGroq(prompt, "JSON Generator", []); 
                 } else {
                     res = await callAI(prompt, "JSON Generator", imgCtx, GEMINI_PROXY_URL);
                 }
@@ -700,14 +691,26 @@
                                     <button onClick={() => setPracticeMode('topic')} disabled={loading} className={`px-3 py-1 text-xs font-bold rounded-md transition-all ${practiceMode==='topic' ? 'bg-white dark:bg-zinc-700 shadow-sm text-black dark:text-white' : 'text-zinc-500'}`}>Topic Challenge</button>
                                 </div>
                                 {(practiceMode === 'topic') && (
-                                    <div className="flex gap-2 flex-1 justify-end">
-                                        <select value={selectedSubject} onChange={e=>setSelectedSubject(e.target.value)} className="bg-white dark:bg-black/30 border border-zinc-200 dark:border-white/10 rounded-lg px-2 py-1 text-xs max-w-[120px]">{subjects.map(s=><option key={s.id} value={s.name}>{s.name}</option>)}</select>
-                                        <select value={selectedTopic} onChange={e=>setSelectedTopic(e.target.value)} className="bg-white dark:bg-black/30 border border-zinc-200 dark:border-white/10 rounded-lg px-2 py-1 text-xs max-w-[120px]"><option value="">Any Topic</option>{availableTopics.map(t=><option key={t} value={t}>{t}</option>)}</select>
+                                    <div className="flex gap-2 flex-1 justify-end flex-wrap">
+                                        <select value={selectedSubject} onChange={e=>setSelectedSubject(e.target.value)} className="bg-white dark:bg-black/30 border border-zinc-200 dark:border-white/10 rounded-lg px-2 py-1 text-xs max-w-[100px]">{subjects.map(s=><option key={s.id} value={s.name}>{s.name}</option>)}</select>
+                                        <select value={selectedTopic} onChange={e=>setSelectedTopic(e.target.value)} className="bg-white dark:bg-black/30 border border-zinc-200 dark:border-white/10 rounded-lg px-2 py-1 text-xs max-w-[100px]"><option value="">Any Topic</option>{availableTopics.map(t=><option key={t} value={t}>{t}</option>)}</select>
                                         <select value={selectedType} onChange={e=>setSelectedType(e.target.value)} className="bg-white dark:bg-black/30 border border-zinc-200 dark:border-white/10 rounded-lg px-2 py-1 text-xs w-[60px] font-bold text-indigo-500"><option value="MC">MC</option><option value="LQ">LQ</option></select>
-                                        <button onClick={() => generatePractice('topic')} className="bg-brand text-white px-3 py-1 rounded-lg text-xs font-bold hover:bg-indigo-600">Start</button>
                                     </div>
                                 )}
                             </div>
+                            {practiceMode === 'topic' && !loading && questions.length === 0 && !lqData && (
+                                <div className="w-full">
+                                    <textarea 
+                                        value={customInstructions} 
+                                        onChange={(e) => setCustomInstructions(e.target.value)}
+                                        placeholder="Optional: Special constraints (e.g. No calculation questions, focus on definitions, make it extremely hard...)"
+                                        className="w-full bg-white dark:bg-black/20 border border-zinc-200 dark:border-white/10 rounded-lg p-2 text-xs focus:ring-1 focus:ring-brand outline-none dark:text-zinc-300 placeholder-zinc-400 resize-none h-16"
+                                    />
+                                    <div className="flex justify-end mt-2">
+                                        <button onClick={() => generatePractice('topic')} className="bg-brand text-white px-4 py-1.5 rounded-lg text-xs font-bold hover:bg-indigo-600 shadow-lg">Start Challenge</button>
+                                    </div>
+                                </div>
+                            )}
                         </div>
                         <div className="flex-1 overflow-y-auto p-6 space-y-6">
                             {loading ? (<div className="flex flex-col items-center justify-center py-10 space-y-4"><div className="w-10 h-10 border-4 border-brand border-t-transparent rounded-full animate-spin"></div><p className="text-zinc-500 animate-pulse">Generating...</p></div>) 
@@ -715,10 +718,61 @@
                                 <div className="space-y-8">{questions.map((q, idx) => (<div key={idx} className="space-y-3"><div className="font-semibold text-zinc-900 dark:text-zinc-100">{idx+1}. {q.q}</div><div className="grid grid-cols-1 sm:grid-cols-2 gap-2">{q.options.map((opt) => { const letter = opt.charAt(0); const isSelected = userAnswers[idx] === letter; const isCorrect = q.answer === letter; let bg = "bg-zinc-50 dark:bg-white/5 border-zinc-200 dark:border-white/10 hover:border-brand"; if (marked) { if (isCorrect) bg = "bg-green-500/20 border-green-500"; else if (isSelected) bg = "bg-red-500/20 border-red-500"; } else if (isSelected) { bg = "bg-brand/10 border-brand"; } return (<button key={opt} onClick={() => !marked && setUserAnswers({...userAnswers, [idx]: letter})} className={`text-left p-3 rounded-lg border text-sm transition-all dark:text-zinc-300 ${bg}`}>{opt}</button>); })}</div>{marked && (<div className="text-xs p-3 rounded bg-zinc-100 dark:bg-white/5 text-zinc-600 dark:text-zinc-400"><span className="font-bold">Explanation:</span> {q.explanation}</div>)}</div>))}</div>) 
                             : lqData ? (
                                 <div className="space-y-6"><div className="p-4 bg-zinc-50 dark:bg-white/5 rounded-lg text-zinc-800 dark:text-zinc-200 font-medium">{lqData.context}</div>{lqData.parts.map((part) => (<div key={part.id} className="space-y-2"><div className="flex justify-between text-sm"><span className="font-bold dark:text-white">({part.id}) {part.text}</span><span className="text-zinc-500">[{part.marks} marks]</span></div><textarea value={userAnswers[part.id] || ''} onChange={e => setUserAnswers({...userAnswers, [part.id]: e.target.value})} disabled={marked} className="w-full bg-transparent border border-zinc-200 dark:border-white/10 rounded-lg p-3 text-sm focus:ring-1 focus:ring-brand outline-none dark:text-white" rows="3" placeholder="Type your answer here..."/>{marked && lqFeedback?.partFeedback[part.id] && (<div className={`text-xs p-2 rounded flex justify-between ${lqFeedback.partFeedback[part.id].score === part.marks ? 'bg-green-500/10 text-green-500' : 'bg-red-500/10 text-red-400'}`}><span>{lqFeedback.partFeedback[part.id].comment}</span><span className="font-bold">{lqFeedback.partFeedback[part.id].score}/{part.marks}</span></div>)}</div>))} {marked && (<div className="p-4 rounded-lg bg-brand/10 border border-brand/20 text-center"><div className="text-2xl font-bold text-brand">{lqFeedback.totalScore} / {lqFeedback.maxScore}</div><div className="text-sm text-brand/80">{lqFeedback.generalFeedback}</div></div>)}</div>) 
-                            : (!loading && practiceMode === 'topic' && questions.length === 0 && !lqData && <div className="flex flex-col items-center justify-center text-zinc-400 h-full"><Icons.Brain className="w-12 h-12 mb-2 opacity-20"/><p>Select Subject, Topic & Type above to Start</p></div>)}
+                            : (!loading && practiceMode === 'topic' && questions.length === 0 && !lqData && <div className="flex flex-col items-center justify-center text-zinc-400 h-24"><Icons.Brain className="w-8 h-8 mb-2 opacity-20"/><p className="text-xs">Configure above & Click Start</p></div>)}
                         </div>
                         <div className="p-4 border-t border-zinc-200 dark:border-white/10 bg-zinc-50 dark:bg-zinc-900/50 flex justify-between items-center rounded-b-2xl"><span className={`text-xs px-2 py-0.5 rounded-full ${quota >= limit ? 'bg-red-100 text-red-600' : 'bg-zinc-200 dark:bg-white/10 text-zinc-500'}`}>{quota}/{limit} Today</span>{!marked && (questions.length > 0 || lqData) ? <button onClick={() => questions.length > 0 ? setMarked(true) : handleLqMark()} className="px-6 py-2 bg-brand text-white font-bold rounded-lg hover:bg-indigo-600 shadow-lg">{questions.length > 0 ? 'Check Answers' : 'Submit for Grading'}</button> : <button onClick={onClose} className="px-6 py-2 bg-zinc-200 dark:bg-white/10 text-zinc-900 dark:text-white font-bold rounded-lg hover:bg-zinc-300">Close</button>}</div>
                     </div>
+                </div>
+            );
+        };
+
+        const SidebarSubjectItem = ({ subject, currentFilter, onSelect }) => {
+            const isSelected = currentFilter.startsWith(`subject:${subject.name}`);
+            const [isOpen, setIsOpen] = useState(false);
+
+            useEffect(() => {
+                if (isSelected) setIsOpen(true);
+            }, [isSelected]);
+
+            return (
+                <div className="mb-1">
+                    <button 
+                        onClick={() => setIsOpen(!isOpen)} 
+                        className={`w-full flex items-center justify-between px-3 py-2 rounded-lg text-sm font-medium transition-colors ${isSelected ? 'text-zinc-900 dark:text-white bg-zinc-100 dark:bg-white/5' : 'text-zinc-500 dark:text-zinc-400 hover:bg-zinc-50 dark:hover:bg-white/5 hover:text-zinc-900 dark:hover:text-white'}`}
+                    >
+                        <span className="truncate">{subject.name}</span>
+                        <Icons.ChevronRight className={`w-3.5 h-3.5 text-zinc-400 transition-transform duration-200 ${isOpen ? 'rotate-90' : ''}`} />
+                    </button>
+                    <AnimatePresence>
+                        {isOpen && (
+                            <motion.div 
+                                initial={{ height: 0, opacity: 0 }} 
+                                animate={{ height: 'auto', opacity: 1 }} 
+                                exit={{ height: 0, opacity: 0 }}
+                                className="overflow-hidden"
+                            >
+                                <div className="pl-3 space-y-0.5 mt-1 border-l-2 border-zinc-200 dark:border-white/5 ml-4">
+                                    <button 
+                                        onClick={() => onSelect(`subject:${subject.name}`)}
+                                        className={`w-full text-left px-3 py-1.5 rounded-md text-xs transition-colors flex items-center gap-2 ${currentFilter === `subject:${subject.name}` ? 'bg-brand/10 text-brand font-bold' : 'text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white'}`}
+                                    >
+                                        <div className={`w-1.5 h-1.5 rounded-full ${currentFilter === `subject:${subject.name}` ? 'bg-brand' : 'bg-transparent border border-zinc-400'}`}></div>
+                                        All {subject.name}
+                                    </button>
+                                    {subject.topics.map(topic => (
+                                        <button 
+                                            key={topic}
+                                            onClick={() => onSelect(`subject:${subject.name}:${topic}`)}
+                                            className={`w-full text-left px-3 py-1.5 rounded-md text-xs transition-colors truncate flex items-center gap-2 ${currentFilter === `subject:${subject.name}:${topic}` ? 'bg-brand/10 text-brand font-bold' : 'text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white'}`}
+                                        >
+                                             <div className={`w-1.5 h-1.5 rounded-full ${currentFilter === `subject:${subject.name}:${topic}` ? 'bg-brand' : 'bg-transparent border border-zinc-400'}`}></div>
+                                            {topic}
+                                        </button>
+                                    ))}
+                                </div>
+                            </motion.div>
+                        )}
+                    </AnimatePresence>
                 </div>
             );
         };
@@ -794,13 +848,25 @@
                     const db = window.firebase.db;
                     const logsRef = window.firebase.collection(db, 'artifacts', "darnote-app", 'users', uid, 'error_logs');
                     let constraints = [];
+                    
                     if (filter === 'active') constraints.push(window.firebase.where('mastered', '==', false));
                     if (filter === 'mastered') constraints.push(window.firebase.where('mastered', '==', true));
-                    if (filter.startsWith('subject:')) constraints.push(window.firebase.where('subject', '==', filter.split(':')[1]));
+                    
+                    // NEW: Handles subject AND topic filtering
+                    if (filter.startsWith('subject:')) {
+                        const parts = filter.split(':');
+                        const subj = parts[1];
+                        const top = parts[2];
+                        constraints.push(window.firebase.where('subject', '==', subj));
+                        if (top) constraints.push(window.firebase.where('topic', '==', top));
+                    }
+                    
                     if (typeFilter !== 'ALL') constraints.push(window.firebase.where('questionType', '==', typeFilter));
+                    
                     constraints.push(window.firebase.orderBy('createdAt', sortBy === 'date-desc' ? 'desc' : 'asc'));
                     if (isLoadMore && lastDoc) constraints.push(window.firebase.startAfter(lastDoc));
                     constraints.push(window.firebase.limit(10));
+                    
                     const q = window.firebase.query(logsRef, ...constraints);
                     let snapshot = await window.firebase.getDocs(q);
                     const newLogs = snapshot.docs.map(d => {
@@ -1027,7 +1093,14 @@ Output strictly JSON: { "text": "...", "title": "...", "type": "MC"|"LQ", "subje
                                 <div className="h-4"></div>
                                 <button onClick={()=>setPracticeConfig({ isOpen: true, mode: 'topic' })} className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-bold text-orange-600 dark:text-orange-400 bg-orange-50 dark:bg-orange-500/10 hover:bg-orange-100 dark:hover:bg-orange-500/20 transition-all border border-orange-200 dark:border-orange-500/20"><Icons.Brain className="w-4 h-4"/> Practice Arcade</button>
                             </nav>
-                            <div className="pt-4 border-t border-zinc-200 dark:border-white/10"><div className="px-2 text-[10px] font-bold text-zinc-400 mb-2 uppercase tracking-widest">Subjects</div><div className="space-y-0.5 max-h-[250px] overflow-y-auto">{subjects.map(s => (<button key={s.id} onClick={()=>setFilter(`subject:${s.name}`)} className={`w-full text-left px-3 py-2 rounded-lg text-sm transition-colors hover:text-zinc-900 dark:hover:text-white hover:bg-zinc-100 dark:hover:bg-white/5 ${filter === `subject:${s.name}` ? 'bg-zinc-100 dark:bg-white/10 text-brand' : 'text-zinc-500 dark:text-zinc-400'}`}>{s.name}</button>))}</div></div>
+                            <div className="pt-4 border-t border-zinc-200 dark:border-white/10">
+                                <div className="px-2 text-[10px] font-bold text-zinc-400 mb-2 uppercase tracking-widest">Subjects</div>
+                                <div className="space-y-0.5 max-h-[250px] overflow-y-auto pr-1">
+                                    {subjects.map(s => (
+                                        <SidebarSubjectItem key={s.id} subject={s} currentFilter={filter} onSelect={setFilter} />
+                                    ))}
+                                </div>
+                            </div>
                         </div>
                         <div className="space-y-3 pt-4 border-t border-zinc-200 dark:border-white/10"><div className="flex items-center gap-3 px-2 py-1"><>{user.photoURL ? <img src={user.photoURL} className="w-8 h-8 rounded-full border border-zinc-200 dark:border-white/10"/> : <div className="w-8 h-8 rounded-full bg-zinc-200 dark:bg-white/10 flex items-center justify-center"><Icons.User className="w-4 h-4 text-zinc-500"/></div>}<div className="overflow-hidden"><div className="text-xs font-bold text-zinc-900 dark:text-white truncate w-32">{user.displayName}</div><div className="text-[10px] text-zinc-500 truncate">{user.email}</div></div></></div><div className="flex gap-2"><button onClick={()=>setIsDarkMode(!isDarkMode)} className="flex-1 btn-ghost py-2 rounded-lg flex items-center justify-center gap-2 text-xs font-medium border border-zinc-200 dark:border-white/5 bg-white dark:bg-white/5 shadow-sm">{isDarkMode ? <><Icons.Sun className="w-3 h-3"/> Light</> : <><Icons.Moon className="w-3 h-3"/> Dark</>}</button><button onClick={()=>window.firebase.signOut(window.firebase.auth)} className="px-3 btn-ghost py-2 rounded-lg text-red-500 border border-transparent"><Icons.Logout className="w-4 h-4"/></button></div></div>
                     </div>
