@@ -24,27 +24,31 @@
             border: 1px solid rgba(255, 255, 255, 0.1);
             box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
         }
-        .scroll-hide::-webkit-scrollbar {
-            display: none;
+        
+        /* SCROLLBAR FIXES */
+        /* Ensure scrollbars are always clickable and visible */
+        .chat-scroll {
+            scrollbar-width: thin;
+            scrollbar-color: #475569 #0f172a;
+            overflow-y: auto;
+            /* Critical for scrolling momentum on iOS */
+            -webkit-overflow-scrolling: touch; 
         }
-        .scroll-hide {
-            -ms-overflow-style: none;
-            scrollbar-width: none;
-        }
-        /* Custom Scrollbar for chat logs - MADE VISIBLE */
+
         .chat-scroll::-webkit-scrollbar {
-            width: 10px;
+            width: 12px; /* A bit wider for easier grabbing */
         }
         .chat-scroll::-webkit-scrollbar-track {
             background: #0f172a; 
         }
         .chat-scroll::-webkit-scrollbar-thumb {
             background: #475569; 
-            border-radius: 5px;
-            border: 2px solid #0f172a;
+            border-radius: 6px;
+            border: 2px solid #0f172a; /* Creates padding effect */
         }
         .chat-scroll::-webkit-scrollbar-thumb:hover {
             background: #94a3b8; 
+            cursor: pointer;
         }
         
         .glow-text-blue { text-shadow: 0 0 10px rgba(59, 130, 246, 0.5); }
@@ -115,7 +119,7 @@
         <main class="flex-1 grid grid-cols-1 md:grid-cols-3 gap-0 overflow-hidden">
             
             <!-- COLUMN 1: GEMINI -->
-            <section class="flex flex-col border-r border-slate-700/50 bg-slate-900/30 relative min-h-0">
+            <section class="flex flex-col border-r border-slate-700/50 bg-slate-900/30 relative min-h-0 h-full">
                 <div class="absolute top-0 left-0 w-full h-1 bg-blue-500 shadow-[0_0_15px_rgba(59,130,246,0.5)]"></div>
                 
                 <!-- Settings -->
@@ -130,7 +134,7 @@
                 </div>
 
                 <!-- Chat Log -->
-                <div id="gemini-log" class="flex-1 overflow-y-auto p-4 space-y-4 chat-scroll relative">
+                <div id="gemini-log" class="flex-1 overflow-y-auto p-4 space-y-4 chat-scroll relative w-full">
                     <!-- Messages go here -->
                     <div class="text-center text-xs text-slate-600 mt-10">Waiting for initialization...</div>
                 </div>
@@ -142,7 +146,7 @@
             </section>
 
             <!-- COLUMN 2: CONTROL & LOGS -->
-            <section class="flex flex-col bg-slate-950 relative z-20 shadow-xl min-h-0">
+            <section class="flex flex-col bg-slate-950 relative z-20 shadow-xl min-h-0 h-full">
                 
                 <!-- Controls -->
                 <div class="p-6 flex flex-col items-center justify-center space-y-4 border-b border-slate-800 bg-slate-900/40 shrink-0">
@@ -173,7 +177,7 @@
                 </div>
 
                 <!-- Central Transcript / Observability -->
-                <div class="flex-1 overflow-y-auto p-4 chat-scroll bg-slate-950 relative" id="central-log">
+                <div id="central-log" class="flex-1 overflow-y-auto p-4 chat-scroll bg-slate-950 relative w-full">
                     <div class="text-xs mono text-slate-600 mb-2">/// SYSTEM LOG ///</div>
                 </div>
 
@@ -189,7 +193,7 @@
             </section>
 
             <!-- COLUMN 3: GROQ (LLAMA) -->
-            <section class="flex flex-col border-l border-slate-700/50 bg-slate-900/30 relative min-h-0">
+            <section class="flex flex-col border-l border-slate-700/50 bg-slate-900/30 relative min-h-0 h-full">
                 <div class="absolute top-0 left-0 w-full h-1 bg-emerald-500 shadow-[0_0_15px_rgba(34,197,94,0.5)]"></div>
 
                 <!-- Settings -->
@@ -204,7 +208,7 @@
                 </div>
 
                 <!-- Chat Log -->
-                <div id="groq-log" class="flex-1 overflow-y-auto p-4 space-y-4 chat-scroll relative">
+                <div id="groq-log" class="flex-1 overflow-y-auto p-4 space-y-4 chat-scroll relative w-full">
                     <!-- Messages go here -->
                      <div class="text-center text-xs text-slate-600 mt-10">Waiting for initialization...</div>
                 </div>
@@ -470,8 +474,10 @@
         function addBubble(side, text, isSuccess = true) {
             const container = document.getElementById(side + '-log');
             
-            // Check scroll position BEFORE adding bubble
-            const isAtBottom = (container.scrollHeight - container.scrollTop - container.clientHeight) < 20;
+            // INCREASED TOLERANCE: Check if user is "near" bottom (within 150px)
+            // If checking during an ongoing scroll/animation, standard math fails, so we give it leeway.
+            const distanceToBottom = container.scrollHeight - container.scrollTop - container.clientHeight;
+            const isNearBottom = distanceToBottom < 150;
 
             const div = document.createElement('div');
             
@@ -491,23 +497,25 @@
             `;
             container.appendChild(div);
 
-            // Sticky Scroll Logic: Only auto-scroll if user was ALREADY at the bottom
-            if (isAtBottom || container.children.length <= 2) {
-                container.scrollTo({ top: container.scrollHeight, behavior: 'smooth' });
+            // FORCE SCROLL: If near bottom or empty, SNAP to bottom. 
+            // Removed behavior: 'smooth' because it fights manual scrolling.
+            if (isNearBottom || container.children.length <= 2) {
+                container.scrollTop = container.scrollHeight;
             }
         }
 
         function addSystemLog(text) {
             const container = document.getElementById('central-log');
             // Sticky check
-            const isAtBottom = (container.scrollHeight - container.scrollTop - container.clientHeight) < 20;
+            const distanceToBottom = container.scrollHeight - container.scrollTop - container.clientHeight;
+            const isNearBottom = distanceToBottom < 100;
             
             const div = document.createElement('div');
             div.className = "text-[10px] font-mono text-slate-500 mb-1 border-l-2 border-slate-700 pl-2";
             div.innerText = `[${new Date().toLocaleTimeString()}] ${text}`;
             container.appendChild(div);
             
-            if (isAtBottom) {
+            if (isNearBottom) {
                  container.scrollTop = container.scrollHeight;
             }
         }
