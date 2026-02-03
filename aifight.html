@@ -31,19 +31,20 @@
             -ms-overflow-style: none;
             scrollbar-width: none;
         }
-        /* Custom Scrollbar for chat logs */
+        /* Custom Scrollbar for chat logs - MADE VISIBLE */
         .chat-scroll::-webkit-scrollbar {
-            width: 8px;
+            width: 10px;
         }
         .chat-scroll::-webkit-scrollbar-track {
-            background: #1e293b; 
+            background: #0f172a; 
         }
         .chat-scroll::-webkit-scrollbar-thumb {
             background: #475569; 
-            border-radius: 4px;
+            border-radius: 5px;
+            border: 2px solid #0f172a;
         }
         .chat-scroll::-webkit-scrollbar-thumb:hover {
-            background: #64748b; 
+            background: #94a3b8; 
         }
         
         .glow-text-blue { text-shadow: 0 0 10px rgba(59, 130, 246, 0.5); }
@@ -71,7 +72,7 @@
             <p class="text-slate-400 mono text-sm">SECURE_CHANNEL_v1.0 // ID_VERIFICATION_REQUIRED</p>
         </div>
         
-        <div id="auth-status" class="h-6 text-sm text-red-400 mono"></div>
+        <div id="auth-status" class="h-auto min-h-[24px] text-sm text-red-400 mono text-center max-w-lg px-4"></div>
 
         <button id="btn-login" class="group relative px-8 py-3 bg-slate-800 hover:bg-slate-700 border border-slate-600 rounded-lg transition-all duration-200">
             <div class="flex items-center space-x-3">
@@ -81,6 +82,11 @@
             <div class="absolute inset-0 rounded-lg ring-2 ring-white/10 group-hover:ring-white/20 transition-all"></div>
         </button>
         
+        <!-- Emergency Override Button (Hidden by default) -->
+        <button id="btn-override" class="hidden text-xs text-yellow-500 border border-yellow-500/30 px-4 py-2 rounded hover:bg-yellow-500/10 transition-colors mt-2 mono">
+            <i class="fas fa-exclamation-triangle mr-2"></i>OVERRIDE DB LOCK (OWNER ONLY)
+        </button>
+
         <p class="text-xs text-slate-600 max-w-md text-center mt-4">
             Auth: <span class="mono text-slate-500">darrenng@3-shot.com</span> OR <span class="mono text-slate-500">GI7ARUUMQwMPr3a71eJUi62ADYf1</span><br>
             Attempts to bypass will be logged and mocked.
@@ -109,11 +115,11 @@
         <main class="flex-1 grid grid-cols-1 md:grid-cols-3 gap-0 overflow-hidden">
             
             <!-- COLUMN 1: GEMINI -->
-            <section class="flex flex-col border-r border-slate-700/50 bg-slate-900/30 relative">
+            <section class="flex flex-col border-r border-slate-700/50 bg-slate-900/30 relative min-h-0">
                 <div class="absolute top-0 left-0 w-full h-1 bg-blue-500 shadow-[0_0_15px_rgba(59,130,246,0.5)]"></div>
                 
                 <!-- Settings -->
-                <div class="p-4 border-b border-slate-700/50 bg-slate-800/20">
+                <div class="p-4 border-b border-slate-700/50 bg-slate-800/20 shrink-0">
                     <div class="flex items-center justify-between mb-2">
                         <h2 class="text-lg font-bold text-blue-400 flex items-center gap-2">
                             <i class="fas fa-gem"></i> GEMINI
@@ -124,25 +130,32 @@
                 </div>
 
                 <!-- Chat Log -->
-                <div id="gemini-log" class="flex-1 overflow-y-auto p-4 space-y-4 chat-scroll pb-20">
+                <div id="gemini-log" class="flex-1 overflow-y-auto p-4 space-y-4 chat-scroll relative">
                     <!-- Messages go here -->
                     <div class="text-center text-xs text-slate-600 mt-10">Waiting for initialization...</div>
                 </div>
 
                 <!-- Status Indicator -->
-                <div id="gemini-status" class="h-8 border-t border-slate-700/50 flex items-center px-4 text-xs text-slate-500 mono">
+                <div id="gemini-status" class="h-8 border-t border-slate-700/50 flex items-center px-4 text-xs text-slate-500 mono shrink-0">
                     Ready
                 </div>
             </section>
 
             <!-- COLUMN 2: CONTROL & LOGS -->
-            <section class="flex flex-col bg-slate-950 relative z-20 shadow-xl">
+            <section class="flex flex-col bg-slate-950 relative z-20 shadow-xl min-h-0">
                 
                 <!-- Controls -->
-                <div class="p-6 flex flex-col items-center justify-center space-y-4 border-b border-slate-800 bg-slate-900/40">
+                <div class="p-6 flex flex-col items-center justify-center space-y-4 border-b border-slate-800 bg-slate-900/40 shrink-0">
                     <div class="w-full max-w-xs space-y-2 text-center">
                         <label class="text-xs uppercase tracking-widest text-slate-500 font-bold">Rounds</label>
                         <input type="number" id="max-rounds" value="10" class="w-full bg-slate-900 border border-slate-700 text-center rounded py-2 text-white font-mono focus:border-purple-500 outline-none">
+                    </div>
+
+                    <!-- NEW: Round Display Scoreboard -->
+                    <div id="round-scoreboard" class="w-full text-center py-2 hidden">
+                         <div class="text-3xl font-bold mono tracking-tighter text-transparent bg-clip-text bg-gradient-to-r from-blue-400 via-white to-emerald-400">
+                            ROUND <span id="current-round-disp">0</span>/<span id="total-rounds-disp">0</span>
+                         </div>
                     </div>
 
                     <div class="flex gap-4 w-full justify-center pt-2">
@@ -160,12 +173,12 @@
                 </div>
 
                 <!-- Central Transcript / Observability -->
-                <div class="flex-1 overflow-y-auto p-4 chat-scroll bg-slate-950" id="central-log">
+                <div class="flex-1 overflow-y-auto p-4 chat-scroll bg-slate-950 relative" id="central-log">
                     <div class="text-xs mono text-slate-600 mb-2">/// SYSTEM LOG ///</div>
                 </div>
 
                 <!-- Input for Human Injection -->
-                <div class="p-3 border-t border-slate-800 bg-slate-900/80">
+                <div class="p-3 border-t border-slate-800 bg-slate-900/80 shrink-0">
                     <div class="relative">
                         <input type="text" id="human-injection" placeholder="Inject message into conversation..." class="w-full bg-slate-950 border border-slate-700 rounded-full py-2 pl-4 pr-10 text-sm text-white focus:border-purple-500 outline-none">
                         <button onclick="injectHuman()" class="absolute right-2 top-1.5 text-slate-400 hover:text-white">
@@ -176,11 +189,11 @@
             </section>
 
             <!-- COLUMN 3: GROQ (LLAMA) -->
-            <section class="flex flex-col border-l border-slate-700/50 bg-slate-900/30 relative">
+            <section class="flex flex-col border-l border-slate-700/50 bg-slate-900/30 relative min-h-0">
                 <div class="absolute top-0 left-0 w-full h-1 bg-emerald-500 shadow-[0_0_15px_rgba(34,197,94,0.5)]"></div>
 
                 <!-- Settings -->
-                <div class="p-4 border-b border-slate-700/50 bg-slate-800/20">
+                <div class="p-4 border-b border-slate-700/50 bg-slate-800/20 shrink-0">
                     <div class="flex items-center justify-between mb-2">
                         <h2 class="text-lg font-bold text-emerald-400 flex items-center gap-2">
                             <i class="fas fa-robot"></i> LLAMA (GROQ)
@@ -191,13 +204,13 @@
                 </div>
 
                 <!-- Chat Log -->
-                <div id="groq-log" class="flex-1 overflow-y-auto p-4 space-y-4 chat-scroll pb-20">
+                <div id="groq-log" class="flex-1 overflow-y-auto p-4 space-y-4 chat-scroll relative">
                     <!-- Messages go here -->
                      <div class="text-center text-xs text-slate-600 mt-10">Waiting for initialization...</div>
                 </div>
 
                 <!-- Status Indicator -->
-                <div id="groq-status" class="h-8 border-t border-slate-700/50 flex items-center px-4 text-xs text-slate-500 mono">
+                <div id="groq-status" class="h-8 border-t border-slate-700/50 flex items-center px-4 text-xs text-slate-500 mono shrink-0">
                     Ready
                 </div>
             </section>
@@ -231,13 +244,14 @@
         const app = initializeApp(firebaseConfig);
         const auth = getAuth(app);
         const db = getFirestore(app);
-        // Use the proper artifacts path structure for user data
-        const appId = firebaseConfig.appId;
+        
+        const appId = typeof __app_id !== 'undefined' ? __app_id : firebaseConfig.appId;
 
         // --- AUTH LOGIC ---
         const overlay = document.getElementById('auth-overlay');
         const appContainer = document.getElementById('app-container');
         const loginBtn = document.getElementById('btn-login');
+        const overrideBtn = document.getElementById('btn-override');
         const statusTxt = document.getElementById('auth-status');
         const userDisplay = document.getElementById('user-display');
 
@@ -257,58 +271,65 @@
             }
         });
 
+        const allowAccess = (user, method) => {
+             statusTxt.className = "text-emerald-400 mono text-sm";
+             statusTxt.innerText = `ACCESS GRANTED (${method}). WELCOME OVERLORD.`;
+             userDisplay.innerText = `ID: ${user.email || user.uid.substring(0, 8)} (VERIFIED)`;
+             
+             setTimeout(() => {
+                 overlay.classList.add('opacity-0', 'pointer-events-none');
+                 appContainer.classList.remove('opacity-0', 'pointer-events-none', 'blur-sm');
+             }, 1000);
+        };
+
+        overrideBtn.addEventListener('click', () => {
+             if (currentUser && (currentUser.uid === TARGET_UID || currentUser.email === TARGET_EMAIL)) {
+                 allowAccess(currentUser, "MANUAL OVERRIDE");
+             }
+        });
+
         onAuthStateChanged(auth, async (user) => {
             if (user) {
                 currentUser = user;
                 statusTxt.innerText = "VERIFYING IDENTITY...";
                 
                 // 1. STRICT UID OR EMAIL CHECK (Client Side)
-                // Now accepts EITHER the specific UID OR the darrenng@3-shot.com email
                 if (user.uid !== TARGET_UID && user.email !== TARGET_EMAIL) {
                     statusTxt.innerHTML = `<span class="text-red-500 font-bold">ACCESS DENIED.</span><br>UID: ${user.uid}<br>Email: ${user.email}`;
-                    // We also immediately sign them out so they can't linger
                     await signOut(auth);
                     return;
                 }
 
-                // 2. FIRESTORE TAG CHECK (Server Side Validation Simulation)
-                // We try to write to a path that should only be writable by YOU via security rules.
-                // If this fails, it means the user isn't authorized at the database level.
+                // 2. FIRESTORE TAG CHECK (Server Side Validation)
                 try {
                     statusTxt.innerText = "WRITING SECURE TAG...";
-                    
-                    // Path: /artifacts/{appId}/users/{uid}/access_logs/current_session
-                    // This follows the required path structure for private user data
                     const logRef = doc(db, 'artifacts', appId, 'users', user.uid, 'access_logs', 'current_session');
-                    
                     await setDoc(logRef, {
                         last_access: serverTimestamp(),
                         agent: navigator.userAgent,
                         status: 'ACTIVE_SESSION',
-                        security_clearance: 'MAXIMUM',
-                        email: user.email // Log the email used
+                        email: user.email 
                     });
-
-                    // Success! Unlock UI
-                    statusTxt.className = "text-emerald-400 mono text-sm";
-                    statusTxt.innerText = "ACCESS GRANTED. WELCOME OVERLORD.";
-                    userDisplay.innerText = `ID: ${user.email || user.uid.substring(0, 8)} (VERIFIED)`;
-                    
-                    setTimeout(() => {
-                        overlay.classList.add('opacity-0', 'pointer-events-none');
-                        appContainer.classList.remove('opacity-0', 'pointer-events-none', 'blur-sm');
-                    }, 1000);
+                    allowAccess(user, "DB VERIFIED");
 
                 } catch (e) {
                     console.error(e);
-                    statusTxt.innerHTML = `<span class="text-red-500">DB PERMISSION FAILED.</span><br>Are you truly the owner?`;
-                    await signOut(auth);
+                    const errorPath = `/artifacts/${appId}/users/${user.uid}/access_logs/current_session`;
+                    statusTxt.innerHTML = `
+                        <span class="text-red-500 font-bold">DB PERMISSION FAILED.</span><br>
+                        <span class="text-[10px] text-slate-500">Target Path: ${errorPath}</span><br>
+                        <span class="text-[10px] text-slate-400 mt-2 block">
+                            Likely Cause: Firestore Rules block writes.<br>
+                            If you are the owner, check your console or use Override.
+                        </span>
+                    `;
+                    overrideBtn.classList.remove('hidden');
                 }
 
             } else {
-                // Reset UI
                 overlay.classList.remove('opacity-0', 'pointer-events-none');
                 appContainer.classList.add('opacity-0', 'pointer-events-none', 'blur-sm');
+                overrideBtn.classList.add('hidden');
                 currentUser = null;
             }
         });
@@ -347,7 +368,6 @@
                 sender: sender,
                 content: content
             });
-            console.log("Saved to IDB:", sender);
         };
 
         window.clearDB = async () => {
@@ -357,7 +377,6 @@
             addSystemLog("Local Database Purged.");
         };
 
-        // Init DB on load
         initDB().then(() => console.log("DB Ready"));
 
         // --- API INTERACTIONS ---
@@ -367,9 +386,6 @@
             statusEl.innerText = "Thinking...";
             statusEl.classList.add("text-blue-400", "animate-pulse");
 
-            // Construct prompt context from history
-            // We'll concatenate recent history to give context
-            // Build the conversation string for context
             let contextStr = history.map(h => `${h.sender.toUpperCase()}: ${h.text}`).join("\n\n");
             let finalPrompt = `PREVIOUS CONVERSATION:\n${contextStr}\n\nREPLY TO THE LAST MESSAGE.`;
 
@@ -381,16 +397,12 @@
                         contents: [{
                             parts: [{ text: finalPrompt }]
                         }],
-                        // If the proxy supports systemInstruction, add it. If not, prepend to text.
-                        // Assuming basic generateContent structure:
                         systemInstruction: { parts: [{ text: document.getElementById('gemini-system').value || "You are a helpful AI." }] }
                     })
                 });
 
                 if(!response.ok) throw new Error("Gemini Proxy Error");
                 const data = await response.json();
-                
-                // Parse standard Gemini response
                 const text = data.candidates?.[0]?.content?.parts?.[0]?.text || "Error: No text in response";
                 
                 statusEl.innerText = "Ready";
@@ -409,28 +421,19 @@
             statusEl.classList.add("text-emerald-400", "animate-pulse");
 
             const systemPrompt = document.getElementById('groq-system').value || "You are a helpful AI.";
-            
-            // Convert history to OpenAI format for Groq
-            let messages = [
-                { role: "system", content: systemPrompt }
-            ];
-
-            // Add last few messages for context
+            let messages = [{ role: "system", content: systemPrompt }];
             history.forEach(h => {
                 let role = "user";
                 if (h.sender === "groq") role = "assistant";
                 messages.push({ role: role, content: h.text });
             });
 
-            // Ensure the very last message is from "user" (Gemini) so Groq responds to it
-            // If we just started, prompt is empty, rely on system.
-
             try {
                 const response = await fetch(PROXY_GROQ, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
-                        model: "llama-3.3-70b-versatile", // Versatile model
+                        model: "llama-3.3-70b-versatile",
                         messages: messages,
                         temperature: 0.7,
                         max_tokens: 1024
@@ -439,7 +442,6 @@
 
                 if(!response.ok) throw new Error("Groq Proxy Error");
                 const data = await response.json();
-                
                 const text = data.choices?.[0]?.message?.content || "Error: No text";
                 
                 statusEl.innerText = "Ready";
@@ -467,7 +469,15 @@
                 <div class="whitespace-pre-wrap leading-relaxed">${text}</div>
             `;
             container.appendChild(div);
-            container.scrollTop = container.scrollHeight;
+
+            // Sticky Scroll Logic: Only auto-scroll if we are close to bottom
+            const tolerance = 50; // pixels
+            const isNearBottom = (container.scrollHeight - container.scrollTop - container.clientHeight) < tolerance;
+            
+            // Or if it's the very first message
+            if (isNearBottom || container.children.length <= 2) {
+                container.scrollTop = container.scrollHeight;
+            }
         }
 
         function addSystemLog(text) {
@@ -476,7 +486,11 @@
             div.className = "text-[10px] font-mono text-slate-500 mb-1 border-l-2 border-slate-700 pl-2";
             div.innerText = `[${new Date().toLocaleTimeString()}] ${text}`;
             container.appendChild(div);
-            container.scrollTop = container.scrollHeight;
+            
+            // Simple sticky scroll for logs
+            if ((container.scrollHeight - container.scrollTop - container.clientHeight) < 50) {
+                 container.scrollTop = container.scrollHeight;
+            }
         }
 
         window.startBattle = async () => {
@@ -491,15 +505,16 @@
             document.getElementById('btn-stop').disabled = false;
             document.getElementById('gemini-log').innerHTML = '';
             document.getElementById('groq-log').innerHTML = '';
+            
+            // Show Scoreboard
+            document.getElementById('round-scoreboard').classList.remove('hidden');
+            document.getElementById('total-rounds-disp').innerText = maxRounds;
+            document.getElementById('current-round-disp').innerText = '1';
 
             addSystemLog("SEQUENCE INITIATED.");
             
-            // Seed the conversation
-            // We start by asking Gemini to speak first based on its system prompt
             let currentSpeaker = 'gemini';
-            let lastMessage = "Hello. Who are you?"; // Initial spark if system prompts are passive
-            
-            // Allow user to kickstart with injection instead of default
+            let lastMessage = "Hello. Who are you?";
             const injection = document.getElementById('human-injection').value;
             if(injection) {
                 lastMessage = injection;
@@ -507,37 +522,29 @@
                 document.getElementById('human-injection').value = "";
             }
 
-            // --- THE LOOP ---
             while (isLoopRunning && roundCount < maxRounds) {
                 roundCount++;
+                document.getElementById('current-round-disp').innerText = roundCount;
                 addSystemLog(`--- ROUND ${roundCount} ---`);
 
                 // 1. GEMINI TURN
                 if (currentSpeaker === 'gemini') {
-                    // Gemini receives history (which includes Groq's last message)
                     const gResponse = await callGemini(lastMessage, conversationHistory);
-                    
                     addBubble('gemini', gResponse);
                     saveLog('gemini', gResponse);
-                    
                     conversationHistory.push({ sender: 'gemini', text: gResponse });
                     lastMessage = gResponse;
                     currentSpeaker = 'groq';
                 }
                 
-                // Check stop
                 if (!isLoopRunning) break;
-
-                // small delay for dramatic effect
                 await new Promise(r => setTimeout(r, 1000));
 
                 // 2. GROQ TURN
                 if (currentSpeaker === 'groq') {
                     const lResponse = await callGroq(lastMessage, conversationHistory);
-                    
                     addBubble('groq', lResponse);
                     saveLog('groq', lResponse);
-                    
                     conversationHistory.push({ sender: 'groq', text: lResponse });
                     lastMessage = lResponse;
                     currentSpeaker = 'gemini';
@@ -549,6 +556,7 @@
             isLoopRunning = false;
             document.getElementById('btn-start').disabled = false;
             document.getElementById('btn-stop').disabled = true;
+            document.getElementById('round-scoreboard').classList.add('hidden'); // Hide score when done
             addSystemLog("SEQUENCE COMPLETE.");
         };
 
@@ -566,8 +574,6 @@
             saveLog('human', val);
             addSystemLog("Human Injection: " + val);
             input.value = "";
-            
-            // If loop is running, the next AI will pick this up automatically via history
         };
 
     </script>
