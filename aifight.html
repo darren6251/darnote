@@ -395,7 +395,7 @@
             statusEl.classList.add("text-blue-400", "animate-pulse");
 
             let contextStr = history.map(h => `${h.sender.toUpperCase()}: ${h.text}`).join("\n\n");
-            let finalPrompt = `PREVIOUS CONVERSATION:\n${contextStr}\n\nREPLY TO THE LAST MESSAGE.`;
+            let finalPrompt = `you arent chatting with user but another ai assitant, PREVIOUS CONVERSATION:\n${contextStr}\n\nREPLY TO THE LAST MESSAGE.`;
 
             try {
                 const response = await fetch(PROXY_GEMINI, {
