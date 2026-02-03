@@ -407,11 +407,11 @@
                 
                 statusEl.innerText = "Ready";
                 statusEl.classList.remove("text-blue-400", "animate-pulse");
-                return text;
+                return { text, success: true };
 
             } catch (e) {
                 statusEl.innerText = "Error: " + e.message;
-                return "I have crashed. Protocol failure.";
+                return { text: "I have crashed. Protocol failure.", success: false };
             }
         }
 
@@ -429,66 +429,85 @@
             });
 
             try {
+                // Use a standard stable model ID for testing connectivity
                 const response = await fetch(PROXY_GROQ, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
-                        model: "llama-3.3-70b-versatile",
+                        model: "llama3-70b-8192", // Changed to most standard Groq model
                         messages: messages,
                         temperature: 0.7,
                         max_tokens: 1024
                     })
                 });
 
-                if(!response.ok) throw new Error("Groq Proxy Error");
+                // DEBUG LOGGING
+                console.log("GROQ STATUS:", response.status);
+                
+                if(!response.ok) {
+                    const errorText = await response.text();
+                    console.error("GROQ ERROR:", errorText);
+                    throw new Error(`Groq HTTP ${response.status}`);
+                }
+                
                 const data = await response.json();
+                console.log("GROQ DATA:", data);
+
                 const text = data.choices?.[0]?.message?.content || "Error: No text";
                 
                 statusEl.innerText = "Ready";
                 statusEl.classList.remove("text-emerald-400", "animate-pulse");
-                return text;
+                return { text, success: true };
 
             } catch (e) {
                 statusEl.innerText = "Error: " + e.message;
-                return "System malfunction. Rebooting...";
+                return { text: "System malfunction: " + e.message, success: false };
             }
         }
 
         // --- APP LOGIC ---
 
-        function addBubble(side, text) {
+        function addBubble(side, text, isSuccess = true) {
             const container = document.getElementById(side + '-log');
+            
+            // Check scroll position BEFORE adding bubble
+            const isAtBottom = (container.scrollHeight - container.scrollTop - container.clientHeight) < 20;
+
             const div = document.createElement('div');
             
             const isGemini = side === 'gemini';
-            const colorClass = isGemini ? 'bg-blue-900/40 border-blue-800 text-blue-100' : 'bg-emerald-900/40 border-emerald-800 text-emerald-100';
+            let colorClass;
+            
+            if (!isSuccess) {
+                colorClass = 'bg-red-900/40 border-red-500 text-red-100 animate-pulse'; // ERROR STYLE
+            } else {
+                colorClass = isGemini ? 'bg-blue-900/40 border-blue-800 text-blue-100' : 'bg-emerald-900/40 border-emerald-800 text-emerald-100';
+            }
             
             div.className = `p-3 rounded-lg border ${colorClass} text-sm mb-2 animate-in fade-in slide-in-from-bottom-2 shadow-sm`;
             div.innerHTML = `
-                <div class="font-bold text-[10px] opacity-70 mb-1 tracking-wider uppercase">${side}</div>
+                <div class="font-bold text-[10px] opacity-70 mb-1 tracking-wider uppercase">${side} ${!isSuccess ? '(ERROR)' : ''}</div>
                 <div class="whitespace-pre-wrap leading-relaxed">${text}</div>
             `;
             container.appendChild(div);
 
-            // Sticky Scroll Logic: Only auto-scroll if we are close to bottom
-            const tolerance = 50; // pixels
-            const isNearBottom = (container.scrollHeight - container.scrollTop - container.clientHeight) < tolerance;
-            
-            // Or if it's the very first message
-            if (isNearBottom || container.children.length <= 2) {
-                container.scrollTop = container.scrollHeight;
+            // Sticky Scroll Logic: Only auto-scroll if user was ALREADY at the bottom
+            if (isAtBottom || container.children.length <= 2) {
+                container.scrollTo({ top: container.scrollHeight, behavior: 'smooth' });
             }
         }
 
         function addSystemLog(text) {
             const container = document.getElementById('central-log');
+            // Sticky check
+            const isAtBottom = (container.scrollHeight - container.scrollTop - container.clientHeight) < 20;
+            
             const div = document.createElement('div');
             div.className = "text-[10px] font-mono text-slate-500 mb-1 border-l-2 border-slate-700 pl-2";
             div.innerText = `[${new Date().toLocaleTimeString()}] ${text}`;
             container.appendChild(div);
             
-            // Simple sticky scroll for logs
-            if ((container.scrollHeight - container.scrollTop - container.clientHeight) < 50) {
+            if (isAtBottom) {
                  container.scrollTop = container.scrollHeight;
             }
         }
@@ -529,12 +548,19 @@
 
                 // 1. GEMINI TURN
                 if (currentSpeaker === 'gemini') {
-                    const gResponse = await callGemini(lastMessage, conversationHistory);
-                    addBubble('gemini', gResponse);
-                    saveLog('gemini', gResponse);
-                    conversationHistory.push({ sender: 'gemini', text: gResponse });
-                    lastMessage = gResponse;
-                    currentSpeaker = 'groq';
+                    const result = await callGemini(lastMessage, conversationHistory);
+                    addBubble('gemini', result.text, result.success);
+                    saveLog('gemini', result.text);
+                    
+                    if (result.success) {
+                        conversationHistory.push({ sender: 'gemini', text: result.text });
+                        lastMessage = result.text;
+                        currentSpeaker = 'groq';
+                    } else {
+                        addSystemLog("Gemini Failed. Retrying round...");
+                        // Don't advance speaker, or break? Let's just break for safety
+                        isLoopRunning = false;
+                    }
                 }
                 
                 if (!isLoopRunning) break;
@@ -542,12 +568,18 @@
 
                 // 2. GROQ TURN
                 if (currentSpeaker === 'groq') {
-                    const lResponse = await callGroq(lastMessage, conversationHistory);
-                    addBubble('groq', lResponse);
-                    saveLog('groq', lResponse);
-                    conversationHistory.push({ sender: 'groq', text: lResponse });
-                    lastMessage = lResponse;
-                    currentSpeaker = 'gemini';
+                    const result = await callGroq(lastMessage, conversationHistory);
+                    addBubble('groq', result.text, result.success);
+                    saveLog('groq', result.text);
+                    
+                    if (result.success) {
+                        conversationHistory.push({ sender: 'groq', text: result.text });
+                        lastMessage = result.text;
+                        currentSpeaker = 'gemini';
+                    } else {
+                        addSystemLog("Groq Failed. Aborting.");
+                        isLoopRunning = false;
+                    }
                 }
 
                 await new Promise(r => setTimeout(r, 1000));
