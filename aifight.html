@@ -82,7 +82,7 @@
         </button>
         
         <p class="text-xs text-slate-600 max-w-md text-center mt-4">
-            Only UID: <span class="mono text-slate-500">GI7ARUUMQwMPr3a71eJUi62ADYf1</span> is authorized. <br>
+            Auth: <span class="mono text-slate-500">darrenng@3-shot.com</span> OR <span class="mono text-slate-500">GI7ARUUMQwMPr3a71eJUi62ADYf1</span><br>
             Attempts to bypass will be logged and mocked.
         </p>
     </div>
@@ -216,6 +216,7 @@
         
         // This is THE ID.
         const TARGET_UID = "GI7ARUUMQwMPr3a71eJUi62ADYf1"; 
+        const TARGET_EMAIL = "darrenng@3-shot.com";
 
         const firebaseConfig = { 
             apiKey: "AIzaSyAvPEac-03kE4oazvaq8K3T2gxLPsnZO20", 
@@ -259,11 +260,12 @@
         onAuthStateChanged(auth, async (user) => {
             if (user) {
                 currentUser = user;
-                statusTxt.innerText = "VERIFYING UID...";
+                statusTxt.innerText = "VERIFYING IDENTITY...";
                 
-                // 1. STRICT UID CHECK (Client Side - Can be bypassed by editing JS)
-                if (user.uid !== TARGET_UID) {
-                    statusTxt.innerHTML = `<span class="text-red-500 font-bold">ACCESS DENIED. UID MISMATCH.</span><br>Detected: ${user.uid}`;
+                // 1. STRICT UID OR EMAIL CHECK (Client Side)
+                // Now accepts EITHER the specific UID OR the darrenng@3-shot.com email
+                if (user.uid !== TARGET_UID && user.email !== TARGET_EMAIL) {
+                    statusTxt.innerHTML = `<span class="text-red-500 font-bold">ACCESS DENIED.</span><br>UID: ${user.uid}<br>Email: ${user.email}`;
                     // We also immediately sign them out so they can't linger
                     await signOut(auth);
                     return;
@@ -283,13 +285,14 @@
                         last_access: serverTimestamp(),
                         agent: navigator.userAgent,
                         status: 'ACTIVE_SESSION',
-                        security_clearance: 'MAXIMUM'
+                        security_clearance: 'MAXIMUM',
+                        email: user.email // Log the email used
                     });
 
                     // Success! Unlock UI
                     statusTxt.className = "text-emerald-400 mono text-sm";
                     statusTxt.innerText = "ACCESS GRANTED. WELCOME OVERLORD.";
-                    userDisplay.innerText = `ID: ${user.uid.substring(0, 8)}... (VERIFIED)`;
+                    userDisplay.innerText = `ID: ${user.email || user.uid.substring(0, 8)} (VERIFIED)`;
                     
                     setTimeout(() => {
                         overlay.classList.add('opacity-0', 'pointer-events-none');
