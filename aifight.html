@@ -8,6 +8,14 @@
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
     <!-- Google Font for that Cyberpunk feel -->
     <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
+    
+    <!-- MARKDOWN PARSER -->
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+
+    <!-- KATEX FOR MATH -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"></script>
 
     <style>
         body {
@@ -63,6 +71,37 @@
             border-radius: 12px 12px 0 12px;
             margin-left: auto;
         }
+        
+        /* MARKDOWN STYLES WITHIN BUBBLES */
+        .markdown-body p { margin-bottom: 0.75em; }
+        .markdown-body p:last-child { margin-bottom: 0; }
+        .markdown-body pre { 
+            background: rgba(15, 23, 42, 0.6); 
+            padding: 10px; 
+            border-radius: 8px; 
+            overflow-x: auto; 
+            margin-top: 8px;
+            margin-bottom: 8px;
+            border: 1px solid rgba(255,255,255,0.1);
+        }
+        .markdown-body code { 
+            font-family: 'JetBrains Mono', monospace; 
+            font-size: 0.9em;
+            background: rgba(0,0,0,0.2);
+            padding: 2px 4px;
+            border-radius: 4px;
+        }
+        .markdown-body pre code {
+            background: transparent;
+            padding: 0;
+            color: #e2e8f0;
+        }
+        .markdown-body ul { list-style-type: disc; padding-left: 20px; margin-bottom: 0.5em; }
+        .markdown-body ol { list-style-type: decimal; padding-left: 20px; margin-bottom: 0.5em; }
+        .markdown-body strong { color: white; font-weight: 700; }
+        
+        /* KaTeX Adjustments */
+        .katex-display { margin: 0.5em 0; overflow-x: auto; overflow-y: hidden; }
         
         .glow-text-blue { text-shadow: 0 0 10px rgba(59, 130, 246, 0.5); }
         .glow-text-green { text-shadow: 0 0 10px rgba(34, 197, 94, 0.5); }
@@ -148,7 +187,6 @@
                         Status: Ready
                     </div>
                 </div>
-                <!-- Removed local chat log, centralized in middle -->
             </section>
 
             <!-- COLUMN 2: THE ARENA (Unified Chat) - Spans 6 cols -->
@@ -212,7 +250,6 @@
                         Status: Ready
                     </div>
                 </div>
-                <!-- Removed local chat log -->
             </section>
         </main>
     </div>
@@ -387,7 +424,7 @@
             statusEl.className = "mt-4 p-2 border border-blue-500/50 rounded bg-blue-900/20 text-center text-xs text-blue-300 mono animate-pulse";
 
             let contextStr = history.map(h => `${h.sender.toUpperCase()}: ${h.text}`).join("\n\n");
-            let finalPrompt = `PREVIOUS CONVERSATION:\n${contextStr}\n\nREPLY TO THE LAST MESSAGE. Note that you are chatting with another ai assitant to share and exchnage your perspective, not the user, User is spectating. `;
+            let finalPrompt = `PREVIOUS CONVERSATION:\n${contextStr}\n\nREPLY TO THE LAST MESSAGE. Note that you are chatting with another ai assitant to share and exchnage your perspective, not the user, User is spectating`;
 
             try {
                 const response = await fetch(PROXY_GEMINI, {
@@ -485,16 +522,27 @@
 
             const bubble = document.createElement('div');
             bubble.className = "max-w-[85%] p-4 text-sm relative group";
+            
+            // PARSE MARKDOWN
+            // We use marked.parse. Note: marked returns a string of HTML.
+            // We wrap it in a markdown-body class for local styling
+            const parsedHtml = marked.parse(text);
 
             if (side === 'gemini') {
                 bubble.classList.add('bubble-gemini', 'text-blue-50');
                 if (!isSuccess) bubble.classList.add('border-red-500', 'bg-red-900/40');
-                bubble.innerHTML = `<div class="text-[10px] text-blue-400 font-bold mb-1">GEMINI</div>${text.replace(/\n/g, '<br>')}`;
+                bubble.innerHTML = `
+                    <div class="text-[10px] text-blue-400 font-bold mb-1">GEMINI</div>
+                    <div class="markdown-body">${parsedHtml}</div>
+                `;
             } 
             else if (side === 'groq') {
                 bubble.classList.add('bubble-groq', 'text-emerald-50');
                 if (!isSuccess) bubble.classList.add('border-red-500', 'bg-red-900/40');
-                bubble.innerHTML = `<div class="text-[10px] text-emerald-400 font-bold mb-1 text-right">GROQ</div>${text.replace(/\n/g, '<br>')}`;
+                bubble.innerHTML = `
+                    <div class="text-[10px] text-emerald-400 font-bold mb-1 text-right">GROQ</div>
+                    <div class="markdown-body">${parsedHtml}</div>
+                `;
             } 
             else if (side === 'human') {
                 bubble.classList.add('rounded-xl', 'bg-purple-900/40', 'border', 'border-purple-500/50', 'text-purple-100', 'text-center', 'italic');
@@ -503,6 +551,20 @@
 
             row.appendChild(bubble);
             container.appendChild(row);
+
+            // RENDER MATH (KaTeX)
+            // We run this on the specific bubble element to process math delimiters
+            if (side !== 'human') {
+                renderMathInElement(bubble, {
+                    delimiters: [
+                        {left: '$$', right: '$$', display: true},
+                        {left: '$', right: '$', display: false},
+                        {left: '\\(', right: '\\)', display: false},
+                        {left: '\\[', right: '\\]', display: true}
+                    ],
+                    throwOnError: false
+                });
+            }
 
             // FORCE SCROLL
             if (isNearBottom || container.children.length <= 5) {
