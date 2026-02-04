@@ -387,7 +387,7 @@
             statusEl.className = "mt-4 p-2 border border-blue-500/50 rounded bg-blue-900/20 text-center text-xs text-blue-300 mono animate-pulse";
 
             let contextStr = history.map(h => `${h.sender.toUpperCase()}: ${h.text}`).join("\n\n");
-            let finalPrompt = `PREVIOUS CONVERSATION:\n${contextStr}\n\nREPLY TO THE LAST MESSAGE. Note that you are chatting with another ai assitant, not the user, User is spectating. `;
+            let finalPrompt = `PREVIOUS CONVERSATION:\n${contextStr}\n\nREPLY TO THE LAST MESSAGE. Note that you are chatting with another ai assitant to share and exchnage your perspective, not the user, User is spectating. `;
 
             try {
                 const response = await fetch(PROXY_GEMINI, {
