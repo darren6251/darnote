@@ -603,41 +603,74 @@
                 setQuota(newQuota);
 
                 let contextData = "", imgCtx = [];
-                let useGroqTextModel = false;
+                // We are ditching Groq for Practice. Gemini ONLY.
+                // Logic: 
+                // 1. Single Mode: Use Question Image + Marking Scheme (Gemini Vision)
+                // 2. Arcade Mode: Use Extracted Text from Same Subject/Topic (Gemini Text)
 
                 if (mode === 'single' && activeLog) {
                     contextData = `Subject: ${activeLog.subject}. Topic: ${activeLog.topic}. Concept: ${activeLog.explanation}. Q: ${activeLog.questionText || "See Image"}`;
-                    if (activeLog.questionImages && activeLog.questionImages.length > 0) {
-                         const rawUrl = activeLog.questionImages[0];
+                    
+                    // Helper to fetch base64
+                    const fetchB64 = async (url) => {
+                        try {
+                            const res = await fetch(url);
+                            const blob = await res.blob();
+                            return new Promise((r) => { const reader = new FileReader(); reader.onloadend = () => r(reader.result); reader.readAsDataURL(blob); });
+                        } catch(e) { return null; }
+                    };
+
+                    // Add Question Image
+                    if (activeLog.questionImages?.length > 0) {
+                        const rawUrl = activeLog.questionImages[0];
                          if (rawUrl && !rawUrl.includes('drive.google.com')) {
-                             try {
-                                const res = await fetch(rawUrl);
-                                const blob = await res.blob();
-                                const base64 = await new Promise((r) => { const reader = new FileReader(); reader.onloadend = () => r(reader.result); reader.readAsDataURL(blob); });
-                                imgCtx = [base64];
-                             } catch(e) {}
+                             const b64 = await fetchB64(rawUrl);
+                             if(b64) imgCtx.push(b64);
                          }
                     } else if (activeLog.imageUrl && !activeLog.imageUrl.includes('drive.google.com')) {
-                         try {
-                                const res = await fetch(activeLog.imageUrl);
-                                const blob = await res.blob();
-                                const base64 = await new Promise((r) => { const reader = new FileReader(); reader.onloadend = () => r(reader.result); reader.readAsDataURL(blob); });
-                                imgCtx = [base64];
-                         } catch(e) {}
+                         const b64 = await fetchB64(activeLog.imageUrl);
+                         if(b64) imgCtx.push(b64);
                     }
+
+                    // Add Scheme Image (Context for Gemini to understand the right answer logic)
+                    if (activeLog.schemeImages?.length > 0) {
+                        const rawUrl = activeLog.schemeImages[0];
+                         if (rawUrl && !rawUrl.includes('drive.google.com')) {
+                             const b64 = await fetchB64(rawUrl);
+                             if(b64) imgCtx.push(b64);
+                         }
+                    } else if (activeLog.markingSchemeUrl && !activeLog.markingSchemeUrl.includes('drive.google.com')) {
+                         const b64 = await fetchB64(activeLog.markingSchemeUrl);
+                         if(b64) imgCtx.push(b64);
+                    }
+
                 } else {
-                    // TOPIC CHALLENGE - TEXT ONLY MODE
-                    useGroqTextModel = true;
-                    const subj = selectedSubject; const top = selectedTopic;
+                    // TOPIC CHALLENGE - TEXT ONLY MODE (VIA GEMINI)
+                    const subj = selectedSubject; 
+                    const top = selectedTopic;
+                    
                     try {
                         const db = window.firebase.db;
-                        let constraints = [ window.firebase.where('subject', '==', subj), window.firebase.limit(10) ];
+                        let constraints = [ window.firebase.where('subject', '==', subj), window.firebase.limit(15) ];
+                        // STRICTLY FILTER BY TOPIC IF SELECTED
                         if (top) constraints.push(window.firebase.where('topic', '==', top));
+                        
                         const q = window.firebase.query(window.firebase.collection(db, 'artifacts', "darnote-app", 'users', user.uid, 'error_logs'), ...constraints);
                         const snap = await window.firebase.getDocs(q);
                         const logs = snap.docs.map(d => d.data());
-                        if (logs.length === 0) contextData = `Subject: ${subj}. Topic: ${top}. (Generate hard practice questions).`;
-                        else contextData = `Subject: ${subj}. Topic: ${top}. Past mistakes context (TEXT ONLY):\n${logs.map((l, i) => `Mistake ${i+1}: ${l.questionText || l.explanation || "(Visual Question - Logic Hidden)"}`).join('\n')}`;
+                        
+                        if (logs.length === 0) {
+                            contextData = `Subject: ${subj}. Topic: ${top || "General"}. (Generate hard practice questions based on this topic).`;
+                        } else {
+                            // Extract OCR text only
+                            const mistakesText = logs
+                                .map((l, i) => l.questionText ? `Mistake ${i+1} Context: ${l.questionText}` : null)
+                                .filter(Boolean)
+                                .join('\n\n');
+                            
+                            if (!mistakesText) contextData = `Subject: ${subj}. Topic: ${top || "General"}. (No OCR text found in logs, generate general hard questions for this topic).`;
+                            else contextData = `Subject: ${subj}. Topic: ${top || "General"}. \nPAST MISTAKE CONTEXTS (OCR TEXT):\n${mistakesText}`;
+                        }
                     } catch (e) { contextData = `Focus on ${top} in ${subj}`; }
                 }
 
@@ -653,12 +686,8 @@
                 
                 const prompt = `Context: ${contextData}\n${promptSuffix}`;
                 
-                let res;
-                if (useGroqTextModel) {
-                    res = await callGroq(prompt, "JSON Generator", []); 
-                } else {
-                    res = await callAI(prompt, "JSON Generator", imgCtx, GEMINI_PROXY_URL);
-                }
+                // ALWAYS USE GEMINI
+                let res = await callAI(prompt, "JSON Generator", imgCtx, GEMINI_PROXY_URL);
 
                 try { 
                     const json = JSON.parse(res.replace(/```json|```/g, '')); 
@@ -890,7 +919,10 @@
 
             const updateLog = (id, updates) => {
                 const timestampedUpdates = { ...updates, lastModified: new Date().toISOString() };
+                
+                // Functional Update to ensure atomic updates
                 setLogs(prev => prev.map(l => l.id === id ? { ...l, ...timestampedUpdates } : l));
+                
                 if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
                 pendingUpdatesRef.current[id] = { ...(pendingUpdatesRef.current[id] || {}), ...timestampedUpdates };
                 saveTimeoutRef.current = setTimeout(async () => {
@@ -947,11 +979,21 @@ Output strictly JSON: { "text": "...", "title": "...", "type": "MC"|"LQ", "subje
                 const isQ = type === 'question'; 
                 const setSpinner = isQ ? setUploadingQ : setUploadingS; 
                 const targetField = isQ ? 'questionImages' : 'schemeImages'; 
-                const currentImages = isQ ? activeLog.questionImages : activeLog.schemeImages;
                 
+                // --- ATOMIC REMOVAL ---
                 if (action === 'remove') { 
-                    const newArr = currentImages.filter((_, i) => i !== data); 
-                    updateLog(activeLogId, { [targetField]: newArr }); 
+                    // Use functional update on setLogs to remove correctly based on latest state
+                    setLogs(currentLogs => currentLogs.map(l => {
+                        if (l.id === activeLogId) {
+                            const currentList = l[targetField] || [];
+                            const newArr = currentList.filter((_, i) => i !== data);
+                            
+                            // Trigger firebase update in background
+                            updateLog(activeLogId, { [targetField]: newArr });
+                            return { ...l, [targetField]: newArr };
+                        }
+                        return l;
+                    }));
                     return; 
                 }
                 
@@ -986,7 +1028,7 @@ Output strictly JSON: { "text": "...", "title": "...", "type": "MC"|"LQ", "subje
 
                         // Reset Timer
                         if (ocrTimerRef.current) clearTimeout(ocrTimerRef.current);
-                        setOcrPendingToast(15); // 8 seconds countdown
+                        setOcrPendingToast(15); 
                         
                         ocrTimerRef.current = setTimeout(async () => {
                              // Timeout fired: check quota and run OCR
@@ -1001,9 +1043,22 @@ Output strictly JSON: { "text": "...", "title": "...", "type": "MC"|"LQ", "subje
                     // -----------------------
 
                     const finalUrl = await saveToDrive(blobToUpload, `ErrorLog_${type}_${Date.now()}.${blobToUpload.type==='application/pdf'?'pdf':'jpg'}`, preFetchedToken);
-                    const newArr = [...currentImages, finalUrl]; 
                     
-                    updateLog(activeLogId, { [targetField]: newArr });
+                    // --- ATOMIC ADDITION (RACE CONDITION FIX) ---
+                    // Instead of using stale 'activeLog' closure, access latest logs
+                    setLogs(currentLogs => {
+                        const targetLog = currentLogs.find(l => l.id === activeLogId);
+                        if (!targetLog) return currentLogs;
+
+                        const currentList = targetLog[targetField] || [];
+                        const newArr = [...currentList, finalUrl];
+
+                        // Trigger firebase update with the *correct* new array
+                        updateLog(activeLogId, { [targetField]: newArr });
+
+                        return currentLogs.map(l => l.id === activeLogId ? { ...l, [targetField]: newArr } : l);
+                    });
+                    
                     setSpinner(false);
                 } catch(e) { alert("Upload Failed: " + e.message); setSpinner(false); } 
             };
