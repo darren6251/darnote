@@ -139,6 +139,7 @@
         const [status, setStatus] = useState('none'); 
         const [cooldownEnd, setCooldownEnd] = useState(null);
         const [uploadStatusMsg, setUploadStatusMsg] = useState("");
+        const [verifiedData, setVerifiedData] = useState(null);
 
         useEffect(() => {
             if(!isOpen || !user) return;
@@ -146,6 +147,7 @@
             window.firebase.getDoc(ref).then(snap => {
                 if(snap.exists()) {
                     if (snap.data().studentStatus) setStatus(snap.data().studentStatus);
+                    if (snap.data().verifiedData) setVerifiedData(snap.data().verifiedData);
                     const cd = snap.data().studentVerificationCooldown;
                     if (cd && cd > Date.now()) setCooldownEnd(cd);
                 }
@@ -247,6 +249,7 @@
                 await batch.commit();
                 
                 setStatus('temp_verified');
+                setVerifiedData({ fullName, schoolName });
                 setUploading(false);
                 setUploadStatusMsg("");
                 alert("Success! Temporary Verification Granted. You have instant access to +20 credits.");
@@ -280,6 +283,12 @@
                                     <Icons.ShieldCheck className="w-8 h-8 text-green-500"/>
                                 </div>
                                 <h4 className="font-bold text-lg text-green-500 mb-2">Verified Student</h4>
+                                {verifiedData && (
+                                    <div className="bg-zinc-50 dark:bg-white/5 border border-zinc-200 dark:border-white/10 rounded-xl p-3 mb-4 mx-6">
+                                        <div className="text-sm font-bold text-zinc-900 dark:text-white">{verifiedData.fullName}</div>
+                                        <div className="text-xs text-zinc-500">{verifiedData.schoolName}</div>
+                                    </div>
+                                )}
                                 <p className="text-sm text-zinc-400">Enjoy your perks.</p>
                             </div>
                         ) : status === 'temp_verified' ? (
@@ -289,6 +298,12 @@
                                 </div>
                                 <h4 className="font-bold text-lg text-orange-500 mb-1">Temporary Verified</h4>
                                 <div className="text-xs font-bold text-orange-400 uppercase tracking-wider mb-2">Under Manual Review</div>
+                                {verifiedData && (
+                                    <div className="bg-white/50 dark:bg-black/20 border border-orange-500/10 rounded-xl p-3 mb-4 mx-6">
+                                        <div className="text-sm font-bold text-zinc-900 dark:text-white">{verifiedData.fullName}</div>
+                                        <div className="text-xs text-zinc-500">{verifiedData.schoolName}</div>
+                                    </div>
+                                )}
                                 <p className="text-sm text-zinc-400 px-4">You have <b>instant access</b> to student perks while we double-check your ID.</p>
                             </div>
                         ) : cooldownEnd ? (
