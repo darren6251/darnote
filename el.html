@@ -44,7 +44,7 @@
 
     const getLimits = async () => { const defaults = { chat_gemini: 5, chat_groq: 20, practice: 10, ocr: 20 }; try { const cfgRef = window.firebase.doc(window.firebase.db, 'artifacts', "darnote-app", 'public', 'data', 'config', 'main'); const snap = await window.firebase.getDoc(cfgRef); if (snap.exists()) return { ...defaults, ...snap.data() }; } catch(e) {} return defaults; };
     
-    // UPDATED: Now supports "Negative Number Hack" for students (verified OR temp_verified)
+    // UPDATED: Now supports "Negative Number Hack" for students (verified OR temp_verified) on EACH tool individually
     const checkAndIncrementQuota = async (user, type, subtype = null) => { 
         if (!user) return false; 
         const limits = await getLimits(); 
@@ -60,34 +60,31 @@
 
         try { 
             const snap = await window.firebase.getDoc(ref); 
-            let count = 0;
-            
-            if (snap.exists()) {
-                count = snap.data()[field] || 0;
+            let currentVal = null; // Use null to indicate "not initialized yet"
+
+            if (snap.exists() && typeof snap.data()[field] !== 'undefined') {
+                currentVal = snap.data()[field];
             } else {
-                // Initializing logic for the day
+                // Initialize for this specific field
                 const profileRef = window.firebase.doc(window.firebase.db, 'artifacts', "darnote-app", 'users', user.uid, 'settings', 'profile');
                 const profileSnap = await window.firebase.getDoc(profileRef);
                 const status = profileSnap.exists() ? profileSnap.data().studentStatus : null;
                 const isStudent = status === 'verified' || status === 'temp_verified';
-                // HACK: Start from -20 if student (or temp student) to give 20 extra credits
-                count = isStudent ? -20 : 0;
-                
-                // If we are starting from negative, we must set it explicitly first
-                if (count < 0) {
-                     await window.firebase.setDoc(ref, { [field]: count + 1 }, { merge: true });
-                     return count + 1;
-                }
+                currentVal = isStudent ? -20 : 0;
             }
 
-            if (count >= limit) return false; 
-            
-            if (snap.exists()) {
-                 await window.firebase.setDoc(ref, { [field]: window.firebase.increment(1) }, { merge: true });
+            if (currentVal >= limit) return false; 
+
+            // If we just initialized it (it wasn't in the DB), we need to set the specific value
+            // because standard increment(1) on an empty field defaults to 1, ignoring our -20.
+            if (!snap.exists() || typeof snap.data()[field] === 'undefined') {
+                 const newVal = currentVal + 1;
+                 await window.firebase.setDoc(ref, { [field]: newVal }, { merge: true });
+                 return newVal;
             } else {
-                 await window.firebase.setDoc(ref, { [field]: 1 }, { merge: true });
+                 await window.firebase.setDoc(ref, { [field]: window.firebase.increment(1) }, { merge: true });
+                 return currentVal + 1;
             }
-            return count + 1; 
         } catch (e) { return false; } 
     };
 
