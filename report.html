@@ -4,7 +4,6 @@
 <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"><title>darNote - Insight Deck</title>
 <link rel="icon" type="image/png" href="https://raw.githubusercontent.com/darren6251/darnote/refs/heads/main/darNote%20logo.png">
 <script crossorigin src="https://unpkg.com/react@18/umd/react.development.js"></script><script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script><script src="https://unpkg.com/@babel/standalone/babel.min.js"></script><script src="https://cdn.tailwindcss.com"></script><script src="https://unpkg.com/framer-motion@10.16.4/dist/framer-motion.js"></script>
-<!-- FIX: Added prop-types (required peer dependency) and pinned stable Recharts version -->
 <script src="https://unpkg.com/prop-types/prop-types.min.js"></script>
 <script src="https://unpkg.com/recharts@2.10.3/umd/Recharts.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
@@ -13,11 +12,10 @@
 </script>
 <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-app.js";
-    import { getAuth, GoogleAuthProvider, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-auth.js";
+    import { getAuth, signInWithPopup, GoogleAuthProvider, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-auth.js";
     import { getFirestore, collection, doc, getDocs, getDoc, setDoc, increment, query, where, orderBy, limit } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-firestore.js";
-    // USING SAME CONFIG AS EL.HTML TO SHARE DATA
     const app = initializeApp({ apiKey: "AIzaSyAvPEac-03kE4oazvaq8K3T2gxLPsnZO20", authDomain: "darnote625.firebaseapp.com", projectId: "darnote625", storageBucket: "darnote625.firebasestorage.app", messagingSenderId: "16458322562", appId: "1:16458322562:web:8894d71f3e6c326eba1a9b" });
-    window.firebase = { app, auth: getAuth(app), db: getFirestore(app), GoogleAuthProvider, signOut, onAuthStateChanged, collection, doc, getDocs, getDoc, setDoc, increment, query, where, orderBy, limit };
+    window.firebase = { app, auth: getAuth(app), db: getFirestore(app), signInWithPopup, GoogleAuthProvider, signOut, onAuthStateChanged, collection, doc, getDocs, getDoc, setDoc, increment, query, where, orderBy, limit };
 </script>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
 <style>
@@ -35,8 +33,6 @@
     const GEMINI_PROXY_URL = "https://gemini-proxy-513372702506.us-central1.run.app/proxy";
     const { useState, useEffect, useMemo, useRef } = React;
     const { motion, AnimatePresence } = window.Motion;
-    
-    // FIX: Fallback to prevent crash if Recharts fails to load
     const Recharts = window.Recharts || { PieChart: () => null, Pie: () => null, Cell: () => null, BarChart: () => null, Bar: () => null, XAxis: () => null, YAxis: () => null, Tooltip: () => null, ResponsiveContainer: () => null, CartesianGrid: () => null, AreaChart: () => null, Area: () => null };
     const { PieChart, Pie, Cell, BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, AreaChart, Area } = Recharts;
 
@@ -52,19 +48,21 @@
         Sun:p=><svg {...p} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="5"/><path d="M12 1v2"/><path d="M12 21v2"/><path d="M4.22 4.22l1.42 1.42"/><path d="M18.36 18.36l1.42 1.42"/><path d="M1 12h2"/><path d="M21 12h2"/><path d="M4.22 19.78l1.42-1.42"/><path d="M18.36 5.64l1.42-1.42"/></svg>,
         Moon:p=><svg {...p} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>,
         Refresh:p=><svg {...p} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 12a9 9 0 0 0-9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/><path d="M3 12a9 9 0 0 0 9 9 9.75 9.75 0 0 0 6.74-2.74L21 16"/><path d="M21 21v-5h-5"/></svg>,
-        ChevronRight:p=><svg {...p} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="m9 18 6-6-6-6"/></svg>
+        ShieldCheck:p=><svg {...p} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><path d="m9 12 2 2 4-4"/></svg>,
+        ShieldClock:p=><svg {...p} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><circle cx="12" cy="12" r="3"/><polyline points="12 10 12 12 13 13"/></svg>,
+        User:p=><svg {...p} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>,
+        Google:p=><svg {...p} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M12 22C6.477 22 2 17.523 2 12S6.477 2 12 2s10 4.477 10 10-4.477 10-10 10z"/><path d="M12 11h9c.1 1.4.1 2.9-.4 4.3-1.1 3-4.1 5.3-7.6 5.6-5 .5-9.4-3.1-9.9-8.1C2.5 7.1 6 2.3 11 2c2.5-.1 4.9.9 6.7 2.6l-2.7 2.8c-1-.7-2.3-1.1-3.6-1-2.9.2-5.1 2.8-4.9 5.7.2 2.6 2.4 4.7 5 4.7 2 0 3.6-1.1 4.3-2.9H12v-3z" fill="currentColor"/></svg>
     };
 
-    // Colors for Charts
     const COLORS = ['#4f46e5', '#06b6d4', '#f97316', '#ec4899', '#8b5cf6', '#10b981'];
 
     const getLimits = async (uid) => {
-        const defaults = { analysis: 1 }; // Default 1 per day
+        const defaults = { analysis: 1 };
         try {
             const profileRef = window.firebase.doc(window.firebase.db, 'artifacts', "darnote-app", 'users', uid, 'settings', 'profile');
             const snap = await window.firebase.getDoc(profileRef);
             if(snap.exists() && (snap.data().studentStatus === 'verified' || snap.data().studentStatus === 'temp_verified')) {
-                return { analysis: 2 }; // Students get 2
+                return { analysis: 2 };
             }
         } catch(e) {}
         return defaults;
@@ -96,7 +94,7 @@
         } catch (e) { return "Error contacting AI counselor."; }
     };
 
-    const Sidebar = ({ isDarkMode, setIsDarkMode }) => (
+    const Sidebar = ({ isDarkMode, setIsDarkMode, user, studentStatus }) => (
         <div className="w-[240px] flex-shrink-0 glass-panel flex flex-col justify-between p-5 z-20 hidden md:flex h-full">
             <div className="space-y-6">
                 <div className="flex items-center gap-3 px-1">
@@ -112,13 +110,28 @@
                     </button>
                 </nav>
             </div>
-            <div className="flex gap-2">
-                <button onClick={()=>setIsDarkMode(!isDarkMode)} className="flex-1 btn-ghost py-2 rounded-lg flex items-center justify-center gap-2 text-xs font-medium border border-zinc-200 dark:border-white/5 bg-white dark:bg-white/5 shadow-sm text-zinc-600 dark:text-zinc-300">
-                    {isDarkMode ? <><Icons.Sun className="w-3 h-3"/> Light</> : <><Icons.Moon className="w-3 h-3"/> Dark</>}
-                </button>
-                <button onClick={()=>window.firebase.signOut(window.firebase.auth)} className="px-3 btn-ghost py-2 rounded-lg text-red-500 border border-transparent hover:bg-red-50 dark:hover:bg-red-900/10">
-                    <Icons.Logout className="w-4 h-4"/>
-                </button>
+            
+            <div className="space-y-3">
+                 <div className="flex items-center gap-3 px-2 py-1">
+                    {user?.photoURL ? <img src={user.photoURL} className="w-8 h-8 rounded-full border border-zinc-200 dark:border-white/10"/> : <div className="w-8 h-8 rounded-full bg-zinc-200 dark:bg-white/10 flex items-center justify-center"><Icons.User className="w-4 h-4 text-zinc-500"/></div>}
+                    <div className="overflow-hidden">
+                        <div className="text-xs font-bold text-zinc-900 dark:text-white truncate w-32 flex items-center gap-1">
+                            {user?.displayName} 
+                            {studentStatus === 'verified' && <Icons.ShieldCheck className="w-3 h-3 text-blue-500" title="Verified Student"/>} 
+                            {studentStatus === 'temp_verified' && <Icons.ShieldClock className="w-3 h-3 text-orange-500" title="Under Review"/>}
+                        </div>
+                        <div className="text-[10px] text-zinc-500 truncate">{user?.email}</div>
+                    </div>
+                </div>
+
+                <div className="flex gap-2">
+                    <button onClick={()=>setIsDarkMode(!isDarkMode)} className="flex-1 btn-ghost py-2 rounded-lg flex items-center justify-center gap-2 text-xs font-medium border border-zinc-200 dark:border-white/5 bg-white dark:bg-white/5 shadow-sm text-zinc-600 dark:text-zinc-300">
+                        {isDarkMode ? <><Icons.Sun className="w-3 h-3"/> Light</> : <><Icons.Moon className="w-3 h-3"/> Dark</>}
+                    </button>
+                    <button onClick={()=>window.firebase.signOut(window.firebase.auth)} className="px-3 btn-ghost py-2 rounded-lg text-red-500 border border-transparent hover:bg-red-50 dark:hover:bg-red-900/10">
+                        <Icons.Logout className="w-4 h-4"/>
+                    </button>
+                </div>
             </div>
         </div>
     );
@@ -137,7 +150,7 @@
         </div>
     );
 
-    const AIAdvicePanel = ({ data, user }) => {
+    const AIAdvicePanel = ({ data, user, studentStatus }) => {
         const [advice, setAdvice] = useState(null);
         const [loading, setLoading] = useState(false);
         const [quota, setQuota] = useState(null);
@@ -151,8 +164,6 @@
                 return;
             }
             setQuota(qCheck);
-
-            // Construct text-only payload
             const topSubject = data.subjects[0];
             const topTopics = data.topics.slice(0,3).map(t => `${t.name} (${t.value})`).join(', ');
             const total = data.total;
@@ -160,10 +171,8 @@
             Total Errors: ${total}.
             Main Struggle: ${topSubject?.name} (${topSubject?.value} errors).
             Top 3 Problem Topics: ${topTopics}.
-            
             Provide a clear, structured, 3-point strategy plan. Do not roast the student. Be professional and encouraging. 
             Format nicely with Markdown. Keep it under 150 words.`;
-
             const res = await callAI(prompt);
             setAdvice(res);
             setLoading(false);
@@ -186,7 +195,6 @@
                         </button>
                     )}
                 </div>
-                
                 <div className="bg-zinc-50 dark:bg-black/20 rounded-xl p-4 min-h-[120px] text-sm text-zinc-600 dark:text-zinc-300 border border-zinc-100 dark:border-white/5">
                     {advice ? (
                         <div className="markdown-body space-y-2 animate-in fade-in slide-in-from-bottom-2 duration-500">
@@ -196,7 +204,7 @@
                     ) : (
                         <div className="flex flex-col items-center justify-center h-full text-zinc-400 gap-2">
                             <Icons.Layout className="w-8 h-8 opacity-20"/>
-                            <span className="text-xs">Click generate to analyze your {data.total} logged mistakes.</span>
+                            <span className="text-xs">Click generate to analyze your recent {data.total} logged mistakes.</span>
                         </div>
                     )}
                 </div>
@@ -204,16 +212,15 @@
         );
     };
 
-    const Heatmap = ({ logs }) => {
-        // Simple GitHub-style contribution mimic
-        // Generate last 30 days
+    const Heatmap = ({ logs, isDarkMode }) => {
         const days = useMemo(() => {
             const res = [];
             for (let i = 29; i >= 0; i--) {
                 const d = new Date(); d.setDate(d.getDate() - i);
                 const iso = d.toISOString().split('T')[0];
+                const display = d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
                 const count = logs.filter(l => l.createdAt.startsWith(iso)).length;
-                res.push({ date: iso, count });
+                res.push({ date: iso, display, count });
             }
             return res;
         }, [logs]);
@@ -236,10 +243,17 @@
                                     <stop offset="95%" stopColor="#10b981" stopOpacity={0}/>
                                 </linearGradient>
                             </defs>
+                            <XAxis 
+                                dataKey="display" 
+                                interval={6} 
+                                tick={{fontSize: 10, fill: isDarkMode ? '#71717a' : '#a1a1aa'}} 
+                                axisLine={false}
+                                tickLine={false}
+                            />
                             <Tooltip 
-                                contentStyle={{backgroundColor: '#18181b', border: '1px solid #333', borderRadius: '8px', color: '#fff'}}
+                                contentStyle={{backgroundColor: isDarkMode ? '#18181b' : '#fff', border: isDarkMode ? '1px solid #333' : '1px solid #e4e4e7', borderRadius: '8px', color: isDarkMode ? '#fff' : '#000'}}
                                 itemStyle={{color: '#10b981'}}
-                                labelStyle={{display: 'none'}}
+                                labelStyle={{color: isDarkMode ? '#a1a1aa' : '#52525b', fontSize: '12px'}}
                             />
                             <Area type="monotone" dataKey="count" stroke="#10b981" strokeWidth={2} fillOpacity={1} fill="url(#colorCount)" />
                         </AreaChart>
@@ -249,17 +263,54 @@
         );
     };
 
+    const QuickSummary = ({ stats }) => {
+        if (!stats) return null;
+        const sub = stats.subjects[0];
+        const top = stats.topics[0];
+        const msg = sub && top 
+            ? `You seem to be struggling most with ${sub.name}, specifically ${top.name}.`
+            : "Keep logging to find your patterns.";
+        return (
+            <div className="mb-4 p-3 bg-brand/5 border border-brand/10 rounded-lg flex items-center gap-2 text-sm text-brand font-medium animate-in slide-in-from-top-2">
+                <Icons.Target className="w-4 h-4"/>
+                <span>{msg}</span>
+            </div>
+        );
+    };
+
+    const LandingPage = () => (
+        <div className="h-screen w-full flex items-center justify-center bg-zinc-950 text-white flex-col gap-6 relative overflow-hidden">
+            <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-indigo-900/40 via-zinc-950 to-zinc-950"></div>
+            <div className="z-10 flex flex-col items-center">
+                <img src="https://raw.githubusercontent.com/darren6251/darnote/refs/heads/main/darNote%20logo.png" className="w-20 h-20 mb-6 drop-shadow-[0_0_25px_rgba(99,102,241,0.5)] animate-pulse"/>
+                <h1 className="text-4xl font-bold mb-2 tracking-tight">darNote Analysis</h1>
+                <p className="text-zinc-400 mb-8 text-center max-w-md">Visualize your learning gaps. Find your weakness. Crush your exams.</p>
+                <button onClick={() => window.firebase.signInWithPopup(window.firebase.auth, new window.firebase.GoogleAuthProvider())} className="bg-white text-black px-8 py-3 rounded-full font-bold flex gap-2 items-center hover:scale-105 transition-transform shadow-[0_0_20px_rgba(255,255,255,0.3)] w-64 justify-center">
+                    <Icons.Google className="w-5 h-5"/> Sign In to Dashboard
+                </button>
+            </div>
+        </div>
+    );
+
     const App = () => {
         const [user, setUser] = useState(null);
         const [loading, setLoading] = useState(true);
         const [isDarkMode, setIsDarkMode] = useState(true);
         const [stats, setStats] = useState(null);
+        const [studentStatus, setStudentStatus] = useState('none');
 
         useEffect(() => {
             const unsub = window.firebase.onAuthStateChanged(window.firebase.auth, (u) => {
                 setUser(u);
-                if (u) loadData(u.uid);
-                else setLoading(false);
+                if (u) {
+                    loadData(u.uid);
+                    // Fetch student status for badge
+                    window.firebase.getDoc(window.firebase.doc(window.firebase.db, 'artifacts', "darnote-app", 'users', u.uid, 'settings', 'profile')).then(s => {
+                         if(s.exists()) setStudentStatus(s.data().studentStatus || 'none');
+                    });
+                } else {
+                    setLoading(false);
+                }
             });
             return () => unsub();
         }, []);
@@ -270,7 +321,6 @@
         }, [isDarkMode]);
 
         const loadData = async (uid) => {
-            // Check Session Cache (5 mins)
             const cached = sessionStorage.getItem(`darnote_analysis_${uid}`);
             if (cached) {
                 const parsed = JSON.parse(cached);
@@ -280,16 +330,16 @@
                     return;
                 }
             }
-
             try {
-                // Fetch ALL logs (optimized: we just need metadata really, but Firestore charges 1 read per doc anyway)
-                // We'll fetch just needed fields if possible, but client SDK is restricted. 
-                const q = window.firebase.query(window.firebase.collection(window.firebase.db, 'artifacts', "darnote-app", 'users', uid, 'error_logs'));
+                // Safety Limit: 500
+                const q = window.firebase.query(
+                    window.firebase.collection(window.firebase.db, 'artifacts', "darnote-app", 'users', uid, 'error_logs'),
+                    window.firebase.orderBy('createdAt', 'desc'),
+                    window.firebase.limit(500)
+                );
                 const snap = await window.firebase.getDocs(q);
-                
                 const rawLogs = snap.docs.map(d => d.data());
                 
-                // Process Data
                 const subjectCounts = {};
                 const topicCounts = {};
                 
@@ -298,40 +348,30 @@
                     if(l.topic) topicCounts[l.topic] = (topicCounts[l.topic] || 0) + 1;
                 });
 
-                const subjects = Object.entries(subjectCounts)
-                    .map(([name, value]) => ({ name, value }))
-                    .sort((a,b) => b.value - a.value);
-                
-                const topics = Object.entries(topicCounts)
-                    .map(([name, value]) => ({ name, value }))
-                    .sort((a,b) => b.value - a.value);
+                const subjects = Object.entries(subjectCounts).map(([name, value]) => ({ name, value })).sort((a,b) => b.value - a.value);
+                const topics = Object.entries(topicCounts).map(([name, value]) => ({ name, value })).sort((a,b) => b.value - a.value);
 
                 const data = {
                     total: rawLogs.length,
                     subjects,
                     topics,
-                    logs: rawLogs, // Keep for heatmap
+                    logs: rawLogs,
                     nemesis: topics.length > 0 ? topics[0] : { name: "N/A", value: 0 },
-                    lastActive: rawLogs.length > 0 ? new Date(Math.max(...rawLogs.map(l => new Date(l.createdAt)))).toLocaleDateString() : "Never"
+                    lastActive: rawLogs.length > 0 ? new Date(Math.max(...rawLogs.map(l => new Date(l.createdAt)))).toLocaleDateString() : "Never",
+                    isLimited: rawLogs.length === 500
                 };
 
                 setStats(data);
                 sessionStorage.setItem(`darnote_analysis_${uid}`, JSON.stringify({ ts: Date.now(), data }));
-
             } catch(e) { console.error(e); }
             setLoading(false);
         };
 
-        if (!user) return (
-            <div className="h-screen w-full flex items-center justify-center bg-zinc-950 text-white flex-col gap-6">
-                <div className="w-10 h-10 border-4 border-indigo-500 border-t-transparent rounded-full animate-spin"></div>
-                <p className="font-mono text-sm text-zinc-400">Authenticating with darNote Core...</p>
-            </div>
-        );
+        if (!user) return loading ? <div className="h-screen bg-zinc-950 flex items-center justify-center"><div className="w-10 h-10 border-4 border-indigo-500 border-t-transparent rounded-full animate-spin"></div></div> : <LandingPage />;
 
         return (
             <div className="flex h-screen w-full bg-[#f4f4f5] dark:bg-onyx transition-colors duration-300">
-                <Sidebar isDarkMode={isDarkMode} setIsDarkMode={setIsDarkMode} />
+                <Sidebar isDarkMode={isDarkMode} setIsDarkMode={setIsDarkMode} user={user} studentStatus={studentStatus} />
                 
                 <main className="flex-1 h-full overflow-y-auto p-4 md:p-8 relative">
                     {loading ? (
@@ -340,29 +380,27 @@
                         </div>
                     ) : stats && stats.total > 0 ? (
                         <div className="max-w-6xl mx-auto space-y-6">
-                            
-                            {/* Header */}
                             <div className="flex justify-between items-end mb-2">
                                 <div>
                                     <h1 className="text-2xl font-bold text-zinc-900 dark:text-white flex items-center gap-2">
                                         Hello, {user.displayName.split(' ')[0]}
                                     </h1>
-                                    <p className="text-sm text-zinc-500 dark:text-zinc-400">Here is the strategic breakdown of your {stats.total} logged errors.</p>
+                                    <p className="text-sm text-zinc-500 dark:text-zinc-400">Analysis of recent {stats.total} errors {stats.isLimited && "(Capped for speed)"}.</p>
                                 </div>
                                 <button onClick={() => { sessionStorage.removeItem(`darnote_analysis_${user.uid}`); loadData(user.uid); }} className="p-2 bg-white dark:bg-white/5 rounded-lg border border-zinc-200 dark:border-white/10 text-zinc-500 hover:text-zinc-900 dark:hover:text-white transition-colors">
                                     <Icons.Refresh className="w-4 h-4"/>
                                 </button>
                             </div>
+                            
+                            <QuickSummary stats={stats} />
 
-                            {/* Top Stats Row */}
                             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-                                <StatCard label="Total Errors" value={stats.total} sub="Lifetime Count" icon={Icons.Book} color="bg-indigo-500" />
+                                <StatCard label="Analyzed Errors" value={stats.total} sub={stats.isLimited ? "Limited to last 500" : "Total Lifetime"} icon={Icons.Book} color="bg-indigo-500" />
                                 <StatCard label="Heaviest Subject" value={stats.subjects[0]?.name || "N/A"} sub={`${stats.subjects[0]?.value || 0} Logs recorded`} icon={Icons.Layout} color="bg-cyan-500" />
                                 <StatCard label="Nemesis Topic" value={stats.nemesis.name} sub={`${stats.nemesis.value} Repeated mistakes`} icon={Icons.AlertCircle} color="bg-orange-500" />
                                 <StatCard label="Last Activity" value={stats.lastActive} sub="Keep it consistent!" icon={Icons.Activity} color="bg-pink-500" />
                             </div>
 
-                            {/* Charts Row */}
                             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                                 <div className="card h-[350px] flex flex-col">
                                     <div className="flex justify-between items-center mb-4">
@@ -386,7 +424,7 @@
                                                     ))}
                                                 </Pie>
                                                 <Tooltip 
-                                                    contentStyle={{backgroundColor: '#18181b', border: '1px solid #333', borderRadius: '8px', color: '#fff'}}
+                                                    contentStyle={{backgroundColor: isDarkMode ? '#18181b' : '#fff', border: isDarkMode ? '1px solid #333' : '1px solid #e4e4e7', borderRadius: '8px', color: isDarkMode ? '#fff' : '#000'}}
                                                     itemStyle={{color: '#fff'}}
                                                 />
                                             </PieChart>
@@ -411,10 +449,10 @@
                                         <ResponsiveContainer width="100%" height="100%">
                                             <BarChart data={stats.topics.slice(0,5)} layout="vertical" margin={{top: 5, right: 30, left: 40, bottom: 5}}>
                                                 <XAxis type="number" hide />
-                                                <YAxis dataKey="name" type="category" width={80} tick={{fill: '#71717a', fontSize: 10}} />
+                                                <YAxis dataKey="name" type="category" width={80} tick={{fill: isDarkMode ? '#e4e4e7' : '#3f3f46', fontSize: 10}} />
                                                 <Tooltip 
                                                     cursor={{fill: 'rgba(255,255,255,0.05)'}}
-                                                    contentStyle={{backgroundColor: '#18181b', border: '1px solid #333', borderRadius: '8px', color: '#fff'}}
+                                                    contentStyle={{backgroundColor: isDarkMode ? '#18181b' : '#fff', border: isDarkMode ? '1px solid #333' : '1px solid #e4e4e7', borderRadius: '8px', color: isDarkMode ? '#fff' : '#000'}}
                                                 />
                                                 <Bar dataKey="value" radius={[0, 4, 4, 0]}>
                                                     {stats.topics.slice(0,5).map((entry, index) => (
@@ -427,12 +465,10 @@
                                 </div>
                             </div>
 
-                            {/* Bottom Row */}
                             <div className="grid grid-cols-1 lg:grid-cols-4 gap-6 pb-10">
-                                <AIAdvicePanel data={stats} user={user} />
-                                <Heatmap logs={stats.logs} />
+                                <AIAdvicePanel data={stats} user={user} studentStatus={studentStatus} />
+                                <Heatmap logs={stats.logs} isDarkMode={isDarkMode} />
                             </div>
-
                         </div>
                     ) : (
                         <div className="h-full flex flex-col items-center justify-center text-center p-6">
@@ -448,7 +484,6 @@
             </div>
         );
     };
-
     const root = ReactDOM.createRoot(document.getElementById('root'));
     root.render(<App />);
 </script>
