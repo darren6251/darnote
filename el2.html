@@ -1,26 +1,31 @@
 <!DOCTYPE html>
 <html lang="en" class="dark">
 <head>
-<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"><title>darNote Error Log</title>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"><title>darNote - The Lab</title>
 <link rel="icon" type="image/png" href="https://raw.githubusercontent.com/darren6251/darnote/refs/heads/main/darNote%20logo.png">
 <script crossorigin src="https://unpkg.com/react@18/umd/react.development.js"></script><script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script><script src="https://unpkg.com/@babel/standalone/babel.min.js"></script><script src="https://cdn.tailwindcss.com"></script><script src="https://unpkg.com/framer-motion@10.16.4/dist/framer-motion.js"></script><script src="https://cdnjs.cloudflare.com/ajax/libs/spark-md5/3.0.2/spark-md5.min.js"></script><script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script><script src="https://apis.google.com/js/api.js" async defer></script><script src="https://accounts.google.com/gsi/client" async defer></script>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
 <script>
     tailwind.config = { 
         darkMode: 'class', 
         theme: { 
             extend: { 
                 colors: { 
-                    onyx: '#09090b', 
-                    surface: '#18181b', 
-                    border: '#27272a', 
-                    brand: '#6366f1', 
-                    accent: '#8b5cf6' 
+                    bg: '#050505', 
+                    surface: '#121212', 
+                    'surface-light': '#1E1E1E',
+                    primary: '#6366f1', 
+                    'primary-glow': '#818cf8',
+                    accent: '#f472b6',
+                    success: '#10b981',
+                    danger: '#ef4444'
                 }, 
-                fontFamily: { sans: ['Inter', 'sans-serif'] },
-                animation: { 'blob': 'blob 7s infinite', 'shimmer': 'shimmer 2s linear infinite' },
-                keyframes: {
-                    blob: { "0%": { transform: "translate(0px, 0px) scale(1)" }, "33%": { transform: "translate(30px, -50px) scale(1.1)" }, "66%": { transform: "translate(-20px, 20px) scale(0.9)" }, "100%": { transform: "translate(0px, 0px) scale(1)" } },
-                    shimmer: { from: { backgroundPosition: "0 0" }, to: { backgroundPosition: "-200% 0" } }
+                fontFamily: { 
+                    sans: ['Space Grotesk', 'sans-serif'],
+                    mono: ['JetBrains Mono', 'monospace']
+                },
+                animation: {
+                    'pulse-slow': 'pulse 3s cubic-bezier(0.4, 0, 0.6, 1) infinite',
                 }
             } 
         } 
@@ -33,573 +38,512 @@
     const app = initializeApp({ apiKey: "AIzaSyAvPEac-03kE4oazvaq8K3T2gxLPsnZO20", authDomain: "darnote625.firebaseapp.com", projectId: "darnote625", storageBucket: "darnote625.firebasestorage.app", messagingSenderId: "16458322562", appId: "1:16458322562:web:8894d71f3e6c326eba1a9b" });
     window.firebase = { app, auth: getAuth(app), db: getFirestore(app), signInWithPopup, GoogleAuthProvider, signOut, onAuthStateChanged, collection, doc, addDoc, updateDoc, deleteDoc, getDocs, getDoc, setDoc, increment, arrayUnion, writeBatch, query, limit, orderBy, startAfter, where, onSnapshot };
 </script>
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
 <style>
-    body { background-color: #000; color: #fff; font-family: 'Inter', sans-serif; overflow: hidden; }
-    /* Custom Scrollbar */
-    ::-webkit-scrollbar { width: 4px; height: 4px; } ::-webkit-scrollbar-track { background: transparent; } ::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 4px; } ::-webkit-scrollbar-thumb:hover { background: rgba(255,255,255,0.3); }
-    /* Aurora Background */
-    .aurora-bg { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; z-index: -1; background: #050505; overflow: hidden; }
-    .aurora-blob { position: absolute; filter: blur(80px); opacity: 0.4; animation: blob 10s infinite alternate; }
-    .blob-1 { top: -10%; left: -10%; width: 500px; height: 500px; background: #4f46e5; animation-delay: 0s; }
-    .blob-2 { bottom: -10%; right: -10%; width: 500px; height: 500px; background: #7c3aed; animation-delay: 2s; }
-    .blob-3 { top: 40%; left: 40%; width: 400px; height: 400px; background: #0ea5e9; animation-delay: 4s; opacity: 0.2; }
-    /* Glassmorphism Classes */
-    .glass-panel { background: rgba(20, 20, 23, 0.6); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px); border: 1px solid rgba(255, 255, 255, 0.08); box-shadow: 0 20px 40px rgba(0,0,0,0.2); }
-    .glass-card { background: rgba(255, 255, 255, 0.03); border: 1px solid rgba(255, 255, 255, 0.05); transition: all 0.2s ease; }
-    .glass-card:hover { background: rgba(255, 255, 255, 0.06); border-color: rgba(255, 255, 255, 0.1); transform: translateY(-2px); }
-    .glass-input { background: rgba(0,0,0,0.2); border: 1px solid rgba(255,255,255,0.1); color: white; transition: all 0.2s; }
-    .glass-input:focus { border-color: #6366f1; background: rgba(0,0,0,0.4); box-shadow: 0 0 0 2px rgba(99, 102, 241, 0.2); }
-    /* Typography */
-    .markdown-content h1, .markdown-content h2 { color: white; font-weight: 700; margin-top: 1em; } .markdown-content p { color: #a1a1aa; line-height: 1.6; } .markdown-content strong { color: #e4e4e7; }
-    .shimmer-text { background: linear-gradient(to right, #818cf8 20%, #c4b5fd 40%, #818cf8 60%, #818cf8 80%); background-size: 200% auto; color: transparent; -webkit-background-clip: text; background-clip: text; animation: shimmer 3s linear infinite; }
+    body { @apply bg-zinc-50 dark:bg-bg text-zinc-900 dark:text-zinc-200; overflow: hidden; }
+    ::-webkit-scrollbar { width: 6px; } ::-webkit-scrollbar-thumb { @apply bg-zinc-300 dark:bg-zinc-800; border-radius: 4px; }
+    .glass { @apply bg-white/70 dark:bg-surface/70 backdrop-blur-xl border border-white/20 dark:border-white/5; }
+    .glass-strong { @apply bg-white/90 dark:bg-surface/90 backdrop-blur-2xl border border-zinc-200 dark:border-white/10; }
+    .input-ghost { @apply bg-transparent border-b border-zinc-200 dark:border-white/10 focus:border-primary transition-colors outline-none px-0 py-2; }
+    .bento-card { @apply bg-white dark:bg-surface rounded-3xl border border-zinc-200 dark:border-white/5 overflow-hidden transition-all duration-200; }
+    .markdown-content table { border-collapse: collapse; width: 100%; margin: 8px 0; font-size: 0.8rem; } .markdown-content th, .markdown-content td { border: 1px solid #444; padding: 4px 8px; text-align: left; } .dark .markdown-content th, .dark .markdown-content td { border-color: #555; } .markdown-content ul, .markdown-content ol { padding-left: 20px; margin: 4px 0; list-style: disc; } .markdown-content pre { background: #1a1a1a; padding: 8px; rounded: 4px; overflow-x: auto; margin: 8px 0; }
+    .context-menu { animation: fadein 0.1s ease-out; } @keyframes fadein { from { opacity: 0; transform: scale(0.95); } to { opacity: 1; transform: scale(1); } }
 </style>
 </head>
 <body>
-<div class="aurora-bg"><div class="aurora-blob blob-1"></div><div class="aurora-blob blob-2"></div><div class="aurora-blob blob-3"></div></div>
 <div id="root"></div>
 <script type="text/babel">
     const GDRIVE_API_KEY = "AIzaSyCScFR_D0snZ6hrHob5fUQM7Y2NhK-kTIA"; const GDRIVE_CLIENT_ID = "256215327792-oglegui0q8qj507oao2c2733thcl9lrc.apps.googleusercontent.com"; 
     const GEMINI_PROXY_URL = "https://gemini-proxy-513372702506.us-central1.run.app/proxy"; const GROQ_PROXY_URL = "https://groq-proxy-157237873670.us-central1.run.app/chat/completions";
-    const { useState, useEffect, useRef, useMemo, useCallback } = React; const { motion, AnimatePresence, LayoutGroup } = window.Motion;
+    const { useState, useEffect, useRef, useMemo, useCallback } = React; const { motion, AnimatePresence } = window.Motion;
 
-    // --- ICONS (Same SVG paths, improved wrapper) ---
-    const IconWrapper = ({children, className}) => <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">{children}</svg>;
-    const Icons={
-        Plus:p=><IconWrapper {...p}><path d="M5 12h14"/><path d="M12 5v14"/></IconWrapper>,
-        Trash:p=><IconWrapper {...p}><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/></IconWrapper>,
-        Bug:p=><IconWrapper {...p}><rect width="8" height="14" x="8" y="6" rx="4"/><path d="m19 7-3 2"/><path d="m5 7 3 2"/><path d="m19 19-3-2"/><path d="m5 19 3-2"/><path d="M20 13h-4"/><path d="M4 13h4"/><path d="m10 4 1 2"/></IconWrapper>,
-        Check:p=><IconWrapper {...p}><polyline points="20 6 9 17 4 12"/></IconWrapper>,
-        Image:p=><IconWrapper {...p}><rect width="18" height="18" x="3" y="3" rx="2" ry="2"/><circle cx="9" cy="9" r="2"/><path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21"/></IconWrapper>,
-        Bot:p=><IconWrapper {...p}><path d="M12 8V4H8"/><rect width="16" height="12" x="4" y="8" rx="2"/><path d="M2 14h2"/><path d="M20 14h2"/><path d="M15 13v2"/><path d="M9 13v2"/></IconWrapper>,
-        X:p=><IconWrapper {...p}><path d="M18 6 6 18"/><path d="m6 6 18 18"/></IconWrapper>,
-        Logout:p=><IconWrapper {...p}><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" x2="9" y1="12" y2="12"/></IconWrapper>,
-        Google:p=><IconWrapper {...p}><path d="M12 22C6.477 22 2 17.523 2 12S6.477 2 12 2s10 4.477 10 10-4.477 10-10 10z"/><path d="M12 11h9c.1 1.4.1 2.9-.4 4.3-1.1 3-4.1 5.3-7.6 5.6-5 .5-9.4-3.1-9.9-8.1C2.5 7.1 6 2.3 11 2c2.5-.1 4.9.9 6.7 2.6l-2.7 2.8c-1-.7-2.3-1.1-3.6-1-2.9.2-5.1 2.8-4.9 5.7.2 2.6 2.4 4.7 5 4.7 2 0 3.6-1.1 4.3-2.9H12v-3z" fill="currentColor" stroke="none"/></IconWrapper>,
-        Sun:p=><IconWrapper {...p}><circle cx="12" cy="12" r="5"/><path d="M12 1v2"/><path d="M12 21v2"/><path d="M4.22 4.22l1.42 1.42"/><path d="M18.36 18.36l1.42 1.42"/><path d="M1 12h2"/><path d="M21 12h2"/><path d="M4.22 19.78l1.42-1.42"/><path d="M18.36 5.64l1.42-1.42"/></IconWrapper>,
-        Moon:p=><IconWrapper {...p}><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></IconWrapper>,
-        User:p=><IconWrapper {...p}><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></IconWrapper>,
-        Scan:p=><IconWrapper {...p}><path d="M3 7V5a2 2 0 0 1 2-2h2"/><path d="M17 3h2a2 2 0 0 1 2 2v2"/><path d="M21 17v2a2 2 0 0 1-2 2h-2"/><path d="M7 21H5a2 2 0 0 1-2-2v-2"/><path d="M8 12h8"/><path d="M12 8v8"/></IconWrapper>,
-        Lock:p=><IconWrapper {...p}><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></IconWrapper>,
-        File:p=><IconWrapper {...p}><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" x2="8" y1="13" y2="13"/><line x1="16" x2="8" y1="17" y2="17"/><polyline points="10 9 9 9 8 9"/></IconWrapper>,
-        Book:p=><IconWrapper {...p}><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></IconWrapper>,
-        CloudUpload:p=><IconWrapper {...p}><path d="M4 14.899A7 7 0 1 1 15.71 8h1.79a4.5 4.5 0 0 1 2.5 8.242"/><path d="M12 12v9"/><path d="m16 16-4-4-4 4"/></IconWrapper>,
-        Refresh:p=><IconWrapper {...p}><path d="M21 12a9 9 0 0 0-9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/><path d="M3 12a9 9 0 0 0 9 9 9.75 9.75 0 0 0 6.74-2.74L21 16"/><path d="M21 21v-5h-5"/></IconWrapper>,
-        Clip:p=><IconWrapper {...p}><path d="m21.44 11.05-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"/></IconWrapper>,
-        ExternalLink:p=><IconWrapper {...p}><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" x2="21" y1="14" y2="3"/></IconWrapper>,
-        ChevronLeft:p=><IconWrapper {...p}><path d="m15 18-6-6 6-6"/></IconWrapper>,
-        ChevronRight:p=><IconWrapper {...p}><path d="m9 18 6-6-6-6"/></IconWrapper>,
-        ZoomIn:p=><IconWrapper {...p}><circle cx="11" cy="11" r="8"/><line x1="21" x2="16.65" y1="21" y2="16.65"/><line x1="11" x2="11" y1="8" y2="14"/><line x1="8" x2="14" y1="11" y2="11"/></IconWrapper>,
-        Undo:p=><IconWrapper {...p}><path d="M3 7v6h6"/><path d="M21 17a9 9 0 0 0-9-9 9 9 0 0 0-6 2.3L3 13"/></IconWrapper>,
-        Sort:p=><IconWrapper {...p}><line x1="12" x2="12" y1="3" y2="21"/><polyline points="8 7 12 3 16 7"/><polyline points="8 17 12 21 16 17"/></IconWrapper>,
-        Copy:p=><IconWrapper {...p}><rect width="14" height="14" x="8" y="8" rx="2" ry="2"/><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/></IconWrapper>,
-        MoreVertical:p=><IconWrapper {...p}><circle cx="12" cy="12" r="1"/><circle cx="12" cy="5" r="1"/><circle cx="12" cy="19" r="1"/></IconWrapper>,
-        Brain:p=><IconWrapper {...p}><path d="M9.5 2A2.5 2.5 0 0 1 12 4.5v15a2.5 2.5 0 0 1-4.96.44 2.5 2.5 0 0 1-2.96-3.08 3 3 0 0 1-.34-5.58 2.5 2.5 0 0 1 1.32-4.24 2.5 2.5 0 0 1 1.98-3A2.5 2.5 0 0 1 9.5 2Z"/><path d="M14.5 2A2.5 2.5 0 0 0 12 4.5v15a2.5 2.5 0 0 0 4.96.44 2.5 2.5 0 0 0 2.96-3.08 3 3 0 0 0 .34-5.58 2.5 2.5 0 0 0-1.32-4.24 2.5 2.5 0 0 0-1.98-3A2.5 2.5 0 0 0 14.5 2Z"/></IconWrapper>,
-        Eye:p=><IconWrapper {...p}><path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/></IconWrapper>,
-        Target:p=><IconWrapper {...p}><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/></IconWrapper>,
-        Zap:p=><IconWrapper {...p}><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></IconWrapper>,
-        GraduationCap:p=><IconWrapper {...p}><path d="M22 10v6M2 10l10-5 10 5-10 5z"/><path d="M6 12v5c3 3 9 3 12 0v-5"/></IconWrapper>,
-        ShieldCheck:p=><IconWrapper {...p}><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><path d="m9 12 2 2 4-4"/></IconWrapper>,
-        ShieldClock:p=><IconWrapper {...p}><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><circle cx="12" cy="12" r="3"/><polyline points="12 10 12 12 13 13"/></IconWrapper>
+    // --- ICONS (Keeping them consistent but clean) ---
+    const Icons={Plus:p=><svg {...p} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M5 12h14"/><path d="M12 5v14"/></svg>,Trash:p=><svg {...p} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/></svg>,Bug:p=><svg {...p} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="m8 2 1.88 1.88"/><path d="M14.12 3.88 16 2"/><path d="M9 7.13v-1a3.003 3.003 0 1 1 6 0v1"/><path d="M12 20c-3.3 0-6-2.7-6-6v-3a4 4 0 0 1 4-4h4a4 4 0 0 1 4 4v3c0 3.3-2.7 6-6 6"/><path d="M12 20v-9"/><path d="M6.53 9C4.6 8.8 3 7.1 3 5"/><path d="M6 13H2"/><path d="M3 21c0-2.1 1.7-3.9 3.8-4"/><path d="M20.97 5c0 2.1-1.6 3.8-3.5 4"/><path d="M22 13h-4"/><path d="M17.2 17c2.1.1 3.8 1.9 3.8 4"/></svg>,Check:p=><svg {...p} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="20 6 9 17 4 12"/></svg>,Image:p=><svg {...p} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect width="18" height="18" x="3" y="3" rx="2" ry="2"/><circle cx="9" cy="9" r="2"/><path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21"/></svg>,Bot:p=><svg {...p} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M12 8V4H8"/><rect width="16" height="12" x="4" y="8" rx="2"/><path d="M2 14h2"/><path d="M20 14h2"/><path d="M15 13v2"/><path d="M9 13v2"/></svg>,X:p=><svg {...p} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M18 6 6 18"/><path d="m6 6 18 18"/></svg>,Logout:p=><svg {...p} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" x2="9" y1="12" y2="12"/></svg>,Google:p=><svg {...p} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M12 22C6.477 22 2 17.523 2 12S6.477 2 12 2s10 4.477 10 10-4.477 10-10 10z"/><path d="M12 11h9c.1 1.4.1 2.9-.4 4.3-1.1 3-4.1 5.3-7.6 5.6-5 .5-9.4-3.1-9.9-8.1C2.5 7.1 6 2.3 11 2c2.5-.1 4.9.9 6.7 2.6l-2.7 2.8c-1-.7-2.3-1.1-3.6-1-2.9.2-5.1 2.8-4.9 5.7.2 2.6 2.4 4.7 5 4.7 2 0 3.6-1.1 4.3-2.9H12v-3z" fill="currentColor"/></svg>,Sun:p=><svg {...p} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="5"/><path d="M12 1v2"/><path d="M12 21v2"/><path d="M4.22 4.22l1.42 1.42"/><path d="M18.36 18.36l1.42 1.42"/><path d="M1 12h2"/><path d="M21 12h2"/><path d="M4.22 19.78l1.42-1.42"/><path d="M18.36 5.64l1.42-1.42"/></svg>,Moon:p=><svg {...p} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>,User:p=><svg {...p} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>,Scan:p=><svg {...p} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M3 7V5a2 2 0 0 1 2-2h2"/><path d="M17 3h2a2 2 0 0 1 2 2v2"/><path d="M21 17v2a2 2 0 0 1-2 2h-2"/><path d="M7 21H5a2 2 0 0 1-2-2v-2"/><path d="M8 12h8"/><path d="M12 8v8"/></svg>,Lock:p=><svg {...p} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>,File:p=><svg {...p} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" x2="8" y1="13" y2="13"/><line x1="16" x2="8" y1="17" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>,Book:p=><svg {...p} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>,CloudUpload:p=><svg {...p} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M4 14.899A7 7 0 1 1 15.71 8h1.79a4.5 4.5 0 0 1 2.5 8.242"/><path d="M12 12v9"/><path d="m16 16-4-4-4 4"/></svg>,Refresh:p=><svg {...p} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 12a9 9 0 0 0-9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/><path d="M3 12a9 9 0 0 0 9 9 9.75 9.75 0 0 0 6.74-2.74L21 16"/><path d="M21 21v-5h-5"/></svg>,Clip:p=><svg {...p} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="m21.44 11.05-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"/></svg>,ExternalLink:p=><svg {...p} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" x2="21" y1="14" y2="3"/></svg>,ChevronLeft:p=><svg {...p} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="m15 18-6-6 6-6"/></svg>,ChevronRight:p=><svg {...p} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="m9 18 6-6-6-6"/></svg>,ZoomIn:p=><svg {...p} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="11" cy="11" r="8"/><line x1="21" x2="16.65" y1="21" y2="16.65"/><line x1="11" x2="11" y1="8" y2="14"/><line x1="8" x2="14" y1="11" y2="11"/></svg>,Undo:p=><svg {...p} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M3 7v6h6"/><path d="M21 17a9 9 0 0 0-9-9 9 9 0 0 0-6 2.3L3 13"/></svg>,Sort:p=><svg {...p} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="12" x2="12" y1="3" y2="21"/><polyline points="8 7 12 3 16 7"/><polyline points="8 17 12 21 16 17"/></svg>,Copy:p=><svg {...p} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect width="14" height="14" x="8" y="8" rx="2" ry="2"/><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/></svg>,MoreVertical:p=><svg {...p} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="1"/><circle cx="12" cy="5" r="1"/><circle cx="12" cy="19" r="1"/></svg>,Brain:p=><svg {...p} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M9.5 2A2.5 2.5 0 0 1 12 4.5v15a2.5 2.5 0 0 1-4.96.44 2.5 2.5 0 0 1-2.96-3.08 3 3 0 0 1-.34-5.58 2.5 2.5 0 0 1 1.32-4.24 2.5 2.5 0 0 1 1.98-3A2.5 2.5 0 0 1 9.5 2Z"/><path d="M14.5 2A2.5 2.5 0 0 0 12 4.5v15a2.5 2.5 0 0 0 4.96.44 2.5 2.5 0 0 0 2.96-3.08 3 3 0 0 0 .34-5.58 2.5 2.5 0 0 0-1.32-4.24 2.5 2.5 0 0 0-1.98-3A2.5 2.5 0 0 0 14.5 2Z"/></svg>,Eye:p=><svg {...p} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/></svg>,Target:p=><svg {...p} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/></svg>,Zap:p=><svg {...p} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>,GraduationCap:p=><svg {...p} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M22 10v6M2 10l10-5 10 5-10 5z"/><path d="M6 12v5c3 3 9 3 12 0v-5"/></svg>,ShieldCheck:p=><svg {...p} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><path d="m9 12 2 2 4-4"/></svg>,ShieldClock:p=><svg {...p} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><circle cx="12" cy="12" r="3"/><polyline points="12 10 12 12 13 13"/></svg>
     };
 
-    // --- UTILS & API LOGIC (Retained 100% functionality) ---
+    // --- UTILS (API, Drive, Compression) ---
     const compressImage = async (fileOrBlob) => new Promise((resolve) => { const img = new Image(); const reader = new FileReader(); reader.onload = (e) => { img.src = e.target.result; img.onload = () => { const canvas = document.createElement('canvas'); const MAX_WIDTH = 3000; let width = img.width; let height = img.height; if (width > MAX_WIDTH) { height *= MAX_WIDTH / width; width = MAX_WIDTH; } canvas.width = width; canvas.height = height; const ctx = canvas.getContext('2d'); ctx.drawImage(img, 0, 0, width, height); canvas.toBlob((blob) => { resolve(blob); }, 'image/jpeg', 1); } }; reader.readAsDataURL(fileOrBlob); });
     const callAI = async (prompt, systemInstruction = "", images = [], apiUrl = GEMINI_PROXY_URL) => { const parts = [{ text: `${systemInstruction}\n\nUser: ${prompt}` }]; if (images?.length > 0) { images.forEach(img => { let mimeType = "image/png", data = img; if (img.includes(",")) { const s = img.split(","); mimeType = s[0].match(/:(.*?);/)[1]; data = s[1]; } parts.push({ inlineData: { mimeType, data } }); }); } try { const response = await fetch(apiUrl, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ contents: [{ parts }] }) }); if (!response.ok) return `Error: ${response.status}`; const data = await response.json(); if (data.error) return `API Error: ${data.error.message}`; return data.candidates?.[0]?.content?.parts?.[0]?.text || "Empty response."; } catch (error) { return `Error: ${error.message}`; } };
     const callGroq = async (prompt, systemInstruction = "", images = []) => { const userContent = [{ type: "text", text: prompt }]; if (images?.length > 0) { images.forEach(img => { userContent.push({ type: "image_url", image_url: { url: img } }); }); } const modelToUse = (images?.length > 0) ? "llama-3.2-90b-vision-preview" : "openai/gpt-oss-120b"; const payload = { model: modelToUse, messages: [ { role: "system", content: systemInstruction }, { role: "user", content: userContent } ] }; try { const response = await fetch(GROQ_PROXY_URL, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) }); if (!response.ok) return `Error: ${response.status}`; const data = await response.json(); if (data.error) return `API Error: ${data.error.message}`; return data.choices?.[0]?.message?.content || "Empty response."; } catch (error) { return `Error: ${error.message}`; } };
     const getLimits = async () => { const defaults = { chat_gemini: 5, chat_groq: 20, practice: 10, ocr: 20 }; try { const cfgRef = window.firebase.doc(window.firebase.db, 'artifacts', "darnote-app", 'public', 'data', 'config', 'main'); const snap = await window.firebase.getDoc(cfgRef); if (snap.exists()) return { ...defaults, ...snap.data() }; } catch(e) {} return defaults; };
-    const checkAndIncrementQuota = async (user, type, subtype = null) => { 
-        if (!user) return false; 
-        const limits = await getLimits(); 
-        let field = '', limit = 0; 
-        if (type === 'chat') { 
-            if (subtype === 'groq') { field = 'chat_groq_count'; limit = limits.chat_groq; } 
-            else { field = 'chat_count'; limit = limits.chat_gemini; } 
-        } else if (type === 'practice') { field = 'practice_count'; limit = limits.practice; } 
-        else if (type === 'ocr') { field = 'ocr_count'; limit = limits.ocr; } 
-        const today = new Date().toISOString().split('T')[0]; 
-        const ref = window.firebase.doc(window.firebase.db, 'artifacts', "darnote-app", 'users', user.uid, 'ai_usage', today); 
-        try { 
-            const snap = await window.firebase.getDoc(ref); 
-            let currentVal = null; 
-            if (snap.exists() && typeof snap.data()[field] !== 'undefined') {
-                currentVal = snap.data()[field];
-            } else {
-                const profileRef = window.firebase.doc(window.firebase.db, 'artifacts', "darnote-app", 'users', user.uid, 'settings', 'profile');
-                const profileSnap = await window.firebase.getDoc(profileRef);
-                const status = profileSnap.exists() ? profileSnap.data().studentStatus : null;
-                const isStudent = status === 'verified' || status === 'temp_verified';
-                currentVal = isStudent ? -20 : 0;
-            }
-            if (currentVal >= limit) return false; 
-            if (!snap.exists() || typeof snap.data()[field] === 'undefined') {
-                 const newVal = currentVal + 1;
-                 await window.firebase.setDoc(ref, { [field]: newVal }, { merge: true });
-                 return newVal;
-            } else {
-                 await window.firebase.setDoc(ref, { [field]: window.firebase.increment(1) }, { merge: true });
-                 return currentVal + 1;
-            }
-        } catch (e) { return false; } 
-    };
-    const useGoogleDrive = () => { 
-        const [tokenClient, setTokenClient] = useState(null); 
-        useEffect(() => { 
-            if(!GDRIVE_API_KEY || !GDRIVE_CLIENT_ID) return; 
-            const load = async () => { 
-                if (window.gapi) { await new Promise(r => window.gapi.load('client', r)); await window.gapi.client.init({ apiKey: GDRIVE_API_KEY, discoveryDocs: ['https://www.googleapis.com/discovery/v1/apis/drive/v3/rest'] }); } 
-                if (window.google) setTokenClient(window.google.accounts.oauth2.initTokenClient({ client_id: GDRIVE_CLIENT_ID, scope: 'https://www.googleapis.com/auth/drive.file', callback: () => {} })); 
-            }; load(); 
-        }, []); 
-        const getAccessToken = () => new Promise((resolve, reject) => { 
-            if (!tokenClient) return reject("Auth not initialized"); 
-            const existing = window.gapi.client.getToken(); 
-            if (existing && Date.now() < existing.expiry) return resolve(existing.access_token); 
-            tokenClient.callback = (resp) => { if (resp.error) reject(resp); resolve(resp.access_token); }; 
-            tokenClient.requestAccessToken({ prompt: '' }); 
-        }); 
-        const saveToDrive = async (blob, filename, preFetchedToken = null, folderName = 'darNote_Errors') => { 
-            const token = preFetchedToken || await getAccessToken(); 
-            let folderId; 
-            const q = `mimeType='application/vnd.google-apps.folder' and name='${folderName}' and trashed=false`; 
-            const search = await fetch(`https://www.googleapis.com/drive/v3/files?q=${encodeURIComponent(q)}`, { headers: { Authorization: `Bearer ${token}` } }); 
-            const searchData = await search.json(); 
-            if (searchData.files?.length) folderId = searchData.files[0].id; 
-            else { 
-                const create = await fetch('https://www.googleapis.com/drive/v3/files', { method: 'POST', headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' }, body: JSON.stringify({ name: folderName, mimeType: 'application/vnd.google-apps.folder' }) }); 
-                folderId = (await create.json()).id; 
-            } 
-            const metadata = { name: filename, mimeType: blob.type, parents: [folderId] }; 
-            const form = new FormData(); 
-            form.append('metadata', new Blob([JSON.stringify(metadata)], { type: 'application/json' })); 
-            form.append('file', blob); 
-            const upRes = await fetch('https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&fields=id', { method: 'POST', headers: { Authorization: `Bearer ${token}` }, body: form }); 
-            if(!upRes.ok) throw new Error(upRes.statusText); 
-            const fileId = (await upRes.json()).id; 
-            await fetch(`https://www.googleapis.com/drive/v3/files/${fileId}/permissions`, { method: 'POST', headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' }, body: JSON.stringify({ role: 'reader', type: 'anyone' }) }); 
-            return blob.type === 'application/pdf' ? `https://drive.google.com/file/d/${fileId}/preview` : `https://lh3.googleusercontent.com/d/${fileId}`; 
-        }; 
-        return { saveToDrive, getAccessToken }; 
-    };
-    const cleanLatex=(t)=>t.replace(/\$\$/g,'\n').replace(/\$/g,'').replace(/\\text\{([^}]+)\}/g,'$1').replace(/\\times/g,'×').replace(/\\approx/g,'≈').replace(/\\le/g,'≤').replace(/\\ge/g,'≥').replace(/\\rightarrow/g,'→').replace(/\\cdot/g,'·').replace(/\\frac\{([^}]+)\}\{([^}]+)\}/g,'($1/$2)').replace(/\\/g,'');
+    const checkAndIncrementQuota = async (user, type, subtype = null) => { if (!user) return false; const limits = await getLimits(); let field = '', limit = 0; if (type === 'chat') { if (subtype === 'groq') { field = 'chat_groq_count'; limit = limits.chat_groq; } else { field = 'chat_count'; limit = limits.chat_gemini; } } else if (type === 'practice') { field = 'practice_count'; limit = limits.practice; } else if (type === 'ocr') { field = 'ocr_count'; limit = limits.ocr; } const today = new Date().toISOString().split('T')[0]; const ref = window.firebase.doc(window.firebase.db, 'artifacts', "darnote-app", 'users', user.uid, 'ai_usage', today); try { const snap = await window.firebase.getDoc(ref); let currentVal = null; if (snap.exists() && typeof snap.data()[field] !== 'undefined') { currentVal = snap.data()[field]; } else { const profileRef = window.firebase.doc(window.firebase.db, 'artifacts', "darnote-app", 'users', user.uid, 'settings', 'profile'); const profileSnap = await window.firebase.getDoc(profileRef); const status = profileSnap.exists() ? profileSnap.data().studentStatus : null; const isStudent = status === 'verified' || status === 'temp_verified'; currentVal = isStudent ? -20 : 0; } if (currentVal >= limit) return false; if (!snap.exists() || typeof snap.data()[field] === 'undefined') { const newVal = currentVal + 1; await window.firebase.setDoc(ref, { [field]: newVal }, { merge: true }); return newVal; } else { await window.firebase.setDoc(ref, { [field]: window.firebase.increment(1) }, { merge: true }); return currentVal + 1; } } catch (e) { return false; } };
+    const useGoogleDrive = () => { const [tokenClient, setTokenClient] = useState(null); useEffect(() => { if(!GDRIVE_API_KEY || !GDRIVE_CLIENT_ID) return; const load = async () => { if (window.gapi) { await new Promise(r => window.gapi.load('client', r)); await window.gapi.client.init({ apiKey: GDRIVE_API_KEY, discoveryDocs: ['https://www.googleapis.com/discovery/v1/apis/drive/v3/rest'] }); } if (window.google) setTokenClient(window.google.accounts.oauth2.initTokenClient({ client_id: GDRIVE_CLIENT_ID, scope: 'https://www.googleapis.com/auth/drive.file', callback: () => {} })); }; load(); }, []); const getAccessToken = () => new Promise((resolve, reject) => { if (!tokenClient) return reject("Auth not initialized"); const existing = window.gapi.client.getToken(); if (existing && Date.now() < existing.expiry) return resolve(existing.access_token); tokenClient.callback = (resp) => { if (resp.error) reject(resp); resolve(resp.access_token); }; tokenClient.requestAccessToken({ prompt: '' }); }); const saveToDrive = async (blob, filename, preFetchedToken = null, folderName = 'darNote_Errors') => { const token = preFetchedToken || await getAccessToken(); let folderId; const q = `mimeType='application/vnd.google-apps.folder' and name='${folderName}' and trashed=false`; const search = await fetch(`https://www.googleapis.com/drive/v3/files?q=${encodeURIComponent(q)}`, { headers: { Authorization: `Bearer ${token}` } }); const searchData = await search.json(); if (searchData.files?.length) folderId = searchData.files[0].id; else { const create = await fetch('https://www.googleapis.com/drive/v3/files', { method: 'POST', headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' }, body: JSON.stringify({ name: folderName, mimeType: 'application/vnd.google-apps.folder' }) }); folderId = (await create.json()).id; } const metadata = { name: filename, mimeType: blob.type, parents: [folderId] }; const form = new FormData(); form.append('metadata', new Blob([JSON.stringify(metadata)], { type: 'application/json' })); form.append('file', blob); const upRes = await fetch('https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&fields=id', { method: 'POST', headers: { Authorization: `Bearer ${token}` }, body: form }); if(!upRes.ok) throw new Error(upRes.statusText); const fileId = (await upRes.json()).id; await fetch(`https://www.googleapis.com/drive/v3/files/${fileId}/permissions`, { method: 'POST', headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' }, body: JSON.stringify({ role: 'reader', type: 'anyone' }) }); return blob.type === 'application/pdf' ? `https://drive.google.com/file/d/${fileId}/preview` : `https://lh3.googleusercontent.com/d/${fileId}`; }; return { saveToDrive, getAccessToken }; };
 
-    // --- REBUILT UI COMPONENTS ---
-
-    const ModalOverlay = ({children, onClose}) => (
-        <motion.div initial={{opacity:0}} animate={{opacity:1}} exit={{opacity:0}} className="fixed inset-0 z-[100] bg-black/80 backdrop-blur-md flex items-center justify-center p-4">
-            <div className="absolute inset-0" onClick={onClose}/>
-            <motion.div initial={{scale:0.95, y: 20}} animate={{scale:1, y: 0}} exit={{scale:0.95, y: 20}} className="relative bg-[#111114] border border-white/10 w-full max-w-lg rounded-3xl shadow-2xl overflow-hidden flex flex-col max-h-[90vh]">
-                {children}
-            </motion.div>
-        </motion.div>
-    );
+    // --- RE-DESIGNED UI COMPONENTS ---
 
     const StudentModal = ({ isOpen, onClose, user, saveToDrive, getAccessToken, callGroq }) => {
-        const [role, setRole] = useState('University');
-        const [file, setFile] = useState(null);
-        const [uploading, setUploading] = useState(false);
-        const [status, setStatus] = useState('none'); 
-        const [cooldownEnd, setCooldownEnd] = useState(null);
-        const [uploadStatusMsg, setUploadStatusMsg] = useState("");
-        const [verifiedData, setVerifiedData] = useState(null);
-
-        useEffect(() => {
-            if(!isOpen || !user) return;
-            const ref = window.firebase.doc(window.firebase.db, 'artifacts', "darnote-app", 'users', user.uid, 'settings', 'profile');
-            window.firebase.getDoc(ref).then(snap => {
-                if(snap.exists()) {
-                    if (snap.data().studentStatus) setStatus(snap.data().studentStatus);
-                    if (snap.data().verifiedData) setVerifiedData(snap.data().verifiedData);
-                    const cd = snap.data().studentVerificationCooldown;
-                    if (cd && cd > Date.now()) setCooldownEnd(cd);
-                }
-            });
-        }, [isOpen, user]);
-
-        const [timeLeft, setTimeLeft] = useState("");
-        useEffect(() => {
-            if(!cooldownEnd) return;
-            const i = setInterval(() => {
-                const diff = cooldownEnd - Date.now();
-                if (diff <= 0) { setCooldownEnd(null); clearInterval(i); return; }
-                const mins = Math.floor(diff / 60000);
-                const secs = Math.floor((diff % 60000) / 1000);
-                setTimeLeft(`${mins}m ${secs}s`);
-            }, 1000);
-            return () => clearInterval(i);
-        }, [cooldownEnd]);
-
-        const handleSubmit = async () => {
-            if (!file) { alert("Please upload a proof of identity."); return; }
-            setUploading(true); setUploadStatusMsg("Uploading to secure storage...");
-            try {
-                const token = await getAccessToken();
-                const url = await saveToDrive(file, `Proof_${user.uid}_${Date.now()}.jpg`, token, "darNote_personal image");
-                setUploadStatusMsg("AI Bouncer is analyzing ID...");
-                const b64 = await new Promise((r) => { const reader = new FileReader(); reader.onloadend = () => r(reader.result); reader.readAsDataURL(file); });
-                const prompt = `Analyze this student ID card carefully. Extract the "fullName" and "schoolName". \nReturn JSON ONLY: { "fullName": "...", "schoolName": "..." }.\nRules:\n1. Ignore ID numbers/DOB.\n2. If you cannot clearly read the Full Name OR School Name, return empty strings.\n3. Be strict.`;
-                const aiRes = await callGroq(prompt, "JSON Parser", [b64]);
-                let extractedData = {}; try { const jsonStr = aiRes.substring(aiRes.indexOf('{'), aiRes.lastIndexOf('}') + 1); extractedData = JSON.parse(jsonStr); } catch(e) {}
-                const { fullName, schoolName } = extractedData;
-                if (!fullName || !schoolName || fullName.length < 3 || schoolName.length < 3) {
-                    const cooldownTime = Date.now() + (2 * 60 * 60 * 1000);
-                    const ref = window.firebase.doc(window.firebase.db, 'artifacts', "darnote-app", 'users', user.uid, 'settings', 'profile');
-                    await window.firebase.setDoc(ref, { studentVerificationCooldown: cooldownTime }, { merge: true });
-                    setCooldownEnd(cooldownTime); setUploading(false); alert("AI Check Failed: Could not clearly identify Name or School. Cooldown activated."); return;
-                }
-                const docId = fullName.toLowerCase().trim().replace(/\s+/g, '_'); 
-                const registryRef = window.firebase.doc(window.firebase.db, 'artifacts', "darnote-app", 'public', 'data', 'verified_students', docId);
-                const registrySnap = await window.firebase.getDoc(registryRef);
-                if (registrySnap.exists() && registrySnap.data().uid !== user.uid) {
-                    setUploading(false); alert(`Verification Rejected: The name "${fullName}" is already registered.`);
-                    const cooldownTime = Date.now() + (2 * 60 * 60 * 1000);
-                    const ref = window.firebase.doc(window.firebase.db, 'artifacts', "darnote-app", 'users', user.uid, 'settings', 'profile');
-                    await window.firebase.setDoc(ref, { studentVerificationCooldown: cooldownTime }, { merge: true });
-                    setCooldownEnd(cooldownTime); return;
-                }
-                const batch = window.firebase.writeBatch(window.firebase.db);
-                const userRef = window.firebase.doc(window.firebase.db, 'artifacts', "darnote-app", 'users', user.uid, 'settings', 'profile');
-                batch.set(userRef, { studentStatus: 'temp_verified', studentRole: role, proofUrl: url, verifiedData: { fullName, schoolName }, submittedAt: new Date().toISOString() }, { merge: true });
-                batch.set(registryRef, { uid: user.uid, school: schoolName, role: role, registeredAt: new Date().toISOString() });
-                await batch.commit();
-                setStatus('temp_verified'); setVerifiedData({ fullName, schoolName }); setUploading(false); setUploadStatusMsg(""); alert("Success! Temporary Verification Granted.");
-            } catch(e) { alert("Process Failed: " + e.message); setUploading(false); setUploadStatusMsg(""); }
+        const [role, setRole] = useState('University'); const [file, setFile] = useState(null); const [uploading, setUploading] = useState(false); const [status, setStatus] = useState('none'); const [cooldownEnd, setCooldownEnd] = useState(null); const [uploadStatusMsg, setUploadStatusMsg] = useState(""); const [verifiedData, setVerifiedData] = useState(null);
+        // ... (Keep existing logic, updating styles only)
+        useEffect(() => { if(!isOpen || !user) return; const ref = window.firebase.doc(window.firebase.db, 'artifacts', "darnote-app", 'users', user.uid, 'settings', 'profile'); window.firebase.getDoc(ref).then(snap => { if(snap.exists()) { if (snap.data().studentStatus) setStatus(snap.data().studentStatus); if (snap.data().verifiedData) setVerifiedData(snap.data().verifiedData); const cd = snap.data().studentVerificationCooldown; if (cd && cd > Date.now()) setCooldownEnd(cd); } }); }, [isOpen, user]);
+        const [timeLeft, setTimeLeft] = useState(""); useEffect(() => { if(!cooldownEnd) return; const i = setInterval(() => { const diff = cooldownEnd - Date.now(); if (diff <= 0) { setCooldownEnd(null); clearInterval(i); return; } const mins = Math.floor(diff / 60000); const secs = Math.floor((diff % 60000) / 1000); setTimeLeft(`${mins}m ${secs}s`); }, 1000); return () => clearInterval(i); }, [cooldownEnd]);
+        const handleSubmit = async () => { /* ... Logic same as original ... */ 
+             if (!file) { alert("Please upload a proof of identity."); return; } setUploading(true); setUploadStatusMsg("Uploading to secure storage..."); try { const token = await getAccessToken(); const url = await saveToDrive(file, `Proof_${user.uid}_${Date.now()}.jpg`, token, "darNote_personal image"); setUploadStatusMsg("AI Bouncer is analyzing ID..."); const b64 = await new Promise((r) => { const reader = new FileReader(); reader.onloadend = () => r(reader.result); reader.readAsDataURL(file); }); const prompt = `Analyze this student ID card carefully. Extract the "fullName" and "schoolName". \nReturn JSON ONLY: { "fullName": "...", "schoolName": "..." }.\nRules:\n1. Ignore ID numbers/DOB.\n2. If you cannot clearly read the Full Name OR School Name, return empty strings.\n3. Be strict.`; const aiRes = await callGroq(prompt, "JSON Parser", [b64]); let extractedData = {}; try { const jsonStr = aiRes.substring(aiRes.indexOf('{'), aiRes.lastIndexOf('}') + 1); extractedData = JSON.parse(jsonStr); } catch(e) {} const { fullName, schoolName } = extractedData; if (!fullName || !schoolName || fullName.length < 3 || schoolName.length < 3) { const cooldownTime = Date.now() + (2 * 60 * 60 * 1000); const ref = window.firebase.doc(window.firebase.db, 'artifacts', "darnote-app", 'users', user.uid, 'settings', 'profile'); await window.firebase.setDoc(ref, { studentVerificationCooldown: cooldownTime }, { merge: true }); setCooldownEnd(cooldownTime); setUploading(false); alert("AI Check Failed: Could not clearly identify Name or School. Cooldown activated."); return; } const docId = fullName.toLowerCase().trim().replace(/\s+/g, '_'); const registryRef = window.firebase.doc(window.firebase.db, 'artifacts', "darnote-app", 'public', 'data', 'verified_students', docId); const registrySnap = await window.firebase.getDoc(registryRef); if (registrySnap.exists() && registrySnap.data().uid !== user.uid) { setUploading(false); alert(`Verification Rejected: The name "${fullName}" is already registered by another account.`); const cooldownTime = Date.now() + (2 * 60 * 60 * 1000); const ref = window.firebase.doc(window.firebase.db, 'artifacts', "darnote-app", 'users', user.uid, 'settings', 'profile'); await window.firebase.setDoc(ref, { studentVerificationCooldown: cooldownTime }, { merge: true }); setCooldownEnd(cooldownTime); return; } const batch = window.firebase.writeBatch(window.firebase.db); const userRef = window.firebase.doc(window.firebase.db, 'artifacts', "darnote-app", 'users', user.uid, 'settings', 'profile'); batch.set(userRef, { studentStatus: 'temp_verified', studentRole: role, proofUrl: url, verifiedData: { fullName, schoolName }, submittedAt: new Date().toISOString() }, { merge: true }); batch.set(registryRef, { uid: user.uid, school: schoolName, role: role, registeredAt: new Date().toISOString() }); await batch.commit(); setStatus('temp_verified'); setVerifiedData({ fullName, schoolName }); setUploading(false); setUploadStatusMsg(""); alert("Success! Temporary Verification Granted. You have instant access to +20 credits."); } catch(e) { alert("Process Failed: " + e.message); setUploading(false); setUploadStatusMsg(""); }
         };
 
         if (!isOpen) return null;
         return (
-            <ModalOverlay onClose={onClose}>
-                <div className="p-8">
-                    <div className="flex justify-between items-start mb-6">
-                        <div>
-                            <h3 className="text-2xl font-bold bg-gradient-to-r from-indigo-400 to-purple-400 bg-clip-text text-transparent flex items-center gap-2"><Icons.GraduationCap className="w-6 h-6 text-indigo-400"/> Student Plan</h3>
-                            <p className="text-sm text-zinc-400 mt-1">Unlock +20 Daily AI Credits.</p>
+            <div className="fixed inset-0 z-[100] bg-black/90 backdrop-blur-md flex items-center justify-center p-4">
+                <div className="bg-surface border border-white/10 w-full max-w-md rounded-3xl shadow-2xl overflow-hidden relative">
+                    <div className="absolute top-0 inset-x-0 h-1 bg-gradient-to-r from-primary to-accent"></div>
+                    <div className="p-8">
+                        <div className="flex justify-between items-start mb-6">
+                            <div><h3 className="text-2xl font-bold text-white font-sans flex items-center gap-2"><Icons.GraduationCap className="w-7 h-7 text-primary"/> Student Pass</h3><p className="text-zinc-400 mt-1">Unlock +20 Daily AI Credits.</p></div>
+                            <button onClick={onClose} className="text-zinc-500 hover:text-white transition-colors"><Icons.X/></button>
                         </div>
-                        <button onClick={onClose} className="hover:bg-white/10 p-2 rounded-full transition-colors"><Icons.X className="w-5 h-5 text-zinc-400"/></button>
-                    </div>
-
-                    {status === 'verified' || status === 'temp_verified' ? (
-                        <div className="text-center py-8">
-                            <motion.div initial={{scale:0}} animate={{scale:1}} className={`w-20 h-20 rounded-full flex items-center justify-center mx-auto mb-6 ${status==='verified'?'bg-green-500/10 text-green-500':'bg-orange-500/10 text-orange-500'}`}>
-                                {status==='verified' ? <Icons.ShieldCheck className="w-10 h-10"/> : <Icons.ShieldClock className="w-10 h-10"/>}
-                            </motion.div>
-                            <h4 className="font-bold text-xl text-white mb-2">{status === 'verified' ? 'Verified Student' : 'Temporary Verified'}</h4>
-                            <div className="bg-white/5 border border-white/10 rounded-xl p-4 mb-4 mx-4">
-                                <div className="text-base font-bold text-white">{verifiedData?.fullName}</div>
-                                <div className="text-xs text-zinc-500">{verifiedData?.schoolName}</div>
-                            </div>
-                        </div>
-                    ) : cooldownEnd ? (
-                        <div className="text-center py-10 bg-red-900/10 rounded-2xl border border-red-500/20">
-                            <Icons.Lock className="w-12 h-12 text-red-500 mx-auto mb-4"/>
-                            <h4 className="font-bold text-lg text-red-500 mb-2">Verification Locked</h4>
-                            <div className="text-2xl font-mono font-bold text-white mb-2">{timeLeft}</div>
-                            <p className="text-xs text-zinc-400">Security cooldown active.</p>
-                        </div>
-                    ) : (
-                        <div className="space-y-6">
-                            <div className="flex gap-2 p-1 bg-black/20 rounded-xl border border-white/5">
-                                {['University', 'High School', 'Middle School'].map(r => (
-                                    <button key={r} onClick={() => setRole(r)} className={`flex-1 py-2 rounded-lg text-xs font-medium transition-all ${role === r ? 'bg-indigo-600 text-white shadow-lg' : 'text-zinc-500 hover:text-white'}`}>{r}</button>
-                                ))}
-                            </div>
-                            <div className="border-2 border-dashed border-white/10 rounded-2xl p-8 text-center hover:bg-white/5 transition-all cursor-pointer relative group">
-                                <input type="file" accept="image/*" className="absolute inset-0 opacity-0 cursor-pointer z-10" onChange={(e) => setFile(e.target.files[0])} />
-                                <div className="flex flex-col items-center group-hover:scale-105 transition-transform">
-                                    <Icons.CloudUpload className="w-10 h-10 text-indigo-400 mb-3"/>
-                                    <span className="text-sm text-zinc-300 font-medium">{file ? file.name : "Drop ID Card Image"}</span>
-                                    <span className="text-xs text-zinc-600 mt-2">We use AI to verify. Mask sensitive info.</span>
+                        {status === 'verified' || status === 'temp_verified' ? (
+                            <div className="text-center py-8 bg-white/5 rounded-2xl border border-white/5 relative overflow-hidden">
+                                <div className="absolute inset-0 bg-gradient-to-br from-primary/10 to-transparent"></div>
+                                <div className="relative z-10">
+                                    <div className="w-20 h-20 bg-primary/20 rounded-full flex items-center justify-center mx-auto mb-4 border border-primary/50 shadow-[0_0_30px_rgba(99,102,241,0.3)]"><Icons.ShieldCheck className="w-10 h-10 text-primary"/></div>
+                                    <h4 className="font-bold text-xl text-white mb-1">{status === 'verified' ? 'Verified Student' : 'Temp Verified'}</h4>
+                                    <p className="text-xs text-zinc-400 uppercase tracking-widest font-bold mb-4">{status === 'temp_verified' ? 'Under Review' : 'All Systems Go'}</p>
+                                    {verifiedData && <div className="inline-block px-4 py-2 bg-black/40 rounded-lg text-sm text-zinc-300 font-mono border border-white/10">{verifiedData.fullName} • {verifiedData.schoolName}</div>}
                                 </div>
                             </div>
-                            <button onClick={handleSubmit} disabled={uploading || !file} className="w-full bg-gradient-to-r from-indigo-600 to-purple-600 text-white font-bold py-4 rounded-xl hover:shadow-[0_0_20px_rgba(99,102,241,0.5)] disabled:opacity-50 transition-all flex justify-center items-center gap-2">
-                                {uploading ? <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"/> : <Icons.Scan className="w-5 h-5"/>}
-                                {uploading ? uploadStatusMsg : "Analyze & Unlock"}
-                            </button>
+                        ) : cooldownEnd ? (
+                            <div className="text-center py-12 bg-red-500/5 rounded-2xl border border-red-500/20"><Icons.Lock className="w-12 h-12 text-red-500 mx-auto mb-4"/><h4 className="font-bold text-xl text-red-500">Locked</h4><p className="text-zinc-400 mb-4 text-sm">Verification failed.</p><div className="font-mono text-2xl font-bold text-white">{timeLeft}</div></div>
+                        ) : (
+                            <div className="space-y-6">
+                                <div className="space-y-2"><label className="text-xs font-bold text-zinc-500 uppercase">Institution Type</label><div className="grid grid-cols-1 gap-2">{['University', 'High School / HKDSE', 'Middle School'].map(r => (<button key={r} onClick={() => setRole(r)} className={`p-3 rounded-xl text-sm border text-left transition-all ${role === r ? 'border-primary bg-primary/20 text-white shadow-[0_0_15px_rgba(99,102,241,0.2)]' : 'border-white/10 text-zinc-400 hover:bg-white/5'}`}>{r}</button>))}</div></div>
+                                <div className="space-y-2"><label className="text-xs font-bold text-zinc-500 uppercase">Proof of Identity</label><div className="border-2 border-dashed border-zinc-700 rounded-xl p-8 text-center hover:bg-white/5 transition-colors cursor-pointer relative group"><input type="file" accept="image/*" className="absolute inset-0 opacity-0 cursor-pointer z-10" onChange={(e) => setFile(e.target.files[0])} /><div className="flex flex-col items-center group-hover:scale-105 transition-transform"><Icons.CloudUpload className="w-8 h-8 text-zinc-500 mb-2"/><span className="text-sm text-zinc-300 font-bold">{file ? file.name : "Upload Student ID"}</span></div></div></div>
+                                <button onClick={handleSubmit} disabled={uploading || !file} className="w-full bg-primary hover:bg-primary-glow text-white font-bold py-4 rounded-xl disabled:opacity-50 disabled:cursor-not-allowed flex justify-center items-center gap-2 transition-all shadow-lg shadow-primary/20">{uploading ? <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"/> : <Icons.Scan className="w-5 h-5"/>}{uploading ? "Analyzing..." : "Verify Identity"}</button>
+                                {uploading && <p className="text-center text-xs text-primary animate-pulse">{uploadStatusMsg}</p>}
+                            </div>
+                        )}
+                    </div>
+                </div>
+            </div>
+        );
+    };
+
+    const MultiImageUploader = ({ images = [], onUpdate, label, isUploading, onImageClick }) => {
+        const [isDragging, setIsDragging] = useState(false); const fileInputRef = useRef(null); const imageList = Array.isArray(images) ? images : (images ? [images] : []);
+        const handleFiles = (files) => { Array.from(files).forEach(file => { if (file.type.startsWith('image/') || file.type === 'application/pdf') onUpdate(file, 'add'); }); };
+        const handlePasteClick = async () => { try { const items = await navigator.clipboard.read(); for (const item of items) { for (const type of item.types) { if (type.startsWith("image/") || type === 'application/pdf') { const blob = await item.getType(type); onUpdate(blob, 'add'); } } } } catch (err) { alert("Clipboard permission denied."); } };
+        return (
+            <div className="group">
+                <div className="flex justify-between items-end mb-2 px-1">
+                    <label className="text-xs font-bold text-zinc-500 uppercase tracking-widest flex items-center gap-2">{label} <span className="text-[10px] text-zinc-600 bg-zinc-200 dark:bg-white/10 px-1.5 rounded-full">{imageList.length}</span></label>
+                    <div className="flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                        <button onClick={handlePasteClick} className="text-[10px] flex items-center gap-1 text-primary hover:text-white px-2 py-1 rounded transition-colors"><Icons.Clip className="w-3 h-3"/> Paste</button>
+                        <button onClick={() => fileInputRef.current.click()} className="text-[10px] flex items-center gap-1 text-zinc-400 hover:text-white px-2 py-1 rounded transition-colors"><Icons.Plus className="w-3 h-3"/> Add</button>
+                    </div>
+                    <input type="file" multiple ref={fileInputRef} style={{display:'none'}} onChange={(e) => handleFiles(e.target.files)} accept="image/*,application/pdf" />
+                </div>
+                <div className={`w-full min-h-[140px] bg-zinc-50 dark:bg-black/20 border-2 border-dashed rounded-2xl p-3 transition-all ${isDragging ? 'border-primary bg-primary/5' : 'border-zinc-300 dark:border-white/10 hover:border-white/20'}`} onDragOver={(e) => { e.preventDefault(); setIsDragging(true); }} onDragLeave={() => setIsDragging(false)} onDrop={(e) => { e.preventDefault(); setIsDragging(false); handleFiles(e.dataTransfer.files); }} onPaste={(e) => handleFiles(e.clipboardData.files)} tabIndex="0">
+                    {imageList.length === 0 ? (
+                        <div className="h-full flex flex-col items-center justify-center text-zinc-500 pointer-events-none py-8">
+                            {isUploading ? <div className="w-8 h-8 border-2 border-primary border-t-transparent rounded-full animate-spin mb-2"/> : <Icons.Image className="w-8 h-8 mb-2 opacity-30"/>}
+                            <span className="text-xs font-medium">{isUploading ? "Uploading..." : "Drop Evidence Here"}</span>
+                        </div>
+                    ) : (
+                        <div className="grid grid-cols-2 gap-3">
+                            {imageList.map((url, idx) => (
+                                <div key={idx} onClick={() => onImageClick()} className="group/img relative aspect-[4/3] bg-black rounded-xl overflow-hidden border border-white/10 shadow-lg cursor-zoom-in">
+                                    {url.includes('drive.google.com') ? <div className="w-full h-full flex flex-col items-center justify-center bg-red-900/20 text-red-500"><Icons.File className="w-8 h-8"/><span className="text-[9px] font-bold mt-1">PDF</span></div> : <img src={url} className="w-full h-full object-cover opacity-80 group-hover/img:opacity-100 transition-opacity" />}
+                                    <button onClick={(e) => { e.stopPropagation(); onUpdate(idx, 'remove'); }} className="absolute top-1 right-1 p-1.5 bg-red-500/80 hover:bg-red-500 rounded-lg text-white backdrop-blur-sm opacity-0 group-hover/img:opacity-100 transition-opacity"><Icons.Trash className="w-3 h-3"/></button>
+                                </div>
+                            ))}
+                            {isUploading && <div className="aspect-[4/3] rounded-xl bg-white/5 flex items-center justify-center border border-white/10 animate-pulse"><div className="w-5 h-5 border-2 border-primary border-t-transparent rounded-full animate-spin"></div></div>}
                         </div>
                     )}
                 </div>
-            </ModalOverlay>
+            </div>
         );
     };
 
     const PracticeModal = ({ activeLog, onClose, user, subjects = [], initialMode = 'topic' }) => {
+        // ... (Keep existing logic mostly, update styles)
         const [loading, setLoading] = useState(false); const [practiceMode, setPracticeMode] = useState(initialMode); const [questions, setQuestions] = useState([]); const [lqData, setLqData] = useState(null); const [userAnswers, setUserAnswers] = useState({}); const [marked, setMarked] = useState(false); const [lqFeedback, setLqFeedback] = useState(null); const [quota, setQuota] = useState(0); const [limit, setLimit] = useState(10); const [selectedSubject, setSelectedSubject] = useState(activeLog?.subject || (subjects.length > 0 ? subjects[0].name : '')); const [selectedTopic, setSelectedTopic] = useState(activeLog?.topic || ''); const [selectedType, setSelectedType] = useState('MC'); const [customInstructions, setCustomInstructions] = useState("");
         useEffect(() => { const f = async () => { if (!user) return; const l = await getLimits(); setLimit(l.practice); const today = new Date().toISOString().split('T')[0]; const ref = window.firebase.doc(window.firebase.db, 'artifacts', "darnote-app", 'users', user.uid, 'ai_usage', today); const snap = await window.firebase.getDoc(ref); setQuota(snap.exists() ? (snap.data().practice_count || 0) : 0); }; f(); if (initialMode === 'single' && activeLog) generatePractice('single'); }, []);
         const generatePractice = async (mode = 'single') => { if (mode === 'topic' && !selectedSubject) { alert("Select a subject!"); return; } setLoading(true); setPracticeMode(mode); setMarked(false); setUserAnswers({}); setQuestions([]); setLqData(null); const newQuota = await checkAndIncrementQuota(user, 'practice'); if (newQuota === false) { alert("Daily Limit Reached!"); onClose(); return; } setQuota(newQuota); let contextData = "", imgCtx = []; const fetchB64 = async (url) => { try { const res = await fetch(url); const blob = await res.blob(); return new Promise((r) => { const reader = new FileReader(); reader.onloadend = () => r(reader.result); reader.readAsDataURL(blob); }); } catch(e) { return null; } };
-            if (mode === 'single' && activeLog) { contextData = `Subject: ${activeLog.subject}. Topic: ${activeLog.topic}. Concept: ${activeLog.explanation}. Q: ${activeLog.questionText || "See Image"}`; if (activeLog.questionImages?.length > 0) { const raw = activeLog.questionImages[0]; if(!raw.includes('drive.google')) { const b64 = await fetchB64(raw); if(b64) imgCtx.push(b64); } } } else { const db = window.firebase.db; let constraints = [ window.firebase.where('subject', '==', selectedSubject), window.firebase.limit(15) ]; if (selectedTopic) constraints.push(window.firebase.where('topic', '==', selectedTopic)); try { const q = window.firebase.query(window.firebase.collection(db, 'artifacts', "darnote-app", 'users', user.uid, 'error_logs'), ...constraints); const snap = await window.firebase.getDocs(q); const logs = snap.docs.map(d => d.data()); if (logs.length === 0) contextData = `Subject: ${selectedSubject}. Topic: ${selectedTopic || "General"}. (Generate hard practice questions).`; else { const mText = logs.map((l, i) => l.questionText ? `Mistake ${i+1}: ${l.questionText}` : null).filter(Boolean).join('\n\n'); contextData = mText ? `Subject: ${selectedSubject}. Topic: ${selectedTopic || "General"}. \nPAST MISTAKES (OCR TEXT):\n${mText}` : `Subject: ${selectedSubject}. Topic: ${selectedTopic || "General"}. (Generate hard questions).`; } } catch (e) { contextData = `Focus on ${selectedTopic} in ${selectedSubject}`; } }
+            if (mode === 'single' && activeLog) { contextData = `Subject: ${activeLog.subject}. Topic: ${activeLog.topic}. Concept: ${activeLog.explanation}. Q: ${activeLog.questionText || "See Image"}`; if (activeLog.questionImages?.length > 0) { const raw = activeLog.questionImages[0]; if(!raw.includes('drive.google')) { const b64 = await fetchB64(raw); if(b64) imgCtx.push(b64); } } else if (activeLog.imageUrl && !activeLog.imageUrl.includes('drive.google')) { const b64 = await fetchB64(activeLog.imageUrl); if(b64) imgCtx.push(b64); } if (activeLog.schemeImages?.length > 0) { const raw = activeLog.schemeImages[0]; if(!raw.includes('drive.google')) { const b64 = await fetchB64(raw); if(b64) imgCtx.push(b64); } } else if (activeLog.markingSchemeUrl && !activeLog.markingSchemeUrl.includes('drive.google')) { const b64 = await fetchB64(activeLog.markingSchemeUrl); if(b64) imgCtx.push(b64); } } else { const db = window.firebase.db; let constraints = [ window.firebase.where('subject', '==', selectedSubject), window.firebase.limit(15) ]; if (selectedTopic) constraints.push(window.firebase.where('topic', '==', selectedTopic)); try { const q = window.firebase.query(window.firebase.collection(db, 'artifacts', "darnote-app", 'users', user.uid, 'error_logs'), ...constraints); const snap = await window.firebase.getDocs(q); const logs = snap.docs.map(d => d.data()); if (logs.length === 0) contextData = `Subject: ${selectedSubject}. Topic: ${selectedTopic || "General"}. (Generate hard practice questions).`; else { const mText = logs.map((l, i) => l.questionText ? `Mistake ${i+1}: ${l.questionText}` : null).filter(Boolean).join('\n\n'); contextData = mText ? `Subject: ${selectedSubject}. Topic: ${selectedTopic || "General"}. \nPAST MISTAKES (OCR TEXT):\n${mText}` : `Subject: ${selectedSubject}. Topic: ${selectedTopic || "General"}. (Generate hard questions).`; } } catch (e) { contextData = `Focus on ${selectedTopic} in ${selectedSubject}`; } }
             if (customInstructions.trim()) contextData += `\n\nUSER CONSTRAINT: ${customInstructions}`; const qType = mode === 'single' ? (activeLog?.questionType || 'MC') : selectedType; const prompt = `Context: ${contextData}\n${qType === 'MC' ? `Generate 5 MCQs (ABCD). Return JSON array: [{"q": "...", "options": ["A. ..."], "answer": "A", "explanation": "..."}]. Plain text only.` : `Generate 1 long Q with 3 sub-parts. Return JSON: {"context": "...", "parts": [{"id": "a", "text": "...", "marks": 2}]}. Plain text.`}`; let res = await callAI(prompt, "JSON Generator", imgCtx, GEMINI_PROXY_URL); try { const json = JSON.parse(res.replace(/```json|```/g, '')); if (qType === 'MC') setQuestions(json); else setLqData(json); } catch(e) { alert("Generation failed."); onClose(); } setLoading(false);
         };
         const handleLqMark = async () => { setLoading(true); const prompt = `Mark this. Context: ${lqData.context}\nParts: ${JSON.stringify(lqData.parts)}\nAnswers: ${JSON.stringify(userAnswers)}\nReturn JSON: {"totalScore": 5, "maxScore": 10, "generalFeedback": "...", "partFeedback": {"a": {"score": 1, "comment": "..."}, "b": {"score": 4, "comment": "..."}}}.`; const res = await callAI(prompt, "Examiner JSON Only", [], GEMINI_PROXY_URL); try { setLqFeedback(JSON.parse(res.replace(/```json|```/g, ''))); setMarked(true); } catch(e) { alert("Marking failed."); } setLoading(false); };
-        
+
         return (
-            <motion.div initial={{opacity:0}} animate={{opacity:1}} exit={{opacity:0}} className="fixed inset-0 z-[100] bg-black flex flex-col">
-                <div className="flex-none p-6 flex justify-between items-center border-b border-white/10 bg-[#0A0A0B]">
-                    <div className="flex items-center gap-4">
-                        <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-orange-500 to-red-600 flex items-center justify-center shadow-lg shadow-orange-500/20"><Icons.Target className="w-6 h-6 text-white"/></div>
-                        <div><h2 className="text-xl font-bold text-white">Arcade Mode</h2><div className="text-xs text-orange-400 font-mono">CREDITS: {quota}/{limit}</div></div>
+            <div className="fixed inset-0 z-50 bg-black/90 backdrop-blur-sm flex items-center justify-center p-4">
+                <div className="bg-surface w-full max-w-3xl rounded-3xl shadow-2xl border border-white/10 flex flex-col max-h-[90vh] overflow-hidden relative">
+                    {/* Header */}
+                    <div className="p-5 border-b border-white/10 bg-surface flex justify-between items-center z-10 relative">
+                        <div className="flex items-center gap-3">
+                            <div className="w-10 h-10 bg-primary/20 rounded-xl flex items-center justify-center border border-primary/30"><Icons.Brain className="w-6 h-6 text-primary"/></div>
+                            <div><h3 className="font-bold text-white text-lg font-sans">Practice Arcade</h3><p className="text-xs text-zinc-400">XP Quota: {quota}/{limit}</p></div>
+                        </div>
+                        <button onClick={onClose}><Icons.X className="w-6 h-6 text-zinc-500 hover:text-white"/></button>
                     </div>
-                    <button onClick={onClose} className="w-10 h-10 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center transition-all"><Icons.X className="w-5 h-5"/></button>
-                </div>
-                
-                <div className="flex-1 flex overflow-hidden">
-                    {/* Config Sidebar */}
-                    <div className="w-80 border-r border-white/10 bg-[#0e0e11] p-6 flex flex-col gap-6">
-                        {activeLog && (<button onClick={() => generatePractice('single')} className={`w-full py-4 rounded-xl border font-bold text-sm transition-all flex items-center justify-center gap-2 ${practiceMode==='single' ? 'bg-indigo-600 border-transparent shadow-lg shadow-indigo-500/20 text-white' : 'border-white/10 text-zinc-400 hover:bg-white/5'}`}><Icons.Zap className="w-4 h-4"/> Focus Drill</button>)}
-                        <button onClick={() => setPracticeMode('topic')} className={`w-full py-4 rounded-xl border font-bold text-sm transition-all flex items-center justify-center gap-2 ${practiceMode==='topic' ? 'bg-emerald-600 border-transparent shadow-lg shadow-emerald-500/20 text-white' : 'border-white/10 text-zinc-400 hover:bg-white/5'}`}><Icons.Brain className="w-4 h-4"/> Topic Challenge</button>
-                        
-                        {practiceMode === 'topic' && (
-                            <motion.div initial={{opacity:0}} animate={{opacity:1}} className="space-y-4">
-                                <div><label className="text-xs text-zinc-500 mb-1 block">SUBJECT</label><select value={selectedSubject} onChange={e=>setSelectedSubject(e.target.value)} className="w-full bg-black/30 border border-white/10 rounded-lg p-2 text-sm outline-none focus:border-emerald-500">{subjects.map(s=><option key={s.id} value={s.name}>{s.name}</option>)}</select></div>
-                                <div><label className="text-xs text-zinc-500 mb-1 block">TOPIC</label><select value={selectedTopic} onChange={e=>setSelectedTopic(e.target.value)} className="w-full bg-black/30 border border-white/10 rounded-lg p-2 text-sm outline-none focus:border-emerald-500"><option value="">Any Topic</option>{subjects.find(s=>s.name===selectedSubject)?.topics.map(t=><option key={t} value={t}>{t}</option>)}</select></div>
-                                <div><label className="text-xs text-zinc-500 mb-1 block">TYPE</label><div className="flex bg-black/30 rounded-lg p-1 border border-white/10">{['MC','LQ'].map(t=><button key={t} onClick={()=>setSelectedType(t)} className={`flex-1 text-xs py-1.5 rounded ${selectedType===t?'bg-emerald-500/20 text-emerald-400':'text-zinc-500'}`}>{t}</button>)}</div></div>
-                                <textarea value={customInstructions} onChange={(e) => setCustomInstructions(e.target.value)} placeholder="E.g. No calculation questions..." className="w-full bg-black/30 border border-white/10 rounded-lg p-3 text-xs h-20 outline-none resize-none focus:border-emerald-500"/>
-                                <button onClick={() => generatePractice('topic')} disabled={loading} className="w-full py-3 bg-white text-black font-bold rounded-lg hover:scale-105 transition-transform">Start Game</button>
-                            </motion.div>
-                        )}
-                    </div>
-                    {/* Game Area */}
-                    <div className="flex-1 overflow-y-auto p-8 bg-[#050505] relative">
-                         {loading ? (
-                             <div className="absolute inset-0 flex flex-col items-center justify-center">
-                                 <div className="w-24 h-24 border-4 border-indigo-500/30 border-t-indigo-500 rounded-full animate-spin"/>
-                                 <div className="mt-4 font-mono text-indigo-400 animate-pulse">GENERATING LEVEL...</div>
-                             </div>
-                         ) : questions.length > 0 ? (
-                             <div className="max-w-3xl mx-auto space-y-8 pb-20">
-                                 {questions.map((q, idx) => (
-                                     <motion.div initial={{y:20, opacity:0}} animate={{y:0, opacity:1}} transition={{delay:idx*0.1}} key={idx} className="glass-panel p-6 rounded-2xl">
-                                         <div className="flex gap-4 mb-4"><span className="text-2xl font-bold text-white/20">{String(idx+1).padStart(2,'0')}</span><p className="text-lg font-medium text-white">{q.q}</p></div>
-                                         <div className="grid grid-cols-1 gap-2 pl-10">
-                                             {q.options.map((opt) => {
-                                                 const letter = opt.charAt(0);
-                                                 const isSel = userAnswers[idx] === letter;
-                                                 const isCor = q.answer === letter;
-                                                 let style = "border-white/10 hover:bg-white/5";
-                                                 if(marked) { style = isCor ? "border-green-500 bg-green-500/10 text-green-400" : (isSel ? "border-red-500 bg-red-500/10 text-red-400" : "border-white/10 opacity-50"); }
-                                                 else if(isSel) { style = "border-indigo-500 bg-indigo-500/20 text-indigo-300"; }
-                                                 return (<button key={opt} onClick={()=>!marked && setUserAnswers({...userAnswers,[idx]:letter})} className={`w-full text-left p-4 rounded-xl border transition-all ${style}`}>{opt}</button>);
-                                             })}
-                                         </div>
-                                         {marked && <motion.div initial={{height:0}} animate={{height:'auto'}} className="mt-4 pl-10 text-sm text-zinc-400 border-l-2 border-green-500 pl-4">{q.explanation}</motion.div>}
-                                     </motion.div>
-                                 ))}
-                                 <div className="flex justify-center pt-8">
-                                     {!marked ? <button onClick={()=>setMarked(true)} className="px-8 py-3 bg-white text-black font-bold rounded-full hover:scale-105 transition-transform shadow-[0_0_20px_rgba(255,255,255,0.3)]">Submit Answers</button> 
-                                     : <button onClick={onClose} className="px-8 py-3 bg-white/10 text-white font-bold rounded-full hover:bg-white/20">Exit Level</button>}
+                    {/* Content */}
+                    <div className="flex-1 overflow-y-auto p-8 relative">
+                         {/* Selection Controls */}
+                         {!questions.length && !lqData && !loading && (
+                             <div className="max-w-md mx-auto space-y-6 pt-10">
+                                 <div className="grid grid-cols-2 gap-4">
+                                     <button onClick={() => activeLog ? generatePractice('single') : alert("Open a log first")} className={`p-6 rounded-2xl border transition-all hover:scale-105 active:scale-95 text-left space-y-2 ${practiceMode==='single' ? 'bg-primary/20 border-primary' : 'bg-white/5 border-white/10 hover:bg-white/10'}`}>
+                                        <Icons.Target className="w-8 h-8 text-accent"/>
+                                        <div className="font-bold text-white">Focus Drill</div>
+                                        <div className="text-xs text-zinc-400">Generate Qs based on the current mistake.</div>
+                                     </button>
+                                     <button onClick={() => setPracticeMode('topic')} className={`p-6 rounded-2xl border transition-all hover:scale-105 active:scale-95 text-left space-y-2 ${practiceMode==='topic' ? 'bg-primary/20 border-primary' : 'bg-white/5 border-white/10 hover:bg-white/10'}`}>
+                                        <Icons.Zap className="w-8 h-8 text-yellow-400"/>
+                                        <div className="font-bold text-white">Topic Raid</div>
+                                        <div className="text-xs text-zinc-400">Randomized hard Qs from a specific topic.</div>
+                                     </button>
                                  </div>
-                             </div>
-                         ) : lqData ? (
-                             <div className="max-w-3xl mx-auto glass-panel p-8 rounded-3xl">
-                                 <div className="bg-white/5 p-6 rounded-xl text-lg leading-relaxed text-zinc-200 font-serif mb-8">{lqData.context}</div>
-                                 {lqData.parts.map((part) => (
-                                     <div key={part.id} className="mb-6">
-                                         <div className="flex justify-between mb-2"><span className="font-bold text-indigo-300">({part.id}) {part.text}</span><span className="text-xs bg-white/10 px-2 py-1 rounded text-zinc-400">{part.marks} marks</span></div>
-                                         <textarea disabled={marked} value={userAnswers[part.id]||''} onChange={e=>setUserAnswers({...userAnswers,[part.id]:e.target.value})} className="w-full bg-black/40 border border-white/10 rounded-xl p-4 text-zinc-300 focus:border-indigo-500 outline-none" rows="4"/>
-                                         {marked && lqFeedback?.partFeedback[part.id] && (
-                                             <div className={`mt-2 p-3 rounded-lg text-sm ${lqFeedback.partFeedback[part.id].score===part.marks ? 'bg-green-500/10 text-green-400' : 'bg-red-500/10 text-red-400'}`}>
-                                                 Examiner: {lqFeedback.partFeedback[part.id].comment} <b>({lqFeedback.partFeedback[part.id].score}/{part.marks})</b>
-                                             </div>
-                                         )}
+                                 {practiceMode === 'topic' && (
+                                     <div className="bg-white/5 p-4 rounded-xl border border-white/10 space-y-3">
+                                         <div className="grid grid-cols-2 gap-2">
+                                            <select value={selectedSubject} onChange={e=>setSelectedSubject(e.target.value)} className="bg-black/40 text-white border border-white/10 rounded-lg px-3 py-2 text-sm outline-none">{subjects.map(s=><option key={s.id} value={s.name}>{s.name}</option>)}</select>
+                                            <select value={selectedTopic} onChange={e=>setSelectedTopic(e.target.value)} className="bg-black/40 text-white border border-white/10 rounded-lg px-3 py-2 text-sm outline-none"><option value="">All Topics</option>{subjects.find(s=>s.name===selectedSubject)?.topics.map(t=><option key={t} value={t}>{t}</option>)}</select>
+                                         </div>
+                                         <select value={selectedType} onChange={e=>setSelectedType(e.target.value)} className="w-full bg-black/40 text-white border border-white/10 rounded-lg px-3 py-2 text-sm outline-none font-bold text-center"><option value="MC">Multiple Choice</option><option value="LQ">Long Question</option></select>
+                                         <textarea value={customInstructions} onChange={(e) => setCustomInstructions(e.target.value)} placeholder="Boss Modifiers (e.g. 'No calculator', 'Hardest difficulty')" className="w-full bg-black/40 text-white border border-white/10 rounded-lg p-3 text-sm focus:border-primary outline-none resize-none h-20"/>
+                                         <button onClick={() => generatePractice('topic')} className="w-full bg-primary hover:bg-primary-glow text-white font-bold py-3 rounded-xl shadow-lg shadow-primary/20">Start Raid</button>
                                      </div>
-                                 ))}
-                                 {!marked && <button onClick={handleLqMark} className="w-full py-4 bg-indigo-600 text-white font-bold rounded-xl mt-4 hover:bg-indigo-500">Grade My Work</button>}
-                                 {marked && <div className="mt-8 text-center"><div className="text-4xl font-black text-white">{lqFeedback.totalScore} / {lqFeedback.maxScore}</div><div className="text-zinc-400">{lqFeedback.generalFeedback}</div></div>}
-                             </div>
-                         ) : (
-                             <div className="h-full flex flex-col items-center justify-center text-zinc-600">
-                                 <Icons.Brain className="w-20 h-20 opacity-20 mb-4"/>
-                                 <p>Select a mode from the sidebar to start.</p>
+                                 )}
                              </div>
                          )}
-                    </div>
-                </div>
-            </motion.div>
-        );
-    };
 
-    const App = () => {
-        const [user, setUser] = useState(null); const [logs, setLogs] = useState([]); const [subjects, setSubjects] = useState([]); const [activeLogId, setActiveLogId] = useState(() => new URLSearchParams(window.location.search).get('log'));
-        const [filter, setFilter] = useState('all'); const [searchQuery, setSearchQuery] = useState(''); const [isAiOpen, setIsAiOpen] = useState(false);
-        const [practiceConfig, setPracticeConfig] = useState({ isOpen: false, mode: 'topic' }); const { saveToDrive, getAccessToken } = useGoogleDrive(); 
-        const [uploadingQ, setUploadingQ] = useState(false); const [uploadingS, setUploadingS] = useState(false); const [showStudentModal, setShowStudentModal] = useState(false); const [studentStatus, setStudentStatus] = useState('none');
-        const [chatMessages, setChatMessages] = useState([{role: 'ai', text: "Ready to analyze your mistakes. What's confusing you?"}]); const [compareMode, setCompareMode] = useState(false);
-        const [showOcrText, setShowOcrText] = useState(false); const pendingUpdatesRef = useRef({}); const saveTimeoutRef = useRef(null); const pendingOcrBlobs = useRef([]);
-        
-        // --- DATA FETCHING (Same Logic) ---
-        useEffect(() => { const unsub = window.firebase.onAuthStateChanged(window.firebase.auth, async (u) => { if (u) { setUser(u); const db = window.firebase.db; window.firebase.getDocs(window.firebase.collection(db, 'artifacts', "darnote-app", 'users', u.uid, 'subjects')).then(snap => { setSubjects(snap.docs.map(d => ({id: d.id, name: d.data().name, topics: d.data().topics || []})).sort((a,b)=>a.name.localeCompare(b.name))); }); window.firebase.onSnapshot(window.firebase.doc(db, 'artifacts', "darnote-app", 'users', u.uid, 'settings', 'profile'), (doc) => { if(doc.exists()) setStudentStatus(doc.data().studentStatus || 'none'); }); } else setUser(null); }); return () => unsub(); }, []);
-        const fetchLogs = async () => { if (!user) return; const db = window.firebase.db; const logsRef = window.firebase.collection(db, 'artifacts', "darnote-app", 'users', user.uid, 'error_logs'); let constraints = [window.firebase.orderBy('createdAt', 'desc'), window.firebase.limit(50)]; if (filter === 'active') constraints.push(window.firebase.where('mastered', '==', false)); if (filter === 'mastered') constraints.push(window.firebase.where('mastered', '==', true)); const q = window.firebase.query(logsRef, ...constraints); const snapshot = await window.firebase.getDocs(q); setLogs(snapshot.docs.map(d => ({ id: d.id, ...d.data(), questionImages: d.data().questionImages || (d.data().imageUrl ? [d.data().imageUrl] : []), schemeImages: d.data().schemeImages || (d.data().markingSchemeUrl ? [d.data().markingSchemeUrl] : []) }))); };
-        useEffect(() => { fetchLogs(); }, [user, filter]);
+                         {loading && (
+                             <div className="flex flex-col items-center justify-center h-full space-y-4">
+                                 <div className="w-16 h-16 relative">
+                                     <div className="absolute inset-0 rounded-full border-4 border-white/10"></div>
+                                     <div className="absolute inset-0 rounded-full border-4 border-primary border-t-transparent animate-spin"></div>
+                                 </div>
+                                 <div className="text-zinc-400 font-mono text-sm animate-pulse">Constructing Simulation...</div>
+                             </div>
+                         )}
 
-        // --- CRUD ACTIONS ---
-        const createLog = async () => { const newLog = { title: '', subject: 'General', topic: '', questionImages: [], schemeImages: [], questionType: 'MC', correctAnswer: '', marks: '', explanation: '', questionText: '', mastered: false, createdAt: new Date().toISOString(), lastModified: new Date().toISOString() }; const docRef = await window.firebase.addDoc(window.firebase.collection(window.firebase.db, 'artifacts', "darnote-app", 'users', user.uid, 'error_logs'), newLog); setLogs(prev => [{...newLog, id: docRef.id}, ...prev]); setActiveLogId(docRef.id); };
-        const updateLog = (id, updates) => { const timestampedUpdates = { ...updates, lastModified: new Date().toISOString() }; setLogs(prev => prev.map(l => l.id === id ? { ...l, ...timestampedUpdates } : l)); if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current); pendingUpdatesRef.current[id] = { ...(pendingUpdatesRef.current[id] || {}), ...timestampedUpdates }; saveTimeoutRef.current = setTimeout(async () => { const ids = Object.keys(pendingUpdatesRef.current); for (const logId of ids) { const payload = pendingUpdatesRef.current[logId]; delete pendingUpdatesRef.current[logId]; await window.firebase.updateDoc(window.firebase.doc(window.firebase.db, 'artifacts', "darnote-app", 'users', user.uid, 'error_logs', logId), payload); } }, 2000); };
-        const handleImageUpdate = async (data, action, type) => { if (!activeLogId) return; const isQ = type === 'question'; const setSpinner = isQ ? setUploadingQ : setUploadingS; const targetField = isQ ? 'questionImages' : 'schemeImages'; if (action === 'remove') { setLogs(currentLogs => currentLogs.map(l => { if (l.id === activeLogId) { const newArr = (l[targetField] || []).filter((_, i) => i !== data); updateLog(activeLogId, { [targetField]: newArr }); return { ...l, [targetField]: newArr }; } return l; })); return; } setSpinner(true); try { let blobToUpload = data; let preFetchedToken = null; try { preFetchedToken = await getAccessToken(); } catch(e) {} if (data instanceof File) blobToUpload = (data.type === 'application/pdf') ? data : await compressImage(data); const finalUrl = await saveToDrive(blobToUpload, `ErrorLog_${type}_${Date.now()}.jpg`, preFetchedToken); setLogs(currentLogs => { const targetLog = currentLogs.find(l => l.id === activeLogId); if (!targetLog) return currentLogs; const newArr = [...(targetLog[targetField] || []), finalUrl]; updateLog(activeLogId, { [targetField]: newArr }); return currentLogs.map(l => l.id === activeLogId ? { ...l, [targetField]: newArr } : l); }); setSpinner(false); } catch(e) { alert("Upload Failed"); setSpinner(false); } };
-        const activeLog = logs.find(l => l.id === activeLogId);
-
-        // --- NEW CHAT COMPONENT (Glass) ---
-        const GlassChat = () => {
-            const [input, setInput] = useState(""); const [loading, setLoading] = useState(false); const msgsRef = useRef(null);
-            useEffect(() => { msgsRef.current?.scrollIntoView({ behavior: "smooth" }); }, [chatMessages]);
-            const send = async () => { if(!input.trim()) return; const msg = input; setInput(""); setChatMessages(p=>[...p,{role:'user',text:msg}]); setLoading(true); 
-                const context = `Sub:${activeLog.subject}, Q:${activeLog.questionText}, Exp:${activeLog.explanation}`; 
-                const res = await callAI(msg, `You are a strict but helpful tutor. Keep it short. Context: ${context}`, [], GEMINI_PROXY_URL);
-                setChatMessages(p=>[...p,{role:'ai',text:cleanLatex(res)}]); setLoading(false);
-            }
-            return (
-                <div className="flex flex-col h-full bg-[#111114]/90 backdrop-blur-xl border-l border-white/10">
-                    <div className="p-4 border-b border-white/10 flex justify-between items-center"><span className="font-bold text-indigo-400 flex items-center gap-2"><Icons.Bot className="w-4 h-4"/> AI Tutor</span><button onClick={()=>setIsAiOpen(false)}><Icons.X className="w-4 h-4 text-zinc-500"/></button></div>
-                    <div className="flex-1 overflow-y-auto p-4 space-y-4">
-                        {chatMessages.map((m,i)=>(<div key={i} className={`flex ${m.role==='user'?'justify-end':'justify-start'}`}><div className={`max-w-[85%] p-3 rounded-2xl text-sm ${m.role==='user'?'bg-indigo-600 text-white rounded-br-none':'bg-white/10 text-zinc-200 rounded-bl-none'}`}>{m.text}</div></div>))}
-                        {loading && <div className="text-xs text-zinc-500 animate-pulse">Thinking...</div>} <div ref={msgsRef}/>
-                    </div>
-                    <div className="p-4 border-t border-white/10"><input value={input} onChange={e=>setInput(e.target.value)} onKeyDown={e=>e.key==='Enter'&&send()} className="w-full bg-black/30 border border-white/10 rounded-full px-4 py-2 text-sm text-white focus:border-indigo-500 outline-none" placeholder="Ask a question..."/></div>
-                </div>
-            );
-        };
-
-        if (!user) return (
-            <div className="h-screen w-full flex items-center justify-center relative overflow-hidden">
-                <div className="absolute inset-0 bg-gradient-to-br from-black via-zinc-900 to-[#0c0c14]"/>
-                <motion.div initial={{y:20, opacity:0}} animate={{y:0, opacity:1}} className="z-10 text-center glass-panel p-12 rounded-3xl max-w-md mx-4">
-                    <img src="https://raw.githubusercontent.com/darren6251/darnote/refs/heads/main/darNote%20logo.png" className="w-24 h-24 mx-auto mb-6 drop-shadow-[0_0_30px_rgba(99,102,241,0.5)]"/>
-                    <h1 className="text-4xl font-black mb-2 text-white">darNote 2.0</h1>
-                    <p className="text-zinc-400 mb-8">The most advanced error log for students.</p>
-                    <button onClick={() => window.firebase.signInWithPopup(window.firebase.auth, new window.firebase.GoogleAuthProvider())} className="w-full bg-white text-black font-bold py-4 rounded-xl hover:scale-105 transition-transform flex items-center justify-center gap-3">
-                        <Icons.Google className="w-5 h-5"/> Continue with Google
-                    </button>
-                </motion.div>
-            </div>
-        );
-
-        return (
-            <div className="h-screen w-full flex overflow-hidden text-sm relative">
-                <StudentModal isOpen={showStudentModal} onClose={() => setShowStudentModal(false)} user={user} saveToDrive={saveToDrive} getAccessToken={getAccessToken} callGroq={callGroq} />
-                {practiceConfig.isOpen && <PracticeModal activeLog={activeLog} onClose={() => setPracticeConfig({...practiceConfig, isOpen: false})} user={user} subjects={subjects} initialMode={practiceConfig.mode} />}
-                
-                {/* --- 1. FLOATING NAV RAIL --- */}
-                <motion.div initial={{x:-50, opacity:0}} animate={{x:0, opacity:1}} className="w-20 m-4 rounded-3xl glass-panel flex flex-col items-center py-6 z-20 flex-shrink-0">
-                    <img src="https://raw.githubusercontent.com/darren6251/darnote/refs/heads/main/darNote%20logo.png" className="w-10 h-10 mb-8"/>
-                    <div className="space-y-4 flex-1 w-full px-2">
-                        {[{id:'all', i:Icons.Bug}, {id:'active', i:Icons.X}, {id:'mastered', i:Icons.Check}].map(item => (
-                            <button key={item.id} onClick={()=>setFilter(item.id)} className={`w-full aspect-square rounded-2xl flex items-center justify-center transition-all ${filter===item.id ? 'bg-indigo-600 text-white shadow-[0_0_15px_rgba(99,102,241,0.5)]' : 'text-zinc-500 hover:bg-white/10 hover:text-white'}`}><item.i className="w-6 h-6"/></button>
-                        ))}
-                        <div className="w-10 h-px bg-white/10 mx-auto my-4"/>
-                        <button onClick={()=>setPracticeConfig({isOpen:true, mode:'topic'})} className="w-full aspect-square rounded-2xl flex items-center justify-center text-orange-400 hover:bg-orange-500/20 transition-all"><Icons.Brain className="w-6 h-6"/></button>
-                        <button onClick={()=>setShowStudentModal(true)} className="w-full aspect-square rounded-2xl flex items-center justify-center text-indigo-400 hover:bg-indigo-500/20 transition-all relative">
-                            <Icons.GraduationCap className="w-6 h-6"/>
-                            {studentStatus==='verified' && <div className="absolute top-3 right-3 w-2 h-2 bg-green-500 rounded-full shadow-[0_0_5px_#22c55e]"/>}
-                        </button>
-                    </div>
-                    <img src={user.photoURL} className="w-10 h-10 rounded-full border-2 border-white/10 mb-4"/>
-                </motion.div>
-
-                {/* --- 2. LIST PANEL --- */}
-                <motion.div initial={{opacity:0, y:20}} animate={{opacity:1, y:0}} className="w-80 my-4 mr-4 flex flex-col gap-4 z-10 flex-shrink-0">
-                    <div className="glass-panel rounded-3xl p-4">
-                        <div className="flex gap-2 mb-4">
-                            <input value={searchQuery} onChange={e=>setSearchQuery(e.target.value)} placeholder="Search logs..." className="w-full bg-black/20 border border-white/10 rounded-xl px-4 py-2 text-white outline-none focus:border-indigo-500"/>
-                            <button onClick={createLog} className="bg-indigo-600 text-white p-2.5 rounded-xl hover:bg-indigo-500 shadow-lg"><Icons.Plus className="w-5 h-5"/></button>
-                        </div>
-                        <div className="overflow-y-auto h-[calc(100vh-140px)] space-y-2 pr-2">
-                            {logs.filter(l=>l.title?.toLowerCase().includes(searchQuery.toLowerCase())).map((l, idx) => (
-                                <motion.div layout initial={{opacity:0, x:-20}} animate={{opacity:1, x:0}} transition={{delay: idx*0.05}} key={l.id} onClick={()=>setActiveLogId(l.id)} className={`p-4 rounded-2xl cursor-pointer border transition-all group ${activeLogId===l.id ? 'bg-white/10 border-white/20 shadow-lg backdrop-blur-md' : 'border-transparent hover:bg-white/5'}`}>
-                                    <div className="flex justify-between items-start mb-2">
-                                        <div className={`font-bold truncate ${!l.title && 'text-zinc-600 italic'}`}>{l.title || "Untitled Log"}</div>
-                                        {l.mastered && <Icons.Check className="w-4 h-4 text-green-500"/>}
+                         {questions.length > 0 && (
+                            <div className="space-y-8 pb-20">
+                                {questions.map((q, idx) => (
+                                    <div key={idx} className="bg-white/5 p-6 rounded-2xl border border-white/10">
+                                        <div className="font-bold text-white text-lg mb-4 flex gap-3"><span className="text-primary">Q{idx+1}</span> {q.q}</div>
+                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                                            {q.options.map((opt) => {
+                                                const letter = opt.charAt(0); const isSelected = userAnswers[idx] === letter; const isCorrect = q.answer === letter;
+                                                let style = "border-white/10 text-zinc-400 hover:bg-white/10";
+                                                if (marked) { if (isCorrect) style = "bg-green-500/20 border-green-500 text-green-400"; else if (isSelected) style = "bg-red-500/20 border-red-500 text-red-400"; }
+                                                else if (isSelected) style = "bg-primary/20 border-primary text-white";
+                                                return (<button key={opt} onClick={() => !marked && setUserAnswers({...userAnswers, [idx]: letter})} className={`text-left p-4 rounded-xl border transition-all ${style}`}>{opt}</button>);
+                                            })}
+                                        </div>
+                                        {marked && <div className="mt-4 p-3 bg-white/5 rounded-lg text-sm text-zinc-300 border-l-2 border-primary"><span className="text-primary font-bold">Analysis:</span> {q.explanation}</div>}
                                     </div>
-                                    <div className="flex items-center gap-2 text-xs text-zinc-500">
-                                        <span className="bg-white/5 px-2 py-0.5 rounded text-zinc-400">{l.subject}</span>
-                                        <span className="truncate max-w-[80px]">{l.topic}</span>
-                                    </div>
-                                </motion.div>
-                            ))}
-                        </div>
-                    </div>
-                </motion.div>
-
-                {/* --- 3. EDITOR CANVAS --- */}
-                <div className="flex-1 my-4 mr-4 relative z-0 flex flex-col">
-                    {activeLog ? (
-                        <motion.div key={activeLog.id} initial={{opacity:0, scale:0.98}} animate={{opacity:1, scale:1}} className="flex-1 glass-panel rounded-3xl overflow-hidden flex flex-col relative">
-                            {/* Toolbar */}
-                            <div className="h-16 border-b border-white/10 flex items-center justify-between px-6 bg-white/5 backdrop-blur-xl">
-                                <div className="flex items-center gap-3 flex-1">
-                                    <input value={activeLog.title} onChange={e=>updateLog(activeLog.id, {title:e.target.value})} className="bg-transparent text-xl font-bold text-white outline-none w-full placeholder-zinc-600" placeholder="Untitled Mistake"/>
-                                    <span className={`px-2 py-1 rounded text-[10px] font-bold border ${activeLog.questionType==='MC'?'border-indigo-500 text-indigo-400':'border-orange-500 text-orange-400'}`}>{activeLog.questionType}</span>
-                                </div>
-                                <div className="flex gap-2">
-                                    <button onClick={()=>updateLog(activeLog.id, {mastered:!activeLog.mastered})} className={`px-4 py-1.5 rounded-full text-xs font-bold border transition-all ${activeLog.mastered?'border-green-500 text-green-400 bg-green-500/10':'border-red-500 text-red-400 bg-red-500/10'}`}>{activeLog.mastered ? 'MASTERED' : 'REVIEW'}</button>
-                                    <button onClick={()=>setIsAiOpen(!isAiOpen)} className={`p-2 rounded-xl transition-all ${isAiOpen?'bg-indigo-600 text-white':'hover:bg-white/10 text-zinc-400'}`}><Icons.Bot className="w-5 h-5"/></button>
-                                </div>
+                                ))}
                             </div>
-                            
-                            {/* Scroll Content */}
-                            <div className="flex-1 overflow-y-auto p-8 space-y-8">
-                                {/* Metadata Row */}
-                                <div className="grid grid-cols-3 gap-4">
-                                    <div className="glass-card p-4 rounded-2xl">
-                                        <label className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest mb-2 block">Subject</label>
-                                        <select value={activeLog.subject} onChange={e=>updateLog(activeLog.id, {subject:e.target.value})} className="w-full bg-transparent text-white outline-none font-medium"><option>General</option>{subjects.map(s=><option key={s.id} value={s.name}>{s.name}</option>)}</select>
-                                    </div>
-                                    <div className="glass-card p-4 rounded-2xl col-span-2">
-                                        <label className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest mb-2 block">Topic</label>
-                                        <input value={activeLog.topic||''} onChange={e=>updateLog(activeLog.id, {topic:e.target.value})} className="w-full bg-transparent text-white outline-none font-medium" placeholder="E.g. Integration by Parts"/>
-                                    </div>
-                                </div>
+                         )}
 
-                                {/* Images Area */}
-                                <div className="grid grid-cols-2 gap-6 h-64">
-                                    <div className="glass-card rounded-2xl p-4 flex flex-col relative group">
-                                        <div className="flex justify-between mb-2"><span className="font-bold text-zinc-400">Question</span><button onClick={()=>document.getElementById('q_up').click()} className="text-xs text-indigo-400 hover:text-white transition-colors">+ Add</button></div>
-                                        <input id="q_up" type="file" hidden onChange={e=>handleImageUpdate(e.target.files[0], 'add', 'question')} />
-                                        <div className="flex-1 bg-black/20 rounded-xl border border-white/5 overflow-hidden relative">
-                                            {activeLog.questionImages?.length > 0 ? <img src={activeLog.questionImages[0]} className="w-full h-full object-contain"/> : <div className="absolute inset-0 flex items-center justify-center text-zinc-600 text-xs">Drop Image Here</div>}
-                                            {uploadingQ && <div className="absolute inset-0 bg-black/50 flex items-center justify-center"><div className="w-6 h-6 border-2 border-indigo-500 border-t-transparent rounded-full animate-spin"/></div>}
+                         {lqData && (
+                            <div className="space-y-6 pb-20">
+                                <div className="p-6 bg-white/5 rounded-2xl border border-white/10 text-lg font-mono text-zinc-300 leading-relaxed">{lqData.context}</div>
+                                {lqData.parts.map((part) => (
+                                    <div key={part.id} className="space-y-2">
+                                        <div className="flex justify-between items-end pb-2 border-b border-white/5">
+                                            <span className="font-bold text-white text-lg">({part.id}) {part.text}</span>
+                                            <span className="text-zinc-500 font-mono text-xs">[{part.marks} pts]</span>
+                                        </div>
+                                        <textarea value={userAnswers[part.id] || ''} onChange={e => setUserAnswers({...userAnswers, [part.id]: e.target.value})} disabled={marked} className="w-full bg-black/30 border border-white/10 rounded-xl p-4 text-zinc-200 focus:border-primary outline-none min-h-[100px]" placeholder="Type answer..."/>
+                                        {marked && lqFeedback?.partFeedback[part.id] && (
+                                            <div className={`text-sm p-3 rounded-xl flex justify-between items-center ${lqFeedback.partFeedback[part.id].score === part.marks ? 'bg-green-500/10 text-green-400 border border-green-500/20' : 'bg-red-500/10 text-red-400 border border-red-500/20'}`}>
+                                                <span>{lqFeedback.partFeedback[part.id].comment}</span>
+                                                <span className="font-bold text-lg">{lqFeedback.partFeedback[part.id].score}/{part.marks}</span>
+                                            </div>
+                                        )}
+                                    </div>
+                                ))}
+                                {marked && (
+                                    <div className="mt-8 p-6 bg-gradient-to-br from-primary/20 to-accent/10 rounded-2xl border border-primary/30 text-center relative overflow-hidden">
+                                        <div className="relative z-10">
+                                            <div className="text-4xl font-black text-white mb-2">{lqFeedback.totalScore} <span className="text-xl text-zinc-400 font-normal">/ {lqFeedback.maxScore}</span></div>
+                                            <div className="text-zinc-300">{lqFeedback.generalFeedback}</div>
                                         </div>
                                     </div>
-                                    <div className="glass-card rounded-2xl p-4 flex flex-col relative">
-                                        <div className="flex justify-between mb-2"><span className="font-bold text-zinc-400">Solution</span><button onClick={()=>document.getElementById('s_up').click()} className="text-xs text-emerald-400 hover:text-white transition-colors">+ Add</button></div>
-                                        <input id="s_up" type="file" hidden onChange={e=>handleImageUpdate(e.target.files[0], 'add', 'scheme')} />
-                                        <div className="flex-1 bg-black/20 rounded-xl border border-white/5 overflow-hidden relative">
-                                            {activeLog.schemeImages?.length > 0 ? <img src={activeLog.schemeImages[0]} className="w-full h-full object-contain"/> : <div className="absolute inset-0 flex items-center justify-center text-zinc-600 text-xs">Drop Image Here</div>}
-                                             {uploadingS && <div className="absolute inset-0 bg-black/50 flex items-center justify-center"><div className="w-6 h-6 border-2 border-emerald-500 border-t-transparent rounded-full animate-spin"/></div>}
-                                        </div>
-                                    </div>
-                                </div>
-
-                                {/* Deep Work Area */}
-                                <div className="glass-card p-6 rounded-3xl min-h-[300px] flex flex-col">
-                                    <div className="flex gap-4 mb-4">
-                                        <div className="flex-1">
-                                            <label className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest block mb-2">Why I missed this (Analysis)</label>
-                                            <textarea value={activeLog.explanation} onChange={e=>updateLog(activeLog.id, {explanation:e.target.value})} className="w-full h-40 bg-transparent text-lg text-zinc-300 leading-relaxed outline-none resize-none placeholder-zinc-700" placeholder="Start typing..."/>
-                                        </div>
-                                        <div className="w-32 space-y-4">
-                                            <div><label className="text-[10px] font-bold text-zinc-500 uppercase block mb-1">Ans</label><input value={activeLog.correctAnswer} onChange={e=>updateLog(activeLog.id, {correctAnswer:e.target.value})} className="w-full bg-green-500/10 border border-green-500/30 rounded-lg p-2 text-green-400 font-mono font-bold text-center"/></div>
-                                            <div><label className="text-[10px] font-bold text-zinc-500 uppercase block mb-1">Lost</label><input value={activeLog.marks} onChange={e=>updateLog(activeLog.id, {marks:e.target.value})} className="w-full bg-red-500/10 border border-red-500/30 rounded-lg p-2 text-red-400 font-bold text-center"/></div>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                            
-                            {/* AI Panel (Slide Over) */}
-                            <AnimatePresence>
-                                {isAiOpen && (
-                                    <motion.div initial={{x:300, opacity:0}} animate={{x:0, opacity:1}} exit={{x:300, opacity:0}} className="absolute top-0 right-0 bottom-0 w-80 z-20 shadow-2xl">
-                                        <GlassChat/>
-                                    </motion.div>
                                 )}
-                            </AnimatePresence>
-                        </motion.div>
-                    ) : (
-                        <div className="flex-1 glass-panel rounded-3xl flex flex-col items-center justify-center text-zinc-500">
-                            <motion.div animate={{y: [0, -10, 0]}} transition={{duration:3, repeat: Infinity}} className="mb-6 opacity-30">
-                                <Icons.Bug className="w-24 h-24"/>
-                            </motion.div>
-                            <h2 className="text-2xl font-bold text-white mb-2">No Selection</h2>
-                            <p>Pick a log from the left to start analyzing.</p>
+                            </div>
+                         )}
+                    </div>
+                    {/* Footer Actions */}
+                    {(questions.length > 0 || lqData) && !loading && (
+                        <div className="absolute bottom-0 left-0 right-0 p-5 bg-surface/90 backdrop-blur-md border-t border-white/10 flex justify-end">
+                            {!marked ? 
+                                <button onClick={() => questions.length > 0 ? setMarked(true) : handleLqMark()} className="bg-success text-black font-bold px-8 py-3 rounded-xl hover:scale-105 transition-transform shadow-[0_0_20px_rgba(16,185,129,0.4)]">Submit Answers</button> :
+                                <button onClick={onClose} className="bg-zinc-800 text-white font-bold px-8 py-3 rounded-xl hover:bg-zinc-700">Close Mission</button>
+                            }
                         </div>
                     )}
                 </div>
+            </div>
+        );
+    };
+
+    const AIChat = ({ activeLog, onClose, user, messages, setMessages }) => {
+        // ... (Logic preserved, UI Updated)
+        const [input, setInput] = useState(""); const [loading, setLoading] = useState(false); const [quota, setQuota] = useState(0); const [limits, setLimits] = useState({ chat_gemini: 5, chat_groq: 20 }); const [model, setModel] = useState('gemini'); const messagesEndRef = useRef(null);
+        useEffect(() => { messagesEndRef.current?.scrollIntoView({ behavior: "smooth" }); }, [messages]);
+        useEffect(() => { const f = async () => { if (!user) return; const l = await getLimits(); setLimits(l); const today = new Date().toISOString().split('T')[0]; const ref = window.firebase.doc(window.firebase.db, 'artifacts', "darnote-app", 'users', user.uid, 'ai_usage', today); const snap = await window.firebase.getDoc(ref); if (snap.exists()) { const data = snap.data(); setQuota(model === 'groq' ? (data.chat_groq_count || 0) : (data.chat_count || 0)); } else setQuota(0); }; f(); }, [user, model]);
+        const cleanLatex=(t)=>t.replace(/\$\$/g,'\n').replace(/\$/g,'').replace(/\\text\{([^}]+)\}/g,'$1').replace(/\\times/g,'×').replace(/\\approx/g,'≈').replace(/\\le/g,'≤').replace(/\\ge/g,'≥').replace(/\\rightarrow/g,'→').replace(/\\cdot/g,'·').replace(/\\frac\{([^}]+)\}\{([^}]+)\}/g,'($1/$2)').replace(/\\/g,'');
+        const handleSend = async () => { if(!input.trim()) return; const limit = model === 'groq' ? limits.chat_groq : limits.chat_gemini; const newQuota = await checkAndIncrementQuota(user, 'chat', model); const userMsg = input; setMessages(prev => [...prev, {role: 'user', text: userMsg}]); setInput(""); if (newQuota === false) { setMessages(prev => [...prev, {role: 'ai', text: `🛑 **Quota Depleted**\n\nRecharge your brain cells (and quota) tomorrow.`}]); return; } setQuota(newQuota); setLoading(true); let imgContexts = []; if (model === 'gemini') { const rawImages = activeLog.questionImages?.length ? activeLog.questionImages : (activeLog.imageUrl ? [activeLog.imageUrl] : []); for (const rawUrl of rawImages) { if (rawUrl.startsWith('http') && !rawUrl.includes('drive.google.com')) { try { const res = await fetch(rawUrl); const blob = await res.blob(); const base64 = await new Promise((r) => { const reader = new FileReader(); reader.onloadend = () => r(reader.result); reader.readAsDataURL(blob); }); imgContexts.push(base64); } catch(e) {} } else if (rawUrl.startsWith('data:')) { imgContexts.push(rawUrl); } } } const qText = activeLog.questionText || "No text extracted."; const historyText = messages.slice(Math.max(messages.length - 6, 1)).map(m => `${m.role === 'user' ? 'Student' : 'Tutor'}: ${m.text}`).join('\n'); const context = `Subject: ${activeLog.subject}, Topic: ${activeLog.topic}, Type: ${activeLog.questionType}, Answer: ${activeLog.correctAnswer}, Text: "${qText}". Notes: ${activeLog.explanation}`; const systemPrompt = `You are a savvy, slightly sarcastic but helpful tutor for Gen Z students. Context: ${context}. \nPREVIOUS CHAT:\n${historyText}\n\nINSTRUCTIONS:\n1. Be CONCISE (TL;DR).\n2. No LaTeX, use simple math chars.\n3. Tone: Encouraging but real.`; let response = model === 'groq' ? await callGroq(userMsg, systemPrompt, imgContexts) : await callAI(userMsg, systemPrompt, imgContexts, GEMINI_PROXY_URL); response = cleanLatex(response); setMessages(prev => [...prev, {role: 'ai', text: response}]); setLoading(false); };
+        
+        return (
+            <div className="flex flex-col h-full bg-surface-light border-l border-white/5 shadow-2xl relative overflow-hidden">
+                <div className="absolute inset-0 bg-gradient-to-b from-primary/5 to-transparent pointer-events-none"></div>
+                <div className="p-4 border-b border-white/5 flex flex-col gap-3 bg-surface/80 backdrop-blur-md z-10">
+                    <div className="flex justify-between items-center"><div className="flex items-center gap-2"><div className="w-2 h-2 rounded-full bg-green-500 animate-pulse"></div><span className="font-bold text-sm text-white font-sans">AI Tutor Protocol</span></div><button onClick={onClose}><Icons.X className="w-5 h-5 text-zinc-500 hover:text-white"/></button></div>
+                    <div className="flex bg-black/40 p-1 rounded-xl border border-white/5">
+                        <button onClick={()=>setModel('gemini')} className={`flex-1 py-2 rounded-lg text-[10px] font-bold transition-all ${model==='gemini' ? 'bg-white/10 text-white shadow-sm' : 'text-zinc-500 hover:text-zinc-300'}`}>Gemini 2.0 <span className="opacity-50 ml-1">({quota}/{limits.chat_gemini})</span></button>
+                        <button onClick={()=>setModel('groq')} className={`flex-1 py-2 rounded-lg text-[10px] font-bold transition-all ${model==='groq' ? 'bg-white/10 text-white shadow-sm' : 'text-zinc-500 hover:text-zinc-300'}`}>DeepSeek <span className="opacity-50 ml-1">({quota}/{limits.chat_groq})</span></button>
+                    </div>
+                </div>
+                <div className="flex-1 overflow-y-auto p-4 space-y-6 markdown-content scroll-smooth z-0">
+                    {messages.map((m, i) => (
+                        <div key={i} className={`flex ${m.role==='user'?'justify-end':'justify-start'}`}>
+                            <div className={`max-w-[85%] p-4 rounded-3xl text-sm leading-relaxed shadow-sm ${m.role==='user'?'bg-primary text-white rounded-br-sm':'bg-white/10 text-zinc-200 rounded-bl-sm border border-white/5'}`} dangerouslySetInnerHTML={{ __html: marked.parse(m.text, {breaks: true, gfm: true}) }} />
+                        </div>
+                    ))}
+                    {loading && <div className="flex items-center gap-2 text-xs text-zinc-500 pl-4"><div className="w-2 h-2 bg-zinc-500 rounded-full animate-bounce"></div><div className="w-2 h-2 bg-zinc-500 rounded-full animate-bounce delay-75"></div></div>} 
+                    <div ref={messagesEndRef}/>
+                </div>
+                <div className="p-4 bg-surface z-10 border-t border-white/5">
+                    <div className="relative">
+                        <input value={input} onChange={e=>setInput(e.target.value)} onKeyDown={e=>e.key==='Enter'&&handleSend()} className="w-full bg-black/40 border border-white/10 rounded-full pl-5 pr-12 py-3 text-sm focus:border-primary outline-none text-white transition-all shadow-inner" placeholder="Ask for help..."/>
+                        <button onClick={handleSend} disabled={loading} className="absolute right-1.5 top-1.5 bg-white text-black rounded-full p-2 hover:bg-zinc-200 transition-colors disabled:opacity-50"><Icons.Plus className="w-4 h-4 rotate-90"/></button>
+                    </div>
+                </div>
+            </div>
+        );
+    };
+
+    // --- MAIN APP ---
+
+    const App = () => {
+        // ... (State logic preserved from original)
+        const [user, setUser] = useState(null); const [logs, setLogs] = useState([]); const [subjects, setSubjects] = useState([]); const [activeLogId, setActiveLogId] = useState(() => new URLSearchParams(window.location.search).get('log'));
+        const [filter, setFilter] = useState('all'); const [typeFilter, setTypeFilter] = useState('ALL'); const [sortBy, setSortBy] = useState('date-desc'); const [searchQuery, setSearchQuery] = useState('');
+        const [isAiOpen, setIsAiOpen] = useState(false); const [isDarkMode, setIsDarkMode] = useState(true); const [isAutoTitleLoading, setIsAutoTitleLoading] = useState(false); const [isLoadingLogs, setIsLoadingLogs] = useState(false);
+        const [practiceConfig, setPracticeConfig] = useState({ isOpen: false, mode: 'topic' }); const { saveToDrive, getAccessToken } = useGoogleDrive(); 
+        const [uploadingQ, setUploadingQ] = useState(false); const [uploadingS, setUploadingS] = useState(false); const [lastDoc, setLastDoc] = useState(null); const [hasMore, setHasMore] = useState(true);
+        const [previewLog, setPreviewLog] = useState(null); const [chatMessages, setChatMessages] = useState([{role: 'ai', text: "Yo. I'm active. What are we breaking today?"}]);
+        const hoverTimeoutRef = useRef(null); const pendingUpdatesRef = useRef({}); const saveTimeoutRef = useRef(null); const [showOcrText, setShowOcrText] = useState(false); const [compareMode, setCompareMode] = useState(false);
+        const ocrTimerRef = useRef(null); const [ocrPendingToast, setOcrPendingToast] = useState(null); const pendingOcrBlobs = useRef([]); 
+        const [showStudentModal, setShowStudentModal] = useState(false); const [studentStatus, setStudentStatus] = useState('none');
+
+        // ... (Effect logic same as original)
+        useEffect(() => { const unsub = window.firebase.onAuthStateChanged(window.firebase.auth, async (u) => { if (u) { setUser(u); const db = window.firebase.db; window.firebase.getDocs(window.firebase.collection(db, 'artifacts', "darnote-app", 'users', u.uid, 'subjects')).then(snap => { setSubjects(snap.docs.map(d => ({id: d.id, name: d.data().name, topics: d.data().topics || []})).sort((a,b)=>a.name.localeCompare(b.name))); }); window.firebase.onSnapshot(window.firebase.doc(db, 'artifacts', "darnote-app", 'users', u.uid, 'settings', 'profile'), (doc) => { if(doc.exists()) setStudentStatus(doc.data().studentStatus || 'none'); }); } else setUser(null); }); return () => unsub(); }, []);
+        useEffect(() => { if(isDarkMode) document.documentElement.classList.add('dark'); else document.documentElement.classList.remove('dark'); }, [isDarkMode]);
+        useEffect(() => { const url = new URL(window.location); if (activeLogId) url.searchParams.set('log', activeLogId); else url.searchParams.delete('log'); window.history.pushState({}, '', url); }, [activeLogId]);
+        
+        // ... (Fetching Logic same as original)
+        const fetchLogs = async (isLoadMore = false, uid = user?.uid) => { if (!uid) return; setIsLoadingLogs(true); try { const db = window.firebase.db; const logsRef = window.firebase.collection(db, 'artifacts', "darnote-app", 'users', uid, 'error_logs'); let constraints = []; if (filter === 'active') constraints.push(window.firebase.where('mastered', '==', false)); if (filter === 'mastered') constraints.push(window.firebase.where('mastered', '==', true)); if (filter.startsWith('subject:')) { const parts = filter.split(':'); constraints.push(window.firebase.where('subject', '==', parts[1])); if (parts[2]) constraints.push(window.firebase.where('topic', '==', parts[2])); } if (typeFilter !== 'ALL') constraints.push(window.firebase.where('questionType', '==', typeFilter)); constraints.push(window.firebase.orderBy('createdAt', sortBy === 'date-desc' ? 'desc' : 'asc')); if (isLoadMore && lastDoc) constraints.push(window.firebase.startAfter(lastDoc)); constraints.push(window.firebase.limit(10)); const q = window.firebase.query(logsRef, ...constraints); let snapshot = await window.firebase.getDocs(q); const newLogs = snapshot.docs.map(d => { const data = d.data(); return { id: d.id, ...data, questionImages: data.questionImages || (data.imageUrl ? [data.imageUrl] : []), schemeImages: data.schemeImages || (data.markingSchemeUrl ? [data.markingSchemeUrl] : []) }; }); if (isLoadMore) setLogs(prev => [...prev, ...newLogs]); else setLogs(newLogs); setLastDoc(snapshot.docs[snapshot.docs.length - 1]); setHasMore(snapshot.docs.length === 10); } catch(e) { console.error("Fetch Error", e); } setIsLoadingLogs(false); };
+        useEffect(() => { if(user) { setLastDoc(null); setLogs([]); fetchLogs(false); } }, [sortBy, typeFilter, filter, user]); 
+
+        const createLog = async () => { const newLog = { title: 'Untitled Mistake', subject: 'General', topic: '', questionImages: [], schemeImages: [], questionType: 'MC', correctAnswer: '', marks: '', explanation: '', questionText: '', mastered: false, createdAt: new Date().toISOString(), lastModified: new Date().toISOString() }; const docRef = await window.firebase.addDoc(window.firebase.collection(window.firebase.db, 'artifacts', "darnote-app", 'users', user.uid, 'error_logs'), newLog); setLogs(prev => [{...newLog, id: docRef.id}, ...prev]); setActiveLogId(docRef.id); };
+        const updateLog = (id, updates) => { const timestampedUpdates = { ...updates, lastModified: new Date().toISOString() }; setLogs(prev => prev.map(l => l.id === id ? { ...l, ...timestampedUpdates } : l)); if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current); pendingUpdatesRef.current[id] = { ...(pendingUpdatesRef.current[id] || {}), ...timestampedUpdates }; saveTimeoutRef.current = setTimeout(async () => { const ids = Object.keys(pendingUpdatesRef.current); for (const logId of ids) { const payload = pendingUpdatesRef.current[logId]; delete pendingUpdatesRef.current[logId]; await window.firebase.updateDoc(window.firebase.doc(window.firebase.db, 'artifacts', "darnote-app", 'users', user.uid, 'error_logs', logId), payload); } }, 3000); };
+        const handleDelete = async (id, e) => { if(e) e.stopPropagation(); if(!confirm("Delete this log permanently?")) return; setLogs(prev => prev.filter(l => l.id !== id)); if (activeLogId === id) setActiveLogId(null); await window.firebase.deleteDoc(window.firebase.doc(window.firebase.db, 'artifacts', "darnote-app", 'users', user.uid, 'error_logs', id)); };
+        const addTopicToSubject = async (subjectName) => { const subjectDoc = subjects.find(s => s.name === subjectName); if (!subjectDoc) { alert("Cannot add topic to General."); return; } const newTopic = prompt(`Add topic for ${subjectName}:`); if (!newTopic) return; setSubjects(prev => prev.map(s => s.id === subjectDoc.id ? {...s, topics: [...s.topics, newTopic]} : s)); const docRef = window.firebase.doc(window.firebase.db, 'artifacts', 'darnote-app', 'users', user.uid, 'subjects', subjectDoc.id); await window.firebase.updateDoc(docRef, { topics: window.firebase.arrayUnion(newTopic) }); };
+
+        const performSmartOCR = async (images) => { setIsAutoTitleLoading(true); setOcrPendingToast(null); try { const schema = subjects.length > 0 ? subjects.map(s => `${s.name} (Topics: ${s.topics.join(', ')})`).join('\n') : "No existing subjects. Suggest 'General'."; const prompt = `Analyze these images for an error log.\n1. Extract the text exactly and identical layout as it appears.\n2. Generate a short, descriptive title.\n3. Determine Type: 'MC' or 'LQ'.\n4. Classify into best Subject/Topic from:\n${schema}\nOutput strictly JSON: { "text": "...", "title": "...", "type": "MC"|"LQ", "subject": "...", "topic": "..." }`; const res = await callGroq(prompt, "JSON Generator", images); const json = JSON.parse(res.substring(res.indexOf('{'), res.lastIndexOf('}') + 1)); updateLog(activeLogId, { title: json.title || activeLog.title, questionText: json.text || "", questionType: (json.type === 'MC' || json.type === 'LQ') ? json.type : activeLog.questionType, subject: json.subject || activeLog.subject, topic: json.topic || activeLog.topic }); } catch (e) { alert("AI Classification Failed: " + e.message); } setIsAutoTitleLoading(false); pendingOcrBlobs.current = []; };
+        const handleImageUpdate = async (data, action, type) => { if (!activeLogId) return; const isQ = type === 'question'; const setSpinner = isQ ? setUploadingQ : setUploadingS; const targetField = isQ ? 'questionImages' : 'schemeImages'; if (action === 'remove') { setLogs(currentLogs => currentLogs.map(l => { if (l.id === activeLogId) { const newArr = (l[targetField] || []).filter((_, i) => i !== data); updateLog(activeLogId, { [targetField]: newArr }); return { ...l, [targetField]: newArr }; } return l; })); return; } setSpinner(true); try { let blobToUpload = data; let preFetchedToken = null; if (data instanceof File || data instanceof Blob) { try { preFetchedToken = await getAccessToken(); } catch(err) { if (err.error === 'popup_blocked_by_browser') alert("Allow popups for GDrive."); throw err; } blobToUpload = (data.type === 'application/pdf') ? data : await compressImage(data); } if (isQ && blobToUpload.type !== 'application/pdf') { const reader = new FileReader(); reader.onloadend = () => pendingOcrBlobs.current.push(reader.result); reader.readAsDataURL(blobToUpload); if (ocrTimerRef.current) clearTimeout(ocrTimerRef.current); setOcrPendingToast(15); ocrTimerRef.current = setTimeout(async () => { const newQuota = await checkAndIncrementQuota(user, 'ocr'); if (newQuota === false) return; if (pendingOcrBlobs.current.length > 0) performSmartOCR([...pendingOcrBlobs.current]); }, 15000); } const finalUrl = await saveToDrive(blobToUpload, `ErrorLog_${type}_${Date.now()}.${blobToUpload.type==='application/pdf'?'pdf':'jpg'}`, preFetchedToken); setLogs(currentLogs => { const targetLog = currentLogs.find(l => l.id === activeLogId); if (!targetLog) return currentLogs; const newArr = [...(targetLog[targetField] || []), finalUrl]; updateLog(activeLogId, { [targetField]: newArr }); return currentLogs.map(l => l.id === activeLogId ? { ...l, [targetField]: newArr } : l); }); setSpinner(false); } catch(e) { alert("Upload Failed: " + e.message); setSpinner(false); } };
+        useEffect(() => { if (ocrPendingToast !== null && ocrPendingToast > 0) { const timer = setTimeout(() => setOcrPendingToast(ocrPendingToast - 1), 1000); return () => clearTimeout(timer); } }, [ocrPendingToast]);
+        const handleAutoTitle = async () => { if (!activeLog.questionImages?.length && !activeLog.imageUrl) { alert("Paste image first!"); return; } const newQuota = await checkAndIncrementQuota(user, 'ocr'); if (newQuota === false) { alert("Daily OCR Limit Reached!"); return; } try { let imagesToProcess = []; if (pendingOcrBlobs.current.length > 0) { imagesToProcess = [...pendingOcrBlobs.current]; } else { const rawImages = activeLog.questionImages?.length ? activeLog.questionImages : (activeLog.imageUrl ? [activeLog.imageUrl] : []); for (const url of rawImages) { if (url.includes('drive.google.com')) continue; if (!url.startsWith('data:')) { try { const res = await fetch(url); const b = await res.blob(); const base64 = await new Promise(r=>{const rd=new FileReader(); rd.onload=()=>r(rd.result); rd.readAsDataURL(b);}); imagesToProcess.push(base64); } catch(e) {} } else { imagesToProcess.push(url); } } } if(imagesToProcess.length === 0) { alert("No valid images found for OCR."); return; } await performSmartOCR(imagesToProcess); } catch(e) { alert("OCR Failed: " + e.message); setIsAutoTitleLoading(false); } };
+
+        const activeLog = logs.find(l => l.id === activeLogId);
+        const filteredLogs = logs.filter(l => (l.title || '').toLowerCase().includes(searchQuery.toLowerCase()) || (l.questionText || '').toLowerCase().includes(searchQuery.toLowerCase()));
+        const currentSub = activeLog ? subjects.find(s=>s.name===activeLog.subject) : null;
+
+        // --- RENDER ---
+        if (!user) return (<div className="h-screen w-full flex items-center justify-center bg-black text-white flex-col gap-6 overflow-hidden relative"><div className="absolute inset-0 bg-[url('https://grainy-gradients.vercel.app/noise.svg')] opacity-20"></div><div className="absolute inset-0 bg-gradient-to-br from-indigo-900/30 to-purple-900/30"></div><img src="https://raw.githubusercontent.com/darren6251/darnote/refs/heads/main/darNote%20logo.png" className="w-24 h-24 mb-4 drop-shadow-[0_0_50px_rgba(99,102,241,0.5)] z-10 animate-pulse-slow"/><h1 className="text-6xl font-black z-10 tracking-tighter">darNote<span className="text-primary">.lab</span></h1><p className="z-10 text-zinc-400">The Error Log for Academic Weapons.</p><button onClick={() => window.firebase.signInWithPopup(window.firebase.auth, new window.firebase.GoogleAuthProvider())} className="z-10 bg-white text-black px-10 py-4 rounded-full font-bold flex gap-3 items-center hover:scale-110 transition-transform shadow-[0_0_40px_rgba(255,255,255,0.3)] mt-8"><Icons.Google className="w-5 h-5"/> Initiate Session</button></div>);
+
+        return (
+            <div className="flex h-screen w-full bg-bg font-sans overflow-hidden">
+                <StudentModal isOpen={showStudentModal} onClose={() => setShowStudentModal(false)} user={user} saveToDrive={saveToDrive} getAccessToken={getAccessToken} callGroq={callGroq} />
+                
+                {/* --- SIDEBAR DOCK --- */}
+                <div className="w-[80px] hover:w-[240px] transition-all duration-300 border-r border-white/5 bg-surface flex flex-col z-50 group">
+                    <div className="p-4 flex items-center gap-4 border-b border-white/5 h-[70px]">
+                         <img src="https://raw.githubusercontent.com/darren6251/darnote/refs/heads/main/darNote%20logo.png" className="w-10 h-10 shrink-0"/>
+                         <span className="font-bold text-xl text-white tracking-tight opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap">darNote</span>
+                    </div>
+                    <div className="flex-1 py-4 space-y-2 overflow-y-auto overflow-x-hidden">
+                        {[
+                            {id: 'all', icon: Icons.Bug, label: 'All Mistakes'}, 
+                            {id: 'active', icon: Icons.Zap, label: 'To Fix', color: 'text-red-400'}, 
+                            {id: 'mastered', icon: Icons.Check, label: 'Mastered', color: 'text-green-400'}
+                        ].map(item => (
+                            <button key={item.id} onClick={()=>setFilter(item.id)} className={`w-full flex items-center h-12 px-4 gap-4 transition-all relative ${filter===item.id ? 'bg-white/10 text-white' : 'text-zinc-500 hover:text-white hover:bg-white/5'}`}>
+                                <div className={`shrink-0 ${item.color || ''} ${filter===item.id ? 'scale-110' : ''}`}><item.icon className="w-6 h-6"/></div>
+                                <span className="text-sm font-medium opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap">{item.label}</span>
+                                {filter===item.id && <div className="absolute left-0 top-0 bottom-0 w-1 bg-primary"></div>}
+                            </button>
+                        ))}
+                        <div className="my-4 border-t border-white/10"></div>
+                        <div className="px-4 text-[10px] font-bold text-zinc-500 uppercase tracking-widest opacity-0 group-hover:opacity-100 transition-opacity mb-2">Modules</div>
+                        {subjects.map(s => (
+                             <button key={s.id} onClick={() => setFilter(`subject:${s.name}`)} className={`w-full flex items-center h-10 px-4 gap-4 transition-all text-sm ${filter===`subject:${s.name}` ? 'text-white font-bold' : 'text-zinc-500 hover:text-white'}`}>
+                                 <div className="w-6 h-6 flex items-center justify-center shrink-0"><div className={`w-2 h-2 rounded-full ${filter===`subject:${s.name}` ? 'bg-primary' : 'bg-zinc-600'}`}></div></div>
+                                 <span className="opacity-0 group-hover:opacity-100 transition-opacity truncate">{s.name}</span>
+                             </button>
+                        ))}
+                    </div>
+                    <div className="p-4 border-t border-white/5 space-y-2">
+                        <button onClick={()=>setPracticeConfig({ isOpen: true, mode: 'topic' })} className="w-full flex items-center h-12 gap-4 px-3 bg-gradient-to-r from-primary to-accent rounded-xl text-white shadow-lg hover:shadow-primary/50 transition-all active:scale-95 overflow-hidden group/btn">
+                            <Icons.Brain className="w-6 h-6 shrink-0"/>
+                            <span className="font-bold opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap">Arcade Mode</span>
+                        </button>
+                        <button onClick={() => setShowStudentModal(true)} className="w-full flex items-center h-10 gap-4 px-3 text-zinc-400 hover:text-white transition-all overflow-hidden">
+                            <Icons.GraduationCap className="w-6 h-6 shrink-0"/>
+                            <span className="text-xs font-bold opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap">Student Plan {studentStatus === 'verified' && '✓'}</span>
+                        </button>
+                        <button onClick={()=>window.firebase.signOut(window.firebase.auth)} className="w-full flex items-center h-10 gap-4 px-3 text-red-500 hover:bg-red-500/10 rounded-lg transition-all overflow-hidden">
+                             <Icons.Logout className="w-6 h-6 shrink-0"/>
+                             <span className="text-xs font-bold opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap">Logout</span>
+                        </button>
+                    </div>
+                </div>
+
+                {/* --- MISTAKE LIST (Middle Pane) --- */}
+                <div className="w-[350px] bg-surface-light border-r border-white/5 flex flex-col shrink-0 relative z-40">
+                    <div className="p-5 border-b border-white/5 bg-surface/80 backdrop-blur-md sticky top-0 z-10 space-y-4">
+                        <h2 className="text-2xl font-bold text-white tracking-tight">Logbook</h2>
+                        <div className="relative">
+                            <input type="text" placeholder="Search logs..." value={searchQuery} onChange={e=>setSearchQuery(e.target.value)} className="w-full bg-black/40 border border-white/10 rounded-xl pl-10 pr-4 py-3 text-sm focus:border-primary outline-none text-white transition-all shadow-inner"/>
+                            <div className="absolute left-3 top-3 text-zinc-500"><Icons.Scan className="w-5 h-5"/></div>
+                        </div>
+                        <button onClick={createLog} className="w-full py-3 border-2 border-dashed border-white/10 rounded-xl text-zinc-400 hover:text-white hover:border-white/30 hover:bg-white/5 transition-all text-sm font-bold flex items-center justify-center gap-2">
+                            <Icons.Plus className="w-4 h-4"/> New Entry
+                        </button>
+                    </div>
+                    <div className="flex-1 overflow-y-auto p-4 space-y-3">
+                        {isLoadingLogs && <div className="text-center text-zinc-500 py-10 animate-pulse">Scanning Archive...</div>}
+                        {filteredLogs.map(l => (
+                            <motion.div key={l.id} layoutId={l.id} onClick={()=>setActiveLogId(l.id)} initial={{opacity:0, y:10}} animate={{opacity:1, y:0}} className={`group relative p-4 rounded-2xl cursor-pointer border transition-all duration-200 ${activeLogId===l.id ? 'bg-primary/10 border-primary shadow-[0_0_20px_rgba(99,102,241,0.15)]' : 'bg-surface border-white/5 hover:border-white/10 hover:bg-white/5'}`}>
+                                <div className="flex justify-between items-start mb-2">
+                                    <h4 className={`font-bold text-sm leading-tight line-clamp-2 ${activeLogId===l.id ? 'text-white' : 'text-zinc-300'}`}>{l.title}</h4>
+                                    {l.mastered && <div className="text-success"><Icons.Check className="w-4 h-4"/></div>}
+                                </div>
+                                <div className="flex items-center justify-between text-xs mt-3">
+                                    <div className="flex gap-2">
+                                        <span className="px-2 py-0.5 rounded bg-white/5 text-zinc-400 border border-white/5">{l.subject}</span>
+                                        <span className={`px-2 py-0.5 rounded font-bold ${l.questionType==='MC'?'text-primary':'text-accent'}`}>{l.questionType}</span>
+                                    </div>
+                                    <span className="text-zinc-600 font-mono">{new Date(l.createdAt).toLocaleDateString(undefined, {month:'short', day:'numeric'})}</span>
+                                </div>
+                                <button onClick={(e) => handleDelete(l.id, e)} className="absolute top-2 right-2 p-1.5 bg-red-500 rounded-lg text-white opacity-0 group-hover:opacity-100 transition-opacity hover:bg-red-600 scale-90 hover:scale-100"><Icons.Trash className="w-3 h-3"/></button>
+                            </motion.div>
+                        ))}
+                        {hasMore && !isLoadingLogs && (<button onClick={() => fetchLogs(true)} className="w-full py-3 text-xs text-primary font-bold opacity-50 hover:opacity-100">Load More Records</button>)}
+                    </div>
+                </div>
+
+                {/* --- EDITOR (Main Stage) --- */}
+                <main className="flex-1 flex flex-col bg-bg relative overflow-hidden">
+                    {activeLog ? (
+                        <>
+                        {/* EDITOR HEADER */}
+                        <header className="h-[70px] border-b border-white/5 bg-surface/80 backdrop-blur-md flex items-center justify-between px-6 z-20">
+                             <div className="flex items-center gap-4 flex-1">
+                                 <div className="h-8 w-1 bg-gradient-to-b from-primary to-accent rounded-full"></div>
+                                 <input value={activeLog.title} onChange={e=>updateLog(activeLog.id, {title:e.target.value})} className="bg-transparent text-xl font-bold outline-none text-white w-full placeholder-zinc-600 font-sans tracking-tight" placeholder="Untitled Anomaly"/>
+                             </div>
+                             <div className="flex items-center gap-3">
+                                 <button onClick={handleAutoTitle} disabled={isAutoTitleLoading} className={`px-3 py-1.5 rounded-lg text-xs font-bold border border-white/10 flex items-center gap-2 transition-all ${isAutoTitleLoading ? 'bg-primary/20 text-primary animate-pulse' : 'text-zinc-400 hover:text-white hover:bg-white/5'}`}>
+                                     {isAutoTitleLoading ? <div className="w-3 h-3 border-2 border-current border-t-transparent rounded-full animate-spin"/> : <Icons.Scan className="w-4 h-4"/>} Auto-Scan
+                                 </button>
+                                 <div className="h-6 w-px bg-white/10"></div>
+                                 <button onClick={()=>updateLog(activeLog.id, {mastered: !activeLog.mastered})} className={`px-4 py-2 rounded-xl text-xs font-bold border transition-all ${activeLog.mastered ? 'bg-success/10 border-success text-success shadow-[0_0_15px_rgba(16,185,129,0.2)]' : 'bg-surface border-white/10 text-zinc-400 hover:text-white'}`}>
+                                     {activeLog.mastered ? 'MASTERED' : 'MARK COMPLETE'}
+                                 </button>
+                                 <button onClick={()=>setIsAiOpen(!isAiOpen)} className={`p-2 rounded-xl transition-all ${isAiOpen ? 'bg-white text-black' : 'bg-white/5 text-zinc-400 hover:text-white'}`}><Icons.Bot className="w-5 h-5"/></button>
+                             </div>
+                        </header>
+
+                        {/* EDITOR BODY */}
+                        <div className="flex-1 overflow-y-auto p-6 md:p-8 scroll-smooth">
+                            <div className="max-w-6xl mx-auto grid grid-cols-12 gap-6">
+                                {/* METADATA BAR */}
+                                <div className="col-span-12 grid grid-cols-1 md:grid-cols-4 gap-4 p-4 rounded-3xl bg-surface border border-white/5 shadow-lg">
+                                    <div>
+                                        <label className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest block mb-1">Subject</label>
+                                        <select value={activeLog.subject} onChange={e=>updateLog(activeLog.id, {subject:e.target.value, topic: ''})} className="w-full bg-black/40 border border-white/10 rounded-lg px-2 py-2 text-sm text-white outline-none focus:border-primary"><option>General</option>{subjects.map(s=><option key={s.id} value={s.name}>{s.name}</option>)}</select>
+                                    </div>
+                                    <div>
+                                        <label className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest block mb-1">Topic</label>
+                                        <div className="flex gap-2">
+                                            {activeLog.subject !== 'General' && currentSub ? (
+                                                <>
+                                                <select value={activeLog.topic || ''} onChange={e=>updateLog(activeLog.id, {topic:e.target.value})} className="flex-1 bg-black/40 border border-white/10 rounded-lg px-2 py-2 text-sm text-white outline-none focus:border-primary"><option value="">-- Select --</option>{currentSub.topics.map(t => <option key={t} value={t}>{t}</option>)}</select>
+                                                <button onClick={() => addTopicToSubject(activeLog.subject)} className="px-2 bg-white/5 rounded-lg hover:bg-white/10 text-white">+</button>
+                                                </>
+                                            ) : <input className="w-full bg-black/40 border border-white/10 rounded-lg px-2 py-2 text-sm text-white outline-none" placeholder="Topic..." value={activeLog.topic} onChange={e=>updateLog(activeLog.id, {topic:e.target.value})} />}
+                                        </div>
+                                    </div>
+                                    <div>
+                                        <label className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest block mb-1">Answer Key</label>
+                                        <input value={activeLog.correctAnswer} onChange={e=>updateLog(activeLog.id, {correctAnswer:e.target.value})} className="w-full bg-success/10 border border-success/30 rounded-lg px-2 py-2 text-sm text-success font-bold font-mono outline-none focus:border-success" placeholder="Correct Ans"/>
+                                    </div>
+                                    <div>
+                                        <label className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest block mb-1">Score Impact</label>
+                                        <input value={activeLog.marks} onChange={e=>updateLog(activeLog.id, {marks:e.target.value})} className="w-full bg-danger/10 border border-danger/30 rounded-lg px-2 py-2 text-sm text-danger font-bold font-mono outline-none focus:border-danger" placeholder="- Marks"/>
+                                    </div>
+                                </div>
+
+                                {/* LEFT COLUMN: EVIDENCE */}
+                                <div className="col-span-12 lg:col-span-5 space-y-6">
+                                    <div className="bg-surface p-5 rounded-3xl border border-white/5 shadow-xl relative overflow-hidden group">
+                                         <div className="absolute top-0 right-0 w-20 h-20 bg-primary/10 blur-3xl pointer-events-none"></div>
+                                         <h3 className="font-bold text-white mb-4 flex items-center gap-2"><Icons.Image className="text-zinc-500"/> The Problem</h3>
+                                         <MultiImageUploader images={activeLog.questionImages} onUpdate={(d, a) => handleImageUpdate(d, a, 'question')} label="Question Source" isUploading={uploadingQ} />
+                                         <div className="mt-4 pt-4 border-t border-white/5">
+                                             <button onClick={() => setShowOcrText(!showOcrText)} className="text-xs text-zinc-500 hover:text-white flex items-center gap-2 transition-colors mb-2"><Icons.File className="w-3 h-3"/> Toggle OCR Text Layer</button>
+                                             {showOcrText && <textarea value={activeLog.questionText || ""} onChange={(e) => updateLog(activeLog.id, { questionText: e.target.value })} className="w-full bg-black/40 border border-white/10 rounded-xl p-3 text-xs font-mono text-zinc-400 focus:border-primary outline-none h-32" placeholder="AI extracted text will appear here..." />}
+                                         </div>
+                                    </div>
+                                    <div className="bg-surface p-5 rounded-3xl border border-white/5 shadow-xl">
+                                         <h3 className="font-bold text-white mb-4 flex items-center gap-2"><Icons.Check className="text-zinc-500"/> Marking Scheme</h3>
+                                         <MultiImageUploader images={activeLog.schemeImages} onUpdate={(d, a) => handleImageUpdate(d, a, 'scheme')} label="Official Answer" isUploading={uploadingS} />
+                                    </div>
+                                </div>
+
+                                {/* RIGHT COLUMN: AUTOPSY */}
+                                <div className="col-span-12 lg:col-span-7 flex flex-col h-full min-h-[500px]">
+                                    <div className="flex-1 bg-surface rounded-3xl border border-white/5 shadow-xl flex flex-col overflow-hidden relative">
+                                        <div className="absolute inset-0 bg-[url('https://grainy-gradients.vercel.app/noise.svg')] opacity-5 pointer-events-none"></div>
+                                        <div className="p-4 border-b border-white/5 bg-white/5 flex justify-between items-center">
+                                            <div className="flex items-center gap-2"><div className="w-2 h-2 rounded-full bg-accent"></div><span className="font-bold text-sm text-white uppercase tracking-wider">Analysis Protocol</span></div>
+                                            <span className="text-[10px] text-zinc-500 font-mono">MARKDOWN ENABLED</span>
+                                        </div>
+                                        <textarea className="flex-1 w-full bg-transparent p-6 text-base text-zinc-200 leading-relaxed outline-none resize-none font-sans placeholder-zinc-700" placeholder="# Why did I fail?&#10;&#10;1. Concept Error: ...&#10;2. Careless Mistake: ...&#10;3. The Fix: ..." value={activeLog.explanation} onChange={e=>updateLog(activeLog.id, {explanation:e.target.value})}/>
+                                        <div className="p-4 border-t border-white/5 bg-black/20 text-xs text-zinc-500 flex gap-4">
+                                            <span>Type **bold** for emphasis</span>
+                                            <span>Use `code` for formulas</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        </>
+                    ) : (
+                        <div className="flex-1 flex flex-col items-center justify-center relative">
+                            <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,rgba(99,102,241,0.1),transparent)] pointer-events-none"></div>
+                            <div className="text-center space-y-4">
+                                <div className="w-24 h-24 bg-surface rounded-3xl border border-white/10 flex items-center justify-center mx-auto shadow-2xl rotate-3 hover:rotate-0 transition-transform duration-500">
+                                    <Icons.Bug className="w-10 h-10 text-zinc-600"/>
+                                </div>
+                                <h1 className="text-3xl font-bold text-white tracking-tight">System Ready.</h1>
+                                <p className="text-zinc-500">Select a failure to begin analysis.</p>
+                            </div>
+                        </div>
+                    )}
+                    
+                    {/* AI SIDEBAR */}
+                    <AnimatePresence>{isAiOpen && activeLog && user && (
+                        <motion.div initial={{x:400, opacity:0}} animate={{x:0, opacity:1}} exit={{x:400, opacity:0}} className="absolute top-0 right-0 bottom-0 w-[400px] z-50 border-l border-white/10 shadow-[0_0_50px_rgba(0,0,0,0.5)]">
+                             <AIChat activeLog={activeLog} onClose={()=>setIsAiOpen(false)} user={user} messages={chatMessages} setMessages={setChatMessages}/>
+                        </motion.div>
+                    )}</AnimatePresence>
+                    
+                    {/* PRACTICE MODAL */}
+                    {practiceConfig.isOpen && <PracticeModal activeLog={activeLog} onClose={() => setPracticeConfig({...practiceConfig, isOpen: false})} user={user} subjects={subjects} initialMode={practiceConfig.mode} />}
+                </main>
             </div>
         );
     };
