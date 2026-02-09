@@ -63,7 +63,9 @@
         TrendingUp:p=><svg {...p} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/></svg>,
         Clock:p=><svg {...p} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>,
         Plus:p=><svg {...p} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M5 12h14"/><path d="M12 5v14"/></svg>,
-        Filter:p=><svg {...p} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"/></svg>
+        Filter:p=><svg {...p} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"/></svg>,
+        ChevronLeft:p=><svg {...p} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="m15 18-6-6 6-6"/></svg>,
+        ChevronRight:p=><svg {...p} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="m9 18 6-6-6-6"/></svg>
     };
 
     const COLORS = ['#4f46e5', '#06b6d4', '#f97316', '#ec4899', '#8b5cf6', '#10b981'];
@@ -336,6 +338,21 @@
         );
     };
 
+    const QuickSummary = ({ stats }) => {
+        if (!stats) return null;
+        const sub = stats.subjects[0];
+        const top = stats.topics[0];
+        const msg = sub && top 
+            ? `You seem to be struggling most with ${sub.name}, specifically ${top.name}.`
+            : "Keep logging to find your patterns.";
+        return (
+            <div className="mb-4 p-3 bg-brand/5 border border-brand/10 rounded-lg flex items-center gap-2 text-sm text-brand font-medium animate-in slide-in-from-top-2">
+                <Icons.Target className="w-4 h-4"/>
+                <span>{msg}</span>
+            </div>
+        );
+    };
+
     const AnalysisView = ({ stats, user, isDarkMode, loadData, studentStatus }) => {
         if (!stats) return null;
         return (
@@ -351,6 +368,8 @@
                         <Icons.Refresh className="w-4 h-4"/>
                     </button>
                 </div>
+
+                <QuickSummary stats={stats} />
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
                     <StatCard label="Analyzed Errors" value={stats.total} sub={stats.isLimited ? "Limited to last 500" : "Total Lifetime"} icon={Icons.Book} color="bg-indigo-500" />
@@ -405,7 +424,6 @@
                     </div>
                 </div>
 
-                {/* Restored missing components */}
                 <div className="grid grid-cols-1 lg:grid-cols-4 gap-6 pb-10">
                     <AIAdvicePanel data={stats} user={user} studentStatus={studentStatus} />
                     <Heatmap logs={stats.logs} isDarkMode={isDarkMode} />
@@ -421,6 +439,7 @@
         const [manualSubject, setManualSubject] = useState('');
         const [isSubmitting, setIsSubmitting] = useState(false);
         const [ocrStatus, setOcrStatus] = useState('');
+        const [ocrFiles, setOcrFiles] = useState([]);
 
         const handleManualSubmit = async () => {
             if(!manualDate || !manualHours || !manualSubject) return alert("Fill all fields");
@@ -439,39 +458,59 @@
         };
 
         const handleImageUpload = async (e) => {
-            const file = e.target.files[0];
-            if(!file) return;
-            setOcrStatus("Processing...");
+            const files = Array.from(e.target.files);
+            if(!files.length) return;
+            setOcrFiles(files);
+            setOcrStatus("Checking Quota...");
             
-            // Check Quota
+            // Check Quota once for the batch attempt (or per file? let's do one check for now to be safe)
             const qCheck = await checkQuota(user, 'ocr');
             if(qCheck === false) {
                 setOcrStatus("OCR Limit Reached.");
                 return;
             }
 
-            const reader = new FileReader();
-            reader.onloadend = async () => {
-                const b64 = reader.result;
-                const prompt = `Analyze this study tracker calendar image. Extract daily study hours. Return ONLY a JSON array: [{"date": "YYYY-MM-DD", "hours": 4.5, "subject": "General"}]. Use year ${new Date().getFullYear()}. Ignore 0 hour days.`;
-                const res = await callGroqVision(prompt, b64);
-                
+            let totalProcessed = 0;
+            const batch = window.firebase.writeBatch(window.firebase.db);
+
+            setOcrStatus(`Processing 0/${files.length}...`);
+
+            for (let i = 0; i < files.length; i++) {
+                const file = files[i];
                 try {
+                    const b64 = await new Promise((resolve) => {
+                        const reader = new FileReader();
+                        reader.onloadend = () => resolve(reader.result);
+                        reader.readAsDataURL(file);
+                    });
+
+                    const prompt = `Analyze this study tracker calendar image. Extract daily study hours. Return ONLY a JSON array: [{"date": "YYYY-MM-DD", "hours": 4.5, "subject": "General"}]. Use year ${new Date().getFullYear()}. Ignore 0 hour days.`;
+                    const res = await callGroqVision(prompt, b64);
+                    
                     const jsonStr = res.substring(res.indexOf('['), res.lastIndexOf(']') + 1);
                     const data = JSON.parse(jsonStr);
                     
-                    const batch = window.firebase.writeBatch(window.firebase.db);
                     data.forEach(item => {
                         const ref = window.firebase.doc(window.firebase.collection(window.firebase.db, 'artifacts', "darnote-app", 'users', user.uid, 'study_logs'));
                         batch.set(ref, { ...item, createdAt: new Date().toISOString() });
                     });
-                    await batch.commit();
-                    setOcrStatus(`Success! Logged ${data.length} entries.`);
+                    totalProcessed += data.length;
+                    setOcrStatus(`Processing ${i+1}/${files.length}...`);
+                    
+                    // Artificial delay to not explode rate limits
+                    await new Promise(r => setTimeout(r, 1000));
+                    
                 } catch(err) {
-                    setOcrStatus("Failed to parse image. Try manual entry.");
+                    console.error("Failed file:", file.name, err);
                 }
-            };
-            reader.readAsDataURL(file);
+            }
+
+            try {
+                await batch.commit();
+                setOcrStatus(`Done! Logged ${totalProcessed} total entries.`);
+            } catch(e) {
+                setOcrStatus("Error saving to database.");
+            }
         };
 
         return (
@@ -505,10 +544,10 @@
                     <div className="card text-center py-10 border-dashed border-2">
                         <Icons.Upload className="w-10 h-10 mx-auto text-zinc-400 mb-4"/>
                         <h3 className="font-bold text-zinc-900 dark:text-white">Batch Import Study Logs</h3>
-                        <p className="text-xs text-zinc-500 mt-2 mb-6 max-w-xs mx-auto">Upload a screenshot of your YPT/Forest calendar. AI will extract the dates and hours.</p>
+                        <p className="text-xs text-zinc-500 mt-2 mb-6 max-w-xs mx-auto">Upload screenshots of your YPT/Forest calendar. AI will extract the dates and hours.</p>
                         
-                        <input type="file" accept="image/*" onChange={handleImageUpload} className="hidden" id="ocr-upload"/>
-                        <label htmlFor="ocr-upload" className="bg-zinc-900 dark:bg-white text-white dark:text-black px-6 py-2 rounded-lg font-bold text-sm cursor-pointer hover:opacity-90">Select Screenshot</label>
+                        <input type="file" multiple accept="image/*" onChange={handleImageUpload} className="hidden" id="ocr-upload"/>
+                        <label htmlFor="ocr-upload" className="bg-zinc-900 dark:bg-white text-white dark:text-black px-6 py-2 rounded-lg font-bold text-sm cursor-pointer hover:opacity-90">Select Screenshots</label>
                         
                         {ocrStatus && <div className="mt-4 text-xs font-bold text-indigo-500 animate-pulse">{ocrStatus}</div>}
                     </div>
@@ -521,25 +560,36 @@
         const [data, setData] = useState([]);
         const [loading, setLoading] = useState(true);
         const [range, setRange] = useState(30);
+        const [offset, setOffset] = useState(0); // 0 = current period, 1 = previous period
 
         useEffect(() => {
             const load = async () => {
                 setLoading(true);
-                const now = new Date();
-                const past = new Date(); 
-                past.setDate(past.getDate() - range); // Use selected range
+                const endDate = new Date();
+                endDate.setDate(endDate.getDate() - (offset * range));
+                
+                const startDate = new Date(endDate); 
+                startDate.setDate(startDate.getDate() - range);
                 
                 // Fetch Errors
-                const errQ = window.firebase.query(window.firebase.collection(window.firebase.db, 'artifacts', "darnote-app", 'users', user.uid, 'error_logs'), window.firebase.where('createdAt', '>=', past.toISOString()));
+                const errQ = window.firebase.query(
+                    window.firebase.collection(window.firebase.db, 'artifacts', "darnote-app", 'users', user.uid, 'error_logs'), 
+                    window.firebase.where('createdAt', '>=', startDate.toISOString()),
+                    window.firebase.where('createdAt', '<=', endDate.toISOString())
+                );
                 const errSnap = await window.firebase.getDocs(errQ);
                 
                 // Fetch Study Logs
-                const studyQ = window.firebase.query(window.firebase.collection(window.firebase.db, 'artifacts', "darnote-app", 'users', user.uid, 'study_logs'), window.firebase.where('date', '>=', past.toLocaleDateString('sv')));
+                const studyQ = window.firebase.query(
+                    window.firebase.collection(window.firebase.db, 'artifacts', "darnote-app", 'users', user.uid, 'study_logs'), 
+                    window.firebase.where('date', '>=', startDate.toLocaleDateString('sv')),
+                    window.firebase.where('date', '<=', endDate.toLocaleDateString('sv'))
+                );
                 const studySnap = await window.firebase.getDocs(studyQ);
 
                 // Merge
                 const map = {};
-                for (let d = new Date(past); d <= now; d.setDate(d.getDate() + 1)) {
+                for (let d = new Date(startDate); d <= endDate; d.setDate(d.getDate() + 1)) {
                     const iso = d.toLocaleDateString('sv');
                     map[iso] = { date: d.toLocaleDateString('en-US', {day:'numeric', month:'short'}), errors: 0, hours: 0, rawDate: iso };
                 }
@@ -557,21 +607,30 @@
                 setLoading(false);
             };
             load();
-        }, [user, range]);
+        }, [user, range, offset]);
 
         return (
             <div className="max-w-6xl mx-auto space-y-6 pb-20">
-                <div className="flex justify-between items-center mb-2">
+                <div className="flex flex-col md:flex-row justify-between items-center mb-2 gap-4">
                     <div>
                         <h1 className="text-2xl font-bold text-zinc-900 dark:text-white">Compare Data</h1>
                         <p className="text-sm text-zinc-500 dark:text-zinc-400">Effort vs. Results over time.</p>
                     </div>
-                    <div className="flex bg-zinc-100 dark:bg-white/5 p-1 rounded-lg">
-                        {[30, 60, 90].map(r => (
-                            <button key={r} onClick={()=>setRange(r)} className={`px-3 py-1.5 text-xs font-bold rounded-md transition-all ${range === r ? 'bg-white dark:bg-zinc-800 shadow text-indigo-500' : 'text-zinc-500'}`}>
-                                {r} Days
-                            </button>
-                        ))}
+                    <div className="flex items-center gap-4">
+                        <div className="flex bg-zinc-100 dark:bg-white/5 p-1 rounded-lg">
+                            <button onClick={()=>setOffset(offset+1)} className="px-3 py-1.5 text-xs font-bold text-zinc-500 hover:text-zinc-900 dark:hover:text-white"><Icons.ChevronLeft className="w-4 h-4"/></button>
+                            <span className="px-3 py-1.5 text-xs font-bold text-zinc-900 dark:text-white border-l border-r border-zinc-200 dark:border-white/10">
+                                {offset === 0 ? "Current Period" : `${offset} Periods Ago`}
+                            </span>
+                            <button onClick={()=>setOffset(Math.max(0, offset-1))} disabled={offset===0} className="px-3 py-1.5 text-xs font-bold text-zinc-500 hover:text-zinc-900 dark:hover:text-white disabled:opacity-30"><Icons.ChevronRight className="w-4 h-4"/></button>
+                        </div>
+                        <div className="flex bg-zinc-100 dark:bg-white/5 p-1 rounded-lg">
+                            {[30, 60, 90].map(r => (
+                                <button key={r} onClick={()=>{setRange(r); setOffset(0);}} className={`px-3 py-1.5 text-xs font-bold rounded-md transition-all ${range === r ? 'bg-white dark:bg-zinc-800 shadow text-indigo-500' : 'text-zinc-500'}`}>
+                                    {r} Days
+                                </button>
+                            ))}
+                        </div>
                     </div>
                 </div>
 
@@ -595,11 +654,11 @@
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                      <div className="card text-center">
                         <div className="text-2xl font-bold text-indigo-500">{data.reduce((a,b)=>a+b.hours,0).toFixed(1)}</div>
-                        <div className="text-[10px] text-zinc-500 uppercase font-bold">Total Hours ({range} Days)</div>
+                        <div className="text-[10px] text-zinc-500 uppercase font-bold">Total Hours</div>
                      </div>
                      <div className="card text-center">
                         <div className="text-2xl font-bold text-rose-500">{data.reduce((a,b)=>a+b.errors,0)}</div>
-                        <div className="text-[10px] text-zinc-500 uppercase font-bold">Total Errors ({range} Days)</div>
+                        <div className="text-[10px] text-zinc-500 uppercase font-bold">Total Errors</div>
                      </div>
                      <div className="card text-center">
                         <div className="text-2xl font-bold text-emerald-500">{(data.reduce((a,b)=>a+b.hours,0) / range).toFixed(1)}</div>
