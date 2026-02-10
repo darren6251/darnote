@@ -21,16 +21,36 @@
 <style>
     body { @apply bg-[#f4f4f5] text-zinc-900 dark:bg-onyx dark:text-zinc-100; font-family: 'Inter', sans-serif; overflow: hidden; }
     ::-webkit-scrollbar { width: 6px; } ::-webkit-scrollbar-thumb { @apply bg-zinc-300 dark:bg-zinc-700; border-radius: 4px; }
-    .glass-panel { @apply bg-white dark:bg-surface border-r border-zinc-200 dark:border-border; }
+    
+    /* Fixed Sidebar Styles */
+    .glass-panel { @apply bg-white dark:bg-[#0c0c0e] border-r border-zinc-200 dark:border-white/5; }
     .card { @apply bg-white dark:bg-surface border border-zinc-200 dark:border-white/5 rounded-2xl shadow-sm p-5; }
     .stat-value { @apply text-2xl font-bold text-zinc-900 dark:text-white mt-1; }
     .stat-label { @apply text-[10px] font-bold text-zinc-400 uppercase tracking-wider; }
     
-    /* Improved Navigation Styles */
-    .nav-btn { @apply w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all relative overflow-hidden; }
-    .nav-btn.active { @apply bg-brand text-white shadow-[0_0_15px_rgba(79,70,229,0.3)]; }
-    .nav-btn.inactive { @apply text-zinc-500 dark:text-zinc-400 hover:bg-zinc-100 dark:hover:bg-white/5 hover:text-zinc-900 dark:hover:text-white; }
-    .nav-btn svg { @apply shrink-0; }
+    /* Navigation Typography & Layout */
+    .nav-header { 
+        @apply px-4 text-[11px] font-bold text-zinc-500 dark:text-zinc-400 mb-2 uppercase tracking-widest mt-6; 
+    }
+    
+    .nav-item { 
+        @apply w-full flex items-center gap-3 px-3 py-2.5 mx-0 rounded-lg text-sm font-medium transition-all duration-200 border border-transparent text-zinc-600 dark:text-zinc-400;
+    }
+    
+    .nav-item:hover { 
+        @apply bg-zinc-100 dark:bg-white/5 text-zinc-900 dark:text-zinc-100; 
+    }
+    
+    .nav-item.active { 
+        @apply bg-brand/5 dark:bg-brand/10 text-brand dark:text-indigo-400 font-bold border-brand/20 dark:border-brand/20; 
+    }
+    
+    .nav-item.active svg { 
+        @apply text-brand dark:text-indigo-400; 
+    }
+    
+    .nav-item-icon { @apply transition-transform duration-200; }
+    .nav-item:hover .nav-item-icon { @apply scale-110; }
 </style>
 </head>
 <body>
@@ -58,7 +78,7 @@
         ShieldCheck:p=><svg {...p} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><path d="m9 12 2 2 4-4"/></svg>,
         ShieldClock:p=><svg {...p} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><circle cx="12" cy="12" r="3"/><polyline points="12 10 12 12 13 13"/></svg>,
         User:p=><svg {...p} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>,
-        Google:p=><svg {...p} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M12 22C6.477 22 2 17.523 2 12S6.477 2 12 2s10 4.477 10 10-4.477 10-10 10z"/><path d="M12 11h9c.1 1.4.1 2.9-.4 4.3-1.1 3-4.1 5.3-7.6 5.6-5 .5-9.4-3.1-9.9-8.1C2.5 7.1 6 2.3 11 2c2.5-.1 4.9.9 6.7 2.6l-2.7 2.8c-1-.7-2.3-1.1-3.6-1-2.9.2-5.1 2.8-4.9 5.7.2 2.6 2.4 4.7 5 4.7 2 0 3.6-1.1 4.3-2.9H12v-3z" fill="currentColor"/></svg>,
+        Google:p=><svg {...p} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M12 22C6.477 22 2 17.523 2 12S6.477 2 12 2s10 4.477 10 10-4.477 10 10-10 10z"/><path d="M12 11h9c.1 1.4.1 2.9-.4 4.3-1.1 3-4.1 5.3-7.6 5.6-5 .5-9.4-3.1-9.9-8.1C2.5 7.1 6 2.3 11 2c2.5-.1 4.9.9 6.7 2.6l-2.7 2.8c-1-.7-2.3-1.1-3.6-1-2.9.2-5.1 2.8-4.9 5.7.2 2.6 2.4 4.7 5 4.7 2 0 3.6-1.1 4.3-2.9H12v-3z" fill="currentColor"/></svg>,
         Upload:p=><svg {...p} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" x2="12" y1="3" y2="15"/></svg>,
         TrendingUp:p=><svg {...p} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/></svg>,
         Clock:p=><svg {...p} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>,
@@ -133,42 +153,49 @@
     const Views = { ANALYSIS: 'analysis', CORRELATION: 'correlation', INPUT: 'input' };
 
     const Sidebar = ({ isDarkMode, setIsDarkMode, user, studentStatus, currentView, onChangeView }) => (
-        <div className="w-[260px] flex-shrink-0 glass-panel flex flex-col justify-between p-5 z-20 hidden md:flex h-full">
+        <div className="w-[260px] flex-shrink-0 glass-panel flex flex-col justify-between p-5 z-20 hidden md:flex h-full transition-colors duration-300">
             <div className="space-y-6">
-                <div className="flex items-center gap-3 px-2 mb-4">
+                <div className="flex items-center gap-3 px-2 mb-8">
                     <img src="https://raw.githubusercontent.com/darren6251/darnote/refs/heads/main/darNote%20logo.png" className="w-8 h-8"/>
-                    <div><div className="font-bold text-sm tracking-tight text-zinc-900 dark:text-white">darNote</div><div className="text-[10px] text-zinc-500 font-medium uppercase tracking-wider">Insight Deck</div></div>
+                    <div>
+                        <div className="font-bold text-sm tracking-tight text-zinc-900 dark:text-white">darNote</div>
+                        <div className="text-[10px] text-zinc-500 dark:text-zinc-400 font-medium uppercase tracking-wider">Insight Deck</div>
+                    </div>
                 </div>
                 
-                <div className="space-y-2">
-                     <button onClick={() => onChangeView(Views.ANALYSIS)} className={`nav-btn ${currentView === Views.ANALYSIS ? 'active' : 'inactive'}`}>
-                        <Icons.Activity className="w-5 h-5"/> <span>Insight Deck</span>
-                    </button>
-                    <button onClick={() => onChangeView(Views.CORRELATION)} className={`nav-btn ${currentView === Views.CORRELATION ? 'active' : 'inactive'}`}>
-                        <Icons.TrendingUp className="w-5 h-5"/> <span>Compare Data</span>
-                    </button>
-                    <button onClick={() => onChangeView(Views.INPUT)} className={`nav-btn ${currentView === Views.INPUT ? 'active' : 'inactive'}`}>
-                        <Icons.Clock className="w-5 h-5"/> <span>Time Logger</span>
-                    </button>
+                <div>
+                     <div className="nav-header">Workspaces</div>
+                     <div className="space-y-1">
+                        <button onClick={() => onChangeView(Views.ANALYSIS)} className={`nav-item ${currentView === Views.ANALYSIS ? 'active' : ''}`}>
+                            <Icons.Activity className="w-5 h-5 nav-item-icon"/> <span>Insight Deck</span>
+                        </button>
+                        <button onClick={() => onChangeView(Views.CORRELATION)} className={`nav-item ${currentView === Views.CORRELATION ? 'active' : ''}`}>
+                            <Icons.TrendingUp className="w-5 h-5 nav-item-icon"/> <span>Compare Data</span>
+                        </button>
+                        <button onClick={() => onChangeView(Views.INPUT)} className={`nav-item ${currentView === Views.INPUT ? 'active' : ''}`}>
+                            <Icons.Clock className="w-5 h-5 nav-item-icon"/> <span>Time Logger</span>
+                        </button>
+                     </div>
                 </div>
 
                 <div className="pt-4 border-t border-zinc-200 dark:border-white/5">
-                    <a href="el.html" className="nav-btn inactive">
-                        <Icons.Book className="w-5 h-5"/> <span>Back to Logs</span>
+                    <div className="nav-header">Navigation</div>
+                    <a href="el.html" className="nav-item">
+                        <Icons.Book className="w-5 h-5 nav-item-icon"/> <span>Back to Logs</span>
                     </a>
                 </div>
             </div>
             
             <div className="space-y-4">
-                 <div className="flex items-center gap-3 px-2 py-1 bg-zinc-100 dark:bg-white/5 rounded-xl p-2">
+                 <div className="flex items-center gap-3 px-2 py-2 bg-zinc-100 dark:bg-white/5 rounded-xl border border-transparent dark:border-white/5">
                     {user?.photoURL ? <img src={user.photoURL} className="w-9 h-9 rounded-full border border-zinc-200 dark:border-white/10"/> : <div className="w-9 h-9 rounded-full bg-zinc-200 dark:bg-white/10 flex items-center justify-center"><Icons.User className="w-5 h-5 text-zinc-500"/></div>}
                     <div className="overflow-hidden">
-                        <div className="text-xs font-bold text-zinc-900 dark:text-white truncate w-32 flex items-center gap-1">
+                        <div className="text-xs font-bold text-zinc-900 dark:text-zinc-100 truncate w-32 flex items-center gap-1">
                             {user?.displayName.split(' ')[0]} 
                             {studentStatus === 'verified' && <Icons.ShieldCheck className="w-3 h-3 text-blue-500" title="Verified Student"/>} 
                             {studentStatus === 'temp_verified' && <Icons.ShieldClock className="w-3 h-3 text-orange-500" title="Under Review"/>}
                         </div>
-                        <div className="text-[10px] text-zinc-500 truncate">Student Plan</div>
+                        <div className="text-[10px] text-zinc-500 dark:text-zinc-400 truncate">Student Plan</div>
                     </div>
                 </div>
 
@@ -320,7 +347,7 @@
                             <XAxis 
                                 dataKey="display" 
                                 interval={6} 
-                                tick={{fontSize: 10, fill: isDarkMode ? '#e4e4e7' : '#52525b'}} 
+                                tick={{fontSize: 10, fill: isDarkMode ? '#71717a' : '#a1a1aa'}} 
                                 axisLine={false}
                                 tickLine={false}
                             />
@@ -390,7 +417,6 @@
                                         {stats.subjects.map((entry, index) => (<Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />))}
                                     </Pie>
                                     <Tooltip contentStyle={{backgroundColor: isDarkMode ? '#18181b' : '#fff', border: isDarkMode ? '1px solid #333' : '1px solid #e4e4e7', borderRadius: '8px', color: isDarkMode ? '#fff' : '#000'}} itemStyle={{color: '#fff'}} />
-                                    <Legend iconSize={8} layout="horizontal" verticalAlign="bottom" wrapperStyle={{fontSize: '10px', paddingTop: '10px'}} />
                                 </PieChart>
                             </ResponsiveContainer>
                         </div>
@@ -409,7 +435,6 @@
                                         {stats.studySubjects.map((entry, index) => (<Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />))}
                                     </Pie>
                                     <Tooltip contentStyle={{backgroundColor: isDarkMode ? '#18181b' : '#fff', border: isDarkMode ? '1px solid #333' : '1px solid #e4e4e7', borderRadius: '8px', color: isDarkMode ? '#fff' : '#000'}} itemStyle={{color: '#fff'}} />
-                                    <Legend iconSize={8} layout="horizontal" verticalAlign="bottom" wrapperStyle={{fontSize: '10px', paddingTop: '10px'}} />
                                 </PieChart>
                             </ResponsiveContainer>
                             ) : <div className="flex h-full items-center justify-center text-zinc-500 text-xs">No study logs found</div>}
@@ -651,9 +676,9 @@
                         <ResponsiveContainer width="100%" height="100%">
                             <ComposedChart data={data}>
                                 <CartesianGrid strokeDasharray="3 3" stroke={isDarkMode ? '#333' : '#eee'} vertical={false} />
-                                <XAxis dataKey="date" tick={{fontSize: 10, fill: isDarkMode ? '#e4e4e7' : '#52525b'}} />
-                                <YAxis yAxisId="left" orientation="left" stroke="#8884d8" label={{ value: 'Study Hours', angle: -90, position: 'insideLeft', style: {fontSize: 10, fill: '#8884d8'} }} tick={{fill: isDarkMode ? '#e4e4e7' : '#52525b'}} />
-                                <YAxis yAxisId="right" orientation="right" stroke="#f43f5e" label={{ value: 'Errors Logged', angle: 90, position: 'insideRight', style: {fontSize: 10, fill: '#f43f5e'} }} tick={{fill: isDarkMode ? '#e4e4e7' : '#52525b'}} />
+                                <XAxis dataKey="date" tick={{fontSize: 10, fill: isDarkMode ? '#71717a' : '#a1a1aa'}} />
+                                <YAxis yAxisId="left" orientation="left" stroke="#8884d8" label={{ value: 'Study Hours', angle: -90, position: 'insideLeft', style: {fontSize: 10, fill: '#8884d8'} }} />
+                                <YAxis yAxisId="right" orientation="right" stroke="#f43f5e" label={{ value: 'Errors Logged', angle: 90, position: 'insideRight', style: {fontSize: 10, fill: '#f43f5e'} }} />
                                 <Tooltip contentStyle={{backgroundColor: isDarkMode ? '#18181b' : '#fff', border: isDarkMode ? '1px solid #333' : '1px solid #e4e4e7', borderRadius: '8px', color: isDarkMode ? '#fff' : '#000'}} />
                                 <Legend />
                                 <Bar yAxisId="left" dataKey="hours" name="Study Hours" fill="#4f46e5" barSize={20} radius={[4, 4, 0, 0]} />
