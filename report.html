@@ -26,16 +26,11 @@
     .stat-value { @apply text-2xl font-bold text-zinc-900 dark:text-white mt-1; }
     .stat-label { @apply text-[10px] font-bold text-zinc-400 uppercase tracking-wider; }
     
-    /* Sleek Sidebar Styles */
-    .nav-header { @apply px-4 text-[11px] font-bold text-zinc-400 mb-2 uppercase tracking-widest mt-6 opacity-60; }
-    .nav-item { @apply w-full flex items-center gap-3 px-4 py-3 mx-1 rounded-xl text-sm font-medium transition-all duration-200 border-l-2 border-transparent relative overflow-hidden; width: auto; }
-    .nav-item:hover { @apply bg-zinc-100 dark:bg-white/5 text-zinc-900 dark:text-white; }
-    .nav-item.active { @apply bg-brand/5 text-brand border-brand font-bold; }
-    .nav-item.active svg { @apply text-brand; }
-    .nav-item.inactive { @apply text-zinc-500 dark:text-zinc-400; }
-    
-    .nav-item-icon { @apply transition-transform duration-200; }
-    .nav-item:hover .nav-item-icon { @apply scale-110; }
+    /* Improved Navigation Styles */
+    .nav-btn { @apply w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all relative overflow-hidden; }
+    .nav-btn.active { @apply bg-brand text-white shadow-[0_0_15px_rgba(79,70,229,0.3)]; }
+    .nav-btn.inactive { @apply text-zinc-500 dark:text-zinc-400 hover:bg-zinc-100 dark:hover:bg-white/5 hover:text-zinc-900 dark:hover:text-white; }
+    .nav-btn svg { @apply shrink-0; }
 </style>
 </head>
 <body>
@@ -140,28 +135,26 @@
     const Sidebar = ({ isDarkMode, setIsDarkMode, user, studentStatus, currentView, onChangeView }) => (
         <div className="w-[260px] flex-shrink-0 glass-panel flex flex-col justify-between p-5 z-20 hidden md:flex h-full">
             <div className="space-y-6">
-                <div className="flex items-center gap-3 px-2 mb-8">
+                <div className="flex items-center gap-3 px-2 mb-4">
                     <img src="https://raw.githubusercontent.com/darren6251/darnote/refs/heads/main/darNote%20logo.png" className="w-8 h-8"/>
                     <div><div className="font-bold text-sm tracking-tight text-zinc-900 dark:text-white">darNote</div><div className="text-[10px] text-zinc-500 font-medium uppercase tracking-wider">Insight Deck</div></div>
                 </div>
                 
-                <div>
-                     <div className="nav-header">Workspaces</div>
-                     <button onClick={() => onChangeView(Views.ANALYSIS)} className={`nav-item ${currentView === Views.ANALYSIS ? 'active' : 'inactive'}`}>
-                        <Icons.Activity className="w-5 h-5 nav-item-icon"/> <span>Insight Deck</span>
+                <div className="space-y-2">
+                     <button onClick={() => onChangeView(Views.ANALYSIS)} className={`nav-btn ${currentView === Views.ANALYSIS ? 'active' : 'inactive'}`}>
+                        <Icons.Activity className="w-5 h-5"/> <span>Insight Deck</span>
                     </button>
-                    <button onClick={() => onChangeView(Views.CORRELATION)} className={`nav-item ${currentView === Views.CORRELATION ? 'active' : 'inactive'}`}>
-                        <Icons.TrendingUp className="w-5 h-5 nav-item-icon"/> <span>Compare Data</span>
+                    <button onClick={() => onChangeView(Views.CORRELATION)} className={`nav-btn ${currentView === Views.CORRELATION ? 'active' : 'inactive'}`}>
+                        <Icons.TrendingUp className="w-5 h-5"/> <span>Compare Data</span>
                     </button>
-                    <button onClick={() => onChangeView(Views.INPUT)} className={`nav-item ${currentView === Views.INPUT ? 'active' : 'inactive'}`}>
-                        <Icons.Clock className="w-5 h-5 nav-item-icon"/> <span>Time Logger</span>
+                    <button onClick={() => onChangeView(Views.INPUT)} className={`nav-btn ${currentView === Views.INPUT ? 'active' : 'inactive'}`}>
+                        <Icons.Clock className="w-5 h-5"/> <span>Time Logger</span>
                     </button>
                 </div>
 
                 <div className="pt-4 border-t border-zinc-200 dark:border-white/5">
-                    <div className="nav-header">Navigation</div>
-                    <a href="el.html" className="nav-item inactive">
-                        <Icons.Book className="w-5 h-5 nav-item-icon"/> <span>Back to Logs</span>
+                    <a href="el.html" className="nav-btn inactive">
+                        <Icons.Book className="w-5 h-5"/> <span>Back to Logs</span>
                     </a>
                 </div>
             </div>
@@ -327,7 +320,7 @@
                             <XAxis 
                                 dataKey="display" 
                                 interval={6} 
-                                tick={{fontSize: 10, fill: isDarkMode ? '#71717a' : '#a1a1aa'}} 
+                                tick={{fontSize: 10, fill: isDarkMode ? '#e4e4e7' : '#52525b'}} 
                                 axisLine={false}
                                 tickLine={false}
                             />
@@ -397,6 +390,7 @@
                                         {stats.subjects.map((entry, index) => (<Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />))}
                                     </Pie>
                                     <Tooltip contentStyle={{backgroundColor: isDarkMode ? '#18181b' : '#fff', border: isDarkMode ? '1px solid #333' : '1px solid #e4e4e7', borderRadius: '8px', color: isDarkMode ? '#fff' : '#000'}} itemStyle={{color: '#fff'}} />
+                                    <Legend iconSize={8} layout="horizontal" verticalAlign="bottom" wrapperStyle={{fontSize: '10px', paddingTop: '10px'}} />
                                 </PieChart>
                             </ResponsiveContainer>
                         </div>
@@ -415,6 +409,7 @@
                                         {stats.studySubjects.map((entry, index) => (<Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />))}
                                     </Pie>
                                     <Tooltip contentStyle={{backgroundColor: isDarkMode ? '#18181b' : '#fff', border: isDarkMode ? '1px solid #333' : '1px solid #e4e4e7', borderRadius: '8px', color: isDarkMode ? '#fff' : '#000'}} itemStyle={{color: '#fff'}} />
+                                    <Legend iconSize={8} layout="horizontal" verticalAlign="bottom" wrapperStyle={{fontSize: '10px', paddingTop: '10px'}} />
                                 </PieChart>
                             </ResponsiveContainer>
                             ) : <div className="flex h-full items-center justify-center text-zinc-500 text-xs">No study logs found</div>}
@@ -656,9 +651,9 @@
                         <ResponsiveContainer width="100%" height="100%">
                             <ComposedChart data={data}>
                                 <CartesianGrid strokeDasharray="3 3" stroke={isDarkMode ? '#333' : '#eee'} vertical={false} />
-                                <XAxis dataKey="date" tick={{fontSize: 10, fill: isDarkMode ? '#71717a' : '#a1a1aa'}} />
-                                <YAxis yAxisId="left" orientation="left" stroke="#8884d8" label={{ value: 'Study Hours', angle: -90, position: 'insideLeft', style: {fontSize: 10, fill: '#8884d8'} }} />
-                                <YAxis yAxisId="right" orientation="right" stroke="#f43f5e" label={{ value: 'Errors Logged', angle: 90, position: 'insideRight', style: {fontSize: 10, fill: '#f43f5e'} }} />
+                                <XAxis dataKey="date" tick={{fontSize: 10, fill: isDarkMode ? '#e4e4e7' : '#52525b'}} />
+                                <YAxis yAxisId="left" orientation="left" stroke="#8884d8" label={{ value: 'Study Hours', angle: -90, position: 'insideLeft', style: {fontSize: 10, fill: '#8884d8'} }} tick={{fill: isDarkMode ? '#e4e4e7' : '#52525b'}} />
+                                <YAxis yAxisId="right" orientation="right" stroke="#f43f5e" label={{ value: 'Errors Logged', angle: 90, position: 'insideRight', style: {fontSize: 10, fill: '#f43f5e'} }} tick={{fill: isDarkMode ? '#e4e4e7' : '#52525b'}} />
                                 <Tooltip contentStyle={{backgroundColor: isDarkMode ? '#18181b' : '#fff', border: isDarkMode ? '1px solid #333' : '1px solid #e4e4e7', borderRadius: '8px', color: isDarkMode ? '#fff' : '#000'}} />
                                 <Legend />
                                 <Bar yAxisId="left" dataKey="hours" name="Study Hours" fill="#4f46e5" barSize={20} radius={[4, 4, 0, 0]} />
