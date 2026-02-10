@@ -33,7 +33,6 @@
     const Recharts = window.Recharts || { PieChart: () => null, Pie: () => null, Cell: () => null, BarChart: () => null, Bar: () => null, XAxis: () => null, YAxis: () => null, Tooltip: () => null, ResponsiveContainer: () => null, CartesianGrid: () => null, AreaChart: () => null, Area: () => null, ComposedChart: () => null, Line: () => null, Legend: () => null };
     const { PieChart, Pie, Cell, BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, AreaChart, Area, ComposedChart, Line, Legend } = Recharts;
 
-    // --- Common Styles moved to JS to ensure Tailwind JIT picks them up correctly ---
     const STYLES = {
         glassPanel: "bg-white dark:bg-[#0c0c0e] border-r border-zinc-200 dark:border-white/5",
         card: "bg-white dark:bg-surface border border-zinc-200 dark:border-white/5 rounded-2xl shadow-sm p-5",
@@ -594,6 +593,17 @@
                             AI will extract daily hours. Duplicate dates will be updated automatically.
                         </p>
                         
+                        <div className="flex gap-2 justify-center mb-6">
+                            <div className="group relative">
+                                <img src="https://lh3.googleusercontent.com/d/1m6aF8qFJ6c5IsAOfwwACkWeO1ORQczV6" className="h-32 rounded-lg border border-zinc-200 dark:border-white/10 shadow-sm transition-transform group-hover:scale-105" alt="Example 1" />
+                                <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center rounded-lg text-[10px] font-bold text-white">Daily Grid</div>
+                            </div>
+                            <div className="group relative">
+                                <img src="https://lh3.googleusercontent.com/d/1XDVfaMwrAc80vkHwG6rwRoaX3fCV49MU" className="h-32 rounded-lg border border-zinc-200 dark:border-white/10 shadow-sm transition-transform group-hover:scale-105" alt="Example 2" />
+                                 <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center rounded-lg text-[10px] font-bold text-white">Monthly View</div>
+                            </div>
+                        </div>
+
                         <input type="file" multiple accept="image/*" onChange={handleImageUpload} className="hidden" id="ocr-upload"/>
                         <label htmlFor="ocr-upload" className="bg-zinc-900 dark:bg-white text-white dark:text-black px-6 py-2 rounded-lg font-bold text-sm cursor-pointer hover:opacity-90">Select Screenshots</label>
                         
