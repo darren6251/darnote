@@ -250,7 +250,7 @@
             Main Struggle: ${topSubject?.name} (${topSubject?.value} errors).
             Top 3 Problem Topics: ${topTopics}.
             Study Hours Stats: ${JSON.stringify(data.studySubjects)}.
-            Provide a clear, structured, 3-point strategy plan. Do not roast the student. Be professional, encouraging and optimistic. Student will probably have a study plan following, so do not over providing suggestion that may ruin them. 
+            Provide a clear, structured, 3-point strategy plan. Do not roast the student. Be professional, encouraging, and optimistic. Student will probably have a study plan following, so do not over providing suggestion that may ruin them. 
             Format nicely with Markdown. Keep it under 150 words.`;
             const res = await callAI(prompt);
             setAdvice(res);
@@ -520,10 +520,13 @@
                         Return ONLY a JSON array: [{"date": "YYYY-MM-DD", "hours": 4.5}]. 
                         Use year ${new Date().getFullYear()}. Ignore 0 hour days. DO NOT include subjects.`;
                     } else {
+                        // UPDATED PROMPT: Explicitly ask for Month/Year detection
                         prompt = `Analyze this study tracker SUBJECT breakdown (Pie chart or list).
-                        Extract the Subject Name and Total Hours for the month.
-                        Return ONLY a JSON array: [{"subject": "Math", "hours": 25.5}].
-                        Ignore percentages.`;
+                        1. Detect the MONTH and YEAR shown (e.g., "January" or "Jan 2026").
+                        2. Extract Subject Name and Total Hours.
+                        3. Return ONLY a JSON array: [{"date": "YYYY-MM-01", "subject": "Math", "hours": 25.5}].
+                        4. Set 'date' to the 1st of the detected month. If year is missing, use ${new Date().getFullYear()}.
+                        5. Ignore percentages.`;
                     }
                     
                     const res = await callGroqVision(prompt, b64);
@@ -542,11 +545,18 @@
                                 createdAt: new Date().toISOString() 
                             };
                         } else {
-                            // Save Subject Log: Key = Month_Subject (Use 1st of current month for date)
-                            const currentMonth = new Date().toLocaleDateString('sv').substring(0,7); // YYYY-MM
-                            logId = `${currentMonth}_${item.subject.replace(/\s+/g, '_')}_monthly`;
+                            // Save Subject Log
+                            // Use detected date if available, fallback to current month ONLY if AI failed
+                            let dateStr = item.date;
+                            if (!dateStr) {
+                                const now = new Date();
+                                dateStr = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}-01`;
+                            }
+                            
+                            const monthKey = dateStr.substring(0, 7); // YYYY-MM
+                            logId = `${monthKey}_${item.subject.replace(/\s+/g, '_')}_monthly`;
                             docData = {
-                                date: `${currentMonth}-01`, // Default to 1st
+                                date: dateStr,
                                 hours: item.hours,
                                 subject: item.subject,
                                 createdAt: new Date().toISOString()
@@ -607,7 +617,7 @@
                                 <div className="p-3 bg-zinc-100 dark:bg-white/5 rounded-full inline-block mb-3"><Icons.Activity className="w-6 h-6 text-indigo-500"/></div>
                                 <h3 className="font-bold text-zinc-900 dark:text-white text-sm">Daily Activity</h3>
                                 <p className="text-[10px] text-zinc-500 dark:text-zinc-400 mt-1 mb-4">Upload Calendar Grids to track consistency.</p>
-                                <img src="https://lh3.googleusercontent.com/d/1XDVfaMwrAc80vkHwG6rwRoaX3fCV49MU" className="h-20 rounded border border-zinc-200 dark:border-white/10 mx-auto mb-4 opacity-70 hover:opacity-100 transition-opacity" alt="Daily Grid"/>
+                                <img src="https://lh3.googleusercontent.com/d/1m6aF8qFJ6c5IsAOfwwACkWeO1ORQczV6" className="h-20 rounded border border-zinc-200 dark:border-white/10 mx-auto mb-4 opacity-70 hover:opacity-100 transition-opacity" alt="Daily Grid"/>
                             </div>
                             <div className="w-full">
                                 <input type="file" multiple accept="image/*" onChange={(e)=>handleImageUpload(e, 'daily')} className="hidden" id="ocr-daily"/>
@@ -621,7 +631,7 @@
                                 <div className="p-3 bg-zinc-100 dark:bg-white/5 rounded-full inline-block mb-3"><Icons.Layout className="w-6 h-6 text-pink-500"/></div>
                                 <h3 className="font-bold text-zinc-900 dark:text-white text-sm">Subject Stats</h3>
                                 <p className="text-[10px] text-zinc-500 dark:text-zinc-400 mt-1 mb-4">Upload Pie Charts to track effort distribution.</p>
-                                <img src="https://lh3.googleusercontent.com/d/1m6aF8qFJ6c5IsAOfwwACkWeO1ORQczV6" className="h-20 rounded border border-zinc-200 dark:border-white/10 mx-auto mb-4 opacity-70 hover:opacity-100 transition-opacity" alt="Subject Pie"/>
+                                <img src="https://lh3.googleusercontent.com/d/1XDVfaMwrAc80vkHwG6rwRoaX3fCV49MU" className="h-20 rounded border border-zinc-200 dark:border-white/10 mx-auto mb-4 opacity-70 hover:opacity-100 transition-opacity" alt="Subject Pie"/>
                             </div>
                             <div className="w-full">
                                 <input type="file" multiple accept="image/*" onChange={(e)=>handleImageUpload(e, 'subject')} className="hidden" id="ocr-subject"/>
