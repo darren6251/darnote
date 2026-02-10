@@ -514,12 +514,17 @@
                         reader.readAsDataURL(file);
                     });
 
-                    // Updated Prompt for Daily & Subject-specific breakdown
-                    const prompt = `Analyze this study calendar/log image. The goal is to extract EXACT study hours for each specific date, categorized by subject if visible. 
-                    If the image shows a monthly calendar, check every single day.
-                    Return ONLY a JSON array of objects: [{"date": "YYYY-MM-DD", "hours": 4.5, "subject": "Math"}]. 
-                    Use year ${new Date().getFullYear()}. Ignore days with 0 hours. 
-                    If subject is not specified, use "General".`;
+                    // Updated Prompt specifically for YPT/Forest Grids & Upsert Logic
+                    const prompt = `Analyze this study tracker screenshot (likely YPT/Forest).
+                    GOAL: Extract DAILY study hours from the calendar grid or bar charts.
+                    1. If it's a Calendar Grid (e.g. "Jan 2026"): Extract the date and time for EVERY day with data.
+                       - Convert times like "1:19" (1hr 19m) to 1.32. 
+                       - Convert "9:00" to 9.0.
+                    2. If it's a Monthly Subject Breakdown: Extract totals per subject if possible, but prioritize DAILY grid data if visible.
+                    3. If subject is not specified for a specific day in the grid, use "General" or "Total".
+                    4. Detect the year (e.g., 2026). If not found, use ${new Date().getFullYear()}.
+                    5. RETURN JSON ARRAY ONLY: [{"date": "YYYY-MM-DD", "hours": 1.25, "subject": "General"}]
+                    6. Ignore 0 hour days.`;
                     
                     const res = await callGroqVision(prompt, b64);
                     
@@ -528,6 +533,7 @@
                     
                     data.forEach(item => {
                         // Create a deterministic ID: DATE_SUBJECT to allow upserting/overwriting
+                        // This fixes the duplicate issue: uploading the same date/subject again overwrites the old one.
                         const logId = `${item.date}_${item.subject.replace(/\s+/g, '_')}`;
                         const ref = window.firebase.doc(window.firebase.db, 'artifacts', "darnote-app", 'users', user.uid, 'study_logs', logId);
                         batch.set(ref, { ...item, createdAt: new Date().toISOString() }, { merge: true });
@@ -582,7 +588,11 @@
                     <div className={`${STYLES.card} text-center py-10 border-dashed border-2`}>
                         <Icons.Upload className="w-10 h-10 mx-auto text-zinc-400 mb-4"/>
                         <h3 className="font-bold text-zinc-900 dark:text-white">Batch Import Study Logs</h3>
-                        <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-2 mb-6 max-w-xs mx-auto">Upload screenshots of your YPT/Forest calendar. AI will extract dates and hours for every single day.</p>
+                        <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-2 mb-6 max-w-xs mx-auto">
+                            Upload your <strong>Monthly Calendar Grids</strong> (like YPT/Forest).
+                            <br/><br/>
+                            AI will extract daily hours. Duplicate dates will be updated automatically.
+                        </p>
                         
                         <input type="file" multiple accept="image/*" onChange={handleImageUpload} className="hidden" id="ocr-upload"/>
                         <label htmlFor="ocr-upload" className="bg-zinc-900 dark:bg-white text-white dark:text-black px-6 py-2 rounded-lg font-bold text-sm cursor-pointer hover:opacity-90">Select Screenshots</label>
