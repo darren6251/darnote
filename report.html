@@ -33,7 +33,6 @@
     const Recharts = window.Recharts || { PieChart: () => null, Pie: () => null, Cell: () => null, BarChart: () => null, Bar: () => null, XAxis: () => null, YAxis: () => null, Tooltip: () => null, ResponsiveContainer: () => null, CartesianGrid: () => null, AreaChart: () => null, Area: () => null, ComposedChart: () => null, Line: () => null, Legend: () => null };
     const { PieChart, Pie, Cell, BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, AreaChart, Area, ComposedChart, Line, Legend } = Recharts;
 
-    // --- Common Styles moved to JS to ensure Tailwind JIT picks them up correctly ---
     const STYLES = {
         glassPanel: "bg-white dark:bg-[#0c0c0e] border-r border-zinc-200 dark:border-white/5",
         card: "bg-white dark:bg-surface border border-zinc-200 dark:border-white/5 rounded-2xl shadow-sm p-5",
@@ -251,7 +250,7 @@
             Main Struggle: ${topSubject?.name} (${topSubject?.value} errors).
             Top 3 Problem Topics: ${topTopics}.
             Study Hours Stats: ${JSON.stringify(data.studySubjects)}.
-            Provide a clear, structured, 3-point strategy plan. Do not roast the student. Be professional and encouraging. 
+            Provide a clear, structured, 3-point strategy plan. Do not roast the student. Be professional, encouraging and optimistic. Student will probably have a study plan following, so do not over providing suggestion that may ruin them. 
             Format nicely with Markdown. Keep it under 150 words.`;
             const res = await callAI(prompt);
             setAdvice(res);
@@ -514,12 +513,15 @@
                         reader.readAsDataURL(file);
                     });
 
-                    // Updated Prompt for Daily & Subject-specific breakdown
-                    const prompt = `Analyze this study calendar/log image. The goal is to extract EXACT study hours for each specific date, categorized by subject if visible. 
-                    If the image shows a monthly calendar, check every single day.
-                    Return ONLY a JSON array of objects: [{"date": "YYYY-MM-DD", "hours": 4.5, "subject": "Math"}]. 
-                    Use year ${new Date().getFullYear()}. Ignore days with 0 hours. 
-                    If subject is not specified, use "General".`;
+                    // Updated Prompt specifically for YPT/Forest Grids & Upsert Logic
+                    const prompt = `Analyze this study tracker screenshot. 
+                    Identify if it contains Daily Data (Calendar/Bar Chart) OR Subject Data (Pie Chart/List).
+                    1. **Daily Data**: Extract the date and total study hours for each day. Use subject "General".
+                       - Convert timestamps (e.g. "1:30") to decimal (1.5).
+                    2. **Subject Data**: If a summary of total hours per subject is visible (e.g. "Math: 10h"), extract the subject and its total hours. 
+                       - Use the 1st day of the month shown (or current month) as the date.
+                       - Ignore percentages.
+                    3. Return a JSON array: [{"date": "YYYY-MM-DD", "hours": 2.5, "subject": "General"}, {"date": "2026-01-01", "hours": 10, "subject": "Math"}]`;
                     
                     const res = await callGroqVision(prompt, b64);
                     
@@ -528,6 +530,7 @@
                     
                     data.forEach(item => {
                         // Create a deterministic ID: DATE_SUBJECT to allow upserting/overwriting
+                        // This fixes the duplicate issue: uploading the same date/subject again overwrites the old one.
                         const logId = `${item.date}_${item.subject.replace(/\s+/g, '_')}`;
                         const ref = window.firebase.doc(window.firebase.db, 'artifacts', "darnote-app", 'users', user.uid, 'study_logs', logId);
                         batch.set(ref, { ...item, createdAt: new Date().toISOString() }, { merge: true });
@@ -582,8 +585,23 @@
                     <div className={`${STYLES.card} text-center py-10 border-dashed border-2`}>
                         <Icons.Upload className="w-10 h-10 mx-auto text-zinc-400 mb-4"/>
                         <h3 className="font-bold text-zinc-900 dark:text-white">Batch Import Study Logs</h3>
-                        <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-2 mb-6 max-w-xs mx-auto">Upload screenshots of your YPT/Forest calendar. AI will extract dates and hours for every single day.</p>
+                        <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-2 mb-6 max-w-xs mx-auto">
+                            Upload your <strong>Monthly Calendar Grids</strong> (like YPT/Forest).
+                            <br/><br/>
+                            AI will extract daily hours. Duplicate dates will be updated automatically.
+                        </p>
                         
+                        <div className="flex gap-2 justify-center mb-6">
+                            <div className="group relative">
+                                <img src="https://lh3.googleusercontent.com/d/1m6aF8qFJ6c5IsAOfwwACkWeO1ORQczV6" className="h-32 rounded-lg border border-zinc-200 dark:border-white/10 shadow-sm transition-transform group-hover:scale-105" alt="Example 1" />
+                                <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center rounded-lg text-[10px] font-bold text-white">Daily Grid</div>
+                            </div>
+                            <div className="group relative">
+                                <img src="https://lh3.googleusercontent.com/d/1XDVfaMwrAc80vkHwG6rwRoaX3fCV49MU" className="h-32 rounded-lg border border-zinc-200 dark:border-white/10 shadow-sm transition-transform group-hover:scale-105" alt="Example 2" />
+                                 <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center rounded-lg text-[10px] font-bold text-white">Monthly View</div>
+                            </div>
+                        </div>
+
                         <input type="file" multiple accept="image/*" onChange={handleImageUpload} className="hidden" id="ocr-upload"/>
                         <label htmlFor="ocr-upload" className="bg-zinc-900 dark:bg-white text-white dark:text-black px-6 py-2 rounded-lg font-bold text-sm cursor-pointer hover:opacity-90">Select Screenshots</label>
                         
