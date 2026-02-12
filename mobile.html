@@ -193,10 +193,13 @@
                 }else{
                     try{
                         const db=window.fb.db,ref=window.fb.collection(db,'artifacts',"darnote-app",'users',user.uid,'error_logs');
-                        let q=[window.fb.where('subject','==',ss),window.fb.limit(10)];if(st)q.push(window.fb.where('topic','==',st));
+                        let q=[window.fb.where('subject','==',ss),window.fb.limit(30)];if(st)q.push(window.fb.where('topic','==',st));
                         const sn=await window.fb.getDocs(window.fb.query(ref,...q));
-                        const l=sn.docs.map(d=>d.data());
-                        if(l.length)ctx=`Sub:${ss}.Top:${st}.Mistakes:\n${l.map(x=>x.explanation||x.questionText).join('\n')}`; else ctx=`Sub:${ss}.Top:${st}`;
+                        let l=sn.docs.map(d=>d.data());
+                        if(l.length){
+                            const sampled = l.sort(() => 0.5 - Math.random()).slice(0, 5);
+                            ctx=`Sub:${ss}.Top:${st}.Mistakes:\n${sampled.map(x=>(x.explanation||x.questionText||"").substring(0,300)).filter(Boolean).join('\n')}`;
+                        } else ctx=`Sub:${ss}.Top:${st}`;
                     }catch(e){ctx=`Sub:${ss}.Top:${st}`}
                 }
                 const tp=pm==='drill'?log.questionType:stp;
