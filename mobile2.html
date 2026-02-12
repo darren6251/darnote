@@ -10,11 +10,11 @@
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-app.js";
         import { getAuth, signInWithPopup, GoogleAuthProvider, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-auth.js";
-        import { getFirestore, collection, doc, addDoc, updateDoc, deleteDoc, onSnapshot, getDoc, setDoc, arrayUnion, increment, query, where, orderBy, limit, startAfter, getDocs, getCountFromServer, enableIndexedDbPersistence } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-firestore.js";
+        import { getFirestore, collection, doc, addDoc, updateDoc, deleteDoc, onSnapshot, getDoc, setDoc, arrayUnion, increment, query, where, orderBy, limit, startAfter, getDocs, getCountFromServer, enableIndexedDbPersistence, writeBatch } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-firestore.js";
         const app=initializeApp({apiKey:"AIzaSyAvPEac-03kE4oazvaq8K3T2gxLPsnZO20",authDomain:"darnote625.firebaseapp.com",projectId:"darnote625",storageBucket:"darnote625.firebasestorage.app",messagingSenderId:"16458322562",appId:"1:16458322562:web:8894d71f3e6c326eba1a9b"});
         const db=getFirestore(app);
         try { enableIndexedDbPersistence(db).catch(e=>{if(e.code=='failed-precondition')console.log('Multiple tabs open');else if(e.code=='unimplemented')console.log('Browser no support')}); } catch(e){}
-        window.fb={app,auth:getAuth(app),db,signInWithPopup,GoogleAuthProvider,signOut,onAuthStateChanged,collection,doc,addDoc,updateDoc,deleteDoc,onSnapshot,getDoc,setDoc,arrayUnion,increment,query,where,orderBy,limit,startAfter,getDocs,getCountFromServer};
+        window.fb={app,auth:getAuth(app),db,signInWithPopup,GoogleAuthProvider,signOut,onAuthStateChanged,collection,doc,addDoc,updateDoc,deleteDoc,onSnapshot,getDoc,setDoc,arrayUnion,increment,query,where,orderBy,limit,startAfter,getDocs,getCountFromServer,writeBatch};
     </script>
     <script>tailwind.config={darkMode:'class',theme:{extend:{colors:{onyx:'#09090b',surface:'#18181b',border:'#27272a',brand:'#6366f1','brand-dark':'#4338ca'},fontFamily:{sans:['Inter','sans-serif']},boxShadow:{'glow':'0 0 20px rgba(99, 102, 241, 0.3)'}}}}</script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
@@ -27,7 +27,9 @@
         const GEMINI_PROXY_URL = "https://gemini-proxy-513372702506.us-central1.run.app/proxy";
         const GROQ_PROXY_URL = "https://groq-proxy-157237873670.us-central1.run.app/chat/completions";
         
-        const Icons={Home:p=><svg {...p} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>,Book:p=><svg {...p} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>,Bug:p=><svg {...p} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="1" y="1" width="22" height="22" rx="5"/><path d="M12 1v22"/><path d="M1 12h22"/></svg>,Plus:p=><svg {...p} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>,User:p=><svg {...p} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>,Chevron:p=><svg {...p} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="15 18 9 12 15 6"/></svg>,Check:p=><svg {...p} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="20 6 9 17 4 12"/></svg>,X:p=><svg {...p} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>,Camera:p=><svg {...p} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>,Bot:p=><svg {...p} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="1" y="4" width="22" height="16" rx="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg>,Google:p=><svg {...p} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M12 22C6.477 22 2 17.523 2 12S6.477 2 12 2s10 4.477 10 10-4.477 10-10 10z"/><path d="M12 11h9c.1 1.4.1 2.9-.4 4.3-1.1 3-4.1 5.3-7.6 5.6-5 .5-9.4-3.1-9.9-8.1C2.5 7.1 6 2.3 11 2c2.5-.1 4.9.9 6.7 2.6l-2.7 2.8c-1-.7-2.3-1.1-3.6-1-2.9.2-5.1 2.8-4.9 5.7.2 2.6 2.4 4.7 5 4.7 2 0 3.6-1.1 4.3-2.9H12v-3z" fill="currentColor"/></svg>,Sort:p=><svg {...p} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="12" y1="5" x2="12" y2="19"/><polyline points="19 12 12 19 5 12"/></svg>,Brain:p=><svg {...p} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M9.5 2A2.5 2.5 0 0 1 12 4.5v15a2.5 2.5 0 0 1-4.96.44 2.5 2.5 0 0 1-2.96-3.08 3 3 0 0 1-.34-5.58 2.5 2.5 0 0 1 1.32-4.24 2.5 2.5 0 0 1 1.98-3A2.5 2.5 0 0 1 9.5 2Z"/><path d="M14.5 2A2.5 2.5 0 0 0 12 4.5v15a2.5 2.5 0 0 0 4.96.44 2.5 2.5 0 0 0 2.96-3.08 3 3 0 0 0 .34-5.58 2.5 2.5 0 0 0-1.32-4.24 2.5 2.5 0 0 0-1.98-3A2.5 2.5 0 0 0 14.5 2Z"/></svg>,Dice:p=><svg {...p} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="2" y="2" width="20" height="20" rx="5"/><path d="M16 8h.01"/><path d="M8 8h.01"/><path d="M8 16h.01"/><path d="M16 16h.01"/><path d="M12 12h.01"/></svg>,Zap:p=><svg {...p} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>,Search:p=><svg {...p} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>};
+        const Icons={Home:p=><svg {...p} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>,Book:p=><svg {...p} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>,Bug:p=><svg {...p} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="1" y="1" width="22" height="22" rx="5"/><path d="M12 1v22"/><path d="M1 12h22"/></svg>,Plus:p=><svg {...p} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>,User:p=><svg {...p} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>,Chevron:p=><svg {...p} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="15 18 9 12 15 6"/></svg>,Check:p=><svg {...p} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="20 6 9 17 4 12"/></svg>,X:p=><svg {...p} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>,Camera:p=><svg {...p} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>,Bot:p=><svg {...p} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="1" y="4" width="22" height="16" rx="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg>,Google:p=><svg {...p} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M12 22C6.477 22 2 17.523 2 12S6.477 2 12 2s10 4.477 10 10-4.477 10-10 10z"/><path d="M12 11h9c.1 1.4.1 2.9-.4 4.3-1.1 3-4.1 5.3-7.6 5.6-5 .5-9.4-3.1-9.9-8.1C2.5 7.1 6 2.3 11 2c2.5-.1 4.9.9 6.7 2.6l-2.7 2.8c-1-.7-2.3-1.1-3.6-1-2.9.2-5.1 2.8-4.9 5.7.2 2.6 2.4 4.7 5 4.7 2 0 3.6-1.1 4.3-2.9H12v-3z" fill="currentColor"/></svg>,Sort:p=><svg {...p} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="12" y1="5" x2="12" y2="19"/><polyline points="19 12 12 19 5 12"/></svg>,Brain:p=><svg {...p} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M9.5 2A2.5 2.5 0 0 1 12 4.5v15a2.5 2.5 0 0 1-4.96.44 2.5 2.5 0 0 1-2.96-3.08 3 3 0 0 1-.34-5.58 2.5 2.5 0 0 1 1.32-4.24 2.5 2.5 0 0 1 1.98-3A2.5 2.5 0 0 1 9.5 2Z"/><path d="M14.5 2A2.5 2.5 0 0 0 12 4.5v15a2.5 2.5 0 0 0 4.96.44 2.5 2.5 0 0 0 2.96-3.08 3 3 0 0 0 .34-5.58 2.5 2.5 0 0 0-1.32-4.24 2.5 2.5 0 0 0-1.98-3A2.5 2.5 0 0 0 14.5 2Z"/></svg>,Dice:p=><svg {...p} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="2" y="2" width="20" height="20" rx="5"/><path d="M16 8h.01"/><path d="M8 8h.01"/><path d="M8 16h.01"/><path d="M16 16h.01"/><path d="M12 12h.01"/></svg>,Zap:p=><svg {...p} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>,Search:p=><svg {...p} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>,
+        GraduationCap:p=><svg {...p} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M22 10v6M2 10l10-5 10 5-10 5z"/><path d="M6 12v5c3 3 9 3 12 0v-5"/></svg>,ShieldCheck:p=><svg {...p} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><path d="m9 12 2 2 4-4"/></svg>,ShieldClock:p=><svg {...p} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><circle cx="12" cy="12" r="3"/><polyline points="12 10 12 12 13 13"/></svg>,Lock:p=><svg {...p} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>,Scan:p=><svg {...p} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M3 7V5a2 2 0 0 1 2-2h2"/><path d="M17 3h2a2 2 0 0 1 2 2v2"/><path d="M21 17v2a2 2 0 0 1-2 2h-2"/><path d="M7 21H5a2 2 0 0 1-2-2v-2"/><path d="M8 12h8"/><path d="M12 8v8"/></svg>,CloudUpload:p=><svg {...p} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M4 14.899A7 7 0 1 1 15.71 8h1.79a4.5 4.5 0 0 1 2.5 8.242"/><path d="M12 12v9"/><path d="m16 16-4-4-4 4"/></svg>
+        };
         
         // --- POTATO MODE COMPRESSION ---
         const compressImage=async(f)=>{return new Promise((rs)=>{const i=new Image(),r=new FileReader();r.onload=e=>{i.src=e.target.result;i.onload=()=>{const c=document.createElement('canvas'),mw=2000;let w=i.width,h=i.height;if(w>mw){h*=mw/w;w=mw}c.width=w;c.height=h;c.getContext('2d').drawImage(i,0,0,w,h);c.toBlob(b=>rs(b),'image/jpeg',0.9)}};r.readAsDataURL(f)})};
@@ -36,16 +38,40 @@
         const callAI=async(p,s="",b=null,u=GEMINI_PROXY_URL)=>{
             const pts=[{text:`${s}\n\nUser: ${p}`}];
             if(b){let m="image/png",d=b;if(b.includes(",")){const x=b.split(",");m=x[0].match(/:(.*?);/)[1];d=x[1]}pts.push({inlineData:{mimeType:m,data:d}})}
-            try{const r=await fetch(u,{method:'POST',body:JSON.stringify(u.includes('groq')?{model:"llama-3.2-90b-vision-preview",messages:[{role:"system",content:s},{role:"user",content:[{type:"text",text:p},...(b?[{type:"image_url",image_url:{url:b}}]:[])]}]}:{contents:[{parts:pts}]}),headers:{'Content-Type':'application/json'}});
-            if(!r.ok)throw 0;const d=await r.json();return u.includes('groq')?d.choices?.[0]?.message?.content:d.candidates?.[0]?.content?.parts?.[0]?.text||"No response.";}catch(e){return "Error: "+e.message}
+            try{const r=await fetch(u,{method:'POST',body:JSON.stringify({contents:[{parts:pts}]}),headers:{'Content-Type':'application/json'}});
+            if(!r.ok)throw 0;const d=await r.json();return d.candidates?.[0]?.content?.parts?.[0]?.text||"No response.";}catch(e){return "Error: "+e.message}
         };
 
+        const callGroq = async (prompt, systemInstruction = "", images = []) => { 
+            const userContent = [{ type: "text", text: prompt }]; 
+            if (images?.length > 0) { images.forEach(img => { userContent.push({ type: "image_url", image_url: { url: img } }); }); } 
+            const modelToUse = (images?.length > 0) ? "llama-3.2-90b-vision-preview" : "openai/gpt-oss-120b"; 
+            const payload = { model: modelToUse, messages: [ { role: "system", content: systemInstruction }, { role: "user", content: userContent } ] }; 
+            try { const response = await fetch(GROQ_PROXY_URL, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) }); 
+            if (!response.ok) return `Error: ${response.status}`; 
+            const data = await response.json(); return data.choices?.[0]?.message?.content || "Empty response."; } catch (error) { return `Error: ${error.message}`; } 
+        };
+
+        // --- THE FRAUDULENT QUOTA SYSTEM (NEGATIVE NUMBERS ARE REAL) ---
         const checkQuota=async(u,t,sub=null)=>{
             if(!u)return false;
-            const lim={chat_gemini:5,chat_groq:20,practice:10,ocr:20},fld=t==='chat'?sub==='groq'?'chat_groq_count':'chat_count':t==='practice'?'practice_count':'ocr_count';
+            const lim={chat_gemini:5,chat_groq:20,practice:15,ocr:20},fld=t==='chat'?sub==='groq'?'chat_groq_count':'chat_count':t==='practice'?'practice_count':'ocr_count';
             const l=t==='chat'?sub==='groq'?lim.chat_groq:lim.chat_gemini:lim[t];
             const td=new Date().toISOString().split('T')[0],ref=window.fb.doc(window.fb.db,'artifacts',"darnote-app",'users',u.uid,'ai_usage',td);
-            try{const s=await window.fb.getDoc(ref);let c=s.exists()?(s.data()[fld]||0):0;if(c>=l)return false;await window.fb.setDoc(ref,{[fld]:window.fb.increment(1),date:td},{merge:true});return c+1;}catch(e){return false}
+            try{
+                const s=await window.fb.getDoc(ref);
+                let c=null;
+                if(s.exists()&&typeof s.data()[fld]!=='undefined'){c=s.data()[fld];}
+                else{
+                    const pref=window.fb.doc(window.fb.db,'artifacts',"darnote-app",'users',u.uid,'settings','profile');
+                    const psnap=await window.fb.getDoc(pref);
+                    const st=psnap.exists()?psnap.data().studentStatus:null;
+                    c=(st==='verified'||st==='temp_verified')?-20:0; // Accounting fraud starts here
+                }
+                if(c>=l)return false;
+                if(!s.exists()||typeof s.data()[fld]==='undefined'){await window.fb.setDoc(ref,{[fld]:c+1,date:td},{merge:true});return c+1;}
+                else{await window.fb.setDoc(ref,{[fld]:window.fb.increment(1),date:td},{merge:true});return c+1;}
+            }catch(e){return false}
         };
 
         const useDrive=()=>{
@@ -53,12 +79,15 @@
             useEffect(()=>{
                 const i=async()=>{if(window.gapi){await new Promise(r=>window.gapi.load('client',r));await window.gapi.client.init({apiKey:"AIzaSyCScFR_D0snZ6hrHob5fUQM7Y2NhK-kTIA",discoveryDocs:['https://www.googleapis.com/discovery/v1/apis/drive/v3/rest']})}if(window.google)sC(window.google.accounts.oauth2.initTokenClient({client_id:"256215327792-oglegui0q8qj507oao2c2733thcl9lrc.apps.googleusercontent.com",scope:'https://www.googleapis.com/auth/drive.file',callback:()=>{}}))};i();
             },[]);
-            return {saveToDrive:async(b,n)=>{
-                const t=await new Promise((rs,rj)=>{if(!c)rj();const e=window.gapi.client.getToken();if(e&&Date.now()<e.expiry)rs(e.access_token);c.callback=r=>{if(r.error)rj();rs(r.access_token)};c.requestAccessToken({prompt:''})});
-                const q=`mimeType='application/vnd.google-apps.folder' and name='darNote_Images' and trashed=false`;
+            const getAccessToken = () => new Promise((rs,rj)=>{if(!c)rj("Auth not initialized");const e=window.gapi.client.getToken();if(e&&Date.now()<e.expiry)return rs(e.access_token);c.callback=r=>{if(r.error)rj(r);rs(r.access_token)};c.requestAccessToken({prompt:''});});
+            return {
+                getAccessToken,
+                saveToDrive:async(b,n,preToken=null,folderName='darNote_Images')=>{
+                const t=preToken||await getAccessToken();
+                const q=`mimeType='application/vnd.google-apps.folder' and name='${folderName}' and trashed=false`;
                 const s=await fetch(`https://www.googleapis.com/drive/v3/files?q=${encodeURIComponent(q)}`,{headers:{Authorization:`Bearer ${t}`}});
                 let p=(await s.json()).files?.[0]?.id;
-                if(!p){const cr=await fetch('https://www.googleapis.com/drive/v3/files',{method:'POST',headers:{Authorization:`Bearer ${t}`,'Content-Type':'application/json'},body:JSON.stringify({name:'darNote_Images',mimeType:'application/vnd.google-apps.folder'})});p=(await cr.json()).id}
+                if(!p){const cr=await fetch('https://www.googleapis.com/drive/v3/files',{method:'POST',headers:{Authorization:`Bearer ${t}`,'Content-Type':'application/json'},body:JSON.stringify({name:folderName,mimeType:'application/vnd.google-apps.folder'})});p=(await cr.json()).id}
                 const m={name:n,mimeType:b.type,parents:[p]},f=new FormData();f.append('metadata',new Blob([JSON.stringify(m)],{type:'application/json'}));f.append('file',b);
                 const u=await fetch('https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&fields=id',{method:'POST',headers:{Authorization:`Bearer ${t}`},body:f});
                 const id=(await u.json()).id;
@@ -81,13 +110,81 @@
             return <div onTouchStart={e=>{sX.current=e.touches[0].clientX;sY.current=e.touches[0].clientY}} onTouchEnd={e=>{if(!sX.current)return;const dX=e.changedTouches[0].clientX-sX.current,dY=Math.abs(e.changedTouches[0].clientY-sY.current);if(sX.current<30&&dX>60&&dY<30)onBack();sX.current=null}} className={cls}>{children}</div>;
         };
 
+        // --- THE BOUNCER (STUDENT VERIFICATION) ---
+        const StudentModal = ({ isOpen, onClose, user, saveToDrive, getAccessToken }) => {
+            const [role, setRole] = useState('University'); const [file, setFile] = useState(null); const [uploading, setUploading] = useState(false);
+            const [status, setStatus] = useState('none'); const [cooldownEnd, setCooldownEnd] = useState(null); const [uploadStatusMsg, setUploadStatusMsg] = useState("");
+            const [verifiedData, setVerifiedData] = useState(null); const [timeLeft, setTimeLeft] = useState("");
+
+            useEffect(() => {
+                if(!isOpen || !user) return;
+                const ref = window.fb.doc(window.fb.db, 'artifacts', "darnote-app", 'users', user.uid, 'settings', 'profile');
+                window.fb.getDoc(ref).then(snap => { if(snap.exists()) {
+                    if (snap.data().studentStatus) setStatus(snap.data().studentStatus);
+                    if (snap.data().verifiedData) setVerifiedData(snap.data().verifiedData);
+                    const cd = snap.data().studentVerificationCooldown; if (cd && cd > Date.now()) setCooldownEnd(cd);
+                }});
+            }, [isOpen, user]);
+
+            useEffect(() => {
+                if(!cooldownEnd) return;
+                const i = setInterval(() => { const diff = cooldownEnd - Date.now(); if (diff <= 0) { setCooldownEnd(null); clearInterval(i); return; } setTimeLeft(`${Math.floor(diff / 60000)}m ${Math.floor((diff % 60000) / 1000)}s`); }, 1000);
+                return () => clearInterval(i);
+            }, [cooldownEnd]);
+
+            const handleSubmit = async () => {
+                if (!file) { alert("Please upload proof."); return; }
+                setUploading(true); setUploadStatusMsg("Uploading to secure storage...");
+                try {
+                    const token = await getAccessToken();
+                    const url = await saveToDrive(file, `Proof_${user.uid}_${Date.now()}.jpg`, token, "darNote_personal image");
+                    setUploadStatusMsg("AI Bouncer checking ID...");
+                    const b64 = await new Promise((r) => { const reader = new FileReader(); reader.onloadend = () => r(reader.result); reader.readAsDataURL(file); });
+                    const prompt = `Analyze this ID. Extract "fullName" and "schoolName". Return JSON ONLY: { "fullName": "...", "schoolName": "..." }. Be strict. Ignore numbers. Empty strings if unreadable.`;
+                    const aiRes = await callGroq(prompt, "JSON Parser", [b64]);
+                    
+                    let extractedData = {}; try { extractedData = JSON.parse(aiRes.substring(aiRes.indexOf('{'), aiRes.lastIndexOf('}') + 1)); } catch(e) {}
+                    const { fullName, schoolName } = extractedData;
+
+                    if (!fullName || !schoolName || fullName.length < 3 || schoolName.length < 3) {
+                        const cdTime = Date.now() + (2 * 60 * 60 * 1000); // 2 hr penalty
+                        await window.fb.setDoc(window.fb.doc(window.fb.db, 'artifacts', "darnote-app", 'users', user.uid, 'settings', 'profile'), { studentVerificationCooldown: cdTime }, { merge: true });
+                        setCooldownEnd(cdTime); setUploading(false); alert("AI Bouncer Failed: Could not identify Name or School. Cooldown activated."); return;
+                    }
+
+                    const docId = fullName.toLowerCase().trim().replace(/\s+/g, '_'); 
+                    const regRef = window.fb.doc(window.fb.db, 'artifacts', "darnote-app", 'public', 'data', 'verified_students', docId);
+                    const regSnap = await window.fb.getDoc(regRef);
+
+                    if (regSnap.exists() && regSnap.data().uid !== user.uid) {
+                        setUploading(false); alert(`Rejected: The name "${fullName}" is taken.`);
+                        const cdTime = Date.now() + (2 * 60 * 60 * 1000);
+                        await window.fb.setDoc(window.fb.doc(window.fb.db, 'artifacts', "darnote-app", 'users', user.uid, 'settings', 'profile'), { studentVerificationCooldown: cdTime }, { merge: true });
+                        setCooldownEnd(cdTime); return;
+                    }
+
+                    const batch = window.fb.writeBatch(window.fb.db);
+                    const userRef = window.fb.doc(window.fb.db, 'artifacts', "darnote-app", 'users', user.uid, 'settings', 'profile');
+                    batch.set(userRef, { studentStatus: 'temp_verified', studentRole: role, proofUrl: url, verifiedData: { fullName, schoolName }, submittedAt: new Date().toISOString() }, { merge: true });
+                    batch.set(regRef, { uid: user.uid, school: schoolName, role: role, registeredAt: new Date().toISOString() });
+                    await batch.commit();
+                    
+                    setStatus('temp_verified'); setVerifiedData({ fullName, schoolName }); setUploading(false); setUploadStatusMsg("");
+                    alert("Success! Temporary Verification Granted. You have instant access to the negative quota hack (+20 credits).");
+                } catch(e) { alert("Process Failed: " + e.message); setUploading(false); }
+            };
+
+            if (!isOpen) return null;
+            return <div className="fixed inset-0 z-[100] bg-black/80 flex items-end justify-center sm:items-center sm:p-4" onClick={onClose}><div className="bg-white dark:bg-zinc-900 w-full sm:max-w-md rounded-t-3xl sm:rounded-2xl p-6 shadow-2xl overflow-y-auto max-h-[90vh]" onClick={e=>e.stopPropagation()}><div className="flex justify-between items-start mb-6"><div><h3 className="text-xl font-bold flex items-center gap-2"><Icons.GraduationCap className="w-6 h-6 text-brand"/> Student Plan</h3><p className="text-xs text-zinc-500">Get +20 extra AI credits daily.</p></div><button onClick={onClose}><Icons.X className="w-6 h-6 text-zinc-400"/></button></div>{status === 'verified' ? <div className="text-center py-8"><div className="w-16 h-16 bg-green-500/10 rounded-full flex items-center justify-center mx-auto mb-4"><Icons.ShieldCheck className="w-8 h-8 text-green-500"/></div><h4 className="font-bold text-lg text-green-500 mb-2">Verified Student</h4>{verifiedData && <div className="bg-zinc-50 dark:bg-white/5 rounded-xl p-3 mb-4"><div className="text-sm font-bold">{verifiedData.fullName}</div><div className="text-xs text-zinc-500">{verifiedData.schoolName}</div></div>}<p className="text-sm text-zinc-400">Enjoy your perks.</p></div> : status === 'temp_verified' ? <div className="text-center py-8 border border-orange-500/20 rounded-xl bg-orange-500/5"><div className="w-16 h-16 bg-orange-500/10 rounded-full flex items-center justify-center mx-auto mb-4"><Icons.ShieldClock className="w-8 h-8 text-orange-500"/></div><h4 className="font-bold text-lg text-orange-500 mb-1">Temporary Verified</h4><div className="text-xs font-bold text-orange-400 uppercase tracking-wider mb-2">Under Manual Review</div>{verifiedData && <div className="bg-white/50 dark:bg-black/20 rounded-xl p-3 mb-4 mx-6"><div className="text-sm font-bold">{verifiedData.fullName}</div><div className="text-xs text-zinc-500">{verifiedData.schoolName}</div></div>}<p className="text-sm text-zinc-400 px-4">Instant access granted while we double-check your ID.</p></div> : cooldownEnd ? <div className="text-center py-10"><div className="w-16 h-16 bg-red-500/10 rounded-full flex items-center justify-center mx-auto mb-4 animate-pulse"><Icons.Lock className="w-8 h-8 text-red-500"/></div><h4 className="font-bold text-lg text-red-500 mb-2">Verification Locked</h4><p className="text-sm text-zinc-400 mb-4">AI could not verify ID or duplicate found.</p><div className="bg-zinc-100 dark:bg-black/20 rounded-lg py-2 font-mono text-xl font-bold text-zinc-500">Try in {timeLeft}</div></div> : <div className="space-y-4"><div><label className="text-xs font-bold text-zinc-500 uppercase block mb-2">I am a student at</label><div className="grid grid-cols-1 gap-2">{['University', 'High School / HKDSE', 'Middle School'].map(r => <button key={r} onClick={() => setRole(r)} className={`p-3 rounded-lg text-sm border text-left transition-all ${role === r ? 'border-brand bg-brand/5 text-brand font-bold' : 'border-zinc-200 dark:border-white/10 dark:text-zinc-300'}`}>{r}</button>)}</div></div><div><label className="text-xs font-bold text-zinc-500 uppercase block mb-2">Proof of Identity</label><div className="border-2 border-dashed border-zinc-200 dark:border-white/10 rounded-xl p-6 text-center relative"><input type="file" accept="image/*" className="absolute inset-0 opacity-0 cursor-pointer" onChange={(e) => setFile(e.target.files[0])} /><div className="flex flex-col items-center"><Icons.CloudUpload className="w-8 h-8 text-zinc-400 mb-2"/><span className="text-xs text-zinc-500">{file ? file.name : "Tap to Upload ID"}</span></div></div><div className="text-[10px] text-zinc-400 mt-2 space-y-1"><p className="flex gap-1 text-red-400"><Icons.Lock className="w-3 h-3"/> Mask ID Numbers/DOB.</p><p>• Name & School must be clearly visible.</p></div></div><button onClick={handleSubmit} disabled={uploading || !file} className="w-full bg-brand text-white font-bold py-4 rounded-xl shadow-glow disabled:opacity-50 flex justify-center items-center gap-2">{uploading ? <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"/> : <Icons.Check className="w-4 h-4"/>}{uploading ? "Analyzing..." : "Verify & Unlock Perks"}</button>{uploading && <p className="text-center text-[10px] text-zinc-400 animate-pulse">{uploadStatusMsg}</p>}</div>}</div></div>;
+        };
+
         const PracticeM=({log,close,user,subs})=>{
             const [ld,sLd]=useState(false),[qs,sQs]=useState([]),[lq,sLq]=useState(null),[ans,sAns]=useState({}),[mk,sMk]=useState(false),[fb,sFb]=useState(null),[qt,sQt]=useState(0);
             const [pm,sPm]=useState(log?'drill':'arcade'),[ss,sSs]=useState(log?.subject||'General'),[st,sSt]=useState(log?.topic||''),[stp,sStp]=useState('MC');
             useEffect(()=>{window.fb.onSnapshot(window.fb.doc(window.fb.db,'artifacts',"darnote-app",'users',user.uid,'ai_usage',new Date().toISOString().split('T')[0]),s=>sQt(s.exists()?(s.data().practice_count||0):0))},[user]);
             const gen=async()=>{
                 sLd(true);
-                if(await checkQuota(user,'practice')===false){alert("Daily Limit (10/10)");close();return}
+                if(await checkQuota(user,'practice')===false){alert("Daily Limit Reached");close();return}
                 let im=null,ctx="";
                 if(pm==='drill'&&log){
                     ctx=`Sub:${log.subject}.Top:${log.topic}.Ctx:${log.explanation}`;
@@ -103,11 +200,12 @@
                     }catch(e){ctx=`Sub:${ss}.Top:${st}`}
                 }
                 const tp=pm==='drill'?log.questionType:stp;
+                const proxy = GEMINI_PROXY_URL; // We fired Groq. Gemini only.
                 if(tp==='MC'){
-                    const r=await callAI(`Gen 3 MCQs (ABCD). Context:${ctx}. JSON Array: [{"q":"...","options":["A..."],"answer":"A","explanation":"..."}]. No LaTeX.`,"JSON Gen",im,GEMINI_PROXY_URL);
+                    const r=await callAI(`Gen 5 MCQs (ABCD). Context:${ctx}. JSON Array: [{"q":"...","options":["A..."],"answer":"A","explanation":"..."}]. Plain text only.`,"JSON Gen",im,proxy);
                     try{sQs(JSON.parse(r.replace(/```json|```/g,'')))}catch(e){alert('Err');close()}
                 }else{
-                    const r=await callAI(`Gen 1 long Q (2 parts). Context:${ctx}. JSON: {"context":"...","parts":[{"id":"a","text":"...","marks":2}]}. No LaTeX.`,"JSON Gen",im,GEMINI_PROXY_URL);
+                    const r=await callAI(`Gen 1 long Q with 3 sub-parts. Context:${ctx}. JSON: {"context":"...","parts":[{"id":"a","text":"...","marks":2}]}. Plain text.`,"JSON Gen",im,proxy);
                     try{sLq(JSON.parse(r.replace(/```json|```/g,'')))}catch(e){alert('Err');close()}
                 }
                 sLd(false);
@@ -119,7 +217,7 @@
                 sLd(false);
             };
             const tops=(subs.find(s=>s.name===ss)?.topics||[]);
-            return <div className="fixed inset-0 z-[100] bg-zinc-50 dark:bg-onyx flex flex-col"><div className="p-4 border-b border-zinc-200 dark:border-white/10 flex justify-between bg-white dark:bg-black/20"><div className="flex flex-col"><span className="font-bold flex gap-2"><Icons.Brain className="w-5 h-5 text-brand"/> Arcade</span><span className="text-[10px] text-zinc-500">{qt}/10 Used</span></div><button onClick={close}><Icons.X className="w-6 h-6 text-zinc-400"/></button></div><div className="flex-1 overflow-y-auto p-4 space-y-6">{!ld&&qs.length===0&&!lq?
+            return <div className="fixed inset-0 z-[100] bg-zinc-50 dark:bg-onyx flex flex-col"><div className="p-4 border-b border-zinc-200 dark:border-white/10 flex justify-between bg-white dark:bg-black/20"><div className="flex flex-col"><span className="font-bold flex gap-2"><Icons.Brain className="w-5 h-5 text-brand"/> Arcade</span><span className="text-[10px] text-zinc-500">{qt}/15 Used</span></div><button onClick={close}><Icons.X className="w-6 h-6 text-zinc-400"/></button></div><div className="flex-1 overflow-y-auto p-4 space-y-6">{!ld&&qs.length===0&&!lq?
                 <div className="space-y-4">
                     <div className="flex p-1 bg-zinc-200 dark:bg-white/10 rounded-lg">{['drill','arcade'].map(m=><button key={m} onClick={()=>sPm(m)} disabled={m==='drill'&&!log} className={`flex-1 py-2 text-xs font-bold uppercase rounded-md ${pm===m?'bg-white dark:bg-zinc-800 shadow text-brand':'text-zinc-500'}`}>{m}</button>)}</div>
                     {pm==='arcade'&&<div className="space-y-3 bg-white dark:bg-white/5 p-4 rounded-xl border border-zinc-200 dark:border-white/5">
@@ -138,31 +236,82 @@
             useEffect(()=>{ref.current?.scrollIntoView({behavior:"smooth"})},[ms]);
             const snd=async()=>{
                 if(!inp.trim())return;
-                const lim=mod==='groq'?20:5;
-                if(await checkQuota(user,'chat',mod)===false){sMs(p=>[...p,{role:'ai',text:`Limit (${lim}) Reached.`}]);return}
+                if(await checkQuota(user,'chat',mod)===false){sMs(p=>[...p,{role:'ai',text:`Limit Reached.`}]);return}
                 const u=inp;sMs(p=>[...p,{role:'user',text:u}]);sInp("");sLd(true);
-                let im=null; if(log){let l=(log.questionImages?.[0])||log.imageUrl;if(l&&l.startsWith('http')){try{const r=await fetch(l),b=await r.blob();im=await new Promise(r=>{const f=new FileReader();f.onloadend=()=>r(f.result);f.readAsDataURL(b)})}catch(e){}}}
-                const r=await callAI(u,`Tutor. Ctx: ${log?log.explanation:'General'}`,im, mod==='groq'?GROQ_PROXY_URL:GEMINI_PROXY_URL);
+                let im=null; 
+                if(log && mod !== 'groq'){
+                    let l=(log.questionImages?.[0])||log.imageUrl;
+                    if(l&&l.startsWith('http')){try{const r=await fetch(l),b=await r.blob();im=await new Promise(r=>{const f=new FileReader();f.onloadend=()=>r(f.result);f.readAsDataURL(b)})}catch(e){}}
+                }
+                const r=mod==='groq'?await callGroq(u,`Tutor. Ctx: ${log?log.explanation:'General'}`,im?[im]:[]) : await callAI(u,`Tutor. Ctx: ${log?log.explanation:'General'}`,im, GEMINI_PROXY_URL);
                 sMs(p=>[...p,{role:'ai',text:r.replace(/\$\$/g,'\n').replace(/\$/g,'')}]);sLd(false);
             };
             return <div className="flex flex-col w-full fixed inset-0 z-[80] h-[100dvh] bg-zinc-50 dark:bg-surface"><div className="p-4 border-b border-zinc-200 dark:border-white/10 flex flex-col gap-2 bg-zinc-100 dark:bg-black/20"><div className="flex justify-between items-center"><span className="font-bold text-sm flex gap-2"><Icons.Bot className="w-4 h-4 text-brand"/>AI Tutor</span><button onClick={close}><Icons.Chevron className="w-6 h-6 rotate-[-90deg]"/></button></div><div className="flex bg-zinc-200 dark:bg-white/10 p-1 rounded-lg"><button onClick={()=>sMod('gemini')} className={`flex-1 py-1 text-[10px] font-bold rounded ${mod==='gemini'?'bg-white text-brand shadow':'text-zinc-500'}`}>Gemini ({qc}/5)</button><button onClick={()=>sMod('groq')} className={`flex-1 py-1 text-[10px] font-bold rounded ${mod==='groq'?'bg-white text-green-600 shadow':'text-zinc-500'}`}>ChatGPT ({qc}/20)</button></div></div><div className="flex-1 overflow-y-auto p-4 space-y-4">{ms.map((m,i)=><div key={i} className={`flex ${m.role==='user'?'justify-end':'justify-start'}`}><div className={`max-w-[85%] p-3 rounded-2xl text-sm ${m.role==='user'?'bg-brand text-white':'bg-zinc-200 dark:bg-zinc-800'}`}>{m.text}</div></div>)}{ld&&<div className="text-xs animate-pulse">Thinking...</div>}<div ref={ref}/></div><div className="p-4 border-t bg-white dark:bg-black flex gap-2"><input value={inp} onChange={e=>sInp(e.target.value)} onKeyDown={e=>e.key==='Enter'&&snd()} className="flex-1 bg-zinc-100 dark:bg-zinc-900 border border-zinc-200 dark:border-white/10 rounded-full px-4 py-3 text-sm"/><button onClick={snd} className="bg-brand text-white rounded-full p-3"><Icons.Plus className="w-5 h-5 rotate-90"/></button></div></div>;
         };
 
         const ErrEd=({item,save,back,del,user,subs})=>{
-            const [d,sD]=useState(()=>{const i=item||{};return{title:i.title||'',subject:i.subject||'General',topic:i.topic||'',mastered:i.mastered||false,explanation:i.explanation||'',questionType:i.questionType||'MC',correctAnswer:i.correctAnswer||'',questionImages:i.questionImages||(i.imageUrl?[i.imageUrl]:[]),schemeImages:i.schemeImages||(i.markingSchemeUrl?[i.markingSchemeUrl]:[]),imageUrl:i.imageUrl||'',markingSchemeUrl:i.markingSchemeUrl||''}});
+            const [d,sD]=useState(()=>{const i=item||{};return{title:i.title||'',subject:i.subject||'General',topic:i.topic||'',mastered:i.mastered||false,explanation:i.explanation||'',questionType:i.questionType||'MC',correctAnswer:i.correctAnswer||'',questionText:i.questionText||'',questionImages:i.questionImages||(i.imageUrl?[i.imageUrl]:[]),schemeImages:i.schemeImages||(i.markingSchemeUrl?[i.markingSchemeUrl]:[]),imageUrl:i.imageUrl||'',markingSchemeUrl:i.markingSchemeUrl||''}});
             const [ao,sAo]=useState(false),[po,sPo]=useState(false),[uq,sUq]=useState(false),[us,sUs]=useState(false);
+            const [isAutoTitleLoading, setIsAutoTitleLoading] = useState(false); const [ocrPendingToast, setOcrPendingToast] = useState(null); const [showOcrText, setShowOcrText] = useState(false);
+            const ocrTimerRef = useRef(null); const pendingOcrBlobs = useRef([]);
             const {saveToDrive}=useDrive(), cur=subs.find(s=>s.name===d.subject), tops=cur?.topics||[];
+            
+            useEffect(() => { if (ocrPendingToast !== null && ocrPendingToast > 0) { const timer = setTimeout(() => setOcrPendingToast(ocrPendingToast - 1), 1000); return () => clearTimeout(timer); } }, [ocrPendingToast]);
+
+            const performSmartOCR = async (images) => {
+                setIsAutoTitleLoading(true); setOcrPendingToast(null);
+                try { 
+                    const schema = subs.length > 0 ? subs.map(s => `${s.name} (Topics: ${s.topics.join(', ')})`).join('\n') : "No existing subjects. Suggest 'General'."; 
+                    const prompt = `Analyze these images for an error log.\n1. Extract the text exactly and identical layout as it appears.\n2. Generate a short, descriptive title.\n3. Determine Type: 'MC' or 'LQ'.\n4. Classify into best Subject/Topic from:\n${schema}\nOutput strictly JSON: { "text": "...", "title": "...", "type": "MC"|"LQ", "subject": "...", "topic": "..." }`; 
+                    const res = await callGroq(prompt, "JSON Generator", images); 
+                    const json = JSON.parse(res.substring(res.indexOf('{'), res.lastIndexOf('}') + 1)); 
+                    sD(prev => ({...prev, title: json.title || prev.title, questionText: json.text || "", questionType: (json.type === 'MC' || json.type === 'LQ') ? json.type : prev.questionType, subject: json.subject || prev.subject, topic: json.topic || prev.topic })); 
+                } catch (e) { alert("AI Classification Failed: " + e.message); } 
+                setIsAutoTitleLoading(false); pendingOcrBlobs.current = [];
+            };
+
+            const handleAutoTitle = async () => {
+                const imgUrl = d.questionImages?.[0] || d.imageUrl;
+                if (!imgUrl) { alert("Add an image first!"); return; } 
+                const newQuota = await checkQuota(user, 'ocr'); if (newQuota === false) { alert("Daily OCR Limit Reached!"); return; } 
+                try { 
+                    let imgs = []; if (pendingOcrBlobs.current.length > 0) { imgs = [...pendingOcrBlobs.current]; } 
+                    else { if (!imgUrl.startsWith('data:') && !imgUrl.includes('drive.google')) { const res = await fetch(imgUrl); const b = await res.blob(); const base64 = await new Promise(r=>{const rd=new FileReader(); rd.onload=()=>r(rd.result); rd.readAsDataURL(b);}); imgs.push(base64); } else if(imgUrl.startsWith('data:')) { imgs.push(imgUrl); } } 
+                    if(imgs.length === 0) { alert("No valid images found for OCR."); return; } 
+                    await performSmartOCR(imgs); setShowOcrText(true);
+                } catch(e) { alert("OCR Failed: " + e.message); setIsAutoTitleLoading(false); } 
+            };
+
             const hImg=async(e,t)=>{
                 const f=e.target.files[0];if(!f)return;const q=t==='evidence';q?sUq(1):sUs(1);
-                try{const cmp=await compressImage(f); const u=await saveToDrive(cmp,`${t}_${Date.now()}.jpg`);if(q)sD({...d,questionImages:[...(d.questionImages||[]),u],imageUrl:u});else sD({...d,schemeImages:[...(d.schemeImages||[]),u],markingSchemeUrl:u});}catch(e){alert(e)}q?sUq(0):sUs(0);
+                try{
+                    const cmp=await compressImage(f); 
+                    if(q) {
+                        const reader = new FileReader(); reader.onloadend = () => pendingOcrBlobs.current.push(reader.result); reader.readAsDataURL(cmp);
+                        if (ocrTimerRef.current) clearTimeout(ocrTimerRef.current); setOcrPendingToast(10);
+                        ocrTimerRef.current = setTimeout(async () => { const nQ = await checkQuota(user, 'ocr'); if (nQ !== false && pendingOcrBlobs.current.length > 0) performSmartOCR([...pendingOcrBlobs.current]); }, 10000);
+                    }
+                    const u=await saveToDrive(cmp,`${t}_${Date.now()}.jpg`);
+                    if(q)sD({...d,questionImages:[...(d.questionImages||[]),u],imageUrl:u});else sD({...d,schemeImages:[...(d.schemeImages||[]),u],markingSchemeUrl:u});
+                }catch(e){alert(e)}q?sUq(0):sUs(0);
             };
+
             return <TouchWrap onBack={back} cls="fixed inset-0 bg-zinc-50 dark:bg-onyx z-[60] overflow-y-auto flex flex-col"><motion.div initial={{x:'100%'}} animate={{x:0}} exit={{x:'100%'}} transition={{type:'spring',damping:25,stiffness:300}} className="flex-1 flex flex-col">
-                <div className="sticky top-0 bg-white/90 dark:bg-onyx/90 backdrop-blur-md p-4 border-b flex justify-between items-center z-10 shrink-0"><button onClick={back} className="p-2 rounded-full bg-zinc-100 dark:bg-zinc-800"><Icons.Chevron className="w-6 h-6 rotate-180"/></button><span className="font-bold">Failure Log</span><div className="flex gap-2">{item&&<><button onClick={()=>sPo(1)} className="p-2 bg-orange-500/10 text-orange-500 rounded-full"><Icons.Brain className="w-5 h-5"/></button><button onClick={()=>sAo(1)} className="p-2 bg-brand/10 text-brand rounded-full"><Icons.Bot className="w-5 h-5"/></button></>}<button onClick={()=>save({...d,id:item?.id})} className="px-4 py-2 bg-brand rounded-full text-sm font-bold text-white">Save</button></div></div>
-                <div className="p-6 space-y-6 flex-1 overflow-y-auto pb-20">
+                <div className="sticky top-0 bg-white/90 dark:bg-onyx/90 backdrop-blur-md p-4 border-b flex justify-between items-center z-10 shrink-0"><button onClick={back} className="p-2 rounded-full bg-zinc-100 dark:bg-zinc-800"><Icons.Chevron className="w-6 h-6 rotate-180"/></button>
+                <button onClick={handleAutoTitle} disabled={isAutoTitleLoading || (!d.questionImages?.[0] && !d.imageUrl)} className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[10px] font-bold transition-all border ${isAutoTitleLoading ? 'bg-indigo-100 text-indigo-500 border-indigo-200 animate-pulse' : 'bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-400 border-zinc-200 dark:border-zinc-700'}`}>{isAutoTitleLoading ? <div className="w-3 h-3 border-2 border-current border-t-transparent rounded-full animate-spin"/> : <Icons.Scan className="w-3 h-3"/>} Auto-Title</button>
+                <div className="flex gap-2">{item&&<><button onClick={()=>sPo(1)} className="p-2 bg-orange-500/10 text-orange-500 rounded-full"><Icons.Brain className="w-5 h-5"/></button><button onClick={()=>sAo(1)} className="p-2 bg-brand/10 text-brand rounded-full"><Icons.Bot className="w-5 h-5"/></button></>}<button onClick={()=>save({...d,id:item?.id})} className="px-4 py-2 bg-brand rounded-full text-sm font-bold text-white">Save</button></div></div>
+                <div className="p-6 space-y-6 flex-1 overflow-y-auto pb-20 relative">
+                    <AnimatePresence>{ocrPendingToast > 0 && (<motion.div initial={{opacity:0, scale:0.8}} animate={{opacity:1, scale:1}} exit={{opacity:0}} className="absolute top-2 right-6 bg-orange-500/10 border border-orange-500/20 text-orange-500 text-[10px] font-bold px-2 py-1 rounded-md flex items-center gap-1 z-20"><div className="w-1.5 h-1.5 rounded-full bg-orange-500 animate-pulse"/>OCR in {ocrPendingToast}s</motion.div>)}</AnimatePresence>
                     <div className="flex gap-2 p-1 bg-zinc-200 dark:bg-zinc-900 rounded-xl"><button onClick={()=>sD({...d,mastered:false})} className={`flex-1 py-3 rounded-lg text-sm font-bold ${!d.mastered?'bg-red-500/20 text-red-500':'text-zinc-500'}`}>Review</button><button onClick={()=>sD({...d,mastered:true})} className={`flex-1 py-3 rounded-lg text-sm font-bold ${d.mastered?'bg-green-500/20 text-green-500':'text-zinc-500'}`}>Mastered</button></div>
                     <input placeholder="What went wrong?" className="w-full bg-transparent text-2xl font-bold placeholder-zinc-400 focus:outline-none" value={d.title} onChange={e=>sD({...d,title:e.target.value})}/>
                     <div className="bg-white dark:bg-surface rounded-2xl p-4 border border-zinc-200 dark:border-zinc-800"><label className="text-[10px] text-zinc-500 uppercase font-bold mb-2 block">Answer</label><input placeholder="Correct Answer" value={d.correctAnswer} onChange={e=>sD({...d,correctAnswer:e.target.value})} className="w-full bg-zinc-100 dark:bg-zinc-900 p-3 rounded-xl focus:outline-none text-sm"/></div>
-                    <div className="relative w-full aspect-video bg-zinc-100 dark:bg-zinc-900 rounded-2xl border border-dashed flex flex-col items-center justify-center overflow-hidden">{uq?<span className="loader"/>:(d.questionImages?.[0])?<img src={d.questionImages[0]} className="w-full h-full object-contain"/>:<><Icons.Camera className="w-8 h-8 text-zinc-400 mb-2"/><span className="text-xs text-zinc-500">Question (Compressed)</span><input type="file" onChange={e=>hImg(e,'evidence')} className="absolute inset-0 opacity-0"/></>}</div>
+                    
+                    <div>
+                        <div className="relative w-full aspect-video bg-zinc-100 dark:bg-zinc-900 rounded-2xl border border-dashed flex flex-col items-center justify-center overflow-hidden">{uq?<span className="loader"/>:(d.questionImages?.[0])?<img src={d.questionImages[0]} className="w-full h-full object-contain"/>:<><Icons.Camera className="w-8 h-8 text-zinc-400 mb-2"/><span className="text-xs text-zinc-500">Question (Compressed)</span><input type="file" onChange={e=>hImg(e,'evidence')} className="absolute inset-0 opacity-0"/></>}</div>
+                        <button onClick={() => setShowOcrText(!showOcrText)} className="text-[10px] flex items-center gap-1 text-zinc-400 hover:text-brand mt-2 transition-colors"><Icons.Scan className="w-3 h-3"/> {showOcrText ? "Hide Text" : "Check Extracted Text"}</button>
+                        {showOcrText && (<textarea value={d.questionText || ""} onChange={(e) => sD({...d, questionText: e.target.value})} className="mt-2 w-full p-3 text-xs bg-zinc-100 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-lg font-mono text-zinc-500 focus:outline-none" rows="4" placeholder="AI extracted text..." />)}
+                    </div>
+
                     <div className="relative w-full aspect-video bg-zinc-100 dark:bg-zinc-900 rounded-2xl border border-dashed border-blue-300 flex flex-col items-center justify-center overflow-hidden">{us?<span className="loader"/>:(d.schemeImages?.[0])?<img src={d.schemeImages[0]} className="w-full h-full object-contain"/>:<><Icons.Check className="w-8 h-8 text-blue-400 mb-2"/><span className="text-xs text-blue-500 font-bold">Scheme (Compressed)</span><input type="file" onChange={e=>hImg(e,'scheme')} className="absolute inset-0 opacity-0"/></>}</div>
                     <div className="bg-white dark:bg-surface rounded-2xl p-4 min-h-[150px] border border-zinc-200 dark:border-zinc-800"><textarea className="w-full h-full bg-transparent resize-none focus:outline-none min-h-[150px]" placeholder="Explain why you failed..." value={d.explanation} onChange={e=>sD({...d,explanation:e.target.value})}/></div>
                     <div className="grid grid-cols-2 gap-4"><div><label className="text-[10px] text-zinc-500 uppercase font-bold">Subject</label><select value={d.subject} onChange={e=>sD({...d,subject:e.target.value,topic:''})} className="w-full bg-zinc-100 dark:bg-zinc-900 p-3 rounded-xl mt-1 text-sm"><option value="General">General</option>{subs.map(s=><option key={s.id} value={s.name}>{s.name}</option>)}</select></div><div><label className="text-[10px] text-zinc-500 uppercase font-bold">Type</label><select value={d.questionType} onChange={e=>sD({...d,questionType:e.target.value})} className="w-full bg-zinc-100 dark:bg-zinc-900 p-3 rounded-xl mt-1 text-sm"><option value="MC">MC</option><option value="LQ">Long Question</option></select></div></div>
@@ -215,10 +364,14 @@
         };
 
         const App=()=>{
-            const [u,sU]=useState(null),[tab,sTab]=useState('home'),[sel,sSel]=useState(null),[sht,sSht]=useState(false),[set,sSet]=useState({theme:'dark',bio:''});
+            const [u,sU]=useState(null),[tab,sTab]=useState('home'),[sel,sSel]=useState(null),[sht,sSht]=useState(false),[set,sSet]=useState({theme:'dark',bio:'', studentStatus: 'none'});
             const [eSt,sEst]=useState({logs:[],last:null,hasMore:true,loading:false,mode:'date',sub:null,top:null,sort:'desc',type:'all',rand:false,scroll:0,q:''});
+            const [showStudentModal, setShowStudentModal] = useState(false);
+            
             useEffect(()=>window.fb.onAuthStateChanged(window.fb.auth,sU),[]);
             const {recentErrors,counts}=useDash(u), {data:notes}=useData(u,'notes'), subs=useSub(u);
+            const {saveToDrive, getAccessToken} = useDrive();
+
             const getP=()=>{const p=new URLSearchParams(window.location.search);return{view:p.get('view')||'home',id:p.get('id')}};
             useEffect(()=>{const h=()=>{const{view}=getP();sTab(view)};window.addEventListener('popstate',h);h();return()=>window.removeEventListener('popstate',h)},[]);
             const nav=(t,id=null)=>{
@@ -230,17 +383,18 @@
                 if((tab.includes('edit')||tab.includes('add')) && window.history.state?.fromApp){window.history.back();} 
                 else {if(tab.includes('edit')||tab.includes('add')){const d=tab.includes('error')?'errors':'notes';nav(d)}else if(window.history.length>1)window.history.back();else nav('home');}
             };
-            useEffect(()=>{if(!u)return;const r=window.fb.doc(window.fb.db,'artifacts','darnote-app','users',u.uid,'settings','profile');return window.fb.onSnapshot(r,d=>{const D=d.data()||{theme:'dark',bio:''};sSet(D);document.documentElement.className=D.theme})},[u]);
+            useEffect(()=>{if(!u)return;const r=window.fb.doc(window.fb.db,'artifacts','darnote-app','users',u.uid,'settings','profile');return window.fb.onSnapshot(r,d=>{const D=d.data()||{theme:'dark',bio:'', studentStatus: 'none'};sSet(D);document.documentElement.className=D.theme})},[u]);
             const sv=async(c,d)=>{const r=window.fb.collection(window.fb.db,'artifacts','darnote-app','users',u.uid,c);if(d.id)await window.fb.updateDoc(window.fb.doc(r,d.id),d);else await window.fb.addDoc(r,{...d,createdAt:new Date().toISOString()});goBack()};
             const dl=async(id,c)=>await window.fb.deleteDoc(window.fb.doc(window.fb.db,'artifacts','darnote-app','users',u.uid,c,id));
             if(!u)return <div className="h-screen w-full flex flex-col items-center justify-center bg-onyx relative overflow-hidden"><div className="absolute top-[-20%] right-[-20%] w-[80%] h-[80%] bg-brand/20 rounded-full blur-[100px] animate-pulse"></div><motion.div initial={{y:20,opacity:0}} animate={{y:0,opacity:1}} className="z-10 text-center"><img src="https://raw.githubusercontent.com/darren6251/darnote/refs/heads/main/darNote%20logo.png" className="w-24 h-24 mx-auto mb-8 drop-shadow-glow"/><h1 className="text-4xl font-bold mb-2 tracking-tight text-white">darNote <span className="text-brand">Ultimate</span></h1><motion.button whileTap={{scale:0.95}} onClick={()=>window.fb.signInWithPopup(window.fb.auth,new window.fb.GoogleAuthProvider())} className="w-full bg-white text-black py-4 rounded-2xl font-bold text-lg flex items-center justify-center gap-3 shadow-xl mt-10"><Icons.Google className="w-6 h-6"/> Sign In</motion.button></motion.div></div>;
             return <div className="h-[100dvh] w-full bg-zinc-50 dark:bg-onyx text-zinc-900 dark:text-zinc-100 flex flex-col overflow-hidden">
+                <StudentModal isOpen={showStudentModal} onClose={() => setShowStudentModal(false)} user={u} saveToDrive={saveToDrive} getAccessToken={getAccessToken} />
                 <div id="main-scroller" className="flex-1 overflow-y-auto">
                     <AnimatePresence mode="wait">
-                        {tab==='home'&&<div key="h" className="p-6 pb-24 space-y-8"><div className="flex justify-between items-center"><div><div className="text-zinc-500 text-sm">Welcome Back,</div><div className="text-2xl font-bold">{u.displayName?.split(' ')[0]}</div></div><img src={u.photoURL} className="w-10 h-10 rounded-full"/></div><div className="bg-gradient-to-br from-brand to-brand-dark p-6 rounded-3xl text-white shadow-glow"><div className="text-sm opacity-80">Failures</div><div className="text-4xl font-bold mb-4">{counts.total}</div><div className="flex gap-4"><div className="bg-white/20 px-3 py-1 rounded text-xs"><b>{counts.mastered}</b> Mastered</div><div className="bg-white/20 px-3 py-1 rounded text-xs"><b>{counts.notes}</b> Notes</div></div></div><div className="grid grid-cols-2 gap-4"><button onClick={()=>{sSel(null);nav('add_error')}} className="bg-white dark:bg-surface p-4 rounded-2xl border border-zinc-200 dark:border-zinc-800 flex flex-col items-center gap-2"><div className="w-10 h-10 bg-red-500/10 rounded-full flex items-center justify-center text-red-500"><Icons.Bug className="w-5 h-5"/></div><span className="text-sm font-bold">Log Failure</span></button><button onClick={()=>{sSel(null);nav('add_note')}} className="bg-white dark:bg-surface p-4 rounded-2xl border border-zinc-200 dark:border-zinc-800 flex flex-col items-center gap-2"><div className="w-10 h-10 bg-blue-500/10 rounded-full flex items-center justify-center text-blue-500"><Icons.Book className="w-5 h-5"/></div><span className="text-sm font-bold">New Note</span></button></div><div><div className="flex justify-between items-end mb-4"><h3 className="font-bold text-lg">Recent</h3><button onClick={()=>nav('errors')} className="text-xs text-brand">View All</button></div><div className="space-y-3">{recentErrors.length===0?<div className="text-zinc-500 text-sm italic">No recent errors.</div>:recentErrors.map(e=><div key={e.id} onClick={()=>{sSel(e);nav('edit_error',e.id)}} className="bg-white dark:bg-surface p-4 rounded-2xl border border-zinc-200 dark:border-zinc-800 flex items-center gap-4"><div className={`w-2 h-10 rounded-full ${e.mastered?'bg-green-500':'bg-red-500'}`}></div><div className="flex-1 truncate"><div className="font-bold truncate">{e.title}</div><div className="text-xs text-zinc-500">{e.subject} • {new Date(e.createdAt||0).toLocaleDateString()}</div></div></div>)}</div></div></div>}
+                        {tab==='home'&&<div key="h" className="p-6 pb-24 space-y-8"><div className="flex justify-between items-center"><div><div className="text-zinc-500 text-sm">Welcome Back,</div><div className="text-2xl font-bold flex items-center gap-2">{u.displayName?.split(' ')[0]} {set.studentStatus === 'verified' && <Icons.ShieldCheck className="w-5 h-5 text-blue-500"/>}{set.studentStatus === 'temp_verified' && <Icons.ShieldClock className="w-5 h-5 text-orange-500"/>}</div></div><img src={u.photoURL} className="w-10 h-10 rounded-full"/></div><div className="bg-gradient-to-br from-brand to-brand-dark p-6 rounded-3xl text-white shadow-glow"><div className="text-sm opacity-80">Failures</div><div className="text-4xl font-bold mb-4">{counts.total}</div><div className="flex gap-4"><div className="bg-white/20 px-3 py-1 rounded text-xs"><b>{counts.mastered}</b> Mastered</div><div className="bg-white/20 px-3 py-1 rounded text-xs"><b>{counts.notes}</b> Notes</div></div></div><div className="grid grid-cols-2 gap-4"><button onClick={()=>{sSel(null);nav('add_error')}} className="bg-white dark:bg-surface p-4 rounded-2xl border border-zinc-200 dark:border-zinc-800 flex flex-col items-center gap-2"><div className="w-10 h-10 bg-red-500/10 rounded-full flex items-center justify-center text-red-500"><Icons.Bug className="w-5 h-5"/></div><span className="text-sm font-bold">Log Failure</span></button><button onClick={()=>{sSel(null);nav('add_note')}} className="bg-white dark:bg-surface p-4 rounded-2xl border border-zinc-200 dark:border-zinc-800 flex flex-col items-center gap-2"><div className="w-10 h-10 bg-blue-500/10 rounded-full flex items-center justify-center text-blue-500"><Icons.Book className="w-5 h-5"/></div><span className="text-sm font-bold">New Note</span></button></div><div><div className="flex justify-between items-end mb-4"><h3 className="font-bold text-lg">Recent</h3><button onClick={()=>nav('errors')} className="text-xs text-brand">View All</button></div><div className="space-y-3">{recentErrors.length===0?<div className="text-zinc-500 text-sm italic">No recent errors.</div>:recentErrors.map(e=><div key={e.id} onClick={()=>{sSel(e);nav('edit_error',e.id)}} className="bg-white dark:bg-surface p-4 rounded-2xl border border-zinc-200 dark:border-zinc-800 flex items-center gap-4"><div className={`w-2 h-10 rounded-full ${e.mastered?'bg-green-500':'bg-red-500'}`}></div><div className="flex-1 truncate"><div className="font-bold truncate">{e.title}</div><div className="text-xs text-zinc-500">{e.subject} • {new Date(e.createdAt||0).toLocaleDateString()}</div></div></div>)}</div></div></div>}
                         {tab==='errors'&&<ErrList key="e" onEdit={(m,id)=>{const it=recentErrors.find(x=>x.id===id)||eSt.logs.find(x=>x.id===id);if(it)sSel(it);nav(m,id)}} subs={subs} user={u} state={eSt} setState={sEst}/>}
                         {tab==='notes'&&<div key="n" className="p-6 pb-24 min-h-screen"><h2 className="text-3xl font-bold mb-6">Notes</h2><div className="space-y-3">{notes.map(n=><div key={n.id} onClick={()=>{sSel(n);nav('edit_note',n.id)}} className="bg-white dark:bg-surface p-4 rounded-2xl border border-zinc-200 dark:border-zinc-800 flex justify-between"><div><div className="font-bold">{n.title||'Untitled'}</div><div className="text-xs text-zinc-500">{new Date(n.createdAt||0).toLocaleDateString()}</div></div><Icons.Chevron className="w-5 h-5 rotate-180"/></div>)}</div></div>}
-                        {tab==='profile'&&<div key="p" className="p-6 pb-24 h-full flex flex-col"><h2 className="text-3xl font-bold mb-6">Settings</h2><div className="flex flex-col items-center mb-8"><img src={u.photoURL} className="w-24 h-24 rounded-full border-4 border-brand mb-4"/><h3 className="text-xl font-bold">{u.displayName}</h3></div><div className="space-y-4 mb-8"><div className="bg-white dark:bg-surface p-4 rounded-2xl border border-zinc-200 dark:border-zinc-800 flex justify-between items-center"><span className="font-bold flex items-center gap-3">Appearance</span><button onClick={()=>window.fb.setDoc(window.fb.doc(window.fb.db,'artifacts','darnote-app','users',u.uid,'settings','profile'),{theme:set.theme==='dark'?'light':'dark'},{merge:true})} className="bg-zinc-100 dark:bg-zinc-900 px-4 py-2 rounded-lg text-xs font-bold border border-zinc-200 dark:border-zinc-700">{set.theme==='dark'?'Dark':'Light'}</button></div><div className="bg-white dark:bg-surface p-4 rounded-2xl border border-zinc-200 dark:border-zinc-800"><label className="text-xs font-bold text-zinc-500 uppercase mb-2 block">Bio</label><textarea value={set.bio||''} onChange={e=>window.fb.setDoc(window.fb.doc(window.fb.db,'artifacts','darnote-app','users',u.uid,'settings','profile'),{bio:e.target.value},{merge:true})} className="w-full bg-zinc-100 dark:bg-zinc-900 rounded-lg p-3 text-sm focus:outline-none resize-none h-20"/></div></div><button onClick={()=>window.fb.signOut(window.fb.auth)} className="w-full py-4 bg-zinc-200 dark:bg-zinc-800 rounded-xl font-bold text-red-500 mt-auto">Sign Out</button></div>}
+                        {tab==='profile'&&<div key="p" className="p-6 pb-24 h-full flex flex-col"><h2 className="text-3xl font-bold mb-6">Settings</h2><div className="flex flex-col items-center mb-8"><img src={u.photoURL} className="w-24 h-24 rounded-full border-4 border-brand mb-4"/><h3 className="text-xl font-bold">{u.displayName}</h3></div><div className="space-y-4 mb-8"><button onClick={() => setShowStudentModal(true)} className="w-full bg-brand/10 border border-brand/20 p-4 rounded-2xl flex items-center justify-between"><div className="flex items-center gap-3 text-brand font-bold"><Icons.GraduationCap className="w-5 h-5"/> Student Perks Plan</div><Icons.Chevron className="w-5 h-5 text-brand rotate-[-90deg]"/></button><div className="bg-white dark:bg-surface p-4 rounded-2xl border border-zinc-200 dark:border-zinc-800 flex justify-between items-center"><span className="font-bold flex items-center gap-3">Appearance</span><button onClick={()=>window.fb.setDoc(window.fb.doc(window.fb.db,'artifacts','darnote-app','users',u.uid,'settings','profile'),{theme:set.theme==='dark'?'light':'dark'},{merge:true})} className="bg-zinc-100 dark:bg-zinc-900 px-4 py-2 rounded-lg text-xs font-bold border border-zinc-200 dark:border-zinc-700">{set.theme==='dark'?'Dark':'Light'}</button></div><div className="bg-white dark:bg-surface p-4 rounded-2xl border border-zinc-200 dark:border-zinc-800"><label className="text-xs font-bold text-zinc-500 uppercase mb-2 block">Bio</label><textarea value={set.bio||''} onChange={e=>window.fb.setDoc(window.fb.doc(window.fb.db,'artifacts','darnote-app','users',u.uid,'settings','profile'),{bio:e.target.value},{merge:true})} className="w-full bg-zinc-100 dark:bg-zinc-900 rounded-lg p-3 text-sm focus:outline-none resize-none h-20"/></div></div><button onClick={()=>window.fb.signOut(window.fb.auth)} className="w-full py-4 bg-zinc-200 dark:bg-zinc-800 rounded-xl font-bold text-red-500 mt-auto">Sign Out</button></div>}
                     </AnimatePresence>
                 </div>
                 <div className="fixed bottom-0 w-full h-[80px] glass z-50 px-6 pb-2 flex items-center justify-between">{[{id:'home',I:Icons.Home,l:'Home'},{id:'errors',I:Icons.Bug,l:'Mistakes'},{id:'add',I:Icons.Plus,l:'',s:1},{id:'notes',I:Icons.Book,l:'Notes'},{id:'profile',I:Icons.User,l:'Settings'}].map(t=>t.s?<motion.button key={t.id} whileTap={{scale:0.9}} onClick={()=>sSht(true)} className="w-14 h-14 bg-brand rounded-full flex items-center justify-center text-white shadow-glow mb-6"><t.I className="w-8 h-8"/></motion.button>:<button key={t.id} onClick={()=>nav(t.id)} className={`flex flex-col items-center gap-1 ${tab===t.id?'text-brand':'text-zinc-500'}`}><t.I className="w-6 h-6"/><span className="text-[10px] font-medium">{t.l}</span></button>)}</div>
