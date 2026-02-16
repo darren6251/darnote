@@ -154,7 +154,6 @@
             });
         }, [isOpen, user]);
 
-        // Helper to format cooldown timer
         const [timeLeft, setTimeLeft] = useState("");
         useEffect(() => {
             if(!cooldownEnd) return;
@@ -174,11 +173,11 @@
             setUploadStatusMsg("Uploading to secure storage...");
             
             try {
-                // 1. Upload Image to Drive First
+                // 1. Upload Image
                 const token = await getAccessToken();
                 const url = await saveToDrive(file, `Proof_${user.uid}_${Date.now()}.jpg`, token, "darNote_personal image");
                 
-                // 2. Perform Strict AI Check
+                // 2. AI Analysis
                 setUploadStatusMsg("AI Bouncer is analyzing ID...");
                 const b64 = await new Promise((r) => { const reader = new FileReader(); reader.onloadend = () => r(reader.result); reader.readAsDataURL(file); });
                 
@@ -189,15 +188,11 @@
                 try {
                     const jsonStr = aiRes.substring(aiRes.indexOf('{'), aiRes.lastIndexOf('}') + 1);
                     extractedData = JSON.parse(jsonStr);
-                } catch(e) {
-                    console.error("AI Parse Error", e);
-                }
+                } catch(e) { console.error("AI Parse Error", e); }
 
                 const { fullName, schoolName } = extractedData;
 
-                // 3. Strict Validation: Check for Missing Data
                 if (!fullName || !schoolName || fullName.length < 3 || schoolName.length < 3) {
-                    // PUNISHMENT: 2 Hour Cooldown
                     const cooldownTime = Date.now() + (2 * 60 * 60 * 1000);
                     const ref = window.firebase.doc(window.firebase.db, 'artifacts', "darnote-app", 'users', user.uid, 'settings', 'profile');
                     await window.firebase.setDoc(ref, { studentVerificationCooldown: cooldownTime }, { merge: true });
@@ -207,44 +202,50 @@
                     return;
                 }
 
-                // 4. Duplicate Check (Global Registry)
-                // Normalize ID: lowercase, spaces to underscores
-                const docId = fullName.toLowerCase().trim().replace(/\s+/g, '_'); 
+                // 3. Generate SAFE Doc ID (Remove slashes/symbols that break paths)
+                const docId = fullName.toLowerCase().trim().replace(/[^a-z0-9_]/g, '_'); 
                 const registryRef = window.firebase.doc(window.firebase.db, 'artifacts', "darnote-app", 'public', 'data', 'verified_students', docId);
                 const registrySnap = await window.firebase.getDoc(registryRef);
 
-                if (registrySnap.exists() && registrySnap.data().uid !== user.uid) {
-                    // REJECT: Duplicate Name Found
-                    setUploading(false);
-                    alert(`Verification Rejected: The name "${fullName}" is already registered by another account.`);
-                    // We also trigger cooldown here to prevent brute force
-                    const cooldownTime = Date.now() + (2 * 60 * 60 * 1000);
-                    const ref = window.firebase.doc(window.firebase.db, 'artifacts', "darnote-app", 'users', user.uid, 'settings', 'profile');
-                    await window.firebase.setDoc(ref, { studentVerificationCooldown: cooldownTime }, { merge: true });
-                    setCooldownEnd(cooldownTime);
-                    return;
+                // 4. Check Registry Status
+                let skipRegistryWrite = false;
+                if (registrySnap.exists()) {
+                    if (registrySnap.data().uid !== user.uid) {
+                        // Reject: Name taken by someone else
+                        setUploading(false);
+                        alert(`Verification Rejected: The name "${fullName}" is already registered by another account.`);
+                        const cooldownTime = Date.now() + (2 * 60 * 60 * 1000);
+                        const ref = window.firebase.doc(window.firebase.db, 'artifacts', "darnote-app", 'users', user.uid, 'settings', 'profile');
+                        await window.firebase.setDoc(ref, { studentVerificationCooldown: cooldownTime }, { merge: true });
+                        setCooldownEnd(cooldownTime);
+                        return;
+                    } else {
+                        // Name belongs to THIS user. SKIP writing to avoid "Permission Denied" on Update.
+                        skipRegistryWrite = true;
+                    }
                 }
 
-                // 5. SUCCESS: Register Temporary Verification
                 const batch = window.firebase.writeBatch(window.firebase.db);
                 
-                // A. Update User Profile
+                // Update User Profile (Always allowed)
                 const userRef = window.firebase.doc(window.firebase.db, 'artifacts', "darnote-app", 'users', user.uid, 'settings', 'profile');
                 batch.set(userRef, {
-                    studentStatus: 'temp_verified', // "Temporary" status
+                    studentStatus: 'temp_verified',
                     studentRole: role,
                     proofUrl: url,
                     verifiedData: { fullName, schoolName },
                     submittedAt: new Date().toISOString()
                 }, { merge: true });
 
-                // B. Lock the Name in Registry
-                batch.set(registryRef, {
-                    uid: user.uid,
-                    school: schoolName,
-                    role: role,
-                    registeredAt: new Date().toISOString()
-                });
+                // Update Registry (Only if new, to avoid "Update" permission block)
+                if (!skipRegistryWrite) {
+                    batch.set(registryRef, {
+                        uid: user.uid,
+                        school: schoolName,
+                        role: role,
+                        registeredAt: new Date().toISOString()
+                    });
+                }
 
                 await batch.commit();
                 
