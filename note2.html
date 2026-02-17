@@ -185,6 +185,7 @@
             Menu: (p) => <svg {...p} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="4" x2="20" y1="12" y2="12"/><line x1="4" x2="20" y1="6" y2="6"/><line x1="4" x2="20" y1="18" y2="18"/></svg>,
             ChevronLeft: (p) => <svg {...p} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="m15 18-6-6 6-6"/></svg>,
             ChartBar: (p) => <svg {...p} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M3 3v18h18"/><path d="M18 17V9"/><path d="M13 17V5"/><path d="M8 17v-3"/></svg>,
+            Help: (p) => <svg {...p} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>,
         };
 
         // ==========================================
@@ -753,10 +754,10 @@
             const [activeNoteId, setActiveNoteId] = useState(() => { const p = new URLSearchParams(window.location.search); return p.get('note'); });
             const [searchQuery, setSearchQuery] = useState(''); const [filter, setFilter] = useState('all'); const [viewMode, setViewMode] = useState('list');
             const [rightSidebarMode, setRightSidebarMode] = useState('closed'); // closed, ai, recall
-            const [isNoteListOpen, setIsNoteListOpen] = useState(true); const [contextMenu, setContextMenu] = useState(null);
+            const [isSidebarOpen, setIsSidebarOpen] = useState(true); const [contextMenu, setContextMenu] = useState(null);
             const [isDarkMode, setIsDarkMode] = useState(true); const [isAuthLoading, setIsAuthLoading] = useState(true); 
             const [showProfileModal, setShowProfileModal] = useState(false); const [showMagicModal, setShowMagicModal] = useState(false);
-            const [showStudentModal, setShowStudentModal] = useState(false);
+            const [showStudentModal, setShowStudentModal] = useState(false); const [showSupportMenu, setShowSupportMenu] = useState(false);
             const [logSearchResults, setLogSearchResults] = useState([]); 
             const [viewingLog, setViewingLog] = useState(null);
             const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
@@ -821,7 +822,7 @@
                 return r; 
             }, [notes, searchQuery]);
 
-            const createNote = async (type = 'text') => { if(!user) return; const n = { type, title: '', content: type === 'text' ? '' : null, nodes: type === 'mindmap' ? [{id: 'root', text: 'Central Idea', x: 400, y: 300, color: '#4f46e5'}] : null, connections: type==='mindmap'?[]:null, tasks: type==='tasklist'?[]:null, tags: [], subject: filter.startsWith('subject:') ? filter.split(':')[1] : 'General', updatedAt: new Date().toISOString(), isFavorite: false, isPinned: false, ownerId: user.uid }; const d = await window.firebase.addDoc(window.firebase.collection(window.firebase.db, 'artifacts', "darnote-app", 'users', user.uid, 'notes'), n); setActiveNoteId(d.id); if (!isNoteListOpen) setIsNoteListOpen(true); fetchNotes(false); };
+            const createNote = async (type = 'text') => { if(!user) return; const n = { type, title: '', content: type === 'text' ? '' : null, nodes: type === 'mindmap' ? [{id: 'root', text: 'Central Idea', x: 400, y: 300, color: '#4f46e5'}] : null, connections: type==='mindmap'?[]:null, tasks: type==='tasklist'?[]:null, tags: [], subject: filter.startsWith('subject:') ? filter.split(':')[1] : 'General', updatedAt: new Date().toISOString(), isFavorite: false, isPinned: false, ownerId: user.uid }; const d = await window.firebase.addDoc(window.firebase.collection(window.firebase.db, 'artifacts', "darnote-app", 'users', user.uid, 'notes'), n); setActiveNoteId(d.id); if (!isSidebarOpen) setIsSidebarOpen(true); fetchNotes(false); };
             const updateNote = async (id, u) => { const n = notes.find(n => n.id === id); if(!n) return; await window.firebase.updateDoc(window.firebase.doc(window.firebase.db, 'artifacts', "darnote-app", 'users', user.uid, 'notes', id), { ...u, updatedAt: new Date().toISOString() }); };
             const deleteNote = async (id) => { await window.firebase.deleteDoc(window.firebase.doc(window.firebase.db, 'artifacts', "darnote-app", 'users', user.uid, 'notes', id)); if (activeNoteId === id) setActiveNoteId(null); setNotes(p => p.filter(n => n.id !== id)); };
             const handleContextMenu = (e, t, d) => { e.preventDefault(); setContextMenu({ x: e.clientX, y: e.clientY, type: t, data: d }); };
@@ -850,7 +851,7 @@
                     {/* GLOBAL HEADER (Google Workspace Style) */}
                     <header className="bg-white dark:bg-surface border-b border-zinc-200 dark:border-white/5 h-16 flex items-center justify-between px-4 z-40 shrink-0">
                         <div className="flex items-center gap-3">
-                             <button onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)} className="lg:hidden p-2 rounded-full hover:bg-zinc-100 dark:hover:bg-white/10 text-zinc-500">
+                             <button onClick={() => window.innerWidth < 1024 ? setIsMobileMenuOpen(!isMobileMenuOpen) : setIsSidebarOpen(!isSidebarOpen)} className="p-2 rounded-full hover:bg-zinc-100 dark:hover:bg-white/10 text-zinc-500">
                                 <Icons.Menu className="w-6 h-6"/>
                             </button>
                             <img src="https://raw.githubusercontent.com/darren6251/darnote/refs/heads/main/darNote%20logo.png" className="w-8 h-8 rounded-lg shadow-sm hidden md:block"/>
@@ -872,6 +873,15 @@
                             <button onClick={()=>setIsDarkMode(!isDarkMode)} className="p-2 text-zinc-500 hover:bg-zinc-100 dark:hover:bg-white/5 rounded-full transition-colors" title="Toggle Mode">
                                 {isDarkMode ? <Icons.Sun className="w-5 h-5"/> : <Icons.Moon className="w-5 h-5"/>}
                             </button>
+                            <div className="relative">
+                                <button onClick={() => setShowSupportMenu(!showSupportMenu)} className="p-2 text-zinc-500 hover:bg-zinc-100 dark:hover:bg-white/5 rounded-full transition-colors"><div className="w-5 h-5 border-2 border-current rounded-full flex items-center justify-center text-xs font-bold">?</div></button>
+                                {showSupportMenu && (
+                                    <div className="absolute right-0 top-full mt-2 w-48 bg-white dark:bg-surface border border-zinc-200 dark:border-white/10 rounded-lg shadow-xl z-50 py-1" onClick={() => setShowSupportMenu(false)}>
+                                        <a href="mailto:darnote@3-shot.com" className="block px-4 py-2 text-sm text-zinc-700 dark:text-zinc-200 hover:bg-zinc-100 dark:hover:bg-white/5">Email Support</a>
+                                        <a href="http://linkedin.com/company/darnote" target="_blank" className="block px-4 py-2 text-sm text-zinc-700 dark:text-zinc-200 hover:bg-zinc-100 dark:hover:bg-white/5">LinkedIn</a>
+                                    </div>
+                                )}
+                            </div>
                             {user.photoURL ? <img src={user.photoURL} className="w-8 h-8 rounded-full border border-zinc-200 dark:border-white/10 cursor-pointer"/> : <div className="w-8 h-8 rounded-full bg-indigo-500 flex items-center justify-center font-bold text-white">{user.displayName?user.displayName[0]:'U'}</div>}
                             <button onClick={()=>window.firebase.signOut(window.firebase.auth)} className="p-2 text-zinc-500 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/10 rounded-full transition-colors"><Icons.Logout className="w-5 h-5"/></button>
                         </div>
@@ -880,12 +890,13 @@
                     <div className="flex-1 flex overflow-hidden relative">
                         {/* LEFT SIDEBAR (Collapsible on Mobile) */}
                         <AnimatePresence>
-                            {(isMobileMenuOpen || window.innerWidth >= 1024) && (
+                            {(isMobileMenuOpen || (window.innerWidth >= 1024 && isSidebarOpen)) && (
                                 <motion.div 
-                                    initial={window.innerWidth < 1024 ? { x: -260 } : { x: 0 }}
+                                    initial={{ x: -260 }}
                                     animate={{ x: 0 }}
                                     exit={{ x: -260 }}
-                                    className={`w-[260px] flex-shrink-0 bg-white dark:bg-surface flex flex-col justify-between p-4 z-30 lg:z-0 border-r border-zinc-200 dark:border-white/5 absolute lg:static h-full shadow-2xl lg:shadow-none transition-transform`}
+                                    transition={{ type: 'tween', duration: 0.2 }}
+                                    className={`w-[260px] flex-shrink-0 bg-white dark:bg-surface flex flex-col justify-between p-4 z-30 lg:z-0 border-r border-zinc-200 dark:border-white/5 absolute lg:static h-full shadow-2xl lg:shadow-none`}
                                 >
                                     <div className="space-y-6">
                                         <div className="space-y-1">
@@ -906,7 +917,7 @@
                         </AnimatePresence>
                         
                         {/* NOTE LIST (Hidden on mobile when note active) */}
-                        <div className={`flex-shrink-0 border-r border-zinc-200 dark:border-white/5 bg-light-surface dark:bg-surface flex flex-col z-10 w-full lg:w-[350px] ${activeNoteId ? 'hidden lg:flex' : 'flex'}`}>
+                        <div className={`flex-shrink-0 border-r border-zinc-200 dark:border-white/5 bg-light-surface dark:bg-surface flex flex-col z-10 w-full lg:w-[350px] ${activeNoteId ? 'hidden' : 'flex'} ${isSidebarOpen ? 'lg:flex' : 'lg:hidden'}`}>
                              <div className="p-4 border-b border-zinc-200 dark:border-white/5 space-y-4">
                                 <div className="flex justify-between items-center">
                                     <div className="flex bg-zinc-100 dark:bg-black/20 rounded-lg p-0.5"><button onClick={() => setViewMode('list')} className={`p-1.5 rounded ${viewMode === 'list' ? 'bg-white dark:bg-white/10 shadow-sm' : 'text-zinc-400'}`}><Icons.List className="w-4 h-4"/></button><button onClick={() => setViewMode('grid')} className={`p-1.5 rounded ${viewMode === 'grid' ? 'bg-white dark:bg-white/10 shadow-sm' : 'text-zinc-400'}`}><Icons.Grid className="w-4 h-4"/></button></div>
