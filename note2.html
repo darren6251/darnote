@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>darNote - Workspace</title>
+    <title>darNote - Notes</title>
     <!-- BRANDING: Favicon -->
     <link rel="icon" type="image/png" href="https://raw.githubusercontent.com/darren6251/darnote/refs/heads/main/darNote%20logo.png">
     
@@ -92,9 +92,12 @@
         .dark .tox-tinymce { border-top: 1px solid rgba(255,255,255,0.1) !important; }
         .tox-statusbar__path { display: none !important; } 
 
-        /* Mobile specific hiding */
-        @media screen and (max-width: 1024px) {
-            .hide-on-mobile { display: none !important; }
+        @media screen and (max-width: 850px) {
+            .doc-workspace { padding-top: 0; padding-bottom: 0; }
+            .glass-panel { width: 100%; height: auto; border-right: none; border-bottom: 1px solid #27272a; flex-direction: row; align-items: center; overflow-x: auto; }
+            .glass-panel .space-y-6 { display: flex; align-items: center; space-y: 0; gap: 1rem; width: 100%; }
+            .glass-panel nav { display: flex; gap: 0.5rem; }
+            .glass-panel .hidden-mobile { display: none; }
         }
     </style>
 </head>
@@ -165,15 +168,11 @@
             ShieldClock: (p) => <svg {...p} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><circle cx="12" cy="12" r="3"/><polyline points="12 10 12 12 13 13"/></svg>,
             Target: (p) => <svg {...p} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/></svg>,
             GraduationCap: (p) => <svg {...p} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M22 10v6M2 10l10-5 10 5-10 5z"/><path d="M6 12v5c3 3 9 3 12 0v-5"/></svg>,
-            ExternalLink: (p) => <svg {...p} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" x2="21" y1="14" y2="3"/></svg>,
-            ChevronLeft: (p) => <svg {...p} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="m15 18-6-6 6-6"/></svg>,
-            ChevronRight: (p) => <svg {...p} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="m9 18 6-6-6-6"/></svg>,
-            Menu: (p) => <svg {...p} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="4" x2="20" y1="12" y2="12"/><line x1="4" x2="20" y1="6" y2="6"/><line x1="4" x2="20" y1="18" y2="18"/></svg>,
-            ChartBar: (p) => <svg {...p} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M3 3v18h18"/><path d="M18 17V9"/><path d="M13 17V5"/><path d="M8 17v-3"/></svg>
+            ExternalLink: (p) => <svg {...p} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" x2="21" y1="14" y2="3"/></svg>
         };
 
         // ==========================================
-        // AI & QUOTA HELPERS
+        // AI & QUOTA HELPERS (SYNCED WITH EL.HTML)
         // ==========================================
         
         const getLimits = async () => {
@@ -326,9 +325,41 @@
             return [localData, updateData];
         };
 
-        // ... [RecallWidget, MagicNoteModal, TaskEditor components from note2.html are here] ...
-        // Re-declaring for self-containment:
+        // ==========================================
+        // NEW COMPONENTS: RECALL & COMPARATOR
+        // ==========================================
         
+        const LogLightbox = ({ log, onClose }) => {
+            if (!log) return null;
+            const qImages = log.questionImages?.length > 0 ? log.questionImages : (log.imageUrl ? [log.imageUrl] : []);
+            const sImages = log.schemeImages?.length > 0 ? log.schemeImages : (log.markingSchemeUrl ? [log.markingSchemeUrl] : []);
+            const rC = (src, i) => (<div key={i} className="relative group w-full flex justify-center">{src.includes('drive.google.com') ? <iframe src={src} className="w-full max-w-2xl h-[400px] rounded-xl shadow-ds bg-white" /> : <img src={src} className="max-w-full h-auto rounded-xl shadow-ds bg-white dark:bg-black" />}</div>);
+            
+            return (
+                <div className="fixed inset-0 z-[100] bg-black/80 backdrop-blur-md flex flex-col" onClick={onClose}>
+                    <div className="flex-shrink-0 h-14 bg-zinc-900 border-b border-white/10 flex items-center justify-between px-4">
+                        <h3 className="text-white font-bold text-sm truncate">{log.title}</h3>
+                        <button onClick={onClose} className="p-2 bg-white/10 rounded-full text-white"><Icons.X className="w-5 h-5"/></button>
+                    </div>
+                    <div className="flex-1 overflow-hidden flex flex-col md:flex-row" onClick={e=>e.stopPropagation()}>
+                         <div className="flex-1 overflow-y-auto p-4 space-y-4 border-b md:border-b-0 md:border-r border-white/10 bg-zinc-900/50">
+                             <div className="text-xs font-bold text-zinc-400 uppercase tracking-wider sticky top-0 bg-zinc-900/90 py-2 z-10">Question</div>
+                             {qImages.length ? qImages.map((src, i)=>rC(src,i)) : <div className="text-zinc-500 text-sm">No Question Image</div>}
+                             <div className="text-zinc-300 text-sm p-4 bg-white/5 rounded-lg whitespace-pre-wrap">{log.questionText || "No Text"}</div>
+                         </div>
+                         <div className="flex-1 overflow-y-auto p-4 space-y-4 bg-zinc-900/50">
+                             <div className="text-xs font-bold text-zinc-400 uppercase tracking-wider sticky top-0 bg-zinc-900/90 py-2 z-10">Marking Scheme & Notes</div>
+                             {sImages.length ? sImages.map((src, i)=>rC(src,i)) : <div className="text-zinc-500 text-sm">No Scheme Image</div>}
+                             <div className="p-4 bg-indigo-500/10 border border-indigo-500/20 rounded-lg text-indigo-200 text-sm">
+                                <strong className="block text-xs uppercase mb-1 text-indigo-400">Recall Point:</strong>
+                                {log.explanation || "No analysis provided."}
+                             </div>
+                         </div>
+                    </div>
+                </div>
+            );
+        };
+
         const RecallWidget = ({ note, user, onOpenLog }) => {
             const [logs, setLogs] = useState([]);
             const [loading, setLoading] = useState(false);
@@ -338,8 +369,13 @@
                 const fetchRecall = async () => {
                     setLoading(true);
                     try {
-                        let constraints = [ window.firebase.where('subject', '==', note.subject), window.firebase.limit(10) ];
+                        let constraints = [
+                            window.firebase.where('subject', '==', note.subject),
+                            window.firebase.limit(10) // Limit to save reads
+                        ];
+                        // Only add topic constraint if it exists to allow broader recall if topic missing
                         if(note.topic) constraints.push(window.firebase.where('topic', '==', note.topic));
+                        
                         const q = window.firebase.query(window.firebase.collection(window.firebase.db, 'artifacts', "darnote-app", 'users', user.uid, 'error_logs'), ...constraints);
                         const snap = await window.firebase.getDocs(q);
                         setLogs(snap.docs.map(d => ({id: d.id, ...d.data()})));
@@ -355,15 +391,20 @@
                 <div className="flex flex-col h-full bg-zinc-50 dark:bg-onyx border-l border-zinc-200 dark:border-white/5">
                      <div className="p-4 border-b border-zinc-200 dark:border-white/5 bg-white dark:bg-surface">
                          <h3 className="text-sm font-bold flex items-center gap-2 dark:text-white"><Icons.Brain className="w-4 h-4 text-rose-500"/> Recall Protocol</h3>
+                         <p className="text-[10px] text-zinc-500 mt-1">Mistakes related to <strong>{note.subject}</strong></p>
                      </div>
                      <div className="flex-1 overflow-y-auto p-2 space-y-2">
                          {loading ? <div className="p-4 text-center text-zinc-400 text-xs animate-pulse">Scanning Neural Archives...</div> : 
-                          logs.length === 0 ? <div className="p-8 text-center"><Icons.Check className="w-8 h-8 text-green-500 mx-auto mb-2 opacity-50"/><p className="text-xs text-zinc-500">Clean sheet!</p></div> :
+                          logs.length === 0 ? <div className="p-8 text-center"><Icons.Check className="w-8 h-8 text-green-500 mx-auto mb-2 opacity-50"/><p className="text-xs text-zinc-500">Clean sheet! No recorded errors for this topic.</p></div> :
                           logs.map(log => (
                               <div key={log.id} onClick={()=>onOpenLog(log)} className="p-3 bg-white dark:bg-white/5 border border-zinc-200 dark:border-white/5 rounded-lg hover:border-rose-400 cursor-pointer group transition-all">
                                   <div className="flex justify-between items-start">
                                       <span className="text-xs font-semibold text-zinc-700 dark:text-zinc-300 line-clamp-2 group-hover:text-rose-500 transition-colors">{log.title}</span>
                                       {log.mastered ? <Icons.Check className="w-3 h-3 text-green-500 shrink-0"/> : <div className="w-2 h-2 rounded-full bg-rose-500 shrink-0 mt-1"></div>}
+                                  </div>
+                                  <div className="mt-2 flex items-center gap-2 text-[10px] text-zinc-400">
+                                      <span className="bg-zinc-100 dark:bg-white/10 px-1.5 py-0.5 rounded">{log.questionType}</span>
+                                      <span>{new Date(log.createdAt).toLocaleDateString()}</span>
                                   </div>
                               </div>
                           ))
@@ -373,16 +414,24 @@
             );
         };
 
+        // ... [MagicNoteModal, TaskEditor, MindMapEditor logic remains mostly same] ...
+        // Re-declaring for scope:
         const MagicNoteModal = ({ onClose, onInsert, user }) => {
             const [images, setImages] = useState([]);
             const [instruction, setInstruction] = useState('');
-            const [length, setLength] = useState('short'); 
+            const [length, setLength] = useState('short'); // short, mid, long
             const [generating, setGenerating] = useState(false);
             const [error, setError] = useState(null);
 
             const handleFiles = (e) => {
                 const files = Array.from(e.target.files || e.dataTransfer.files);
-                files.forEach(file => { if(file.type.startsWith('image/')) { const reader = new FileReader(); reader.onload = (ev) => setImages(prev => [...prev, ev.target.result]); reader.readAsDataURL(file); } });
+                files.forEach(file => {
+                    if(file.type.startsWith('image/')) {
+                        const reader = new FileReader();
+                        reader.onload = (ev) => setImages(prev => [...prev, ev.target.result]);
+                        reader.readAsDataURL(file);
+                    }
+                });
             };
 
             const handleGenerate = async () => {
@@ -390,9 +439,17 @@
                 setGenerating(true); setError(null);
                 const cost = length === 'short' ? 1 : length === 'mid' ? 2 : 3;
                 const newUsage = await checkAndIncrementQuota(user, 'magic', cost);
-                if (newUsage === false) { setError(`Daily Limit Reached!`); setGenerating(false); return; }
+                if (newUsage === false) {
+                    setError(`Daily Limit Reached! (Cost: ${cost}).`);
+                    setGenerating(false);
+                    return;
+                }
                 const systemPrompt = `You are an expert academic tutor. User Instruction: ${instruction || "Summarize."} Depth: ${length.toUpperCase()}. STRICT HTML Output for TinyMCE. Use $$ for block math, $ for inline. Structure with <h3>.`;
-                try { const content = await callAI("Generate Magic Note", systemPrompt, images); onInsert(content); onClose(); } catch(e) { setError("Generation failed."); }
+                try {
+                    const content = await callAI("Generate Magic Note", systemPrompt, images);
+                    onInsert(content);
+                    onClose();
+                } catch(e) { setError("Generation failed."); }
                 setGenerating(false);
             };
 
@@ -406,32 +463,36 @@
                         <div className="p-6 overflow-y-auto flex-1 space-y-6">
                             <div className="border-2 border-dashed border-zinc-300 dark:border-zinc-700 rounded-xl p-6 text-center transition-colors hover:border-indigo-500 bg-zinc-50 dark:bg-black/20" onDragOver={e=>e.preventDefault()} onDrop={(e)=>{e.preventDefault(); handleFiles(e);}}>
                                 <input type="file" multiple accept="image/*" onChange={handleFiles} className="hidden" id="magic-upload"/>
-                                <label htmlFor="magic-upload" className="cursor-pointer flex flex-col items-center gap-2"><Icons.ImageFile className="w-12 h-12 text-zinc-400"/><span className="text-sm font-medium text-zinc-600 dark:text-zinc-400">Drop images here or click to upload</span></label>
+                                <label htmlFor="magic-upload" className="cursor-pointer flex flex-col items-center gap-2">
+                                    <Icons.ImageFile className="w-12 h-12 text-zinc-400"/>
+                                    <span className="text-sm font-medium text-zinc-600 dark:text-zinc-400">Drop images here or click to upload</span>
+                                </label>
                             </div>
                             {images.length > 0 && (<div className="flex gap-2 overflow-x-auto pb-2">{images.map((img, i) => (<div key={i} className="relative shrink-0 w-24 h-24 rounded-lg overflow-hidden border border-zinc-200 dark:border-zinc-700"><img src={img} className="w-full h-full object-cover"/><button onClick={()=>setImages(prev=>prev.filter((_, idx)=>idx!==i))} className="absolute top-0 right-0 bg-red-500 text-white p-1 rounded-bl"><Icons.X className="w-3 h-3"/></button></div>))}</div>)}
                             <div className="space-y-4">
                                 <div><label className="text-xs font-bold text-zinc-500 uppercase">Instructions</label><input value={instruction} onChange={e=>setInstruction(e.target.value)} placeholder="e.g. Focus on mechanism..." className="w-full mt-1 bg-zinc-100 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-lg px-3 py-2 text-sm focus:outline-none dark:text-white"/></div>
-                                <div className="grid grid-cols-3 gap-3">{[{id: 'short', cost: 1, label: 'Short'},{id: 'mid', cost: 2, label: 'Standard'},{id: 'long', cost: 3, label: 'Deep'}].map(opt => (<button key={opt.id} onClick={()=>setLength(opt.id)} className={`p-3 rounded-lg border text-sm font-medium transition-all ${length===opt.id ? 'bg-indigo-600 border-indigo-600 text-white' : 'bg-white dark:bg-zinc-800 border-zinc-200 dark:border-zinc-700 text-zinc-600 dark:text-zinc-300'}`}><div className="font-bold">{opt.label}</div><div className="text-xs opacity-70">{opt.cost} Quota</div></button>))}</div>
+                                <div><label className="text-xs font-bold text-zinc-500 uppercase mb-2 block">Depth</label><div className="grid grid-cols-3 gap-3">{[{id: 'short', cost: 1, label: 'Short'},{id: 'mid', cost: 2, label: 'Standard'},{id: 'long', cost: 3, label: 'Deep'}].map(opt => (<button key={opt.id} onClick={()=>setLength(opt.id)} className={`p-3 rounded-lg border text-sm font-medium transition-all ${length===opt.id ? 'bg-indigo-600 border-indigo-600 text-white' : 'bg-white dark:bg-zinc-800 border-zinc-200 dark:border-zinc-700 text-zinc-600 dark:text-zinc-300'}`}><div className="font-bold">{opt.label}</div><div className="text-xs opacity-70">{opt.cost} Quota</div></button>))}</div></div>
                             </div>
-                            {error && <div className="text-red-500 text-sm font-bold bg-red-50 dark:bg-red-900/10 p-3 rounded-lg">{error}</div>}
+                            {error && <div className="text-red-500 text-sm font-bold bg-red-50 dark:bg-red-900/10 p-3 rounded-lg flex items-center gap-2"><Icons.Alert className="w-4 h-4"/> {error}</div>}
                         </div>
-                        <div className="p-4 border-t border-zinc-200 dark:border-white/10 bg-zinc-50 dark:bg-zinc-900 flex justify-end gap-3"><button onClick={onClose} className="px-4 py-2 text-sm font-medium text-zinc-600 dark:text-zinc-400">Cancel</button><button onClick={handleGenerate} disabled={generating || images.length===0} className="px-6 py-2 bg-indigo-600 text-white rounded-lg text-sm font-bold shadow-lg hover:bg-indigo-500 disabled:opacity-50">{generating ? "Generating..." : "Generate Note"}</button></div>
+                        <div className="p-4 border-t border-zinc-200 dark:border-white/10 bg-zinc-50 dark:bg-zinc-900 flex justify-end gap-3"><button onClick={onClose} className="px-4 py-2 text-sm font-medium text-zinc-600 dark:text-zinc-400">Cancel</button><button onClick={handleGenerate} disabled={generating || images.length===0} className="px-6 py-2 bg-indigo-600 text-white rounded-lg text-sm font-bold shadow-lg hover:bg-indigo-500 disabled:opacity-50 flex items-center gap-2">{generating ? "Generating..." : "Generate Note"}</button></div>
                     </motion.div>
                 </div>
             );
         };
 
-        const TaskEditor = ({ data, onChange }) => {
+        const TaskEditor = ({ data, onChange, onSaveToDrive }) => {
             const { tasks: initialTasks = [] } = data;
             const [tasks, updateTasks] = useDebouncedSave(initialTasks, (newTasks) => onChange({...data, tasks: newTasks}), 2000);
-            const [newTaskText, setNewTaskText] = useState('');
-            const addTask = () => { if(!newTaskText.trim()) return; updateTasks([...tasks, { id: Date.now().toString(), text: newTaskText, completed: false, subtasks: [] }]); setNewTaskText(''); };
+            const [filter, setFilter] = useState('all'); const [newTaskText, setNewTaskText] = useState(''); const [newTaskDate, setNewTaskDate] = useState('');
+            const addTask = () => { if(!newTaskText.trim()) return; updateTasks([...tasks, { id: Date.now().toString(), text: newTaskText, completed: false, dueDate: newTaskDate || null, subtasks: [] }]); setNewTaskText(''); setNewTaskDate(''); };
             const toggleTask = (id) => updateTasks(tasks.map(t => t.id === id ? { ...t, completed: !t.completed } : t));
             const deleteTask = (id) => updateTasks(tasks.filter(t => t.id !== id));
+            const filtered = tasks.filter(t => { if(filter==='completed') return t.completed; if(filter==='active') return !t.completed; return true; });
             return (
                 <div className="p-8 h-full overflow-y-auto bg-[#f0f2f5] dark:bg-[#0c0c0c] flex flex-col gap-6 relative">
-                    <div className="bg-white dark:bg-zinc-900 p-4 rounded-xl shadow-sm border border-zinc-200 dark:border-zinc-800 flex gap-2"><input value={newTaskText} onChange={(e) => setNewTaskText(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && addTask()} placeholder="Add task..." className="flex-1 bg-transparent outline-none dark:text-white" /><button onClick={addTask} className="bg-indigo-600 text-white px-4 py-2 rounded-lg font-bold text-sm">Add</button></div>
-                    <div className="space-y-3">{tasks.map(t => (<div key={t.id} className="bg-white dark:bg-zinc-900 p-4 rounded-xl shadow-sm border border-zinc-200 dark:border-zinc-800 group"><div className="flex items-start gap-3"><input type="checkbox" checked={t.completed} onChange={() => toggleTask(t.id)} className="mt-1 task-checkbox" /><div className="flex-1"><div className={`text-sm font-medium ${t.completed ? 'line-through text-zinc-400' : 'text-zinc-900 dark:text-white'}`}>{t.text}</div></div><button onClick={() => deleteTask(t.id)} className="opacity-0 group-hover:opacity-100 text-red-500"><Icons.Trash className="w-4 h-4"/></button></div></div>))}</div>
+                    <div className="bg-white dark:bg-zinc-900 p-4 rounded-xl shadow-sm border border-zinc-200 dark:border-zinc-800 flex gap-2 flex-col sm:flex-row"><input value={newTaskText} onChange={(e) => setNewTaskText(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && addTask()} placeholder="Add task..." className="flex-1 bg-transparent outline-none dark:text-white" /><button onClick={addTask} className="bg-indigo-600 text-white px-4 py-2 rounded-lg font-bold text-sm">Add</button></div>
+                    <div className="space-y-3">{filtered.map(t => (<div key={t.id} className="bg-white dark:bg-zinc-900 p-4 rounded-xl shadow-sm border border-zinc-200 dark:border-zinc-800 group"><div className="flex items-start gap-3"><input type="checkbox" checked={t.completed} onChange={() => toggleTask(t.id)} className="mt-1 task-checkbox" /><div className="flex-1"><div className={`text-sm font-medium ${t.completed ? 'line-through text-zinc-400' : 'text-zinc-900 dark:text-white'}`}>{t.text}</div></div><button onClick={() => deleteTask(t.id)} className="opacity-0 group-hover:opacity-100 text-red-500"><Icons.Trash className="w-4 h-4"/></button></div></div>))}</div>
                 </div>
             )
         };
@@ -571,12 +632,11 @@
             const [activeNoteId, setActiveNoteId] = useState(() => { const p = new URLSearchParams(window.location.search); return p.get('note'); });
             const [searchQuery, setSearchQuery] = useState(''); const [filter, setFilter] = useState('all'); const [viewMode, setViewMode] = useState('list');
             const [rightSidebarMode, setRightSidebarMode] = useState('closed'); // closed, ai, recall
-            const [contextMenu, setContextMenu] = useState(null);
+            const [isNoteListOpen, setIsNoteListOpen] = useState(true); const [contextMenu, setContextMenu] = useState(null);
             const [isDarkMode, setIsDarkMode] = useState(true); const [isAuthLoading, setIsAuthLoading] = useState(true); 
             const [showProfileModal, setShowProfileModal] = useState(false); const [showMagicModal, setShowMagicModal] = useState(false);
-            const [logSearchResults, setLogSearchResults] = useState([]);
-            const [viewingLog, setViewingLog] = useState(null);
-            const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+            const [logSearchResults, setLogSearchResults] = useState([]); // For Omni-search
+            const [viewingLog, setViewingLog] = useState(null); // Lightbox log
             const { saveToDrive, isReady, getAccessToken } = useGoogleDrive();
 
             useEffect(() => { const h = () => setActiveNoteId(new URLSearchParams(window.location.search).get('note')); window.addEventListener('popstate', h); return () => window.removeEventListener('popstate', h); }, []);
@@ -588,11 +648,7 @@
                 if (!user) { setNotes([]); setSubjects([]); return; } 
                 const db = window.firebase.db; const appId = "darnote-app";
                 const pSub = window.firebase.onSnapshot(window.firebase.doc(db, 'artifacts', appId, 'users', user.uid, 'settings', 'profile'), (d) => { if (d.exists()) setProfile(d.data()); }); 
-                const sSub = window.firebase.onSnapshot(window.firebase.collection(db, 'artifacts', appId, 'users', user.uid, 'subjects'), (s) => { 
-                    const fs = s.docs.map(d => ({ id: d.id, name: d.data().name, topics: d.data().topics || [] })).sort((a,b)=>a.name.localeCompare(b.name)); 
-                    if (fs.length === 0) ['Personal', 'Work', 'Ideas'].forEach(n => window.firebase.addDoc(window.firebase.collection(db, 'artifacts', appId, 'users', user.uid, 'subjects'), { name: n })); 
-                    else setSubjects(fs); 
-                }); 
+                const sSub = window.firebase.onSnapshot(window.firebase.collection(db, 'artifacts', appId, 'users', user.uid, 'subjects'), (s) => { const fs = s.docs.map(d => d.data().name).sort(); if (fs.length === 0) ['Personal', 'Work', 'Ideas'].forEach(n => window.firebase.addDoc(window.firebase.collection(db, 'artifacts', appId, 'users', user.uid, 'subjects'), { name: n })); else setSubjects(fs); }); 
                 return () => { pSub(); sSub(); }; 
             }, [user]);
 
@@ -600,24 +656,39 @@
             useEffect(() => { const c = (e) => { if (!e.target.closest('.context-menu')) setContextMenu(null); }; window.addEventListener('mousedown', c); return () => window.removeEventListener('mousedown', c); }, []);
 
             // NOTES FETCHING
-            const fetchNotes = async () => {
+            const fetchNotes = async (loadMore = false) => {
                 if (!user) return; 
                 try {
                     const db = window.firebase.db; const ref = window.firebase.collection(db, 'artifacts', "darnote-app", 'users', user.uid, 'notes');
                     let c = [];
                     if (filter === 'favorites') c.push(window.firebase.where('isFavorite', '==', true));
-                    if (filter.startsWith('subject:')) {
-                        const [, subName, subTopic] = filter.split(':');
-                        c.push(window.firebase.where('subject', '==', subName));
-                        if(subTopic) c.push(window.firebase.where('topic', '==', subTopic));
-                    }
+                    if (filter.startsWith('subject:')) c.push(window.firebase.where('subject', '==', filter.split(':')[1]));
                     c.push(window.firebase.orderBy('updatedAt', 'desc'));
+                    c.push(window.firebase.limit(20));
                     const q = window.firebase.query(ref, ...c);
-                    window.firebase.onSnapshot(q, (s) => { const f = s.docs.map(d => ({ id: d.id, ...d.data() })); setNotes(f); });
+                    const s = await window.firebase.getDocs(q);
+                    const f = s.docs.map(d => ({ id: d.id, ...d.data() }));
+                    setNotes(f);
                 } catch(e) { console.error("Fetch Error", e); }
             };
 
-            useEffect(() => { if(user) { fetchNotes(); } }, [filter, user]);
+            useEffect(() => { if(user) { fetchNotes(false); } }, [filter, user]);
+            useEffect(() => { if(!user || !activeNoteId) return; const u = window.firebase.onSnapshot(window.firebase.doc(window.firebase.db, 'artifacts', "darnote-app", 'users', user.uid, 'notes', activeNoteId), (d) => { if(d.exists()) setNotes(p => p.map(n => n.id === activeNoteId ? { ...n, ...d.data() } : n)); }); return () => u(); }, [activeNoteId]);
+
+            // OMNI-SEARCH
+            useEffect(() => {
+                if(!user || searchQuery.length < 3) { setLogSearchResults([]); return; }
+                const delayDebounceFn = setTimeout(async () => {
+                    // Fire-and-forget query for logs
+                    try {
+                        const logsRef = window.firebase.collection(window.firebase.db, 'artifacts', "darnote-app", 'users', user.uid, 'error_logs');
+                        const q = window.firebase.query(logsRef, window.firebase.where('title', '>=', searchQuery), window.firebase.where('title', '<=', searchQuery + '\uf8ff'), window.firebase.limit(5));
+                        const snap = await window.firebase.getDocs(q);
+                        setLogSearchResults(snap.docs.map(d => ({id: d.id, ...d.data(), type: 'log'})));
+                    } catch(e) { console.warn("Log search failed (probably no index yet):", e); }
+                }, 500);
+                return () => clearTimeout(delayDebounceFn);
+            }, [searchQuery, user]);
 
             const filteredNotes = useMemo(() => { 
                 let r = notes; 
@@ -628,22 +699,12 @@
                 return r; 
             }, [notes, searchQuery]);
 
-            const createNote = async (type = 'text') => { if(!user) return; const n = { type, title: '', content: type === 'text' ? '' : null, nodes: type === 'mindmap' ? [{id: 'root', text: 'Central Idea', x: 400, y: 300}] : null, connections: type==='mindmap'?[]:null, tasks: type==='tasklist'?[]:null, tags: [], subject: 'General', updatedAt: new Date().toISOString(), isFavorite: false, isPinned: false, ownerId: user.uid }; const d = await window.firebase.addDoc(window.firebase.collection(window.firebase.db, 'artifacts', "darnote-app", 'users', user.uid, 'notes'), n); setActiveNoteId(d.id); setIsMobileMenuOpen(false); };
-            const updateNote = async (id, u) => { await window.firebase.updateDoc(window.firebase.doc(window.firebase.db, 'artifacts', "darnote-app", 'users', user.uid, 'notes', id), { ...u, updatedAt: new Date().toISOString() }); };
-            const deleteNote = async (id) => { await window.firebase.deleteDoc(window.firebase.doc(window.firebase.db, 'artifacts', "darnote-app", 'users', user.uid, 'notes', id)); if (activeNoteId === id) setActiveNoteId(null); };
+            const createNote = async (type = 'text') => { if(!user) return; const n = { type, title: '', content: type === 'text' ? '' : null, nodes: type === 'mindmap' ? [{id: 'root', text: 'Central Idea', x: 400, y: 300}] : null, connections: type==='mindmap'?[]:null, tasks: type==='tasklist'?[]:null, tags: [], subject: filter.startsWith('subject:') ? filter.split(':')[1] : 'General', updatedAt: new Date().toISOString(), isFavorite: false, isPinned: false, ownerId: user.uid }; const d = await window.firebase.addDoc(window.firebase.collection(window.firebase.db, 'artifacts', "darnote-app", 'users', user.uid, 'notes'), n); setActiveNoteId(d.id); if (!isNoteListOpen) setIsNoteListOpen(true); fetchNotes(false); };
+            const updateNote = async (id, u) => { const n = notes.find(n => n.id === id); if(!n) return; await window.firebase.updateDoc(window.firebase.doc(window.firebase.db, 'artifacts', "darnote-app", 'users', user.uid, 'notes', id), { ...u, updatedAt: new Date().toISOString() }); };
+            const deleteNote = async (id) => { await window.firebase.deleteDoc(window.firebase.doc(window.firebase.db, 'artifacts', "darnote-app", 'users', user.uid, 'notes', id)); if (activeNoteId === id) setActiveNoteId(null); setNotes(p => p.filter(n => n.id !== id)); };
             const handleContextMenu = (e, t, d) => { e.preventDefault(); setContextMenu({ x: e.clientX, y: e.clientY, type: t, data: d }); };
+            
             const handleMagicInsert = (content) => { if (activeNoteId) { const insertFn = window[`insert_note_${activeNoteId}`]; if (insertFn) insertFn(content); } };
-
-            const addTopicToSubject = async (subjectName) => {
-                const sub = subjects.find(s => s.name === subjectName);
-                if (!sub) return;
-                const topic = prompt(`Add a new topic for ${subjectName}:`);
-                if (topic && topic.trim()) {
-                    await window.firebase.updateDoc(window.firebase.doc(window.firebase.db, 'artifacts', 'darnote-app', 'users', user.uid, 'subjects', sub.id), {
-                        topics: window.firebase.arrayUnion(topic.trim())
-                    });
-                }
-            };
 
             if (isAuthLoading) return <div className="flex h-screen items-center justify-center bg-black"><div className="w-12 h-12 rounded-full border-4 border-white border-t-transparent animate-spin"></div></div>;
             if (!user) return <div className="flex h-screen w-full items-center justify-center bg-black text-white p-4 relative overflow-hidden"><div className="absolute top-[-50%] left-[-50%] w-[200%] h-[200%] bg-[radial-gradient(circle_at_center,_var(--tw-gradient-stops))] from-zinc-800/20 via-black to-black animate-spin-slow"></div><div className="z-10 text-center"><h1 className="text-4xl font-bold mb-4">darNote</h1><button onClick={()=>window.firebase.signInWithPopup(window.firebase.auth, new window.firebase.GoogleAuthProvider())} className="bg-white text-black px-6 py-3 rounded-full font-bold">Sign In with Google</button></div></div>;
@@ -654,133 +715,91 @@
             return (
                 <div className={`flex h-screen w-full transition-colors duration-300 ${isDarkMode ? 'dark bg-onyx text-zinc-100' : 'bg-light-bg text-zinc-900'} overflow-hidden`}>
                     
-                    {/* MOBILE MENU OVERLAY */}
-                    <AnimatePresence>
-                        {isMobileMenuOpen && (
-                            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm lg:hidden" onClick={() => setIsMobileMenuOpen(false)}>
-                                <motion.div initial={{ x: '-100%' }} animate={{ x: 0 }} exit={{ x: '-100%' }} transition={{ type: 'spring', damping: 25, stiffness: 200 }} className="absolute inset-y-0 left-0 w-[280px] bg-white dark:bg-onyx border-r border-zinc-200 dark:border-white/10 flex flex-col" onClick={e => e.stopPropagation()}>
-                                    <div className="p-6 border-b border-zinc-200 dark:border-white/10">
-                                        <div className="flex items-center gap-3 mb-6 font-bold text-xl dark:text-white">darNote</div>
-                                        <button onClick={() => createNote('text')} className="w-full flex items-center justify-center gap-2 bg-brand text-white py-3 rounded-xl font-bold shadow-lg"><Icons.Plus className="w-5 h-5"/> New Note</button>
-                                    </div>
-                                    <div className="flex-1 overflow-y-auto p-4 space-y-1">
-                                        <SidebarButton active={filter==='all'} icon={Icons.Archive} onClick={()=>{setFilter('all'); setIsMobileMenuOpen(false)}}>All Notes</SidebarButton>
-                                        <SidebarButton active={filter==='favorites'} icon={Icons.Star} onClick={()=>{setFilter('favorites'); setIsMobileMenuOpen(false)}}>Favorites</SidebarButton>
-                                        <a href="el.html" className="w-full flex items-center gap-3 px-4 py-3 rounded-r-full text-sm font-medium text-zinc-500 dark:text-zinc-400 hover:bg-zinc-100 dark:hover:bg-white/5"><Icons.Alert className="w-5 h-5"/> Error Log</a>
-                                        <a href="report.html" className="w-full flex items-center gap-3 px-4 py-3 rounded-r-full text-sm font-medium text-zinc-500 dark:text-zinc-400 hover:bg-zinc-100 dark:hover:bg-white/5"><Icons.ChartBar className="w-5 h-5"/> Analytics</a>
-                                        <div className="my-4 border-t border-zinc-200 dark:border-white/10"></div>
-                                        <div className="px-4 text-[11px] font-bold text-zinc-400 uppercase tracking-wider mb-2">Subjects</div>
-                                        {subjects.map(s => (<div key={s.id} className="mb-1"><button onClick={() => { setFilter(`subject:${s.name}`); setIsMobileMenuOpen(false); }} className={`w-full flex items-center justify-between px-3 py-2 rounded-lg text-sm font-medium transition-colors ${filter.startsWith(`subject:${s.name}`) ? 'bg-brand/10 text-brand dark:text-indigo-400' : 'text-zinc-500 dark:text-zinc-400'}`}><span className="flex items-center gap-2"><Icons.Folder className="w-4 h-4"/> {s.name}</span></button></div>))}
-                                    </div>
-                                </motion.div>
-                            </motion.div>
-                        )}
-                    </AnimatePresence>
-
-                    {/* DESKTOP SIDEBAR */}
-                    <div className="hidden lg:flex w-[260px] flex-shrink-0 glass-panel flex-col justify-between p-4 z-20">
-                        <div className="space-y-6 flex-1 overflow-y-auto">
+                    {/* LEFT SIDEBAR */}
+                    <div className="w-[80px] lg:w-[260px] flex-shrink-0 glass-panel flex flex-col justify-between p-4 z-20">
+                        <div className="space-y-6">
                             <div className="flex items-center gap-3 px-2 cursor-pointer hover:bg-white/5 p-2 rounded-xl transition-all" onClick={() => setShowProfileModal(true)}>
                                 <div className="relative">
                                     {user.photoURL ? <img src={user.photoURL} className="w-10 h-10 rounded-full object-cover"/> : <div className="w-10 h-10 rounded-full bg-indigo-500 flex items-center justify-center font-bold">{user.displayName?user.displayName[0]:'U'}</div>}
                                     {isVerified && <div className="absolute -bottom-1 -right-1 bg-white dark:bg-zinc-900 rounded-full p-0.5"><Icons.ShieldCheck className="w-4 h-4 text-green-500 fill-green-500/20"/></div>}
                                 </div>
-                                <div className="text-left"><div className="font-bold text-sm truncate w-32">{user.displayName || 'User'}</div><div className="text-[10px] text-zinc-500 truncate">{isVerified ? 'Verified Student' : 'Free Plan'}</div></div>
+                                <div className="hidden lg:block text-left"><div className="font-bold text-sm truncate w-32">{user.displayName || 'User'}</div><div className="text-[10px] text-zinc-500 truncate">{isVerified ? 'Verified Student' : 'Free Plan'}</div></div>
                             </div>
                             <nav className="space-y-1">
-                                <SidebarButton active={filter==='all'} icon={Icons.Archive} onClick={()=>setFilter('all')}>All Notes</SidebarButton>
-                                <SidebarButton active={filter==='favorites'} icon={Icons.Star} onClick={()=>setFilter('favorites')}>Favorites</SidebarButton>
-                                <a href="el.html" className="w-full flex items-center gap-3 px-4 py-3 rounded-r-full text-sm font-medium transition-colors text-zinc-500 dark:text-zinc-400 hover:bg-zinc-100 dark:hover:bg-white/5"><Icons.Alert className="w-5 h-5"/> Error Log</a>
-                                <a href="report.html" className="w-full flex items-center gap-3 px-4 py-3 rounded-r-full text-sm font-medium transition-colors text-zinc-500 dark:text-zinc-400 hover:bg-zinc-100 dark:hover:bg-white/5"><Icons.ChartBar className="w-5 h-5"/> Analytics</a>
+                                <SidebarButton active={filter==='all'} icon={Icons.Archive} onClick={()=>setFilter('all')}><span className="hidden lg:inline">All Notes</span></SidebarButton>
+                                <SidebarButton active={filter==='favorites'} icon={Icons.Star} onClick={()=>setFilter('favorites')}><span className="hidden lg:inline">Favorites</span></SidebarButton>
+                                <a href="el.html" className="w-full flex items-center gap-3 px-4 py-3 rounded-r-full text-sm font-medium transition-colors text-zinc-500 dark:text-zinc-400 hover:bg-zinc-100 dark:hover:bg-white/5"><Icons.Alert className="w-5 h-5"/> <span className="hidden lg:inline">Error Logs</span></a>
                             </nav>
                             <div className="space-y-1 pt-4 border-t border-zinc-200 dark:border-white/5">
-                                <div className="px-3 py-2 text-[10px] font-bold text-zinc-500 flex items-center justify-between uppercase tracking-widest">Subjects</div>
-                                {subjects.map(s => (<div key={s.id} className="mb-0.5"><button onClick={() => setFilter(`subject:${s.name}`)} className={`w-full flex items-center justify-between px-3 py-2 rounded-lg text-sm font-medium transition-colors ${filter.startsWith(`subject:${s.name}`) ? 'bg-brand/10 text-brand dark:text-indigo-400 font-bold' : 'text-zinc-500 dark:text-zinc-400 hover:bg-zinc-100 dark:hover:bg-white/5'}`}><span className="flex items-center gap-2"><Icons.Folder className="w-4 h-4 opacity-70"/> {s.name}</span></button></div>))}
+                                <div className="px-3 py-2 text-[10px] font-bold text-zinc-500 flex items-center justify-between uppercase tracking-widest"><span className="hidden lg:block">Subjects</span></div>
+                                <nav className="space-y-0.5 overflow-y-auto max-h-[300px]">{subjects.map(s => (<div key={s}><SidebarButton active={filter===`subject:${s}`} icon={Icons.Folder} onClick={()=>setFilter(`subject:${s}`)}><span className="hidden lg:inline truncate">{s}</span></SidebarButton></div>))}</nav>
                             </div>
                         </div>
-                        <div className="space-y-2 pt-4 border-t border-zinc-200 dark:border-white/5 shrink-0">
-                            <SidebarButton icon={isDarkMode?Icons.Sun:Icons.Moon} onClick={()=>setIsDarkMode(!isDarkMode)}>{isDarkMode ? 'Light' : 'Dark'}</SidebarButton>
-                            <SidebarButton icon={Icons.Logout} onClick={()=>window.firebase.signOut(window.firebase.auth)}>Sign Out</SidebarButton>
+                        <div className="space-y-2 pt-4 border-t border-zinc-200 dark:border-white/5">
+                            <SidebarButton icon={isDarkMode?Icons.Sun:Icons.Moon} onClick={()=>setIsDarkMode(!isDarkMode)}><span className="hidden lg:inline">{isDarkMode ? 'Light' : 'Dark'}</span></SidebarButton>
+                            <SidebarButton icon={Icons.Logout} onClick={()=>window.firebase.signOut(window.firebase.auth)}><span className="hidden lg:inline">Sign Out</span></SidebarButton>
                         </div>
                     </div>
                     
-                    {/* NOTES LIST COLUMN */}
-                    <div className={`flex-col border-r border-zinc-200 dark:border-white/5 bg-light-surface dark:bg-surface z-10 shadow-xl transition-all duration-300 w-full lg:w-[350px] shrink-0 ${activeNoteId ? 'hidden lg:flex' : 'flex'}`}>
-                        <div className="p-4 border-b border-zinc-200 dark:border-white/5 space-y-4 shrink-0">
-                            <div className="flex justify-between items-center lg:hidden">
-                                <button onClick={()=>setIsMobileMenuOpen(true)} className="p-2 -ml-2 text-zinc-500"><Icons.Menu className="w-6 h-6"/></button>
-                                <span className="font-bold text-lg dark:text-white">darNote</span>
-                                <button onClick={() => createNote('text')} className="p-2 text-brand"><Icons.Plus className="w-6 h-6"/></button>
-                            </div>
-                            <div className="relative">
-                                <Icons.Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-500" />
-                                <input type="text" placeholder="Search..." value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} className="w-full bg-zinc-100 dark:bg-black/20 border border-zinc-200 dark:border-white/5 rounded-lg pl-9 pr-4 py-2.5 text-sm dark:text-zinc-200 focus:outline-none focus:ring-1 focus:ring-brand" />
-                            </div>
-                            <div className="flex justify-between items-center hidden lg:flex">
-                                <div className="flex bg-zinc-100 dark:bg-black/20 rounded-lg p-0.5"><button onClick={() => setViewMode('list')} className={`p-1.5 rounded ${viewMode === 'list' ? 'bg-white dark:bg-white/10 shadow-sm' : 'text-zinc-400'}`}><Icons.List className="w-4 h-4"/></button><button onClick={() => setViewMode('grid')} className={`p-1.5 rounded ${viewMode === 'grid' ? 'bg-white dark:bg-white/10 shadow-sm' : 'text-zinc-400'}`}><Icons.Grid className="w-4 h-4"/></button></div>
-                                <div className="flex gap-2"><button onClick={() => createNote('mindmap')} className="p-2 rounded-lg hover:bg-zinc-100 dark:hover:bg-white/10 text-zinc-400"><Icons.Network className="w-4 h-4" /></button><button onClick={() => createNote('tasklist')} className="p-2 rounded-lg hover:bg-zinc-100 dark:hover:bg-white/10 text-zinc-400"><Icons.CheckSquare className="w-4 h-4" /></button><button onClick={() => createNote('text')} className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-brand text-white text-sm font-bold shadow hover:bg-indigo-500"><Icons.Plus className="w-4 h-4" /> New</button></div>
-                            </div>
-                        </div>
-                        <div className={`flex-1 overflow-y-auto p-3 ${viewMode === 'grid' ? 'grid grid-cols-2 gap-2' : 'space-y-2'}`}>
-                            {filteredNotes.map(n => (
-                                <div key={n.id} onClick={() => setActiveNoteId(n.id)} onContextMenu={(e) => handleContextMenu(e, 'note', n.id)} className={`rounded-xl cursor-pointer border transition-all relative overflow-hidden group ${activeNoteId === n.id ? 'bg-white dark:bg-white/5 border-zinc-300 dark:border-white/10 shadow-lg' : 'bg-transparent border-transparent hover:bg-zinc-50 dark:hover:bg-white/5'} ${viewMode === 'grid' ? 'p-4 aspect-square flex flex-col' : 'p-4'}`}>
-                                    <div className="flex justify-between items-start mb-1">
-                                        <div className="font-semibold text-sm truncate pr-2 w-full dark:text-zinc-200">{n.title || 'Untitled'}</div>
-                                        {n.isPinned && <Icons.Pin className="w-3 h-3 text-indigo-500 shrink-0" />}
+                    {/* NOTES LIST */}
+                    <AnimatePresence>
+                        {isNoteListOpen && (
+                            <motion.div initial={{ width: 0, opacity: 0 }} animate={{ width: viewMode === 'grid' ? 400 : 350, opacity: 1 }} exit={{ width: 0, opacity: 0 }} className="flex-shrink-0 border-r border-zinc-200 dark:border-white/5 bg-light-surface dark:bg-surface flex flex-col z-10 shadow-xl">
+                                <div className="p-4 border-b border-zinc-200 dark:border-white/5 space-y-4 min-w-[320px]">
+                                    <div className="relative">
+                                        <Icons.Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-500" />
+                                        <input type="text" placeholder="Search Notes & Logs..." value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} className="w-full bg-zinc-100 dark:bg-black/20 border border-zinc-200 dark:border-white/5 rounded-lg pl-9 pr-4 py-2.5 text-sm dark:text-zinc-200 focus:outline-none focus:ring-1 focus:ring-brand" />
                                     </div>
-                                    <p className="text-xs text-zinc-500 line-clamp-2 leading-relaxed mb-2">{n.type==='mindmap'?'Mind Map':n.type==='tasklist'?`${n.tasks?.filter(t=>t.completed).length||0}/${n.tasks?.length||0} Tasks`:(n.content ? n.content.replace(/<[^>]*>/g, '') : 'Empty')}</p>
-                                    <div className="flex items-center justify-between text-[10px] text-zinc-400 mt-auto">
-                                        <span className="bg-zinc-100 dark:bg-white/10 px-1.5 py-0.5 rounded truncate max-w-[80px]">{n.subject}</span>
-                                        <span>{new Date(n.updatedAt).toLocaleDateString(undefined, {month:'short', day:'numeric'})}</span>
+                                    <div className="flex justify-between items-center">
+                                        <div className="flex bg-zinc-100 dark:bg-black/20 rounded-lg p-0.5"><button onClick={() => setViewMode('list')} className={`p-1.5 rounded ${viewMode === 'list' ? 'bg-white dark:bg-white/10 shadow-sm' : 'text-zinc-400'}`}><Icons.List className="w-4 h-4"/></button><button onClick={() => setViewMode('grid')} className={`p-1.5 rounded ${viewMode === 'grid' ? 'bg-white dark:bg-white/10 shadow-sm' : 'text-zinc-400'}`}><Icons.Grid className="w-4 h-4"/></button></div>
+                                        <div className="flex gap-2"><button onClick={() => createNote('mindmap')} className="p-2 rounded-lg hover:bg-zinc-100 dark:hover:bg-white/10 text-zinc-400"><Icons.Network className="w-4 h-4" /></button><button onClick={() => createNote('tasklist')} className="p-2 rounded-lg hover:bg-zinc-100 dark:hover:bg-white/10 text-zinc-400"><Icons.CheckSquare className="w-4 h-4" /></button><button onClick={() => createNote('text')} className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-brand text-white text-sm font-bold shadow hover:bg-indigo-500"><Icons.Plus className="w-4 h-4" /> New</button></div>
                                     </div>
                                 </div>
-                            ))}
-                        </div>
-                        {/* Mobile Bottom Nav */}
-                        <div className="lg:hidden h-14 border-t border-zinc-200 dark:border-white/5 bg-white dark:bg-onyx flex justify-around items-center shrink-0">
-                            <button onClick={()=>setFilter('all')} className={`flex flex-col items-center gap-1 ${filter==='all'?'text-brand':'text-zinc-400'}`}><Icons.Archive className="w-5 h-5"/><span className="text-[10px]">Notes</span></button>
-                            <button onClick={()=>setFilter('favorites')} className={`flex flex-col items-center gap-1 ${filter==='favorites'?'text-brand':'text-zinc-400'}`}><Icons.Star className="w-5 h-5"/><span className="text-[10px]">Favs</span></button>
-                            <a href="el.html" className="flex flex-col items-center gap-1 text-zinc-400"><Icons.Alert className="w-5 h-5"/><span className="text-[10px]">Logs</span></a>
-                            <a href="report.html" className="flex flex-col items-center gap-1 text-zinc-400"><Icons.ChartBar className="w-5 h-5"/><span className="text-[10px]">Stats</span></a>
-                        </div>
-                    </div>
+                                <div className={`flex-1 overflow-y-auto p-3 min-w-[320px] ${viewMode === 'grid' ? 'grid grid-cols-2 gap-2' : 'space-y-2'}`}>
+                                    {logSearchResults.length > 0 && (
+                                        <div className="mb-4">
+                                            <div className="text-[10px] font-bold text-zinc-400 uppercase tracking-wider mb-2 px-2">Recall (Errors)</div>
+                                            {logSearchResults.map(log => (
+                                                <div key={log.id} onClick={()=>setViewingLog(log)} className="px-3 py-2 bg-rose-50 dark:bg-rose-900/10 border border-rose-100 dark:border-rose-900/30 rounded-lg cursor-pointer hover:bg-rose-100 dark:hover:bg-rose-900/20 mb-2">
+                                                    <div className="text-xs font-bold text-rose-600 dark:text-rose-400 truncate">{log.title}</div>
+                                                    <div className="text-[10px] text-zinc-500">{log.subject}</div>
+                                                </div>
+                                            ))}
+                                            <div className="border-b border-zinc-200 dark:border-white/5 my-2"></div>
+                                        </div>
+                                    )}
+                                    {filteredNotes.map(n => (
+                                        <div key={n.id} onClick={() => setActiveNoteId(n.id)} onContextMenu={(e) => handleContextMenu(e, 'note', n.id)} className={`rounded-xl cursor-pointer border transition-all relative overflow-hidden group ${activeNoteId === n.id ? 'bg-white dark:bg-white/5 border-zinc-300 dark:border-white/10 shadow-lg' : 'bg-transparent border-transparent hover:bg-zinc-50 dark:hover:bg-white/5'} ${viewMode === 'grid' ? 'p-4 aspect-square flex flex-col' : 'p-4'}`}>
+                                            <div className="absolute top-2 right-2 flex gap-1">{n.isPinned && <Icons.Pin className="w-3 h-3 text-indigo-500" />}{n.isFavorite && <Icons.Star className="w-3 h-3 text-yellow-500 fill-yellow-500" />}</div>
+                                            <div className="font-semibold text-sm truncate mb-2 dark:text-zinc-200 pr-6">{n.title || 'Untitled'}</div>
+                                            <p className="text-xs text-zinc-500 line-clamp-3 leading-relaxed">{n.type==='mindmap'?'Mind Map':n.type==='tasklist'?`${n.tasks?.filter(t=>t.completed).length||0}/${n.tasks?.length||0} Tasks`:(n.content ? n.content.replace(/<[^>]*>/g, '') : 'Empty')}</p>
+                                        </div>
+                                    ))}
+                                </div>
+                            </motion.div>
+                        )}
+                    </AnimatePresence>
 
-                    {/* MAIN EDITOR AREA */}
-                    <main className={`flex-1 flex flex-col relative bg-light-bg dark:bg-onyx min-w-0 transition-all duration-300 ${!activeNoteId ? 'hidden lg:flex' : 'flex fixed inset-0 z-50 lg:static'}`}>
+                    {/* MAIN EDITOR */}
+                    <main className="flex-1 flex flex-col relative bg-light-bg dark:bg-onyx min-w-0">
                         {activeNote ? (
                             <>
-                                <header className="h-16 flex items-center justify-between px-4 border-b border-zinc-200 dark:border-white/5 bg-light-bg dark:bg-onyx z-20 shrink-0 sticky top-0">
-                                    <div className="flex items-center gap-3 overflow-hidden">
-                                        <button onClick={() => setActiveNoteId(null)} className="lg:hidden p-2 -ml-2 rounded-full hover:bg-zinc-200 dark:hover:bg-white/10 text-zinc-500"><Icons.ChevronLeft className="w-6 h-6"/></button>
-                                        <input value={activeNote.title} onChange={(e) => updateNote(activeNote.id, { title: e.target.value })} placeholder="Untitled Note" className="bg-transparent text-lg font-bold text-zinc-900 dark:text-white placeholder-zinc-300 dark:placeholder-zinc-700 focus:outline-none w-full max-w-md truncate" />
-                                    </div>
-                                    <div className="flex items-center gap-2 shrink-0">
-                                        <div className="hidden md:flex items-center gap-2 mr-2 bg-zinc-100 dark:bg-white/5 p-1 rounded-lg border border-zinc-200 dark:border-white/5">
-                                            <select value={activeNote.subject || 'General'} onChange={(e)=>updateNote(activeNote.id, {subject: e.target.value, topic: ''})} className="bg-transparent text-xs font-bold text-zinc-600 dark:text-zinc-300 uppercase cursor-pointer outline-none pl-2 pr-1 py-1 max-w-[100px] hover:text-brand transition-colors">
-                                                <option value="General">General</option>{subjects.map(s=><option key={s.id} value={s.name}>{s.name}</option>)}
-                                            </select>
-                                            <div className="w-px h-4 bg-zinc-300 dark:bg-white/20"></div>
-                                            {activeNote.subject !== 'General' && subjects.find(s=>s.name===activeNote.subject) ? (
-                                                <div className="flex items-center">
-                                                    <select value={activeNote.topic || ''} onChange={(e)=>updateNote(activeNote.id, {topic: e.target.value})} className="bg-transparent text-xs text-zinc-500 dark:text-zinc-400 cursor-pointer outline-none pl-2 pr-1 py-1 max-w-[100px] hover:text-brand transition-colors">
-                                                        <option value="">No Topic</option>
-                                                        {subjects.find(s=>s.name===activeNote.subject).topics.map(t => <option key={t} value={t}>{t}</option>)}
-                                                    </select>
-                                                    <button onClick={() => addTopicToSubject(activeNote.subject)} className="p-1 hover:bg-zinc-200 dark:hover:bg-white/10 rounded-md text-zinc-400 hover:text-brand transition-colors"><Icons.Plus className="w-3 h-3"/></button>
-                                                </div>
-                                            ) : (
-                                                <input value={activeNote.topic || ''} onChange={(e)=>updateNote(activeNote.id, {topic: e.target.value})} placeholder="Topic..." className="bg-transparent text-xs border-none outline-none w-20 px-2 text-zinc-500" disabled={activeNote.subject !== 'General'}/>
-                                            )}
+                                <header className="h-16 flex items-center justify-between px-6 border-b border-zinc-200 dark:border-white/5 bg-light-bg dark:bg-onyx z-20 shrink-0 sticky top-0">
+                                    <div className="flex items-center gap-3"><button onClick={() => setIsNoteListOpen(!isNoteListOpen)} className="text-zinc-500 hover:text-zinc-900 dark:hover:text-white">{isNoteListOpen ? <Icons.SidebarClose className="w-5 h-5" /> : <Icons.SidebarOpen className="w-5 h-5" />}</button><div className="h-4 w-px bg-zinc-300 dark:bg-white/10 mx-2"></div><input value={activeNote.title} onChange={(e) => updateNote(activeNote.id, { title: e.target.value })} placeholder="Untitled Note" className="bg-transparent text-lg font-bold text-zinc-900 dark:text-white placeholder-zinc-300 dark:placeholder-zinc-700 focus:outline-none w-full max-w-md" /></div>
+                                    <div className="flex items-center gap-2">
+                                        <div className="hidden md:flex items-center gap-2 mr-2">
+                                            <select value={activeNote.subject || 'General'} onChange={(e)=>updateNote(activeNote.id, {subject: e.target.value})} className="bg-transparent text-xs font-bold text-zinc-500 uppercase cursor-pointer outline-none"><option value="General">General</option>{subjects.map(s=><option key={s} value={s}>{s}</option>)}</select>
+                                            {activeNote.subject && activeNote.subject !== 'General' && <input value={activeNote.topic || ''} onChange={(e)=>updateNote(activeNote.id, {topic: e.target.value})} placeholder="Add Topic..." className="bg-transparent text-xs border-b border-transparent hover:border-zinc-300 focus:border-brand outline-none w-24 text-zinc-500"/>}
                                         </div>
                                         <button onClick={() => updateNote(activeNote.id, { isPinned: !activeNote.isPinned })} className={`p-2 rounded-full hover:bg-zinc-100 dark:hover:bg-white/10 ${activeNote.isPinned ? 'text-indigo-500' : 'text-zinc-500'}`}><Icons.Pin className="w-5 h-5"/></button>
-                                        <div className="h-4 w-px bg-zinc-300 dark:bg-white/10 mx-1 hidden sm:block"></div>
+                                        <div className="h-4 w-px bg-zinc-300 dark:bg-white/10 mx-1"></div>
                                         <button onClick={() => setRightSidebarMode(rightSidebarMode === 'recall' ? 'closed' : 'recall')} className={`p-2 rounded-full hover:bg-zinc-100 dark:hover:bg-white/10 ${rightSidebarMode === 'recall' ? 'text-rose-500 bg-rose-50 dark:bg-rose-500/10' : 'text-zinc-500'}`} title="Recall Protocol"><Icons.Brain className="w-5 h-5"/></button>
                                         <button onClick={() => setRightSidebarMode(rightSidebarMode === 'ai' ? 'closed' : 'ai')} className={`p-2 rounded-full hover:bg-zinc-100 dark:hover:bg-white/10 ${rightSidebarMode === 'ai' ? 'text-indigo-500 bg-indigo-50 dark:bg-indigo-500/10' : 'text-zinc-500'}`} title="AI Assistant"><Icons.Bot className="w-5 h-5"/></button>
                                     </div>
                                 </header>
                                 <div className="flex-1 overflow-hidden relative bg-[#f0f2f5] dark:bg-[#0c0c0c] flex flex-col">
                                     <ErrorBoundary key={activeNote.id}>
-                                        {activeNote.type === 'mindmap' ? <div className="p-8 h-full"><MindMapEditor data={activeNote} onChange={(u) => updateNote(activeNote.id, u)} onSaveToDrive={saveToDrive} /></div> : activeNote.type === 'tasklist' ? <TaskEditor data={activeNote} onChange={(u) => updateNote(activeNote.id, u)} onSaveToDrive={saveToDrive} /> : <TinyMCEEditor initialContent={activeNote.content} noteId={activeNote.id} noteTitle={activeNote.title} onSave={(h) => updateNote(activeNote.id, { content: h })} onSaveToDrive={saveToDrive} isDarkMode={isDarkMode} onContextMenu={(e, t, c) => handleContextMenu(e, 'text', { text: t, callback: c })} saveToDriveFunction={saveToDrive} onMagicClick={()=>setShowMagicModal(true)}/>}
+                                        {activeNote.type === 'mindmap' ? <div className="p-8 h-full"><MindMapEditor data={activeNote} onChange={(u) => updateNote(activeNote.id, u)} onSaveToDrive={handleDriveSave} /></div> : activeNote.type === 'tasklist' ? <TaskEditor data={activeNote} onChange={(u) => updateNote(activeNote.id, u)} onSaveToDrive={handleDriveSave} /> : <TinyMCEEditor initialContent={activeNote.content} noteId={activeNote.id} noteTitle={activeNote.title} onSave={(h) => updateNote(activeNote.id, { content: h })} onSaveToDrive={saveToDrive} isDarkMode={isDarkMode} onContextMenu={(e, t, c) => handleContextMenu(e, 'text', { text: t, callback: c })} saveToDriveFunction={saveToDrive} onMagicClick={()=>setShowMagicModal(true)}/>}
                                     </ErrorBoundary>
                                 </div>
                             </>
@@ -789,7 +808,7 @@
                         {/* RIGHT SIDEBAR (AI & RECALL) */}
                         <AnimatePresence>
                             {rightSidebarMode !== 'closed' && (
-                                <motion.div initial={{ x: '100%' }} animate={{ x: 0 }} exit={{ x: '100%' }} transition={{type:'spring', damping: 25, stiffness: 300}} className="w-full sm:w-[350px] bg-white dark:bg-surface border-l border-zinc-200 dark:border-white/10 absolute right-0 top-0 bottom-0 z-30 shadow-2xl flex flex-col">
+                                <motion.div initial={{ x: '100%' }} animate={{ x: 0 }} exit={{ x: '100%' }} transition={{type:'spring', damping: 25, stiffness: 300}} className="w-[350px] bg-white dark:bg-surface border-l border-zinc-200 dark:border-white/10 absolute right-0 top-0 bottom-0 z-30 shadow-2xl flex flex-col">
                                     <div className="flex-none flex justify-between p-2 border-b border-zinc-200 dark:border-white/5">
                                         <div className="flex gap-1">
                                             <button onClick={()=>setRightSidebarMode('ai')} className={`px-3 py-1.5 rounded text-xs font-bold ${rightSidebarMode==='ai'?'bg-indigo-100 text-indigo-600 dark:bg-indigo-900/50 dark:text-indigo-300':'text-zinc-500'}`}>AI Chat</button>
