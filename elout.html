@@ -304,14 +304,18 @@
             const db = window.firebase.db;
             
             try {
-                // Fetch Subjects
+                // Fetch Subjects - SAFE MAP
                 const subRef = window.firebase.collection(db, 'artifacts', "darnote-app", 'users', u.uid, 'subjects');
                 const subSnap = await window.firebase.getDocs(subRef);
-                const subs = subSnap.docs.map(d => ({id: d.id, ...d.data()}));
+                const subs = subSnap.docs.map(d => ({
+                    id: d.id, 
+                    name: d.data().name || "Unknown",
+                    topics: d.data().topics || [] // Force array
+                }));
                 setSubjects(subs);
                 if(subs.length > 0) setSelectedSubject(subs[0].name);
 
-                // Fetch Logs
+                // Fetch Logs - SAFE MAP
                 const logRef = window.firebase.collection(db, 'artifacts', "darnote-app", 'users', u.uid, 'error_logs');
                 const q = window.firebase.query(logRef, window.firebase.orderBy('createdAt', 'desc'));
                 const logSnap = await window.firebase.getDocs(q);
@@ -324,7 +328,6 @@
                 setRawLogs(logs);
             } catch (e) {
                 console.error("Data Fetch Error:", e);
-                // Don't crash, just show empty
             }
         };
 
@@ -375,7 +378,7 @@
         };
 
         const QuestionBlock = ({ item, index, isScheme, type }) => {
-            const images = isScheme ? item.sImgs : item.qImgs;
+            const images = (isScheme ? item.sImgs : item.qImgs) || [];
             return (
                 <div className="question-block group relative">
                     <div className="flex gap-4 items-start">
@@ -458,7 +461,7 @@
                             <label className="text-xs font-bold text-secondary uppercase tracking-wider block mb-1">Topic (Optional)</label>
                             <select value={selectedTopic} onChange={e=>setSelectedTopic(e.target.value)} className="w-full p-2 bg-gray-50 border border-gray-300 rounded-lg text-sm">
                                 <option value="">All Topics</option>
-                                {selectedSubject && subjects.find(s=>s.name===selectedSubject)?.topics.map(t => (
+                                {selectedSubject && subjects.find(s=>s.name===selectedSubject)?.topics?.map(t => (
                                     <option key={t} value={t}>{t}</option>
                                 ))}
                             </select>
