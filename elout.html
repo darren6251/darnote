@@ -41,7 +41,6 @@
     
     const app = initializeApp({ apiKey: "AIzaSyAvPEac-03kE4oazvaq8K3T2gxLPsnZO20", authDomain: "darnote625.firebaseapp.com", projectId: "darnote625", storageBucket: "darnote625.firebasestorage.app", messagingSenderId: "16458322562", appId: "1:16458322562:web:8894d71f3e6c326eba1a9b" });
     
-    // Attach to window so React can see it
     window.firebase = { 
         app, 
         auth: getAuth(app), 
@@ -54,36 +53,24 @@
         onAuthStateChanged, 
         signInWithPopup, 
         GoogleAuthProvider,
-        isReady: true // Flag to check readiness
+        isReady: true 
     };
     
-    // Dispatch event to wake up React if it loaded first
     window.dispatchEvent(new Event('firebase-ready'));
 </script>
 
 <style>
-    /* UI Scrollbar */
     ::-webkit-scrollbar { width: 8px; height: 8px; }
     ::-webkit-scrollbar-thumb { background: #dadce0; border-radius: 4px; }
     ::-webkit-scrollbar-thumb:hover { background: #bdc1c6; }
 
-    /* Print Specific Styles - The "DSE Vibe" */
     @media print {
-        @page {
-            size: A4;
-            margin: 0;
-        }
-        
-        body {
-            background: white;
-            color: black;
-            -webkit-print-color-adjust: exact;
-            print-color-adjust: exact;
-        }
-
+        @page { size: A4; margin: 0; }
+        body { background: white; color: black; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
         .no-print { display: none !important; }
         .print-only { display: block !important; }
-
+        
+        /* DSE Layout Engine */
         .dse-page-container {
             position: relative;
             width: 210mm;
@@ -91,7 +78,7 @@
             padding-top: 25mm;
             padding-bottom: 25mm;
             padding-left: 20mm;
-            padding-right: 95mm; /* The massive 9.5cm right margin */
+            padding-right: 95mm; /* The classic DSE Right Sidebar Margin */
             box-sizing: border-box;
             page-break-after: always;
             overflow: hidden;
@@ -101,17 +88,19 @@
             position: absolute;
             top: 0;
             bottom: 0;
-            right: 90mm; /* 9cm from right edge */
+            right: 90mm;
             width: 1px;
             background-color: black;
             z-index: 50;
         }
-
+        
+        /* Force single page break avoid for questions */
         .question-block {
             page-break-inside: avoid;
             break-inside: avoid;
-            margin-bottom: 20mm;
+            margin-bottom: 15mm;
             position: relative;
+            display: block;
         }
     }
 
@@ -120,13 +109,12 @@
         width: 210mm;
         min-height: 297mm;
         background: white;
-        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+        box-shadow: 0 10px 30px -5px rgba(0, 0, 0, 0.1);
         margin: 2rem auto;
         position: relative;
         overflow: hidden;
     }
     
-    /* Image Filters for "Clean Scan" look */
     .filter-bw { filter: grayscale(100%) contrast(150%) brightness(110%); }
     .filter-high-contrast { filter: grayscale(100%) contrast(200%) brightness(120%); }
 </style>
@@ -137,61 +125,61 @@
 <script type="text/babel">
     const { useState, useEffect, useRef } = React;
 
-    // --- ERROR BOUNDARY (The "White Screen" Fix) ---
     class ErrorBoundary extends React.Component {
-        constructor(props) {
-            super(props);
-            this.state = { hasError: false, error: null };
-        }
+        constructor(props) { super(props); this.state = { hasError: false, error: null }; }
         static getDerivedStateFromError(error) { return { hasError: true, error }; }
         render() {
-            if (this.state.hasError) {
-                return (
-                    <div className="h-screen w-full flex flex-col items-center justify-center bg-red-50 text-red-900 p-8 text-center">
-                        <i className="fa-solid fa-bug text-4xl mb-4"></i>
-                        <h2 className="text-xl font-bold mb-2">Something went wrong</h2>
-                        <pre className="bg-white p-4 rounded border border-red-200 text-xs text-left overflow-auto max-w-lg">
-                            {this.state.error.toString()}
-                        </pre>
-                        <button onClick={() => window.location.reload()} className="mt-6 px-6 py-2 bg-red-600 text-white rounded-full hover:bg-red-700">Reload Page</button>
-                    </div>
-                );
-            }
+            if (this.state.hasError) return <div className="p-8 text-center text-red-600"><h2>Crash!</h2><pre>{this.state.error.toString()}</pre><button onClick={()=>window.location.reload()} className="underline">Reload</button></div>;
             return this.props.children;
         }
     }
 
-    /* --- ICONS --- */
     const Icons = {
         Print: () => <i className="fa-solid fa-print"></i>,
         Refresh: () => <i className="fa-solid fa-arrows-rotate"></i>,
-        Filter: () => <i className="fa-solid fa-filter"></i>,
-        File: () => <i className="fa-regular fa-file-lines"></i>,
+        Magic: () => <i className="fa-solid fa-wand-magic-sparkles"></i>,
         Check: () => <i className="fa-solid fa-check-double"></i>,
         Left: () => <i className="fa-solid fa-chevron-left"></i>,
-        Magic: () => <i className="fa-solid fa-wand-magic-sparkles"></i>,
-        Trash: () => <i className="fa-solid fa-trash"></i>,
         Google: () => <i className="fa-brands fa-google"></i>,
         Image: () => <i className="fa-solid fa-image"></i>
     };
 
-    /* --- COVER PAGE COMPONENT --- */
-    const DSECoverPage = ({ subject, year = "2026" }) => {
+    /* --- DYNAMIC COVER PAGE --- */
+    const DSECoverPage = ({ subject, year = new Date().getFullYear() + 1 }) => {
+        // Map common inputs to Official Titles
+        const getSubjectDetails = (s) => {
+            const clean = s.toLowerCase().trim();
+            if (clean.includes('m2') || clean.includes('algebra')) return { title: 'MATHEMATICS Extended Part', sub: 'Module 2 (Algebra and Calculus)', code: 'MATH-EP(M2)' };
+            if (clean.includes('m1') || clean.includes('calculus')) return { title: 'MATHEMATICS Extended Part', sub: 'Module 1 (Calculus and Statistics)', code: 'MATH-EP(M1)' };
+            if (clean.includes('math')) return { title: 'MATHEMATICS', sub: 'Compulsory Part', code: 'MATH-CP' };
+            if (clean.includes('phys')) return { title: 'PHYSICS', sub: '', code: 'PHYSICS' };
+            if (clean.includes('chem')) return { title: 'CHEMISTRY', sub: '', code: 'CHEMISTRY' };
+            if (clean.includes('bio')) return { title: 'BIOLOGY', sub: '', code: 'BIOLOGY' };
+            if (clean.includes('econ')) return { title: 'ECONOMICS', sub: '', code: 'ECONOMICS' };
+            return { title: s.toUpperCase(), sub: '', code: s.toUpperCase().substring(0, 8) };
+        };
+
+        const info = getSubjectDetails(subject);
+
         return (
             <div className="dse-page-container relative h-[297mm] w-[210mm]">
                 <div className="dse-sidebar-line"></div>
+                
+                {/* Diagonal Top Left */}
                 <div className="absolute top-0 left-0 w-[45mm] h-[45mm] pointer-events-none">
                      <svg width="100%" height="100%" viewBox="0 0 100 100" preserveAspectRatio="none">
                         <line x1="0" y1="45" x2="45" y2="0" stroke="black" strokeWidth="2.5" />
                      </svg>
                      <div className="absolute top-2 left-6 font-bold text-sm leading-tight">
                         {year}-DSE<br/>
-                        {subject.includes('Math') ? 'MATH EP' : subject.toUpperCase()}<br/>
-                        M2
+                        {info.code.split('-')[0]}<br/>
+                        {info.code.includes('M2') ? 'M2' : ''}
                      </div>
                 </div>
+
+                {/* Sidebar Elements */}
                 <div className="absolute top-0 right-0 w-[90mm] h-full pointer-events-none">
-                    <div className="absolute top-[15mm] left-[20mm] w-[50mm] h-[28mm] border border-black flex items-center justify-center text-center p-2">
+                    <div className="absolute top-[15mm] left-[20mm] w-[50mm] h-[28mm] border border-black flex items-center justify-center text-center p-2 bg-white">
                         <span className="font-bold text-xs">Please stick the barcode label here.</span>
                     </div>
                     <div className="absolute top-[50mm] left-[4mm]">
@@ -207,33 +195,39 @@
                         </div>
                     </div>
                 </div>
-                <div className="text-center mt-8 mb-12">
+
+                {/* Main Title Area */}
+                <div className="text-center mt-12 mb-12 px-4">
                     <div className="text-xs font-serif mb-6">
-                        2025/26_dser_math_tutor_Darren Ng<br/>
                         HONG KONG EXAMINATIONS AND ASSESSMENT AUTHORITY<br/>
                         HONG KONG DIPLOMA OF SECONDARY EDUCATION EXAMINATION {year}
                     </div>
-                    <div className="font-bold text-xl mb-2">{subject}</div>
-                    <div className="font-bold text-xl mb-2">Module 2 (Algebra and Calculus)</div>
-                    <div className="font-bold text-xl mb-8">Question-Answer Book</div>
+                    <div className="font-bold text-2xl mb-2">{info.title}</div>
+                    {info.sub && <div className="font-bold text-xl mb-2">{info.sub}</div>}
+                    <div className="font-bold text-xl mb-8 mt-4">Question-Answer Book</div>
                     <div className="text-base font-serif">
-                        8.30 am -- 11.00 am (2½ hours)<br/>
+                        Time Allowed: 2 hours 30 minutes<br/>
                         This paper must be answered in English
                     </div>
                 </div>
+
+                {/* Instructions */}
                 <div className="font-bold mb-4">INSTRUCTIONS</div>
-                <ol className="list-decimal pl-5 text-sm space-y-4 text-justify font-sans">
-                    <li>After the announcement of the start of the examination, you should first write your Candidate Number in the space provided on Page 1...</li>
-                    <li>This paper consists of TWO sections, A and B.</li>
-                    <li>Attempt ALL questions... Do not write in the margins.</li>
+                <ol className="list-decimal pl-5 text-sm space-y-3 text-justify font-sans">
+                    <li>Write your Candidate Number in the space provided on Page 1.</li>
+                    <li>Stick barcode labels in the spaces provided on Pages 1, 3, 5, 7 and 9.</li>
+                    <li>Answer ALL questions. Write your answers in the spaces provided in this Question-Answer Book. Do not write in the margins. Answers written in the margins will not be marked.</li>
                     <li>Unless otherwise specified, all working must be clearly shown.</li>
+                    <li>Unless otherwise specified, numerical answers must be exact.</li>
                 </ol>
+
+                {/* Footer */}
                 <div className="absolute bottom-[15mm] left-[20mm] font-bold text-xs">
-                    {year}-DSE-{subject.includes('Math') ? 'MATH-EP(M2)' : subject.toUpperCase()}--1
+                    {year}-DSE-{info.code}--1
                 </div>
                 <div className="absolute bottom-[15mm] left-[105mm] text-xs">1</div>
                 <div className="absolute bottom-[15mm] right-[95mm] font-bold text-xs">
-                    * {year} HKDSE MOCK M2 Set 1 *
+                    * {year} HKDSE MOCK Set 1 *
                 </div>
             </div>
         );
@@ -244,203 +238,138 @@
         const [isFirebaseReady, setIsFirebaseReady] = useState(false);
         const [rawLogs, setRawLogs] = useState([]);
         const [subjects, setSubjects] = useState([]);
+        
+        // Filters
         const [selectedSubject, setSelectedSubject] = useState('');
         const [selectedTopic, setSelectedTopic] = useState('');
+        const [includeMC, setIncludeMC] = useState(true);
+        const [includeLQ, setIncludeLQ] = useState(true);
+
         const [paper, setPaper] = useState({ mc: [], lq: [] });
         const [generatedAt, setGeneratedAt] = useState(null);
         const [printMode, setPrintMode] = useState(null); 
         const [imgFilter, setImgFilter] = useState('');
-        const [isGenerating, setIsGenerating] = useState(false); // Loading state
+        const [isGenerating, setIsGenerating] = useState(false);
 
-        // 1. SAFE INIT: Wait for Firebase before doing ANYTHING
         useEffect(() => {
-            const checkFirebase = () => {
-                if (window.firebase && window.firebase.isReady) {
-                    setIsFirebaseReady(true);
-                    return true;
-                }
-                return false;
-            };
-
-            if (!checkFirebase()) {
-                const listener = () => checkFirebase();
-                window.addEventListener('firebase-ready', listener);
-                const interval = setInterval(checkFirebase, 200); // Fallback polling
-                return () => {
-                    window.removeEventListener('firebase-ready', listener);
-                    clearInterval(interval);
-                }
-            }
+            const check = () => { if(window.firebase?.isReady) setIsFirebaseReady(true); };
+            if(!check()) { window.addEventListener('firebase-ready', check); setInterval(check, 500); }
         }, []);
 
-        // 2. AUTH LISTENER (Only runs after init)
         useEffect(() => {
             if (!isFirebaseReady) return;
-            try {
-                const unsub = window.firebase.onAuthStateChanged(window.firebase.auth, (u) => {
-                    if (u) {
-                        setUser(u);
-                        fetchData(u);
-                    } else {
-                        setUser(null);
-                    }
-                });
-                return () => unsub();
-            } catch (e) {
-                console.error("Auth Init Error:", e);
-            }
+            const unsub = window.firebase.onAuthStateChanged(window.firebase.auth, u => {
+                if (u) { setUser(u); fetchSubjects(u); } else setUser(null);
+            });
+            return () => unsub();
         }, [isFirebaseReady]);
 
-        const handleLogin = async () => {
+        const fetchSubjects = async (u) => {
             try {
-                if (!window.firebase) throw new Error("Firebase not ready");
-                await window.firebase.signInWithPopup(window.firebase.auth, new window.firebase.GoogleAuthProvider());
-            } catch (error) {
-                alert("Login Failed: " + error.message);
-            }
-        };
-
-        const fetchData = async (u) => {
-            if (!window.firebase) return;
-            const db = window.firebase.db;
-            
-            try {
-                // Only Fetch Subjects Initially
-                const subRef = window.firebase.collection(db, 'artifacts', "darnote-app", 'users', u.uid, 'subjects');
-                const subSnap = await window.firebase.getDocs(subRef);
-                const subs = subSnap.docs.map(d => ({
-                    id: d.id, 
-                    name: d.data().name || "Unknown",
-                    topics: d.data().topics || [] 
-                }));
+                const db = window.firebase.db;
+                const snap = await window.firebase.getDocs(window.firebase.collection(db, 'artifacts', "darnote-app", 'users', u.uid, 'subjects'));
+                const subs = snap.docs.map(d => ({id: d.id, name: d.data().name||"Unknown", topics: d.data().topics||[]}));
                 setSubjects(subs);
-                if(subs.length > 0) setSelectedSubject(subs[0].name);
-
-                // NOTE: We do NOT fetch logs here anymore.
-            } catch (e) {
-                console.error("Data Fetch Error:", e);
-            }
+                if(subs.length) setSelectedSubject(subs[0].name);
+            } catch(e) { console.error(e); }
         };
 
         const fetchAndGenerate = async () => {
-            if (!selectedSubject) {
-                alert("Please select a subject first.");
-                return;
-            }
+            if (!selectedSubject) return alert("Select a subject!");
+            if (!includeMC && !includeLQ) return alert("Select at least one section (MC or LQ)!");
 
             setIsGenerating(true);
-            setGeneratedAt(null); // Reset previous paper
+            setGeneratedAt(null);
             
             try {
                 const db = window.firebase.db;
-                const logRef = window.firebase.collection(db, 'artifacts', "darnote-app", 'users', user.uid, 'error_logs');
-                
-                // Build Query - Targeted Fetch
                 let constraints = [window.firebase.where('subject', '==', selectedSubject)];
-                if (selectedTopic) {
-                    constraints.push(window.firebase.where('topic', '==', selectedTopic));
-                }
+                if (selectedTopic) constraints.push(window.firebase.where('topic', '==', selectedTopic));
                 
-                // No orderBy here to avoid index requirements. Sort later in JS.
-                const q = window.firebase.query(logRef, ...constraints);
-                const querySnap = await window.firebase.getDocs(q);
-
-                const logs = querySnap.docs.map(d => ({
-                    id: d.id, 
-                    ...d.data(),
+                const snap = await window.firebase.getDocs(window.firebase.query(window.firebase.collection(db, 'artifacts', "darnote-app", 'users', user.uid, 'error_logs'), ...constraints));
+                
+                const logs = snap.docs.map(d => ({
+                    id: d.id, ...d.data(),
                     qImgs: d.data().questionImages || (d.data().imageUrl ? [d.data().imageUrl] : []),
                     sImgs: d.data().schemeImages || (d.data().markingSchemeUrl ? [d.data().markingSchemeUrl] : [])
                 }));
+                setRawLogs(logs); // Store pool for swapping
 
-                // Update pool for swapping
-                setRawLogs(logs);
+                if (logs.length === 0) { setIsGenerating(false); return alert("No questions found!"); }
 
-                if (logs.length === 0) {
-                    alert("No questions found for this selection!");
-                    setIsGenerating(false);
-                    return;
-                }
-
-                // Shuffle and Slice
-                let mcPool = logs.filter(l => l.questionType === 'MC');
-                let lqPool = logs.filter(l => l.questionType === 'LQ');
-
-                const shuffle = (array) => [...array].sort(() => 0.5 - Math.random());
+                // Filter & Shuffle
+                const shuffle = arr => [...arr].sort(() => 0.5 - Math.random());
                 
-                const selectedMC = shuffle(mcPool).slice(0, 36);
-                const selectedLQ = shuffle(lqPool).slice(0, 16);
+                const mc = includeMC ? shuffle(logs.filter(l => l.questionType === 'MC')).slice(0, 36) : [];
+                const lq = includeLQ ? shuffle(logs.filter(l => l.questionType === 'LQ')).slice(0, 16) : [];
 
-                setPaper({ mc: selectedMC, lq: selectedLQ });
+                setPaper({ mc, lq });
                 setGeneratedAt(new Date());
 
-            } catch (error) {
-                console.error("Fetch Error:", error);
-                alert("Error fetching questions: " + error.message);
-            } finally {
-                setIsGenerating(false);
-            }
+            } catch (e) { alert("Error: " + e.message); } finally { setIsGenerating(false); }
         };
 
         const handleSwap = (idx, type) => {
-            const currentList = type === 'mc' ? paper.mc : paper.lq;
-            
-            // rawLogs now contains the fetched pool for the current subject/topic
-            let pool = rawLogs.filter(l => l.questionType === (type === 'mc' ? 'MC' : 'LQ'));
-            
-            const currentIds = new Set(currentList.map(i => i.id));
-            const availablePool = pool.filter(l => !currentIds.has(l.id));
-
-            if (availablePool.length === 0) {
-                alert("No other unique questions available in fetched pool!");
-                return;
-            }
-            const replacement = availablePool[Math.floor(Math.random() * availablePool.length)];
-            const newList = [...currentList];
-            newList[idx] = replacement;
+            const list = type === 'mc' ? paper.mc : paper.lq;
+            const pool = rawLogs.filter(l => l.questionType === (type === 'mc' ? 'MC' : 'LQ'));
+            const currentIds = new Set(list.map(i => i.id));
+            const avail = pool.filter(l => !currentIds.has(l.id));
+            if (!avail.length) return alert("No alternatives available.");
+            const newList = [...list];
+            newList[idx] = avail[Math.floor(Math.random() * avail.length)];
             setPaper(prev => ({ ...prev, [type]: newList }));
         };
 
-        const triggerPrint = (mode) => {
-            setPrintMode(mode);
-            setTimeout(() => window.print(), 500);
-        };
-
-        const toggleFilter = () => {
-            if (imgFilter === '') setImgFilter('filter-bw');
-            else if (imgFilter === 'filter-bw') setImgFilter('filter-high-contrast');
-            else setImgFilter('');
-        };
-
+        // Improved Marking Scheme Logic
         const QuestionBlock = ({ item, index, isScheme, type }) => {
-            const images = (isScheme ? item.sImgs : item.qImgs) || [];
+            // Determine which images to show
+            let images = [];
+            if (isScheme) {
+                // If it's a scheme, prioritize scheme images. 
+                // If no scheme images, check if there's text explanation, otherwise fallback to question image for context? 
+                // No, standard DSE marking schemes don't show question images usually. 
+                images = item.sImgs;
+            } else {
+                images = item.qImgs;
+            }
+
+            // Fallback for Scheme: If no images, we rely on text.
+            const hasImages = images && images.length > 0;
+
             return (
-                <div className="question-block group relative">
+                <div className="question-block group">
                     <div className="flex gap-4 items-start">
                         <div className="font-bold text-lg min-w-[30px]">{index + 1}.</div>
                         <div className="flex-1 space-y-4">
-                            {images.length > 0 ? (
+                            {/* Render Images */}
+                            {hasImages ? (
                                 images.map((src, i) => (
-                                    <img key={i} src={src} className={`max-w-full h-auto border border-transparent transition-all ${!isScheme ? imgFilter : ''}`} loading="eager" />
+                                    <img key={i} src={src} className={`max-w-full h-auto border border-transparent ${!isScheme ? imgFilter : ''}`} />
                                 ))
                             ) : (
-                                <div className="p-4 border border-dashed border-gray-400 text-gray-500 italic">
-                                    {isScheme ? "No marking scheme image." : (item.questionText || "No image content.")}
+                                // No Image Fallback
+                                <div className="p-4 border border-dashed border-gray-300 text-gray-400 italic text-sm">
+                                    {isScheme ? "No marking scheme image uploaded." : (item.questionText || "No question content available.")}
                                 </div>
                             )}
-                            {isScheme && (item.correctAnswer || item.explanation) && (
-                                <div className="mt-2 p-2 border-t border-gray-300 text-sm">
-                                    {item.correctAnswer && <div><strong>Ans:</strong> {item.correctAnswer}</div>}
-                                    {item.explanation && <div className="whitespace-pre-wrap text-gray-700 mt-1">{item.explanation}</div>}
+                            
+                            {/* Render Text / Answers (Crucial for Marking Scheme) */}
+                            {isScheme && (
+                                <div className="mt-2 text-sm space-y-2">
+                                    {item.correctAnswer && <div className="bg-gray-100 p-2 rounded inline-block"><strong>Answer:</strong> <span className="font-mono text-lg font-bold">{item.correctAnswer}</span></div>}
+                                    {item.explanation && (
+                                        <div className="bg-yellow-50 p-3 rounded border border-yellow-100">
+                                            <div className="font-bold text-yellow-800 text-xs mb-1">NOTES / EXPLANATION:</div>
+                                            <div className="whitespace-pre-wrap text-gray-800">{item.explanation}</div>
+                                        </div>
+                                    )}
                                 </div>
                             )}
                         </div>
                     </div>
+                    {/* Swap Button */}
                     {!isScheme && (
-                        <button 
-                            onClick={() => handleSwap(index, type)}
-                            className="no-print absolute -top-2 -right-2 w-8 h-8 bg-white border border-gray-300 rounded-full shadow-md text-primary hover:bg-primary hover:text-white transition-colors flex items-center justify-center opacity-0 group-hover:opacity-100 z-10"
-                            title="Swap with random question"
-                        >
+                        <button onClick={() => handleSwap(index, type)} className="no-print absolute top-0 right-0 p-2 bg-white shadow-md rounded-full text-primary opacity-0 group-hover:opacity-100 transition-opacity z-10 hover:bg-primary hover:text-white" title="Swap Question">
                             <Icons.Refresh />
                         </button>
                     )}
@@ -448,154 +377,154 @@
             );
         };
 
-        // --- LOADING STATE ---
-        if (!isFirebaseReady) {
-            return (
-                <div className="h-screen w-full flex flex-col items-center justify-center bg-gray-50 text-gray-500">
-                    <div className="w-8 h-8 border-4 border-primary border-t-transparent rounded-full animate-spin mb-4"></div>
-                    <div className="font-medium">Initializing Engine...</div>
-                </div>
-            );
-        }
-
-        // --- LOGIN STATE ---
-        if (!user) {
-            return (
-                <div className="h-screen w-full flex items-center justify-center bg-white flex-col gap-6 relative overflow-hidden">
-                    <div className="z-10 flex flex-col items-center">
-                        <img src="https://raw.githubusercontent.com/darren6251/darnote/refs/heads/main/darNote%20logo.png" className="w-16 h-16 mb-6 rounded-2xl shadow-sm"/>
-                        <h1 className="text-3xl font-bold text-dark tracking-tight font-sans mb-3">Exam Factory</h1>
-                        <p className="text-sm text-gray-500 max-w-sm text-center mb-8">Sign in to access your error logs and generate mock papers.</p>
-                        <button onClick={handleLogin} className="bg-primary text-white px-8 py-3 rounded-full font-medium flex gap-3 items-center hover:bg-blue-600 transition-all shadow-md hover:shadow-lg justify-center text-sm">
-                            <Icons.Google /> Continue with Google
-                        </button>
-                    </div>
-                </div>
-            );
-        }
+        if (!isFirebaseReady || !user) return <div className="h-screen flex items-center justify-center text-gray-500 font-medium"><div className="animate-spin w-6 h-6 border-2 border-primary border-t-transparent rounded-full mr-3"></div> Loading Exam Factory...</div>;
 
         return (
             <div className="flex flex-col md:flex-row min-h-screen">
-                <div className={`w-full md:w-80 bg-white border-r border-gray-200 p-6 flex flex-col gap-6 fixed md:relative z-20 h-auto md:h-screen overflow-y-auto no-print shadow-xl md:shadow-none`}>
-                    <div className="flex items-center gap-3 mb-2">
+                {/* SIDEBAR CONTROLS */}
+                <div className="w-full md:w-80 bg-white border-r border-gray-200 p-6 flex flex-col gap-6 fixed md:sticky top-0 h-screen overflow-y-auto no-print shadow-xl z-20">
+                    <div className="flex items-center gap-3">
                         <img src="https://raw.githubusercontent.com/darren6251/darnote/refs/heads/main/darNote%20logo.png" className="w-8 h-8 rounded-lg"/>
                         <h1 className="font-bold text-lg text-dark">Exam Factory</h1>
                     </div>
 
                     <div className="space-y-4">
                         <div>
-                            <label className="text-xs font-bold text-secondary uppercase tracking-wider block mb-1">Subject</label>
+                            <label className="text-xs font-bold text-secondary uppercase block mb-1">Subject</label>
                             <select value={selectedSubject} onChange={e=>setSelectedSubject(e.target.value)} className="w-full p-2 bg-gray-50 border border-gray-300 rounded-lg text-sm">
                                 <option value="">Select Subject</option>
                                 {subjects.map(s => <option key={s.id} value={s.name}>{s.name}</option>)}
                             </select>
                         </div>
-                        
                         <div>
-                            <label className="text-xs font-bold text-secondary uppercase tracking-wider block mb-1">Topic (Optional)</label>
+                            <label className="text-xs font-bold text-secondary uppercase block mb-1">Topic</label>
                             <select value={selectedTopic} onChange={e=>setSelectedTopic(e.target.value)} className="w-full p-2 bg-gray-50 border border-gray-300 rounded-lg text-sm">
                                 <option value="">All Topics</option>
-                                {selectedSubject && subjects.find(s=>s.name===selectedSubject)?.topics?.map(t => (
-                                    <option key={t} value={t}>{t}</option>
-                                ))}
+                                {selectedSubject && subjects.find(s=>s.name===selectedSubject)?.topics?.map(t => <option key={t} value={t}>{t}</option>)}
                             </select>
+                        </div>
+
+                        {/* SECTION SELECTORS */}
+                        <div className="bg-gray-50 p-3 rounded-lg border border-gray-200">
+                            <label className="text-xs font-bold text-secondary uppercase block mb-2">Sections</label>
+                            <div className="flex gap-4">
+                                <label className="flex items-center gap-2 text-sm cursor-pointer">
+                                    <input type="checkbox" checked={includeMC} onChange={e=>setIncludeMC(e.target.checked)} className="rounded text-primary focus:ring-primary"/>
+                                    Include MC
+                                </label>
+                                <label className="flex items-center gap-2 text-sm cursor-pointer">
+                                    <input type="checkbox" checked={includeLQ} onChange={e=>setIncludeLQ(e.target.checked)} className="rounded text-primary focus:ring-primary"/>
+                                    Include LQ
+                                </label>
+                            </div>
                         </div>
                         
                         <div>
-                            <label className="text-xs font-bold text-secondary uppercase tracking-wider block mb-1">Image Quality</label>
-                            <button onClick={toggleFilter} className="w-full p-2 bg-gray-50 border border-gray-300 rounded-lg text-sm flex items-center justify-between">
-                                <span>{imgFilter === '' ? 'Original Color' : (imgFilter === 'filter-bw' ? 'B&W Scan' : 'High Contrast')}</span>
+                            <label className="text-xs font-bold text-secondary uppercase block mb-1">Image Filter</label>
+                            <button onClick={()=>setImgFilter(f => f===''?'filter-bw':f==='filter-bw'?'filter-high-contrast':'')} className="w-full p-2 bg-gray-50 border border-gray-300 rounded-lg text-sm flex justify-between">
+                                <span>{imgFilter === '' ? 'Original' : (imgFilter === 'filter-bw' ? 'B&W Clean' : 'High Contrast')}</span>
                                 <Icons.Image />
                             </button>
                         </div>
 
-                        <button onClick={fetchAndGenerate} disabled={isGenerating} className={`w-full py-3 bg-primary text-white rounded-xl font-bold hover:bg-blue-600 transition-all shadow-md flex items-center justify-center gap-2 ${isGenerating ? 'opacity-70 cursor-wait' : ''}`}>
-                            {isGenerating ? <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin"/> : <Icons.Magic />}
-                            {isGenerating ? 'Fetching...' : 'Generate Mock'}
+                        <button onClick={fetchAndGenerate} disabled={isGenerating} className="w-full py-3 bg-primary text-white rounded-xl font-bold hover:bg-blue-600 shadow-md flex justify-center gap-2 disabled:opacity-70">
+                            {isGenerating ? 'Fetching...' : <><Icons.Magic /> Generate</>}
                         </button>
                     </div>
 
                     {generatedAt && (
-                        <div className="border-t border-gray-200 pt-6 space-y-4 animate-in fade-in slide-in-from-left-4 duration-500">
-                            <div className="text-center">
-                                <div className="text-sm font-semibold text-dark mb-1">Generated Paper</div>
-                                <div className="text-xs text-gray-500 mb-3">{generatedAt.toLocaleTimeString()}</div>
-                                <div className="flex gap-2 justify-center text-xs">
-                                    <span className="bg-blue-100 text-blue-800 px-2 py-1 rounded-md">{paper.mc.length} MC</span>
-                                    <span className="bg-purple-100 text-purple-800 px-2 py-1 rounded-md">{paper.lq.length} LQ</span>
-                                </div>
+                        <div className="border-t border-gray-200 pt-6 space-y-3">
+                            <div className="text-center mb-2">
+                                <div className="text-sm font-bold text-dark">Paper Ready</div>
+                                <div className="text-xs text-gray-500">{paper.mc.length} MC · {paper.lq.length} LQ</div>
                             </div>
-                            <button onClick={() => triggerPrint('question')} className="w-full py-2 bg-dark text-white rounded-lg text-sm font-medium hover:bg-black transition-colors flex items-center justify-center gap-2">
-                                <Icons.Print /> Print Question Paper
-                            </button>
-                            <button onClick={() => triggerPrint('scheme')} className="w-full py-2 bg-white border border-gray-300 text-dark rounded-lg text-sm font-medium hover:bg-gray-50 transition-colors flex items-center justify-center gap-2">
-                                <Icons.Check /> Print Marking Scheme
-                            </button>
+                            <button onClick={() => { setPrintMode('question'); setTimeout(()=>window.print(), 500); }} className="w-full py-2 bg-dark text-white rounded-lg text-sm hover:bg-black flex justify-center gap-2"><Icons.Print /> Question Paper</button>
+                            <button onClick={() => { setPrintMode('scheme'); setTimeout(()=>window.print(), 500); }} className="w-full py-2 bg-white border border-gray-300 text-dark rounded-lg text-sm hover:bg-gray-50 flex justify-center gap-2"><Icons.Check /> Marking Scheme</button>
                         </div>
                     )}
-                    
-                    <div className="mt-auto pt-4 border-t border-gray-200">
-                        <a href="el.html" className="flex items-center gap-2 text-sm text-gray-600 hover:text-primary transition-colors">
-                            <Icons.Left /> Back to Error Log
-                        </a>
-                    </div>
                 </div>
 
+                {/* PREVIEW AREA */}
                 <div className="flex-1 bg-gray-100 p-8 overflow-y-auto h-screen">
-                    {!generatedAt && !isGenerating ? (
+                    {!generatedAt ? (
                         <div className="h-full flex flex-col items-center justify-center text-gray-400">
                             <i className="fa-solid fa-print text-6xl mb-4 opacity-20"></i>
-                            <p>Select criteria and click Generate.</p>
-                        </div>
-                    ) : isGenerating ? (
-                        <div className="h-full flex flex-col items-center justify-center text-gray-500">
-                             <div className="w-12 h-12 border-4 border-primary border-t-transparent rounded-full animate-spin mb-4"></div>
-                             <p>Building your exam paper...</p>
+                            <p>Configure and generate to preview.</p>
                         </div>
                     ) : (
                         <div className="w-fit mx-auto">
+                            {/* Question Paper Mode */}
                             {(printMode === 'question' || printMode === null) && (
                                 <div className={printMode === 'scheme' ? 'hidden' : 'block'}>
                                     <div className="paper-preview dse-page-container scale-[0.8] md:scale-100 origin-top bg-white print:scale-100 print:shadow-none print:m-0">
-                                        <DSECoverPage subject={selectedSubject || "Mathematics"} />
+                                        <DSECoverPage subject={selectedSubject} />
                                     </div>
                                     <div className="paper-preview dse-page-container scale-[0.8] md:scale-100 origin-top bg-white print:scale-100 print:shadow-none print:m-0 print:border-none h-auto min-h-[297mm]">
                                         <div className="dse-sidebar-line"></div>
-                                        <div className="font-bold text-lg mb-6 border-b-2 border-black pb-2">Section A: Multiple Choice</div>
-                                        <div className="space-y-8">
-                                            {paper.mc.map((q, i) => <QuestionBlock key={q.id} item={q} index={i} isScheme={false} type="mc" />)}
-                                            {paper.mc.length === 0 && <div className="text-gray-400 italic">No MC questions selected.</div>}
-                                        </div>
-                                        <div className="font-bold text-lg mt-12 mb-6 border-b-2 border-black pb-2 page-break-before">Section B: Long Questions</div>
-                                        <div className="space-y-12">
-                                            {paper.lq.map((q, i) => <QuestionBlock key={q.id} item={q} index={i} isScheme={false} type="lq" />)}
-                                            {paper.lq.length === 0 && <div className="text-gray-400 italic">No LQ questions selected.</div>}
-                                        </div>
+                                        
+                                        {includeMC && paper.mc.length > 0 && (
+                                            <>
+                                                <div className="font-bold text-lg mb-6 border-b-2 border-black pb-2">Section A: Multiple Choice</div>
+                                                <div className="space-y-8 mb-12">
+                                                    {paper.mc.map((q, i) => <QuestionBlock key={q.id} item={q} index={i} isScheme={false} type="mc" />)}
+                                                </div>
+                                            </>
+                                        )}
+
+                                        {includeLQ && paper.lq.length > 0 && (
+                                            <>
+                                                <div className={`font-bold text-lg mb-6 border-b-2 border-black pb-2 ${includeMC ? 'page-break-before' : ''}`}>Section B: Long Questions</div>
+                                                <div className="space-y-12">
+                                                    {paper.lq.map((q, i) => <QuestionBlock key={q.id} item={q} index={i} isScheme={false} type="lq" />)}
+                                                </div>
+                                            </>
+                                        )}
+                                        
                                         <div className="text-center font-bold mt-16 mb-8 text-sm">END OF PAPER</div>
                                     </div>
                                 </div>
                             )}
+
+                            {/* Marking Scheme Mode */}
                             {(printMode === 'scheme') && (
-                                <div>
-                                    <div className="paper-preview dse-page-container scale-[0.8] md:scale-100 origin-top bg-white print:scale-100 print:shadow-none print:m-0 h-auto min-h-[297mm]">
-                                        <div className="text-center font-bold text-xl mb-8 underline">MARKING SCHEME</div>
-                                        <div className="font-bold text-lg mb-6">Section A: MC Answers</div>
-                                        <div className="grid grid-cols-4 gap-4 mb-8">
-                                            {paper.mc.map((q, i) => (
-                                                <div key={i} className="flex gap-2 text-sm"><span className="font-bold">{i+1}.</span><span>{q.correctAnswer || '-'}</span></div>
-                                            ))}
-                                        </div>
-                                        <div className="font-bold text-lg mb-6 border-b border-black pb-2">Detailed Solutions</div>
-                                        <div className="space-y-8">
-                                            {paper.mc.filter(q => q.sImgs.length > 0 || q.explanation).length > 0 && (
+                                <div className="paper-preview dse-page-container scale-[0.8] md:scale-100 origin-top bg-white print:scale-100 print:shadow-none print:m-0 h-auto min-h-[297mm]">
+                                    <div className="text-center font-bold text-xl mb-8 underline uppercase">Marking Scheme: {selectedSubject}</div>
+                                    
+                                    {includeMC && paper.mc.length > 0 && (
+                                        <>
+                                            <div className="font-bold text-lg mb-6">Section A: MC Answers</div>
+                                            <div className="grid grid-cols-4 gap-4 mb-8">
+                                                {paper.mc.map((q, i) => (
+                                                    <div key={i} className="flex gap-2 text-sm border-b border-gray-100 pb-1">
+                                                        <span className="font-bold w-6">{i+1}.</span>
+                                                        <span className="font-mono">{q.correctAnswer || '-'}</span>
+                                                    </div>
+                                                ))}
+                                            </div>
+                                            
+                                            {/* MC Explanations */}
+                                            {paper.mc.some(q => q.sImgs?.length || q.explanation) && (
                                                 <div className="mb-8">
-                                                    <h3 className="font-bold text-md mb-4">MC Explanations</h3>
-                                                    {paper.mc.map((q, i) => (q.sImgs.length > 0 || q.explanation) && <QuestionBlock key={q.id} item={q} index={i} isScheme={true} />)}
+                                                    <h3 className="font-bold text-md mb-4 bg-gray-100 p-2">MC Explanations / Notes</h3>
+                                                    {paper.mc.map((q, i) => (q.sImgs?.length || q.explanation) && (
+                                                        <div key={i} className="mb-6">
+                                                            <div className="font-bold text-sm mb-2">Q{i+1} Note:</div>
+                                                            <QuestionBlock item={q} index={i} isScheme={true} />
+                                                        </div>
+                                                    ))}
                                                 </div>
                                             )}
-                                            {paper.lq.map((q, i) => <QuestionBlock key={q.id} item={q} index={i} isScheme={true} />)}
-                                        </div>
-                                    </div>
+                                        </>
+                                    )}
+
+                                    {includeLQ && paper.lq.length > 0 && (
+                                        <>
+                                            <div className="font-bold text-lg mb-6 border-b border-black pb-2 mt-8">Section B: Detailed Solutions</div>
+                                            <div className="space-y-8">
+                                                {paper.lq.map((q, i) => <QuestionBlock key={q.id} item={q} index={i} isScheme={true} type="lq" />)}
+                                            </div>
+                                        </>
+                                    )}
                                 </div>
                             )}
                         </div>
