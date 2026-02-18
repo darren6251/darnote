@@ -93,18 +93,19 @@
 
     @media print {
         @page { size: A4; margin: 0; }
+        
         html, body { 
             height: 100%; 
             margin: 0 !important; 
             padding: 0 !important; 
-            background: white !important; /* Force white bg */
+            background: white !important;
             color: black;
             -webkit-print-color-adjust: exact; 
             print-color-adjust: exact; 
         }
         
         .no-print { display: none !important; }
-        .print-only { display: block !important; }
+        .print-only { display: flex !important; }
         
         /* NUCLEAR OPTION: RESET ALL REACT CONTAINERS FOR PRINT */
         #root, #root > div { display: block !important; height: auto !important; width: 100% !important; margin: 0 !important; padding: 0 !important; }
@@ -137,20 +138,29 @@
             box-shadow: none !important;
             transform: none !important; 
             overflow: visible !important;
-            page-break-after: always;
         }
 
-        /* Allow footer to repeat */
-        .print-footer {
+        /* Footer styling for print */
+        .print-footer-container {
             position: fixed;
             bottom: 10mm;
+            left: 20mm;
             right: 20mm;
+            display: flex !important;
+            justify-content: space-between;
+            align-items: flex-end;
             font-size: 10px;
             font-weight: bold;
-            display: block !important;
+            pointer-events: none;
+            z-index: 9999;
         }
 
-        .page-break-after { page-break-after: always; }
+        /* ONLY force page break on the cover page specifically */
+        .force-page-break { page-break-after: always; }
+        
+        /* Ensure content doesn't force a break at the end */
+        .content-container { page-break-after: auto; }
+
         .page-break-inside-avoid { page-break-inside: avoid; }
         
         /* Ensure background graphics print */
@@ -174,6 +184,11 @@
     
     .filter-bw { filter: grayscale(100%) contrast(150%) brightness(110%); }
     .filter-high-contrast { filter: grayscale(100%) contrast(200%) brightness(120%); }
+
+    /* Page Numbering Magic - Note: Chrome/Safari cannot do "of Total" in basic HTML/CSS print */
+    .page-number:after {
+        content: "Page " counter(page);
+    }
 </style>
 </head>
 <body class="bg-gray-100 text-[#202124]">
@@ -220,7 +235,7 @@
         const paperTitle = hasLQ ? "Question-Answer Book" : "Question Paper";
 
         return (
-            <div className="paper-preview relative h-[297mm] w-[210mm] overflow-hidden page-break-after">
+            <div className="paper-preview relative h-[297mm] w-[210mm] overflow-hidden force-page-break">
                 {/* Only show marking margin line on cover if it's a QA Book */}
                 {hasLQ && <div className="absolute top-0 right-[90mm] w-[1px] h-full bg-black z-0"></div>}
                 
@@ -266,6 +281,11 @@
                     <div className="font-bold text-2xl mb-2">{info.title}</div>
                     {info.sub && <div className="font-bold text-xl mb-2">{info.sub}</div>}
                     <div className="font-bold text-xl mb-8 mt-4">{paperTitle}</div>
+                    
+                    <div className="inline-block border border-gray-300 rounded px-2 py-1 mb-4 text-[10px] text-gray-500 font-sans tracking-wide">
+                        Made with darNote Error Log
+                    </div>
+
                     <div className="text-base font-serif">
                         Time Allowed: 2 hours 30 minutes<br/>
                         This paper must be answered in English
@@ -542,10 +562,13 @@
                                     <DSECoverPage subject={selectedSubject} year={currentYear} hasLQ={hasLQ} />
                                     
                                     {/* Subsequent Pages: Content with Sticky BG */}
-                                    <div className="paper-preview dse-layout-bg dse-content-padding scale-[0.8] md:scale-100 origin-top bg-white h-auto min-h-[297mm]">
+                                    <div className="paper-preview dse-layout-bg dse-content-padding scale-[0.8] md:scale-100 origin-top bg-white h-auto min-h-[297mm] content-container">
                                         
                                         {/* Repeating Footer for pages 2+ */}
-                                        <div className="print-footer print-only">* {currentYear} HKDSE MOCK *</div>
+                                        <div className="print-footer-container print-only">
+                                            <span>Made with darNote Error Log</span>
+                                            <span className="page-number"></span>
+                                        </div>
 
                                         {includeMC && paper.mc.length > 0 && (
                                             <>
@@ -572,9 +595,15 @@
 
                             {/* Marking Scheme Mode - Always Standard Layout */}
                             {(printMode === 'scheme') && (
-                                <div className="paper-preview layout-std dse-content-padding scale-[0.8] md:scale-100 origin-top bg-white h-auto min-h-[297mm]">
+                                <div className="paper-preview layout-std dse-content-padding scale-[0.8] md:scale-100 origin-top bg-white h-auto min-h-[297mm] content-container">
                                     <div className="text-center font-bold text-xl mb-8 underline uppercase">Marking Scheme: {selectedSubject}</div>
                                     
+                                    {/* Repeating Footer for pages 2+ */}
+                                    <div className="print-footer-container print-only">
+                                        <span>Made with darNote Error Log</span>
+                                        <span className="page-number"></span>
+                                    </div>
+
                                     {includeMC && paper.mc.length > 0 && (
                                         <>
                                             <div className="font-bold text-lg mb-6">Section A: MC Answers</div>
