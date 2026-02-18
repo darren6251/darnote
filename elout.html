@@ -9,7 +9,6 @@
 <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
 <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
 <script src="https://cdn.tailwindcss.com"></script>
-<script src="https://unpkg.com/framer-motion@10.16.4/dist/framer-motion.js"></script>
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans:wght@400;600;700&family=Noto+Serif:wght@400;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 
@@ -40,9 +39,26 @@
     import { getAuth, signInWithPopup, GoogleAuthProvider, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-auth.js";
     import { getFirestore, collection, getDocs, query, where, orderBy } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-firestore.js";
     
-    // Config reused from el.html
     const app = initializeApp({ apiKey: "AIzaSyAvPEac-03kE4oazvaq8K3T2gxLPsnZO20", authDomain: "darnote625.firebaseapp.com", projectId: "darnote625", storageBucket: "darnote625.firebasestorage.app", messagingSenderId: "16458322562", appId: "1:16458322562:web:8894d71f3e6c326eba1a9b" });
-    window.firebase = { app, auth: getAuth(app), db: getFirestore(app), collection, getDocs, query, where, orderBy, onAuthStateChanged, signInWithPopup, GoogleAuthProvider };
+    
+    // Attach to window so React can see it
+    window.firebase = { 
+        app, 
+        auth: getAuth(app), 
+        db: getFirestore(app), 
+        collection, 
+        getDocs, 
+        query, 
+        where, 
+        orderBy, 
+        onAuthStateChanged, 
+        signInWithPopup, 
+        GoogleAuthProvider,
+        isReady: true // Flag to check readiness
+    };
+    
+    // Dispatch event to wake up React if it loaded first
+    window.dispatchEvent(new Event('firebase-ready'));
 </script>
 
 <style>
@@ -55,7 +71,7 @@
     @media print {
         @page {
             size: A4;
-            margin: 0; /* We handle margins manually for the specific layout */
+            margin: 0;
         }
         
         body {
@@ -65,11 +81,9 @@
             print-color-adjust: exact;
         }
 
-        /* Hide UI elements during print */
         .no-print { display: none !important; }
         .print-only { display: block !important; }
 
-        /* The DSE Sidebar Line (Right Margin) */
         .dse-page-container {
             position: relative;
             width: 210mm;
@@ -80,7 +94,7 @@
             padding-right: 95mm; /* The massive 9.5cm right margin */
             box-sizing: border-box;
             page-break-after: always;
-            overflow: hidden; /* Prevents bleed */
+            overflow: hidden;
         }
 
         .dse-sidebar-line {
@@ -93,37 +107,14 @@
             z-index: 50;
         }
 
-        .dse-sidebar-content {
-            position: absolute;
-            top: 25mm;
-            right: 0;
-            width: 90mm;
-            height: 100%;
-            /* Content for the sidebar if needed, mainly blank for working */
-        }
-
-        /* Prevent image splitting */
         .question-block {
             page-break-inside: avoid;
             break-inside: avoid;
             margin-bottom: 20mm;
             position: relative;
         }
-
-        /* Cover Page Specifics */
-        .cover-diagonal {
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 45mm;
-            height: 45mm;
-            border-bottom: 2.5pt solid black;
-            transform-origin: top left;
-            /* In CSS drawing a diagonal is tricky, we use SVG in component */
-        }
     }
 
-    /* Screen Styles */
     .print-only { display: none; }
     .paper-preview {
         width: 210mm;
@@ -132,24 +123,43 @@
         box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
         margin: 2rem auto;
         position: relative;
-        overflow: hidden; /* Simulating the print clip */
+        overflow: hidden;
     }
-
-    /* DSE Grid Styles */
-    .dse-grid-box {
-        width: 4.5mm;
-        height: 8mm;
-        border: 1px solid black;
-        display: inline-block;
-        margin-left: -1px; /* Overlap borders */
-    }
+    
+    /* Image Filters for "Clean Scan" look */
+    .filter-bw { filter: grayscale(100%) contrast(150%) brightness(110%); }
+    .filter-high-contrast { filter: grayscale(100%) contrast(200%) brightness(120%); }
 </style>
 </head>
 <body class="bg-gray-100 text-[#202124]">
 <div id="root"></div>
 
 <script type="text/babel">
-    const { useState, useEffect, useRef, useMemo } = React;
+    const { useState, useEffect, useRef } = React;
+
+    // --- ERROR BOUNDARY (The "White Screen" Fix) ---
+    class ErrorBoundary extends React.Component {
+        constructor(props) {
+            super(props);
+            this.state = { hasError: false, error: null };
+        }
+        static getDerivedStateFromError(error) { return { hasError: true, error }; }
+        render() {
+            if (this.state.hasError) {
+                return (
+                    <div className="h-screen w-full flex flex-col items-center justify-center bg-red-50 text-red-900 p-8 text-center">
+                        <i className="fa-solid fa-bug text-4xl mb-4"></i>
+                        <h2 className="text-xl font-bold mb-2">Something went wrong</h2>
+                        <pre className="bg-white p-4 rounded border border-red-200 text-xs text-left overflow-auto max-w-lg">
+                            {this.state.error.toString()}
+                        </pre>
+                        <button onClick={() => window.location.reload()} className="mt-6 px-6 py-2 bg-red-600 text-white rounded-full hover:bg-red-700">Reload Page</button>
+                    </div>
+                );
+            }
+            return this.props.children;
+        }
+    }
 
     /* --- ICONS --- */
     const Icons = {
@@ -161,17 +171,15 @@
         Left: () => <i className="fa-solid fa-chevron-left"></i>,
         Magic: () => <i className="fa-solid fa-wand-magic-sparkles"></i>,
         Trash: () => <i className="fa-solid fa-trash"></i>,
-        Google: () => <i className="fa-brands fa-google"></i>
+        Google: () => <i className="fa-brands fa-google"></i>,
+        Image: () => <i className="fa-solid fa-image"></i>
     };
 
     /* --- COVER PAGE COMPONENT --- */
     const DSECoverPage = ({ subject, year = "2026" }) => {
         return (
             <div className="dse-page-container relative h-[297mm] w-[210mm]">
-                {/* 1. Sidebar Line */}
                 <div className="dse-sidebar-line"></div>
-
-                {/* 2. Top Left Diagonal & Text */}
                 <div className="absolute top-0 left-0 w-[45mm] h-[45mm] pointer-events-none">
                      <svg width="100%" height="100%" viewBox="0 0 100 100" preserveAspectRatio="none">
                         <line x1="0" y1="45" x2="45" y2="0" stroke="black" strokeWidth="2.5" />
@@ -182,15 +190,10 @@
                         M2
                      </div>
                 </div>
-
-                {/* 3. Right Sidebar Content (Barcode & Grid) */}
                 <div className="absolute top-0 right-0 w-[90mm] h-full pointer-events-none">
-                    {/* Stick Barcode Label Here */}
                     <div className="absolute top-[15mm] left-[20mm] w-[50mm] h-[28mm] border border-black flex items-center justify-center text-center p-2">
                         <span className="font-bold text-xs">Please stick the barcode label here.</span>
                     </div>
-
-                    {/* Candidate Number Grid */}
                     <div className="absolute top-[50mm] left-[4mm]">
                         <div className="flex items-end">
                             <div className="w-[45mm] h-[8mm] border border-black border-r-0 flex items-center pl-2">
@@ -204,8 +207,6 @@
                         </div>
                     </div>
                 </div>
-
-                {/* 4. Center Main Content */}
                 <div className="text-center mt-8 mb-12">
                     <div className="text-xs font-serif mb-6">
                         2025/26_dser_math_tutor_Darren Ng<br/>
@@ -220,20 +221,13 @@
                         This paper must be answered in English
                     </div>
                 </div>
-
-                {/* 5. Instructions */}
                 <div className="font-bold mb-4">INSTRUCTIONS</div>
                 <ol className="list-decimal pl-5 text-sm space-y-4 text-justify font-sans">
-                    <li>After the announcement of the start of the examination, you should first write your Candidate Number in the space provided on Page 1 and stick barcode labels in the spaces provided on Pages 1, 3, 5, 7, 9 and 11.</li>
+                    <li>After the announcement of the start of the examination, you should first write your Candidate Number in the space provided on Page 1...</li>
                     <li>This paper consists of TWO sections, A and B.</li>
-                    <li>Attempt ALL questions in this paper. Write your answers in the spaces provided in this Question-Answer Book. Do not write in the margins. Answers written in the margins will not be marked.</li>
-                    <li>Graph paper and supplementary answer sheets will be supplied on request. Write your Candidate Number, mark the question number box and stick a barcode label on each sheet, and fasten them with string INSIDE this book.</li>
+                    <li>Attempt ALL questions... Do not write in the margins.</li>
                     <li>Unless otherwise specified, all working must be clearly shown.</li>
-                    <li>Unless otherwise specified, numerical answers must be exact.</li>
-                    <li>No extra time will be given to candidates for sticking on the barcode labels or filling in the question number boxes after the 'Time is up' announcement.</li>
                 </ol>
-
-                {/* 6. Footer */}
                 <div className="absolute bottom-[15mm] left-[20mm] font-bold text-xs">
                     {year}-DSE-{subject.includes('Math') ? 'MATH-EP(M2)' : subject.toUpperCase()}--1
                 </div>
@@ -247,72 +241,101 @@
 
     const App = () => {
         const [user, setUser] = useState(null);
-        const [loadingAuth, setLoadingAuth] = useState(true);
+        const [isFirebaseReady, setIsFirebaseReady] = useState(false);
         const [rawLogs, setRawLogs] = useState([]);
         const [subjects, setSubjects] = useState([]);
-        
-        // Filters
         const [selectedSubject, setSelectedSubject] = useState('');
         const [selectedTopic, setSelectedTopic] = useState('');
-        
-        // Paper State
         const [paper, setPaper] = useState({ mc: [], lq: [] });
         const [generatedAt, setGeneratedAt] = useState(null);
-        
-        // Print State
-        const [printMode, setPrintMode] = useState(null); // 'question', 'scheme', or null
+        const [printMode, setPrintMode] = useState(null); 
+        const [imgFilter, setImgFilter] = useState(''); // '', 'filter-bw', 'filter-high-contrast'
 
-        // Initialization
+        // 1. SAFE INIT: Wait for Firebase before doing ANYTHING
         useEffect(() => {
-            const unsub = window.firebase.onAuthStateChanged(window.firebase.auth, (u) => {
-                if (u) {
-                    setUser(u);
-                    fetchData(u);
-                } else {
-                    setUser(null);
+            const checkFirebase = () => {
+                if (window.firebase && window.firebase.isReady) {
+                    setIsFirebaseReady(true);
+                    return true;
                 }
-                setLoadingAuth(false);
-            });
-            return () => unsub();
+                return false;
+            };
+
+            if (!checkFirebase()) {
+                const listener = () => checkFirebase();
+                window.addEventListener('firebase-ready', listener);
+                const interval = setInterval(checkFirebase, 200); // Fallback polling
+                return () => {
+                    window.removeEventListener('firebase-ready', listener);
+                    clearInterval(interval);
+                }
+            }
         }, []);
 
+        // 2. AUTH LISTENER (Only runs after init)
+        useEffect(() => {
+            if (!isFirebaseReady) return;
+            try {
+                const unsub = window.firebase.onAuthStateChanged(window.firebase.auth, (u) => {
+                    if (u) {
+                        setUser(u);
+                        fetchData(u);
+                    } else {
+                        setUser(null);
+                    }
+                });
+                return () => unsub();
+            } catch (e) {
+                console.error("Auth Init Error:", e);
+            }
+        }, [isFirebaseReady]);
+
+        const handleLogin = async () => {
+            try {
+                if (!window.firebase) throw new Error("Firebase not ready");
+                await window.firebase.signInWithPopup(window.firebase.auth, new window.firebase.GoogleAuthProvider());
+            } catch (error) {
+                alert("Login Failed: " + error.message);
+            }
+        };
+
         const fetchData = async (u) => {
+            if (!window.firebase) return;
             const db = window.firebase.db;
             
-            // Fetch Subjects
-            const subRef = window.firebase.collection(db, 'artifacts', "darnote-app", 'users', u.uid, 'subjects');
-            const subSnap = await window.firebase.getDocs(subRef);
-            const subs = subSnap.docs.map(d => ({id: d.id, ...d.data()}));
-            setSubjects(subs);
-            if(subs.length > 0) setSelectedSubject(subs[0].name);
+            try {
+                // Fetch Subjects
+                const subRef = window.firebase.collection(db, 'artifacts', "darnote-app", 'users', u.uid, 'subjects');
+                const subSnap = await window.firebase.getDocs(subRef);
+                const subs = subSnap.docs.map(d => ({id: d.id, ...d.data()}));
+                setSubjects(subs);
+                if(subs.length > 0) setSelectedSubject(subs[0].name);
 
-            // Fetch Logs
-            // We fetch ALL logs once and filter in memory for speed during "Swap"
-            const logRef = window.firebase.collection(db, 'artifacts', "darnote-app", 'users', u.uid, 'error_logs');
-            const q = window.firebase.query(logRef, window.firebase.orderBy('createdAt', 'desc'));
-            const logSnap = await window.firebase.getDocs(q);
-            const logs = logSnap.docs.map(d => ({
-                id: d.id, 
-                ...d.data(),
-                qImgs: d.data().questionImages || (d.data().imageUrl ? [d.data().imageUrl] : []),
-                sImgs: d.data().schemeImages || (d.data().markingSchemeUrl ? [d.data().markingSchemeUrl] : [])
-            }));
-            setRawLogs(logs);
+                // Fetch Logs
+                const logRef = window.firebase.collection(db, 'artifacts', "darnote-app", 'users', u.uid, 'error_logs');
+                const q = window.firebase.query(logRef, window.firebase.orderBy('createdAt', 'desc'));
+                const logSnap = await window.firebase.getDocs(q);
+                const logs = logSnap.docs.map(d => ({
+                    id: d.id, 
+                    ...d.data(),
+                    qImgs: d.data().questionImages || (d.data().imageUrl ? [d.data().imageUrl] : []),
+                    sImgs: d.data().schemeImages || (d.data().markingSchemeUrl ? [d.data().markingSchemeUrl] : [])
+                }));
+                setRawLogs(logs);
+            } catch (e) {
+                console.error("Data Fetch Error:", e);
+                // Don't crash, just show empty
+            }
         };
 
         const generatePaper = () => {
             if (!selectedSubject) return;
-            
-            // Filter pool
             let pool = rawLogs.filter(l => l.subject === selectedSubject);
             if (selectedTopic) pool = pool.filter(l => l.topic === selectedTopic);
 
-            // Separate Types
             let mcPool = pool.filter(l => l.questionType === 'MC');
             let lqPool = pool.filter(l => l.questionType === 'LQ');
 
-            // Logic: Random Selection (Shuffle & Slice)
-            // Limit: 36 MC, 16 LQ
             const shuffle = (array) => [...array].sort(() => 0.5 - Math.random());
             
             const selectedMC = shuffle(mcPool).slice(0, 36);
@@ -323,48 +346,36 @@
         };
 
         const handleSwap = (idx, type) => {
-            // Swap item at index `idx` in `type` ('mc' or 'lq')
             const currentList = type === 'mc' ? paper.mc : paper.lq;
-            const currentItem = currentList[idx];
-            
-            // Available pool (Same filter criteria)
             let pool = rawLogs.filter(l => l.subject === selectedSubject && l.questionType === (type === 'mc' ? 'MC' : 'LQ'));
             if (selectedTopic) pool = pool.filter(l => l.topic === selectedTopic);
-
-            // Remove items already in the paper to avoid duplicates
             const currentIds = new Set(currentList.map(i => i.id));
             const availablePool = pool.filter(l => !currentIds.has(l.id));
 
             if (availablePool.length === 0) {
-                alert("No other unique questions available in this category!");
+                alert("No other unique questions available!");
                 return;
             }
-
-            // Pick random replacement
             const replacement = availablePool[Math.floor(Math.random() * availablePool.length)];
-            
             const newList = [...currentList];
             newList[idx] = replacement;
-
             setPaper(prev => ({ ...prev, [type]: newList }));
         };
 
         const triggerPrint = (mode) => {
             setPrintMode(mode);
-            // Wait for render update then print
-            setTimeout(() => {
-                window.print();
-                // After print dialog closes (or logic resumes), we can optionally reset, 
-                // but keeping the view helps if they cancelled.
-            }, 500);
+            setTimeout(() => window.print(), 500);
         };
 
-        // --- RENDER HELPERS ---
+        // Helper to toggle image filters (Reference from a4.html idea)
+        const toggleFilter = () => {
+            if (imgFilter === '') setImgFilter('filter-bw');
+            else if (imgFilter === 'filter-bw') setImgFilter('filter-high-contrast');
+            else setImgFilter('');
+        };
 
-        // Render a single question block
         const QuestionBlock = ({ item, index, isScheme, type }) => {
             const images = isScheme ? item.sImgs : item.qImgs;
-            
             return (
                 <div className="question-block group relative">
                     <div className="flex gap-4 items-start">
@@ -372,15 +383,13 @@
                         <div className="flex-1 space-y-4">
                             {images.length > 0 ? (
                                 images.map((src, i) => (
-                                    <img key={i} src={src} className="max-w-full h-auto border border-transparent" loading="eager" />
+                                    <img key={i} src={src} className={`max-w-full h-auto border border-transparent transition-all ${!isScheme ? imgFilter : ''}`} loading="eager" />
                                 ))
                             ) : (
                                 <div className="p-4 border border-dashed border-gray-400 text-gray-500 italic">
                                     {isScheme ? "No marking scheme image." : (item.questionText || "No image content.")}
                                 </div>
                             )}
-                            
-                            {/* Scheme Extras */}
                             {isScheme && (item.correctAnswer || item.explanation) && (
                                 <div className="mt-2 p-2 border-t border-gray-300 text-sm">
                                     {item.correctAnswer && <div><strong>Ans:</strong> {item.correctAnswer}</div>}
@@ -389,8 +398,6 @@
                             )}
                         </div>
                     </div>
-                    
-                    {/* Swap Button (Only visible on screen, not print) */}
                     {!isScheme && (
                         <button 
                             onClick={() => handleSwap(index, type)}
@@ -404,16 +411,17 @@
             );
         };
 
-        // --- AUTH & LOADING STATES ---
-        if (loadingAuth) {
+        // --- LOADING STATE ---
+        if (!isFirebaseReady) {
             return (
                 <div className="h-screen w-full flex flex-col items-center justify-center bg-gray-50 text-gray-500">
                     <div className="w-8 h-8 border-4 border-primary border-t-transparent rounded-full animate-spin mb-4"></div>
-                    <div className="font-medium">Connecting to darNote...</div>
+                    <div className="font-medium">Initializing Engine...</div>
                 </div>
             );
         }
 
+        // --- LOGIN STATE ---
         if (!user) {
             return (
                 <div className="h-screen w-full flex items-center justify-center bg-white flex-col gap-6 relative overflow-hidden">
@@ -421,7 +429,7 @@
                         <img src="https://raw.githubusercontent.com/darren6251/darnote/refs/heads/main/darNote%20logo.png" className="w-16 h-16 mb-6 rounded-2xl shadow-sm"/>
                         <h1 className="text-3xl font-bold text-dark tracking-tight font-sans mb-3">Exam Factory</h1>
                         <p className="text-sm text-gray-500 max-w-sm text-center mb-8">Sign in to access your error logs and generate mock papers.</p>
-                        <button onClick={() => window.firebase.signInWithPopup(window.firebase.auth, new window.firebase.GoogleAuthProvider())} className="bg-primary text-white px-8 py-3 rounded-full font-medium flex gap-3 items-center hover:bg-blue-600 transition-all shadow-md hover:shadow-lg justify-center text-sm">
+                        <button onClick={handleLogin} className="bg-primary text-white px-8 py-3 rounded-full font-medium flex gap-3 items-center hover:bg-blue-600 transition-all shadow-md hover:shadow-lg justify-center text-sm">
                             <Icons.Google /> Continue with Google
                         </button>
                     </div>
@@ -431,8 +439,6 @@
 
         return (
             <div className="flex flex-col md:flex-row min-h-screen">
-                
-                {/* --- LEFT SIDEBAR (Controls) --- */}
                 <div className={`w-full md:w-80 bg-white border-r border-gray-200 p-6 flex flex-col gap-6 fixed md:relative z-20 h-auto md:h-screen overflow-y-auto no-print shadow-xl md:shadow-none`}>
                     <div className="flex items-center gap-3 mb-2">
                         <img src="https://raw.githubusercontent.com/darren6251/darnote/refs/heads/main/darNote%20logo.png" className="w-8 h-8 rounded-lg"/>
@@ -457,6 +463,15 @@
                                 ))}
                             </select>
                         </div>
+                        
+                        {/* New Feature: Image Filter Control */}
+                        <div>
+                            <label className="text-xs font-bold text-secondary uppercase tracking-wider block mb-1">Image Quality</label>
+                            <button onClick={toggleFilter} className="w-full p-2 bg-gray-50 border border-gray-300 rounded-lg text-sm flex items-center justify-between">
+                                <span>{imgFilter === '' ? 'Original Color' : (imgFilter === 'filter-bw' ? 'B&W Scan' : 'High Contrast')}</span>
+                                <Icons.Image />
+                            </button>
+                        </div>
 
                         <button onClick={generatePaper} className="w-full py-3 bg-primary text-white rounded-xl font-bold hover:bg-blue-600 transition-all shadow-md flex items-center justify-center gap-2">
                             <Icons.Magic /> Generate Mock
@@ -473,19 +488,12 @@
                                     <span className="bg-purple-100 text-purple-800 px-2 py-1 rounded-md">{paper.lq.length} LQ</span>
                                 </div>
                             </div>
-
                             <button onClick={() => triggerPrint('question')} className="w-full py-2 bg-dark text-white rounded-lg text-sm font-medium hover:bg-black transition-colors flex items-center justify-center gap-2">
                                 <Icons.Print /> Print Question Paper
                             </button>
-                            
                             <button onClick={() => triggerPrint('scheme')} className="w-full py-2 bg-white border border-gray-300 text-dark rounded-lg text-sm font-medium hover:bg-gray-50 transition-colors flex items-center justify-center gap-2">
                                 <Icons.Check /> Print Marking Scheme
                             </button>
-
-                            <div className="text-[10px] text-gray-400 text-center mt-4">
-                                Tip: Use "Save to PDF" in print dialog.<br/>
-                                Check "Background Graphics" for grid.
-                            </div>
                         </div>
                     )}
                     
@@ -496,7 +504,6 @@
                     </div>
                 </div>
 
-                {/* --- PREVIEW AREA --- */}
                 <div className="flex-1 bg-gray-100 p-8 overflow-y-auto h-screen">
                     {!generatedAt ? (
                         <div className="h-full flex flex-col items-center justify-center text-gray-400">
@@ -505,103 +512,59 @@
                         </div>
                     ) : (
                         <div className="w-fit mx-auto">
-                            {/* LOGIC: 
-                                - On Screen: Show whatever was last selected to print, OR show Question Paper by default.
-                                - On Print: We use CSS classes (print-only / no-print) OR we conditionally render 
-                                  based on `printMode` state which we set right before window.print().
-                                  
-                                  Actually, React re-renders are fast. Let's just render EXACTLY what we want to print.
-                            */}
-                            
-                            {/* Question Paper Preview / Print Structure */}
                             {(printMode === 'question' || printMode === null) && (
                                 <div className={printMode === 'scheme' ? 'hidden' : 'block'}>
-                                    
-                                    {/* Cover Page */}
                                     <div className="paper-preview dse-page-container scale-[0.8] md:scale-100 origin-top bg-white print:scale-100 print:shadow-none print:m-0">
                                         <DSECoverPage subject={selectedSubject || "Mathematics"} />
                                     </div>
-
-                                    {/* Content Pages */}
-                                    {/* We wrap questions in a container. CSS handles page breaks. */}
                                     <div className="paper-preview dse-page-container scale-[0.8] md:scale-100 origin-top bg-white print:scale-100 print:shadow-none print:m-0 print:border-none h-auto min-h-[297mm]">
                                         <div className="dse-sidebar-line"></div>
-                                        
                                         <div className="font-bold text-lg mb-6 border-b-2 border-black pb-2">Section A: Multiple Choice</div>
                                         <div className="space-y-8">
-                                            {paper.mc.map((q, i) => (
-                                                <QuestionBlock key={q.id} item={q} index={i} isScheme={false} type="mc" />
-                                            ))}
+                                            {paper.mc.map((q, i) => <QuestionBlock key={q.id} item={q} index={i} isScheme={false} type="mc" />)}
                                             {paper.mc.length === 0 && <div className="text-gray-400 italic">No MC questions selected.</div>}
                                         </div>
-
                                         <div className="font-bold text-lg mt-12 mb-6 border-b-2 border-black pb-2 page-break-before">Section B: Long Questions</div>
                                         <div className="space-y-12">
-                                            {paper.lq.map((q, i) => (
-                                                <QuestionBlock key={q.id} item={q} index={i} isScheme={false} type="lq" />
-                                            ))}
+                                            {paper.lq.map((q, i) => <QuestionBlock key={q.id} item={q} index={i} isScheme={false} type="lq" />)}
                                             {paper.lq.length === 0 && <div className="text-gray-400 italic">No LQ questions selected.</div>}
                                         </div>
-                                        
                                         <div className="text-center font-bold mt-16 mb-8 text-sm">END OF PAPER</div>
                                     </div>
                                 </div>
                             )}
-
-                            {/* Marking Scheme Preview / Print Structure */}
                             {(printMode === 'scheme') && (
                                 <div>
                                     <div className="paper-preview dse-page-container scale-[0.8] md:scale-100 origin-top bg-white print:scale-100 print:shadow-none print:m-0 h-auto min-h-[297mm]">
-                                        {/* No Sidebar line usually needed for marking scheme, but we keep format for consistency or remove it */}
                                         <div className="text-center font-bold text-xl mb-8 underline">MARKING SCHEME</div>
-
                                         <div className="font-bold text-lg mb-6">Section A: MC Answers</div>
                                         <div className="grid grid-cols-4 gap-4 mb-8">
                                             {paper.mc.map((q, i) => (
-                                                <div key={i} className="flex gap-2 text-sm">
-                                                    <span className="font-bold">{i+1}.</span>
-                                                    <span>{q.correctAnswer || '-'}</span>
-                                                </div>
+                                                <div key={i} className="flex gap-2 text-sm"><span className="font-bold">{i+1}.</span><span>{q.correctAnswer || '-'}</span></div>
                                             ))}
                                         </div>
-
                                         <div className="font-bold text-lg mb-6 border-b border-black pb-2">Detailed Solutions</div>
                                         <div className="space-y-8">
-                                            {/* Render MC Schemes if they exist (sometimes useful) */}
                                             {paper.mc.filter(q => q.sImgs.length > 0 || q.explanation).length > 0 && (
                                                 <div className="mb-8">
                                                     <h3 className="font-bold text-md mb-4">MC Explanations</h3>
-                                                    {paper.mc.map((q, i) => (q.sImgs.length > 0 || q.explanation) && (
-                                                        <QuestionBlock key={q.id} item={q} index={i} isScheme={true} />
-                                                    ))}
+                                                    {paper.mc.map((q, i) => (q.sImgs.length > 0 || q.explanation) && <QuestionBlock key={q.id} item={q} index={i} isScheme={true} />)}
                                                 </div>
                                             )}
-
-                                            {/* LQ Schemes */}
-                                            {paper.lq.map((q, i) => (
-                                                <QuestionBlock key={q.id} item={q} index={i} isScheme={true} />
-                                            ))}
+                                            {paper.lq.map((q, i) => <QuestionBlock key={q.id} item={q} index={i} isScheme={true} />)}
                                         </div>
                                     </div>
                                 </div>
                             )}
-
                         </div>
                     )}
                 </div>
-
-                {/* Print Overlay (Optional, to hide sidebar visually if print styles fail, but media print handles it) */}
-                {printMode && (
-                    <div className="fixed inset-0 bg-white z-[100] flex items-center justify-center print:hidden">
-                        <div className="animate-pulse font-bold text-xl">Preparing PDF...</div>
-                    </div>
-                )}
             </div>
         );
     };
 
     const root = ReactDOM.createRoot(document.getElementById('root'));
-    root.render(<App />);
+    root.render(<ErrorBoundary><App /></ErrorBoundary>);
 </script>
 </body>
 </html>
