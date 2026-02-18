@@ -249,7 +249,8 @@
         const [paper, setPaper] = useState({ mc: [], lq: [] });
         const [generatedAt, setGeneratedAt] = useState(null);
         const [printMode, setPrintMode] = useState(null); 
-        const [imgFilter, setImgFilter] = useState(''); // '', 'filter-bw', 'filter-high-contrast'
+        const [imgFilter, setImgFilter] = useState('');
+        const [isGenerating, setIsGenerating] = useState(false); // Loading state
 
         // 1. SAFE INIT: Wait for Firebase before doing ANYTHING
         useEffect(() => {
@@ -304,59 +305,93 @@
             const db = window.firebase.db;
             
             try {
-                // Fetch Subjects - SAFE MAP
+                // Only Fetch Subjects Initially
                 const subRef = window.firebase.collection(db, 'artifacts', "darnote-app", 'users', u.uid, 'subjects');
                 const subSnap = await window.firebase.getDocs(subRef);
                 const subs = subSnap.docs.map(d => ({
                     id: d.id, 
                     name: d.data().name || "Unknown",
-                    topics: d.data().topics || [] // Force array
+                    topics: d.data().topics || [] 
                 }));
                 setSubjects(subs);
                 if(subs.length > 0) setSelectedSubject(subs[0].name);
 
-                // Fetch Logs - SAFE MAP
-                const logRef = window.firebase.collection(db, 'artifacts', "darnote-app", 'users', u.uid, 'error_logs');
-                const q = window.firebase.query(logRef, window.firebase.orderBy('createdAt', 'desc'));
-                const logSnap = await window.firebase.getDocs(q);
-                const logs = logSnap.docs.map(d => ({
-                    id: d.id, 
-                    ...d.data(),
-                    qImgs: d.data().questionImages || (d.data().imageUrl ? [d.data().imageUrl] : []),
-                    sImgs: d.data().schemeImages || (d.data().markingSchemeUrl ? [d.data().markingSchemeUrl] : [])
-                }));
-                setRawLogs(logs);
+                // NOTE: We do NOT fetch logs here anymore.
             } catch (e) {
                 console.error("Data Fetch Error:", e);
             }
         };
 
-        const generatePaper = () => {
-            if (!selectedSubject) return;
-            let pool = rawLogs.filter(l => l.subject === selectedSubject);
-            if (selectedTopic) pool = pool.filter(l => l.topic === selectedTopic);
+        const fetchAndGenerate = async () => {
+            if (!selectedSubject) {
+                alert("Please select a subject first.");
+                return;
+            }
 
-            let mcPool = pool.filter(l => l.questionType === 'MC');
-            let lqPool = pool.filter(l => l.questionType === 'LQ');
-
-            const shuffle = (array) => [...array].sort(() => 0.5 - Math.random());
+            setIsGenerating(true);
+            setGeneratedAt(null); // Reset previous paper
             
-            const selectedMC = shuffle(mcPool).slice(0, 36);
-            const selectedLQ = shuffle(lqPool).slice(0, 16);
+            try {
+                const db = window.firebase.db;
+                const logRef = window.firebase.collection(db, 'artifacts', "darnote-app", 'users', user.uid, 'error_logs');
+                
+                // Build Query - Targeted Fetch
+                let constraints = [window.firebase.where('subject', '==', selectedSubject)];
+                if (selectedTopic) {
+                    constraints.push(window.firebase.where('topic', '==', selectedTopic));
+                }
+                
+                // No orderBy here to avoid index requirements. Sort later in JS.
+                const q = window.firebase.query(logRef, ...constraints);
+                const querySnap = await window.firebase.getDocs(q);
 
-            setPaper({ mc: selectedMC, lq: selectedLQ });
-            setGeneratedAt(new Date());
+                const logs = querySnap.docs.map(d => ({
+                    id: d.id, 
+                    ...d.data(),
+                    qImgs: d.data().questionImages || (d.data().imageUrl ? [d.data().imageUrl] : []),
+                    sImgs: d.data().schemeImages || (d.data().markingSchemeUrl ? [d.data().markingSchemeUrl] : [])
+                }));
+
+                // Update pool for swapping
+                setRawLogs(logs);
+
+                if (logs.length === 0) {
+                    alert("No questions found for this selection!");
+                    setIsGenerating(false);
+                    return;
+                }
+
+                // Shuffle and Slice
+                let mcPool = logs.filter(l => l.questionType === 'MC');
+                let lqPool = logs.filter(l => l.questionType === 'LQ');
+
+                const shuffle = (array) => [...array].sort(() => 0.5 - Math.random());
+                
+                const selectedMC = shuffle(mcPool).slice(0, 36);
+                const selectedLQ = shuffle(lqPool).slice(0, 16);
+
+                setPaper({ mc: selectedMC, lq: selectedLQ });
+                setGeneratedAt(new Date());
+
+            } catch (error) {
+                console.error("Fetch Error:", error);
+                alert("Error fetching questions: " + error.message);
+            } finally {
+                setIsGenerating(false);
+            }
         };
 
         const handleSwap = (idx, type) => {
             const currentList = type === 'mc' ? paper.mc : paper.lq;
-            let pool = rawLogs.filter(l => l.subject === selectedSubject && l.questionType === (type === 'mc' ? 'MC' : 'LQ'));
-            if (selectedTopic) pool = pool.filter(l => l.topic === selectedTopic);
+            
+            // rawLogs now contains the fetched pool for the current subject/topic
+            let pool = rawLogs.filter(l => l.questionType === (type === 'mc' ? 'MC' : 'LQ'));
+            
             const currentIds = new Set(currentList.map(i => i.id));
             const availablePool = pool.filter(l => !currentIds.has(l.id));
 
             if (availablePool.length === 0) {
-                alert("No other unique questions available!");
+                alert("No other unique questions available in fetched pool!");
                 return;
             }
             const replacement = availablePool[Math.floor(Math.random() * availablePool.length)];
@@ -370,7 +405,6 @@
             setTimeout(() => window.print(), 500);
         };
 
-        // Helper to toggle image filters (Reference from a4.html idea)
         const toggleFilter = () => {
             if (imgFilter === '') setImgFilter('filter-bw');
             else if (imgFilter === 'filter-bw') setImgFilter('filter-high-contrast');
@@ -467,7 +501,6 @@
                             </select>
                         </div>
                         
-                        {/* New Feature: Image Filter Control */}
                         <div>
                             <label className="text-xs font-bold text-secondary uppercase tracking-wider block mb-1">Image Quality</label>
                             <button onClick={toggleFilter} className="w-full p-2 bg-gray-50 border border-gray-300 rounded-lg text-sm flex items-center justify-between">
@@ -476,8 +509,9 @@
                             </button>
                         </div>
 
-                        <button onClick={generatePaper} className="w-full py-3 bg-primary text-white rounded-xl font-bold hover:bg-blue-600 transition-all shadow-md flex items-center justify-center gap-2">
-                            <Icons.Magic /> Generate Mock
+                        <button onClick={fetchAndGenerate} disabled={isGenerating} className={`w-full py-3 bg-primary text-white rounded-xl font-bold hover:bg-blue-600 transition-all shadow-md flex items-center justify-center gap-2 ${isGenerating ? 'opacity-70 cursor-wait' : ''}`}>
+                            {isGenerating ? <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin"/> : <Icons.Magic />}
+                            {isGenerating ? 'Fetching...' : 'Generate Mock'}
                         </button>
                     </div>
 
@@ -508,10 +542,15 @@
                 </div>
 
                 <div className="flex-1 bg-gray-100 p-8 overflow-y-auto h-screen">
-                    {!generatedAt ? (
+                    {!generatedAt && !isGenerating ? (
                         <div className="h-full flex flex-col items-center justify-center text-gray-400">
                             <i className="fa-solid fa-print text-6xl mb-4 opacity-20"></i>
                             <p>Select criteria and click Generate.</p>
+                        </div>
+                    ) : isGenerating ? (
+                        <div className="h-full flex flex-col items-center justify-center text-gray-500">
+                             <div className="w-12 h-12 border-4 border-primary border-t-transparent rounded-full animate-spin mb-4"></div>
+                             <p>Building your exam paper...</p>
                         </div>
                     ) : (
                         <div className="w-fit mx-auto">
