@@ -138,12 +138,13 @@
             box-shadow: none !important;
             transform: none !important; 
             overflow: visible !important;
+            page-break-after: always; /* Force break after every sheet */
         }
 
         /* Footer styling for print */
         .print-footer-container {
-            position: fixed;
-            bottom: 10mm;
+            position: absolute; /* Relative to the page container */
+            bottom: 15mm;
             left: 20mm;
             right: 20mm;
             display: flex !important;
@@ -154,12 +155,6 @@
             pointer-events: none;
             z-index: 9999;
         }
-
-        /* ONLY force page break on the cover page specifically */
-        .force-page-break { page-break-after: always; }
-        
-        /* Ensure content doesn't force a break at the end */
-        .content-container { page-break-after: auto; }
 
         .page-break-inside-avoid { page-break-inside: avoid; }
         
@@ -182,13 +177,23 @@
         transition: transform 0.3s ease;
     }
     
+    /* Footer for Web Preview */
+    .print-footer-container {
+        position: absolute;
+        bottom: 15mm;
+        left: 20mm;
+        right: 20mm;
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-end;
+        font-size: 10px;
+        font-weight: bold;
+        pointer-events: none;
+        color: #202124;
+    }
+    
     .filter-bw { filter: grayscale(100%) contrast(150%) brightness(110%); }
     .filter-high-contrast { filter: grayscale(100%) contrast(200%) brightness(120%); }
-
-    /* Page Numbering Magic - Note: Chrome/Safari cannot do "of Total" in basic HTML/CSS print */
-    .page-number:after {
-        content: "Page " counter(page);
-    }
 </style>
 </head>
 <body class="bg-gray-100 text-[#202124]">
@@ -235,7 +240,7 @@
         const paperTitle = hasLQ ? "Question-Answer Book" : "Question Paper";
 
         return (
-            <div className="paper-preview relative h-[297mm] w-[210mm] overflow-hidden force-page-break">
+            <div className="paper-preview relative h-[297mm] w-[210mm] overflow-hidden page-break-after">
                 {/* Only show marking margin line on cover if it's a QA Book */}
                 {hasLQ && <div className="absolute top-0 right-[90mm] w-[1px] h-full bg-black z-0"></div>}
                 
@@ -367,6 +372,17 @@
         );
     };
 
+    // Helper for explicit page numbering
+    const ContentPage = ({ children, pageNum, hasLQ }) => (
+        <div className={`paper-preview ${hasLQ ? 'dse-layout-bg layout-qa' : 'layout-std'} dse-content-padding scale-[0.8] md:scale-100 origin-top bg-white h-auto min-h-[297mm]`}>
+            {children}
+            <div className="print-footer-container">
+                <span>Made with darNote Error Log</span>
+                <span>Page {pageNum}</span>
+            </div>
+        </div>
+    );
+
     const App = () => {
         const [user, setUser] = useState(null);
         const [isFirebaseReady, setIsFirebaseReady] = useState(false);
@@ -454,11 +470,28 @@
             setPaper(prev => ({ ...prev, [type]: newList }));
         };
 
-        // Determine layout mode: If we have LQ, use "QA Book" style (layout-qa). If just MC, use "Standard" (layout-std).
+        // Chunking Utility
+        const paginate = (items, itemsPerPage) => {
+            const pages = [];
+            for (let i = 0; i < items.length; i += itemsPerPage) {
+                pages.push({
+                    items: items.slice(i, i + itemsPerPage),
+                    startIndex: i
+                });
+            }
+            return pages;
+        };
+
         const hasLQ = paper.lq.length > 0;
-        const layoutClass = (hasLQ && printMode !== 'scheme') ? 'layout-qa' : 'layout-std';
         const currentYear = new Date().getFullYear();
 
+        // Paginate Logic
+        const mcPages = paginate(paper.mc, 5); // 5 MC per page
+        const lqPages = paginate(paper.lq, 2); // 2 LQ per page
+        
+        // Flatten pages for rendering (Page 2, Page 3, etc.)
+        // We render Cover (Page 1), then MC Pages, then LQ Pages
+        
         if (!isFirebaseReady) return <div className="h-screen flex items-center justify-center text-gray-500 font-medium"><div className="animate-spin w-6 h-6 border-2 border-primary border-t-transparent rounded-full mr-3"></div> Connecting...</div>;
 
         if (!user) return (
@@ -545,8 +578,8 @@
                     </div>
                 </div>
 
-                {/* PREVIEW AREA - ADDED IDs for Print Targeting */}
-                <div id="preview-scroller" className={`flex-1 bg-gray-100 p-8 overflow-y-auto h-screen ${layoutClass}`}>
+                {/* PREVIEW AREA */}
+                <div id="preview-scroller" className="flex-1 bg-gray-100 p-8 overflow-y-auto h-screen">
                     {!generatedAt ? (
                         <div className="h-full flex flex-col items-center justify-center text-gray-400">
                             <i className="fa-solid fa-print text-6xl mb-4 opacity-20"></i>
@@ -561,49 +594,40 @@
                                     {/* Page 1: Cover */}
                                     <DSECoverPage subject={selectedSubject} year={currentYear} hasLQ={hasLQ} />
                                     
-                                    {/* Subsequent Pages: Content with Sticky BG */}
-                                    <div className="paper-preview dse-layout-bg dse-content-padding scale-[0.8] md:scale-100 origin-top bg-white h-auto min-h-[297mm] content-container">
-                                        
-                                        {/* Repeating Footer for pages 2+ */}
-                                        <div className="print-footer-container print-only">
-                                            <span>Made with darNote Error Log</span>
-                                            <span className="page-number"></span>
-                                        </div>
+                                    {/* MC Pages */}
+                                    {includeMC && mcPages.map((page, pageIdx) => (
+                                        <ContentPage key={`mc-page-${pageIdx}`} pageNum={pageIdx + 2} hasLQ={hasLQ}>
+                                            {pageIdx === 0 && <div className="font-bold text-lg mb-6 border-b-2 border-black pb-2">Section A: Multiple Choice</div>}
+                                            <div className="space-y-8">
+                                                {page.items.map((q, i) => <QuestionBlock key={q.id} item={q} index={page.startIndex + i} isScheme={false} type="mc" onSwap={handleSwap} imgFilter={imgFilter} />)}
+                                            </div>
+                                        </ContentPage>
+                                    ))}
 
-                                        {includeMC && paper.mc.length > 0 && (
-                                            <>
-                                                <div className="font-bold text-lg mb-6 border-b-2 border-black pb-2">Section A: Multiple Choice</div>
-                                                <div className="space-y-8 mb-12">
-                                                    {paper.mc.map((q, i) => <QuestionBlock key={q.id} item={q} index={i} isScheme={false} type="mc" onSwap={handleSwap} imgFilter={imgFilter} />)}
-                                                </div>
-                                            </>
-                                        )}
-
-                                        {includeLQ && paper.lq.length > 0 && (
-                                            <>
-                                                <div className={`font-bold text-lg mb-6 border-b-2 border-black pb-2 ${includeMC ? 'page-break-before' : ''}`}>Section B: Long Questions</div>
-                                                <div className="space-y-12">
-                                                    {paper.lq.map((q, i) => <QuestionBlock key={q.id} item={q} index={i} isScheme={false} type="lq" onSwap={handleSwap} imgFilter={imgFilter} />)}
-                                                </div>
-                                            </>
-                                        )}
-                                        
-                                        <div className="text-center font-bold mt-16 mb-8 text-sm">END OF PAPER</div>
-                                    </div>
+                                    {/* LQ Pages - Continue page numbering */}
+                                    {includeLQ && lqPages.map((page, pageIdx) => (
+                                        <ContentPage key={`lq-page-${pageIdx}`} pageNum={mcPages.length + pageIdx + 2} hasLQ={hasLQ}>
+                                            {pageIdx === 0 && <div className={`font-bold text-lg mb-6 border-b-2 border-black pb-2`}>Section B: Long Questions</div>}
+                                            <div className="space-y-12">
+                                                {page.items.map((q, i) => <QuestionBlock key={q.id} item={q} index={page.startIndex + i} isScheme={false} type="lq" onSwap={handleSwap} imgFilter={imgFilter} />)}
+                                            </div>
+                                            {/* End of Paper on Last Page */}
+                                            {pageIdx === lqPages.length - 1 && <div className="text-center font-bold mt-16 mb-8 text-sm">END OF PAPER</div>}
+                                        </ContentPage>
+                                    ))}
+                                    
+                                    {/* If no LQ but has MC, end of paper on last MC page */}
+                                    {!includeLQ && includeMC && mcPages.length > 0 && (
+                                        <div className="text-center bg-white p-4 font-bold text-sm -mt-8 relative z-10 w-[210mm] mx-auto">END OF PAPER</div>
+                                    )}
                                 </div>
                             )}
 
-                            {/* Marking Scheme Mode - Always Standard Layout */}
+                            {/* Marking Scheme Mode */}
                             {(printMode === 'scheme') && (
-                                <div className="paper-preview layout-std dse-content-padding scale-[0.8] md:scale-100 origin-top bg-white h-auto min-h-[297mm] content-container">
+                                <div className="paper-preview layout-std dse-content-padding scale-[0.8] md:scale-100 origin-top bg-white h-auto min-h-[297mm]">
                                     <div className="text-center font-bold text-xl mb-8 underline uppercase">Marking Scheme: {selectedSubject}</div>
                                     
-                                    {/* Repeating Footer for pages 2+ */}
-                                    <div className="print-footer-container print-only">
-                                        <span>Made with darNote Error Log</span>
-                                        <span className="page-number"></span>
-                                    </div>
-
                                     {includeMC && paper.mc.length > 0 && (
                                         <>
                                             <div className="font-bold text-lg mb-6">Section A: MC Answers</div>
@@ -639,6 +663,10 @@
                                             </div>
                                         </>
                                     )}
+                                    <div className="print-footer-container">
+                                        <span>Made with darNote Error Log</span>
+                                        <span>Page 1</span>
+                                    </div>
                                 </div>
                             )}
                         </div>
