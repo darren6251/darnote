@@ -1,0 +1,548 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>darNote - Exam Generator</title>
+<link rel="icon" type="image/png" href="https://raw.githubusercontent.com/darren6251/darnote/refs/heads/main/darNote%20logo.png">
+
+<!-- React & Tailwind -->
+<script crossorigin src="https://unpkg.com/react@18/umd/react.development.js"></script>
+<script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+<script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+<script src="https://cdn.tailwindcss.com"></script>
+
+<!-- PDF Generation Libraries -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+
+<!-- Google APIs -->
+<script src="https://apis.google.com/js/api.js" async defer></script>
+<script src="https://accounts.google.com/gsi/client" async defer></script>
+
+<!-- Fonts -->
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans:wght@400;700&display=swap" rel="stylesheet">
+
+<script>
+    tailwind.config = {
+        theme: {
+            extend: {
+                colors: { primary: '#1a73e8', danger: '#d93025', success: '#1e8e3e', dark: '#202124' },
+                fontFamily: { sans: ['Noto Sans', 'Arial', 'sans-serif'] }
+            }
+        }
+    }
+</script>
+
+<script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-app.js";
+    import { getAuth, signInWithPopup, GoogleAuthProvider, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-auth.js";
+    import { getFirestore, collection, doc, getDocs, getDoc, setDoc, query, where, limit, orderBy } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-firestore.js";
+
+    const app = initializeApp({ apiKey: "AIzaSyAvPEac-03kE4oazvaq8K3T2gxLPsnZO20", authDomain: "darnote625.firebaseapp.com", projectId: "darnote625", storageBucket: "darnote625.firebasestorage.app", messagingSenderId: "16458322562", appId: "1:16458322562:web:8894d71f3e6c326eba1a9b" });
+    window.firebase = { app, auth: getAuth(app), db: getFirestore(app), signInWithPopup, GoogleAuthProvider, signOut, onAuthStateChanged, collection, doc, getDocs, getDoc, setDoc, query, where, limit, orderBy };
+</script>
+
+<style>
+    /* DSE Print Layout Specifics */
+    @page { size: A4; margin: 0; }
+    .page-break { page-break-after: always; }
+    
+    /* The paper container looks like A4 on screen */
+    .a4-page {
+        width: 210mm;
+        height: 297mm;
+        background: white;
+        position: relative;
+        overflow: hidden;
+        margin: 0 auto 20px auto;
+        box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+        display: flex;
+    }
+
+    /* Left column is content, Right column is the DSE sidebar */
+    .content-area {
+        /* Total width 210mm. Right margin 9.5cm (95mm) + Left 2cm (20mm) = 115mm margins */
+        /* Content width = 210 - 115 = 95mm? That seems very narrow based on the LaTeX. 
+           Let's adjust slightly for web rendering to match visual expectation. 
+           LaTeX: left=2cm, right=9.5cm. Content width = 21 - 2 - 9.5 = 9.5cm.
+           Yes, the content column is actually quite narrow in that template. */
+        width: 115mm; /* 20mm margin left + 95mm content */
+        padding-left: 20mm;
+        padding-top: 25mm;
+        padding-bottom: 25mm;
+        display: flex;
+        flex-direction: column;
+        border-right: 1px solid black; /* The vertical separator line */
+    }
+
+    .sidebar-area {
+        width: 95mm;
+        position: relative;
+        padding-top: 25mm;
+    }
+
+    /* Vertical Text in Sidebar */
+    .vertical-text {
+        writing-mode: vertical-rl;
+        text-orientation: mixed;
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%) rotate(180deg);
+        font-size: 10px;
+        letter-spacing: 2px;
+        color: #000;
+        font-weight: bold;
+        height: 60%;
+        text-align: center;
+    }
+
+    /* Diagonal Header */
+    .diag-header {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 120px;
+        pointer-events: none;
+    }
+
+    /* Print Hiding */
+    @media print {
+        body * { visibility: hidden; }
+        #print-container, #print-container * { visibility: visible; }
+        #print-container { position: absolute; left: 0; top: 0; width: 100%; }
+        .no-print { display: none !important; }
+        .a4-page { box-shadow: none; margin: 0; page-break-after: always; }
+    }
+</style>
+</head>
+<body class="bg-gray-100 text-dark">
+<div id="root"></div>
+
+<script type="text/babel">
+    const { useState, useEffect, useRef } = React;
+    const GDRIVE_API_KEY = "AIzaSyCScFR_D0snZ6hrHob5fUQM7Y2NhK-kTIA"; 
+    const GDRIVE_CLIENT_ID = "256215327792-oglegui0q8qj507oao2c2733thcl9lrc.apps.googleusercontent.com"; 
+
+    // --- ICONS (Simple SVG) ---
+    const Icon = {
+        Printer: () => <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z"></path></svg>,
+        Download: () => <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path></svg>,
+        Refresh: () => <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path></svg>,
+        File: () => <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
+    };
+
+    // --- GOOGLE DRIVE HOOK (Simplified) ---
+    const useGoogleDrive = () => {
+        const [tokenClient, setTokenClient] = useState(null);
+        useEffect(() => {
+            if (window.google) {
+                setTokenClient(window.google.accounts.oauth2.initTokenClient({
+                    client_id: GDRIVE_CLIENT_ID,
+                    scope: 'https://www.googleapis.com/auth/drive.readonly',
+                    callback: () => {}
+                }));
+            }
+        }, []);
+        
+        const getAccessToken = () => new Promise((resolve, reject) => {
+            if (!tokenClient) return reject("Auth init failed");
+            const existing = window.gapi?.client?.getToken();
+            if (existing && Date.now() < existing.expiry) return resolve(existing.access_token);
+            tokenClient.callback = (resp) => {
+                if (resp.error) reject(resp);
+                resolve(resp.access_token);
+            };
+            tokenClient.requestAccessToken({ prompt: '' });
+        });
+        return { getAccessToken };
+    };
+
+    // --- COMPONENTS FOR DSE LAYOUT ---
+
+    const DSEGrid = () => (
+        <div className="flex border border-black w-max">
+            <div className="w-[45px] h-[25px] flex items-center justify-center border-r border-black font-bold text-xs bg-white">
+                Candidate Number
+            </div>
+            {[...Array(8)].map((_, i) => (
+                <div key={i} className="w-[15px] h-[25px] border-r border-black last:border-r-0"></div>
+            ))}
+        </div>
+    );
+
+    const DSEHeader = ({ subject, year }) => (
+        <div className="absolute top-0 left-0 w-full h-[150px] pointer-events-none overflow-hidden">
+            {/* Diagonal Line - Using SVG for crispness */}
+            <svg width="100%" height="100%" className="absolute top-0 left-0">
+                <line x1="15" y1="60" x2="200" y2="60" stroke="black" strokeWidth="2.5" /> 
+                <text x="30" y="50" className="font-bold text-lg" fill="black">{year}-DSE</text>
+                <text x="30" y="75" className="font-bold text-lg" fill="black">{subject}</text>
+            </svg>
+        </div>
+    );
+
+    const DSEPage = ({ children, pageNum, totalPages, isCover = false, subject }) => {
+        return (
+            <div className="a4-page">
+                {/* Left Content Column */}
+                <div className="content-area relative">
+                    {isCover && <DSEHeader subject={subject} year={new Date().getFullYear()} />}
+                    
+                    <div className="flex-1">
+                        {children}
+                    </div>
+
+                    {/* Footer */}
+                    <div className="mt-auto pt-4 flex justify-between items-end text-xs font-bold border-t border-transparent">
+                        <div>{new Date().getFullYear()}-DSE-{subject}</div>
+                        <div>{pageNum}</div>
+                    </div>
+                </div>
+
+                {/* Right Sidebar Column */}
+                <div className="sidebar-area border-black">
+                    {/* Barcode Box */}
+                    <div className="absolute top-[25mm] left-[5mm] w-[85mm] h-[30mm] border border-black flex items-center justify-center text-center font-bold text-sm bg-white z-10">
+                        Please stick the barcode label here.
+                    </div>
+                    
+                    {/* Candidate Grid */}
+                    <div className="absolute top-[60mm] left-[5mm]">
+                        <div className="font-bold text-xs mb-1">Candidate Number</div>
+                        <div className="flex border border-black w-full h-[25px]">
+                            {[...Array(8)].map((_,i) => <div key={i} className="flex-1 border-r border-black last:border-0"></div>)}
+                        </div>
+                    </div>
+
+                    {/* Vertical Warning */}
+                    <div className="vertical-text">
+                        Answers written in the margins will not be marked.
+                    </div>
+                    
+                    {/* Bottom Corner Star */}
+                    <div className="absolute bottom-[25mm] right-[5mm] font-bold text-sm">
+                        * {new Date().getFullYear()} HKDSE MOCK *
+                    </div>
+                </div>
+            </div>
+        );
+    };
+
+    const Instructions = () => (
+        <div className="mt-24 mb-8">
+            <div className="text-center font-bold space-y-1 mb-8">
+                <div className="text-xl">MATHEMATICS Extended Part</div>
+                <div className="text-xl">Module 2 (Algebra and Calculus)</div>
+                <div className="text-xl">Question-Answer Book</div>
+                <div className="mt-6 font-normal">8.30 am -- 11.00 am (2½ hours)</div>
+                <div className="font-normal">This paper must be answered in English</div>
+            </div>
+            
+            <div className="font-bold mb-2">INSTRUCTIONS</div>
+            <ol className="list-decimal list-outside ml-5 text-sm space-y-2 font-medium">
+                <li>After the announcement of the start of the examination, you should first write your Candidate Number in the space provided on Page 1 and stick barcode labels in the spaces provided on Pages 1, 3, 5, 7, 9 and 11.</li>
+                <li>This paper consists of TWO sections, A and B.</li>
+                <li>Attempt ALL questions in this paper. Write your answers in the spaces provided in this Question-Answer Book. Do not write in the margins. Answers written in the margins will not be marked.</li>
+                <li>Unless otherwise specified, all working must be clearly shown.</li>
+                <li>Unless otherwise specified, numerical answers must be exact.</li>
+            </ol>
+        </div>
+    );
+
+    // --- MAIN APP ---
+
+    const App = () => {
+        const [user, setUser] = useState(null);
+        const [subjects, setSubjects] = useState([]);
+        const [config, setConfig] = useState({ subject: '', type: 'MC', limit: 36 });
+        const [logs, setLogs] = useState([]);
+        const [generatedPages, setGeneratedPages] = useState([]); // Array of arrays of questions
+        const [schemePages, setSchemePages] = useState([]);
+        const [loading, setLoading] = useState(false);
+        const [loadingText, setLoadingText] = useState('');
+        const { getAccessToken } = useGoogleDrive();
+        
+        // Quota Management
+        const checkQuota = async (uid) => {
+            const today = new Date().toISOString().split('T')[0];
+            const ref = window.firebase.doc(window.firebase.db, 'artifacts', "darnote-app", 'users', uid, 'ai_usage', today);
+            const snap = await window.firebase.getDoc(ref);
+            const count = snap.exists() ? (snap.data().export_count || 0) : 0;
+            if (count >= 2) return false;
+            
+            await window.firebase.setDoc(ref, { export_count: window.firebase.increment(1) }, { merge: true });
+            return count + 1;
+        };
+
+        useEffect(() => {
+            window.firebase.onAuthStateChanged(window.firebase.auth, async (u) => {
+                setUser(u);
+                if (u) {
+                    const snap = await window.firebase.getDocs(window.firebase.collection(window.firebase.db, 'artifacts', "darnote-app", 'users', u.uid, 'subjects'));
+                    setSubjects(snap.docs.map(d => d.data().name).sort());
+                }
+            });
+        }, []);
+
+        // Helper to convert GDrive/URL images to Base64 to prevent Tainted Canvas
+        const processImages = async (urls) => {
+            if (!urls || urls.length === 0) return [];
+            try {
+                const token = await getAccessToken();
+                const processed = await Promise.all(urls.map(async (url) => {
+                    if (url.includes('drive.google.com')) {
+                        // Extract ID and fetch
+                        const id = url.match(/d\/([^/]+)/)?.[1] || url.split('id=')[1];
+                        if (!id) return null;
+                        const res = await fetch(`https://www.googleapis.com/drive/v3/files/${id}?alt=media`, {
+                            headers: { Authorization: `Bearer ${token}` }
+                        });
+                        const blob = await res.blob();
+                        return new Promise(r => { const fr = new FileReader(); fr.onload=()=>r(fr.result); fr.readAsDataURL(blob); });
+                    } else {
+                        // Regular URL (try fetch, might fail CORS if not configured)
+                        try {
+                            const res = await fetch(url);
+                            const blob = await res.blob();
+                            return new Promise(r => { const fr = new FileReader(); fr.onload=()=>r(fr.result); fr.readAsDataURL(blob); });
+                        } catch(e) { return url; } // Fallback to raw URL
+                    }
+                }));
+                return processed.filter(Boolean);
+            } catch (e) {
+                console.warn("Image process error", e);
+                return urls; // Fallback
+            }
+        };
+
+        const generatePaper = async () => {
+            if (!config.subject) return alert("Please select a subject.");
+            setLoading(true);
+            setLoadingText("Checking quota...");
+
+            const quotaOk = await checkQuota(user.uid);
+            if (quotaOk === false) {
+                setLoading(false);
+                return alert("Daily Export Limit (2/2) Reached. Come back tomorrow!");
+            }
+
+            setLoadingText("Fetching error logs...");
+            // Smart Fetch: Limit 50, then shuffle
+            const q = window.firebase.query(
+                window.firebase.collection(window.firebase.db, 'artifacts', "darnote-app", 'users', user.uid, 'error_logs'),
+                window.firebase.where('subject', '==', config.subject),
+                window.firebase.where('questionType', '==', config.type),
+                window.firebase.limit(50) // Optimization
+            );
+            
+            const snap = await window.firebase.getDocs(q);
+            let fetchedLogs = snap.docs.map(d => ({...d.data(), id: d.id}));
+            
+            if (fetchedLogs.length === 0) {
+                setLoading(false);
+                return alert("No error logs found for this criteria.");
+            }
+
+            // Client-side Shuffle
+            fetchedLogs.sort(() => Math.random() - 0.5);
+            fetchedLogs = fetchedLogs.slice(0, config.type === 'MC' ? 36 : 12); // Apply user limit
+
+            setLoadingText(`Processing ${fetchedLogs.length} questions & images...`);
+            
+            // Process Images for all logs
+            const processedLogs = await Promise.all(fetchedLogs.map(async (log, idx) => {
+                const qImgs = log.questionImages?.length ? log.questionImages : (log.imageUrl ? [log.imageUrl] : []);
+                const sImgs = log.schemeImages?.length ? log.schemeImages : (log.markingSchemeUrl ? [log.markingSchemeUrl] : []);
+                
+                return {
+                    ...log,
+                    index: idx + 1,
+                    qImgs: await processImages(qImgs),
+                    sImgs: await processImages(sImgs)
+                };
+            }));
+
+            setLogs(processedLogs);
+
+            // Pagination Logic
+            // We assume a question block roughly takes space. 
+            // In a real browser render, we can't easily measure before rendering.
+            // Heuristic: 
+            // - MC: 3 per page (approx)
+            // - LQ: 1 per page
+            
+            const pages = [];
+            if (config.type === 'MC') {
+                for (let i = 0; i < processedLogs.length; i += 3) {
+                    pages.push(processedLogs.slice(i, i + 3));
+                }
+            } else {
+                processedLogs.forEach(l => pages.push([l]));
+            }
+            
+            setGeneratedPages(pages);
+            setSchemePages(pages); // Mirror structure for scheme
+            setLoading(false);
+        };
+
+        const downloadPDF = async (mode = 'paper') => {
+            setLoading(true);
+            setLoadingText(mode === 'paper' ? "Generating Question Paper..." : "Generating Marking Scheme...");
+            
+            const elementId = mode === 'paper' ? 'paper-container' : 'scheme-container';
+            const element = document.getElementById(elementId);
+            const doc = new window.jspdf.jsPDF('p', 'mm', 'a4');
+            
+            // We need to capture each .a4-page div inside the container
+            const pageDivs = element.querySelectorAll('.a4-page');
+            
+            for (let i = 0; i < pageDivs.length; i++) {
+                const canvas = await html2canvas(pageDivs[i], { scale: 2, useCORS: true });
+                const imgData = canvas.toDataURL('image/jpeg', 0.95);
+                if (i > 0) doc.addPage();
+                doc.addImage(imgData, 'JPEG', 0, 0, 210, 297);
+            }
+            
+            doc.save(`${config.subject}_${mode === 'paper' ? 'Questions' : 'Answers'}_${new Date().toISOString().split('T')[0]}.pdf`);
+            setLoading(false);
+        };
+
+        if (!user) return (
+            <div className="min-h-screen flex items-center justify-center bg-gray-50">
+                 <button onClick={() => window.firebase.signInWithPopup(window.firebase.auth, new window.firebase.GoogleAuthProvider())} className="bg-white border p-4 rounded-xl shadow-sm font-medium flex gap-2 items-center hover:shadow-md transition-all">
+                    <img src="https://raw.githubusercontent.com/darren6251/darnote/refs/heads/main/darNote%20logo.png" className="w-6 h-6"/>
+                    Sign in to darNote
+                 </button>
+            </div>
+        );
+
+        return (
+            <div className="min-h-screen bg-gray-100 flex flex-col md:flex-row">
+                {/* Control Panel (No Print) */}
+                <div className="w-full md:w-80 bg-white border-r p-6 flex-shrink-0 z-50 shadow-xl h-auto md:h-screen sticky top-0 no-print overflow-y-auto">
+                    <div className="flex items-center gap-2 mb-8">
+                        <img src="https://raw.githubusercontent.com/darren6251/darnote/refs/heads/main/darNote%20logo.png" className="w-8 h-8 rounded-lg"/>
+                        <h1 className="font-bold text-xl tracking-tight">Exam Factory</h1>
+                    </div>
+
+                    <div className="space-y-6">
+                        <div>
+                            <label className="block text-xs font-bold text-gray-500 uppercase mb-2">Subject</label>
+                            <select value={config.subject} onChange={e=>setConfig({...config, subject: e.target.value})} className="w-full p-3 bg-gray-50 rounded-xl border border-transparent focus:bg-white focus:border-primary outline-none transition-all">
+                                <option value="">Select Subject</option>
+                                {subjects.map(s => <option key={s} value={s}>{s}</option>)}
+                            </select>
+                        </div>
+
+                        <div>
+                            <label className="block text-xs font-bold text-gray-500 uppercase mb-2">Paper Type</label>
+                            <div className="grid grid-cols-2 gap-2">
+                                <button onClick={()=>setConfig({...config, type: 'MC', limit: 36})} className={`p-3 rounded-xl text-sm font-medium transition-all ${config.type==='MC' ? 'bg-primary text-white shadow-md' : 'bg-gray-50 text-gray-600 hover:bg-gray-100'}`}>MC (Max 36)</button>
+                                <button onClick={()=>setConfig({...config, type: 'LQ', limit: 12})} className={`p-3 rounded-xl text-sm font-medium transition-all ${config.type==='LQ' ? 'bg-primary text-white shadow-md' : 'bg-gray-50 text-gray-600 hover:bg-gray-100'}`}>LQ (Max 12)</button>
+                            </div>
+                        </div>
+
+                        <div className="pt-4 border-t">
+                            <button onClick={generatePaper} disabled={loading} className="w-full py-4 bg-dark text-white rounded-xl font-bold shadow-lg hover:shadow-xl hover:scale-[1.02] transition-all flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed">
+                                {loading ? <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin"/> : <Icon.Refresh/>}
+                                {loading ? "Processing..." : "Compile Paper"}
+                            </button>
+                        </div>
+
+                        {generatedPages.length > 0 && !loading && (
+                            <div className="space-y-3 animate-fade-in">
+                                <div className="p-4 bg-green-50 text-green-700 rounded-xl text-sm border border-green-100">
+                                    <strong>Success!</strong> Generated {logs.length} questions across {generatedPages.length + 1} pages.
+                                </div>
+                                <button onClick={()=>downloadPDF('paper')} className="w-full py-3 bg-white border border-gray-200 text-dark rounded-xl font-medium hover:bg-gray-50 transition-all flex items-center justify-center gap-2">
+                                    <Icon.Download/> Download Question Paper
+                                </button>
+                                <button onClick={()=>downloadPDF('scheme')} className="w-full py-3 bg-white border border-gray-200 text-dark rounded-xl font-medium hover:bg-gray-50 transition-all flex items-center justify-center gap-2">
+                                    <Icon.File/> Download Marking Scheme
+                                </button>
+                            </div>
+                        )}
+                        
+                        {loading && <div className="text-center text-xs text-gray-500 mt-2">{loadingText}</div>}
+                    </div>
+                </div>
+
+                {/* Preview Area */}
+                <div className="flex-1 p-8 overflow-y-auto bg-gray-200 flex justify-center">
+                    <div id="print-container" className="scale-[0.8] origin-top md:scale-100 transition-transform">
+                        {/* 1. Question Paper Container */}
+                        <div id="paper-container">
+                            {/* Cover Page */}
+                            <DSEPage pageNum={1} totalPages={generatedPages.length + 1} isCover={true} subject={config.subject || "MATH"}>
+                                <Instructions />
+                            </DSEPage>
+
+                            {/* Question Pages */}
+                            {generatedPages.map((pageQuestions, pIdx) => (
+                                <DSEPage key={pIdx} pageNum={pIdx + 2} totalPages={generatedPages.length + 1} subject={config.subject || "MATH"}>
+                                    <div className="space-y-8">
+                                        {pageQuestions.map((q, qIdx) => (
+                                            <div key={q.id} className="break-inside-avoid">
+                                                <div className="flex gap-2 font-bold mb-2">
+                                                    <span>{q.index}.</span>
+                                                    {q.questionText && <span className="font-normal whitespace-pre-wrap text-sm">{q.questionText}</span>}
+                                                </div>
+                                                {q.qImgs && q.qImgs.map((img, i) => (
+                                                    <img key={i} src={img} className="max-w-full max-h-[300px] object-contain border border-gray-100 rounded mb-2" />
+                                                ))}
+                                                {config.type === 'MC' && (
+                                                    <div className="grid grid-cols-4 gap-4 mt-4 text-sm font-bold font-mono">
+                                                        <div>A.</div><div>B.</div><div>C.</div><div>D.</div>
+                                                    </div>
+                                                )}
+                                                {config.type === 'LQ' && (
+                                                    <div className="h-32 border-b border-gray-300 border-dashed mt-4"></div>
+                                                )}
+                                            </div>
+                                        ))}
+                                    </div>
+                                </DSEPage>
+                            ))}
+                        </div>
+
+                        {/* 2. Marking Scheme Container (Hidden usually, but rendered for PDF gen) */}
+                        {/* We hide it visually using height 0 overflow hidden if not needed, but for simplicity we render it below */}
+                         <div id="scheme-container" className={generatedPages.length > 0 ? "mt-20 border-t-8 border-dashed border-gray-400 pt-10" : "hidden"}>
+                             <div className="text-center font-bold text-2xl text-gray-400 mb-10">--- MARKING SCHEME PREVIEW ---</div>
+                             <DSEPage pageNum={1} totalPages={schemePages.length} isCover={true} subject={`${config.subject || "MATH"} (MS)`}>
+                                 <div className="text-center mt-40 font-bold text-2xl">MARKING SCHEME</div>
+                                 <div className="text-center mt-4 text-sm text-gray-500">Strictly Confidential</div>
+                             </DSEPage>
+                             {schemePages.map((pageQuestions, pIdx) => (
+                                <DSEPage key={`ms-${pIdx}`} pageNum={pIdx + 2} totalPages={schemePages.length + 1} subject={`${config.subject || "MATH"} (MS)`}>
+                                    <div className="space-y-8">
+                                        {pageQuestions.map((q, qIdx) => (
+                                            <div key={q.id} className="break-inside-avoid">
+                                                <div className="flex justify-between border-b pb-2 mb-2">
+                                                    <span className="font-bold">Question {q.index}</span>
+                                                    <span className="font-mono font-bold bg-gray-100 px-2">Ans: {q.correctAnswer}</span>
+                                                </div>
+                                                <div className="text-xs text-gray-500 mb-2 italic">{q.explanation || "No explanation provided."}</div>
+                                                {q.sImgs && q.sImgs.map((img, i) => (
+                                                    <img key={i} src={img} className="max-w-full max-h-[250px] object-contain border border-red-100 rounded" />
+                                                ))}
+                                            </div>
+                                        ))}
+                                    </div>
+                                </DSEPage>
+                            ))}
+                         </div>
+                    </div>
+                </div>
+            </div>
+        );
+    };
+
+    const root = ReactDOM.createRoot(document.getElementById('root'));
+    root.render(<App />);
+</script>
+</body>
+</html>
