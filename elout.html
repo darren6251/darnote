@@ -97,7 +97,7 @@
             height: 100%; 
             margin: 0 !important; 
             padding: 0 !important; 
-            background: white; 
+            background: white !important; /* Force white bg */
             color: black;
             -webkit-print-color-adjust: exact; 
             print-color-adjust: exact; 
@@ -106,6 +106,29 @@
         .no-print { display: none !important; }
         .print-only { display: block !important; }
         
+        /* NUCLEAR OPTION: RESET ALL REACT CONTAINERS FOR PRINT */
+        #root, #root > div { display: block !important; height: auto !important; width: 100% !important; margin: 0 !important; padding: 0 !important; }
+        
+        /* Explicitly target the scroll wrapper */
+        #preview-scroller {
+            padding: 0 !important;
+            margin: 0 !important;
+            background: white !important;
+            height: auto !important;
+            overflow: visible !important;
+            position: static !important;
+            display: block !important;
+        }
+
+        /* Explicitly target the centering wrapper */
+        #preview-wrapper {
+            width: 100% !important;
+            max-width: none !important;
+            margin: 0 !important;
+            padding: 0 !important;
+            display: block !important;
+        }
+
         .paper-preview {
             width: 210mm !important;
             min-height: 297mm !important;
@@ -114,6 +137,17 @@
             box-shadow: none !important;
             transform: none !important; 
             overflow: visible !important;
+            page-break-after: always;
+        }
+
+        /* Allow footer to repeat */
+        .print-footer {
+            position: fixed;
+            bottom: 10mm;
+            right: 20mm;
+            font-size: 10px;
+            font-weight: bold;
+            display: block !important;
         }
 
         .page-break-after { page-break-after: always; }
@@ -282,7 +316,7 @@
                                     key={i} 
                                     src={src} 
                                     onError={(e) => {e.target.style.display='none'}}
-                                    className={`w-full min-w-[50%] h-auto object-contain border border-transparent ${!isScheme ? imgFilter : ''} rounded-sm`} 
+                                    className={`w-full max-w-full h-auto object-contain border border-transparent ${!isScheme ? imgFilter : ''} rounded-sm`} 
                                 />
                             ))
                         ) : (
@@ -491,15 +525,15 @@
                     </div>
                 </div>
 
-                {/* PREVIEW AREA */}
-                <div className={`flex-1 bg-gray-100 p-8 overflow-y-auto h-screen ${layoutClass}`}>
+                {/* PREVIEW AREA - ADDED IDs for Print Targeting */}
+                <div id="preview-scroller" className={`flex-1 bg-gray-100 p-8 overflow-y-auto h-screen ${layoutClass}`}>
                     {!generatedAt ? (
                         <div className="h-full flex flex-col items-center justify-center text-gray-400">
                             <i className="fa-solid fa-print text-6xl mb-4 opacity-20"></i>
                             <p>Configure and generate to preview.</p>
                         </div>
                     ) : (
-                        <div className="w-fit mx-auto">
+                        <div id="preview-wrapper" className="w-fit mx-auto">
                             {/* Question Paper Mode */}
                             {(printMode === 'question' || printMode === null) && (
                                 <div className={printMode === 'scheme' ? 'hidden' : 'block'}>
@@ -510,6 +544,9 @@
                                     {/* Subsequent Pages: Content with Sticky BG */}
                                     <div className="paper-preview dse-layout-bg dse-content-padding scale-[0.8] md:scale-100 origin-top bg-white h-auto min-h-[297mm]">
                                         
+                                        {/* Repeating Footer for pages 2+ */}
+                                        <div className="print-footer print-only">* {currentYear} HKDSE MOCK *</div>
+
                                         {includeMC && paper.mc.length > 0 && (
                                             <>
                                                 <div className="font-bold text-lg mb-6 border-b-2 border-black pb-2">Section A: Multiple Choice</div>
