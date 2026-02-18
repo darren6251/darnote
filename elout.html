@@ -64,19 +64,31 @@
     ::-webkit-scrollbar-thumb { background: #dadce0; border-radius: 4px; }
     ::-webkit-scrollbar-thumb:hover { background: #bdc1c6; }
 
-    /* The DSE Sidebar Line Gradient - simulates a 1px line 90mm from right */
-    .dse-layout-bg {
+    /* --- LAYOUT ENGINES --- */
+    
+    /* 1. QA Book (LQ) Layout - Has wide right margin for marking */
+    .layout-qa .dse-layout-bg {
         background: white;
         background-image: linear-gradient(to right, transparent 0%, transparent calc(210mm - 90mm), black calc(210mm - 90mm), black calc(210mm - 90mm + 1px), transparent calc(210mm - 90mm + 1px));
         background-repeat: repeat-y;
-        background-size: 100% 1px; /* Repeat down forever */
+        background-size: 100% 1px;
     }
-
-    .dse-content-padding {
+    .layout-qa .dse-content-padding {
         padding-top: 25mm;
         padding-bottom: 25mm;
         padding-left: 20mm;
-        padding-right: 95mm; /* Space for the right margin */
+        padding-right: 95mm; /* Huge right margin */
+    }
+
+    /* 2. Question Paper (MC) Layout - Full width, no marking column */
+    .layout-std .dse-layout-bg {
+        background: white; /* No line */
+    }
+    .layout-std .dse-content-padding {
+        padding-top: 25mm;
+        padding-bottom: 25mm;
+        padding-left: 25mm; /* Balanced margins */
+        padding-right: 25mm;
     }
 
     @media print {
@@ -94,22 +106,20 @@
         .no-print { display: none !important; }
         .print-only { display: block !important; }
         
-        /* Reset containers for print flow */
         .paper-preview {
             width: 210mm !important;
             min-height: 297mm !important;
-            height: auto !important; /* Allow growth */
+            height: auto !important; 
             margin: 0 !important;
             box-shadow: none !important;
-            transform: none !important; /* Kill the scaling */
-            overflow: visible !important; /* Allow content to flow to next page */
+            transform: none !important; 
+            overflow: visible !important;
         }
 
-        /* Force Breaks */
         .page-break-after { page-break-after: always; }
         .page-break-inside-avoid { page-break-inside: avoid; }
-
-        /* Ensure DSE BG prints */
+        
+        /* Ensure background graphics print */
         .dse-layout-bg {
             -webkit-print-color-adjust: exact;
             print-color-adjust: exact;
@@ -125,8 +135,6 @@
         box-shadow: 0 10px 30px -5px rgba(0, 0, 0, 0.1);
         margin: 2rem auto;
         position: relative;
-        /* Note: No overflow hidden here generally, or it clips tooltips/modals, but for single page preview it was used. 
-           We removed it to support multi-page preview flow */
         transition: transform 0.3s ease;
     }
     
@@ -161,7 +169,7 @@
     };
 
     /* --- DYNAMIC COVER PAGE --- */
-    const DSECoverPage = ({ subject, year = new Date().getFullYear() + 1 }) => {
+    const DSECoverPage = ({ subject, year, hasLQ }) => {
         const getSubjectDetails = (s) => {
             const clean = (s || "GENERAL").toLowerCase().trim();
             if (clean.includes('m2') || clean.includes('algebra')) return { title: 'MATHEMATICS Extended Part', sub: 'Module 2 (Algebra and Calculus)', code: 'MATH-EP(M2)' };
@@ -175,11 +183,12 @@
         };
 
         const info = getSubjectDetails(subject);
+        const paperTitle = hasLQ ? "Question-Answer Book" : "Question Paper";
 
-        // NOTE: dse-layout-bg is NOT applied here because Cover Page has its own border structure
         return (
             <div className="paper-preview relative h-[297mm] w-[210mm] overflow-hidden page-break-after">
-                <div className="absolute top-0 right-[90mm] w-[1px] h-full bg-black z-0"></div>
+                {/* Only show marking margin line on cover if it's a QA Book */}
+                {hasLQ && <div className="absolute top-0 right-[90mm] w-[1px] h-full bg-black z-0"></div>}
                 
                 {/* Diagonal Top Left */}
                 <div className="absolute top-0 left-0 w-[45mm] h-[45mm] pointer-events-none z-10">
@@ -193,34 +202,36 @@
                      </div>
                 </div>
 
-                {/* Sidebar Elements */}
-                <div className="absolute top-0 right-0 w-[90mm] h-full pointer-events-none z-10">
-                    <div className="absolute top-[15mm] left-[20mm] w-[50mm] h-[28mm] border border-black flex items-center justify-center text-center p-2 bg-white">
-                        <span className="font-bold text-xs">Please stick the barcode label here.</span>
-                    </div>
-                    <div className="absolute top-[50mm] left-[4mm]">
-                        <div className="flex items-end">
-                            <div className="w-[45mm] h-[8mm] border border-black border-r-0 flex items-center pl-2 bg-white z-10">
-                                <span className="font-bold text-xs">Candidate Number</span>
-                            </div>
-                            <div className="flex">
-                                {[...Array(8)].map((_, i) => (
-                                    <div key={i} className="w-[4.5mm] h-[8mm] border border-black -ml-[1px] bg-white"></div>
-                                ))}
+                {/* Sidebar Elements - Only for QA Book */}
+                {hasLQ && (
+                    <div className="absolute top-0 right-0 w-[90mm] h-full pointer-events-none z-10">
+                        <div className="absolute top-[15mm] left-[20mm] w-[50mm] h-[28mm] border border-black flex items-center justify-center text-center p-2 bg-white">
+                            <span className="font-bold text-xs">Please stick the barcode label here.</span>
+                        </div>
+                        <div className="absolute top-[50mm] left-[4mm]">
+                            <div className="flex items-end">
+                                <div className="w-[45mm] h-[8mm] border border-black border-r-0 flex items-center pl-2 bg-white z-10">
+                                    <span className="font-bold text-xs">Candidate Number</span>
+                                </div>
+                                <div className="flex">
+                                    {[...Array(8)].map((_, i) => (
+                                        <div key={i} className="w-[4.5mm] h-[8mm] border border-black -ml-[1px] bg-white"></div>
+                                    ))}
+                                </div>
                             </div>
                         </div>
                     </div>
-                </div>
+                )}
 
                 {/* Main Title Area */}
-                <div className="text-center mt-12 mb-12 px-4 pt-[25mm] pr-[95mm] pl-[20mm]">
+                <div className={`text-center mt-12 mb-12 px-4 pt-[25mm] ${hasLQ ? 'pr-[95mm] pl-[20mm]' : 'px-[25mm]'}`}>
                     <div className="text-xs font-serif mb-6">
                         HONG KONG EXAMINATIONS AND ASSESSMENT AUTHORITY<br/>
                         HONG KONG DIPLOMA OF SECONDARY EDUCATION EXAMINATION {year}
                     </div>
                     <div className="font-bold text-2xl mb-2">{info.title}</div>
                     {info.sub && <div className="font-bold text-xl mb-2">{info.sub}</div>}
-                    <div className="font-bold text-xl mb-8 mt-4">Question-Answer Book</div>
+                    <div className="font-bold text-xl mb-8 mt-4">{paperTitle}</div>
                     <div className="text-base font-serif">
                         Time Allowed: 2 hours 30 minutes<br/>
                         This paper must be answered in English
@@ -228,12 +239,17 @@
                 </div>
 
                 {/* Instructions */}
-                <div className="pr-[95mm] pl-[20mm]">
+                <div className={`${hasLQ ? 'pr-[95mm] pl-[20mm]' : 'px-[25mm]'}`}>
                     <div className="font-bold mb-4">INSTRUCTIONS</div>
                     <ol className="list-decimal pl-5 text-sm space-y-3 text-justify font-sans">
-                        <li>Write your Candidate Number in the space provided on Page 1.</li>
-                        <li>Stick barcode labels in the spaces provided on Pages 1, 3, 5, 7 and 9.</li>
-                        <li>Answer ALL questions. Write your answers in the spaces provided in this Question-Answer Book. Do not write in the margins. Answers written in the margins will not be marked.</li>
+                        {hasLQ && <li>Write your Candidate Number in the space provided on Page 1.</li>}
+                        {hasLQ && <li>Stick barcode labels in the spaces provided on Pages 1, 3, 5, 7 and 9.</li>}
+                        <li>Answer ALL questions.</li>
+                        {hasLQ ? (
+                            <li>Write your answers in the spaces provided in this Question-Answer Book. Do not write in the margins. Answers written in the margins will not be marked.</li>
+                        ) : (
+                            <li>Check that this question paper contains all pages.</li>
+                        )}
                         <li>Unless otherwise specified, all working must be clearly shown.</li>
                         <li>Unless otherwise specified, numerical answers must be exact.</li>
                     </ol>
@@ -243,36 +259,30 @@
                 <div className="absolute bottom-[15mm] left-[20mm] font-bold text-xs">
                     {year}-DSE-{info.code}--1
                 </div>
-                <div className="absolute bottom-[15mm] left-[105mm] text-xs">1</div>
-                <div className="absolute bottom-[15mm] right-[95mm] font-bold text-xs pr-2">
-                    * {year} HKDSE MOCK Set 1 *
+                <div className="absolute bottom-[15mm] left-[50%] -translate-x-1/2 text-xs">1</div>
+                <div className="absolute bottom-[15mm] right-[20mm] font-bold text-xs">
+                    * {year} HKDSE MOCK *
                 </div>
             </div>
         );
     };
 
-    // Improved Marking Scheme Logic
     const QuestionBlock = ({ item, index, isScheme, type, onSwap, imgFilter }) => {
-        let images = [];
-        if (isScheme) {
-            images = item.sImgs || [];
-        } else {
-            images = item.qImgs || [];
-        }
+        let images = isScheme ? (item.sImgs || []) : (item.qImgs || []);
         const hasImages = images && images.length > 0;
 
         return (
             <div className="question-block group relative page-break-inside-avoid mb-8">
                 <div className="flex gap-4 items-start">
                     <div className="font-bold text-lg min-w-[30px]">{index + 1}.</div>
-                    <div className="flex-1 space-y-4">
+                    <div className="flex-1 space-y-4 w-full">
                         {hasImages ? (
                             images.map((src, i) => (
                                 <img 
                                     key={i} 
                                     src={src} 
                                     onError={(e) => {e.target.style.display='none'}}
-                                    className={`max-w-full h-auto border border-transparent ${!isScheme ? imgFilter : ''}`} 
+                                    className={`w-full min-w-[50%] h-auto object-contain border border-transparent ${!isScheme ? imgFilter : ''} rounded-sm`} 
                                 />
                             ))
                         ) : (
@@ -363,7 +373,7 @@
                     qImgs: d.data().questionImages || (d.data().imageUrl ? [d.data().imageUrl] : []),
                     sImgs: d.data().schemeImages || (d.data().markingSchemeUrl ? [d.data().markingSchemeUrl] : [])
                 }));
-                setRawLogs(logs); // Store pool for swapping
+                setRawLogs(logs); 
 
                 if (logs.length === 0) { setIsGenerating(false); return alert("No questions found!"); }
 
@@ -389,6 +399,11 @@
             newList[idx] = avail[Math.floor(Math.random() * avail.length)];
             setPaper(prev => ({ ...prev, [type]: newList }));
         };
+
+        // Determine layout mode: If we have LQ, use "QA Book" style (layout-qa). If just MC, use "Standard" (layout-std).
+        const hasLQ = paper.lq.length > 0;
+        const layoutClass = (hasLQ && printMode !== 'scheme') ? 'layout-qa' : 'layout-std';
+        const currentYear = new Date().getFullYear();
 
         if (!isFirebaseReady) return <div className="h-screen flex items-center justify-center text-gray-500 font-medium"><div className="animate-spin w-6 h-6 border-2 border-primary border-t-transparent rounded-full mr-3"></div> Connecting...</div>;
 
@@ -477,7 +492,7 @@
                 </div>
 
                 {/* PREVIEW AREA */}
-                <div className="flex-1 bg-gray-100 p-8 overflow-y-auto h-screen">
+                <div className={`flex-1 bg-gray-100 p-8 overflow-y-auto h-screen ${layoutClass}`}>
                     {!generatedAt ? (
                         <div className="h-full flex flex-col items-center justify-center text-gray-400">
                             <i className="fa-solid fa-print text-6xl mb-4 opacity-20"></i>
@@ -490,7 +505,7 @@
                                 <div className={printMode === 'scheme' ? 'hidden' : 'block'}>
                                     
                                     {/* Page 1: Cover */}
-                                    <DSECoverPage subject={selectedSubject} />
+                                    <DSECoverPage subject={selectedSubject} year={currentYear} hasLQ={hasLQ} />
                                     
                                     {/* Subsequent Pages: Content with Sticky BG */}
                                     <div className="paper-preview dse-layout-bg dse-content-padding scale-[0.8] md:scale-100 origin-top bg-white h-auto min-h-[297mm]">
@@ -518,9 +533,9 @@
                                 </div>
                             )}
 
-                            {/* Marking Scheme Mode */}
+                            {/* Marking Scheme Mode - Always Standard Layout */}
                             {(printMode === 'scheme') && (
-                                <div className="paper-preview dse-content-padding scale-[0.8] md:scale-100 origin-top bg-white h-auto min-h-[297mm]">
+                                <div className="paper-preview layout-std dse-content-padding scale-[0.8] md:scale-100 origin-top bg-white h-auto min-h-[297mm]">
                                     <div className="text-center font-bold text-xl mb-8 underline uppercase">Marking Scheme: {selectedSubject}</div>
                                     
                                     {includeMC && paper.mc.length > 0 && (
