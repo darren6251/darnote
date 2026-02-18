@@ -82,6 +82,7 @@
             box-sizing: border-box;
             page-break-after: always;
             overflow: hidden;
+            background: white;
         }
 
         .dse-sidebar-line {
@@ -146,7 +147,6 @@
 
     /* --- DYNAMIC COVER PAGE --- */
     const DSECoverPage = ({ subject, year = new Date().getFullYear() + 1 }) => {
-        // Map common inputs to Official Titles
         const getSubjectDetails = (s) => {
             const clean = s.toLowerCase().trim();
             if (clean.includes('m2') || clean.includes('algebra')) return { title: 'MATHEMATICS Extended Part', sub: 'Module 2 (Algebra and Calculus)', code: 'MATH-EP(M2)' };
@@ -184,12 +184,12 @@
                     </div>
                     <div className="absolute top-[50mm] left-[4mm]">
                         <div className="flex items-end">
-                            <div className="w-[45mm] h-[8mm] border border-black border-r-0 flex items-center pl-2">
+                            <div className="w-[45mm] h-[8mm] border border-black border-r-0 flex items-center pl-2 bg-white z-10">
                                 <span className="font-bold text-xs">Candidate Number</span>
                             </div>
                             <div className="flex">
                                 {[...Array(8)].map((_, i) => (
-                                    <div key={i} className="w-[4.5mm] h-[8mm] border border-black -ml-[1px]"></div>
+                                    <div key={i} className="w-[4.5mm] h-[8mm] border border-black -ml-[1px] bg-white"></div>
                                 ))}
                             </div>
                         </div>
@@ -322,18 +322,12 @@
 
         // Improved Marking Scheme Logic
         const QuestionBlock = ({ item, index, isScheme, type }) => {
-            // Determine which images to show
             let images = [];
             if (isScheme) {
-                // If it's a scheme, prioritize scheme images. 
-                // If no scheme images, check if there's text explanation, otherwise fallback to question image for context? 
-                // No, standard DSE marking schemes don't show question images usually. 
                 images = item.sImgs;
             } else {
                 images = item.qImgs;
             }
-
-            // Fallback for Scheme: If no images, we rely on text.
             const hasImages = images && images.length > 0;
 
             return (
@@ -341,19 +335,16 @@
                     <div className="flex gap-4 items-start">
                         <div className="font-bold text-lg min-w-[30px]">{index + 1}.</div>
                         <div className="flex-1 space-y-4">
-                            {/* Render Images */}
                             {hasImages ? (
                                 images.map((src, i) => (
                                     <img key={i} src={src} className={`max-w-full h-auto border border-transparent ${!isScheme ? imgFilter : ''}`} />
                                 ))
                             ) : (
-                                // No Image Fallback
                                 <div className="p-4 border border-dashed border-gray-300 text-gray-400 italic text-sm">
                                     {isScheme ? "No marking scheme image uploaded." : (item.questionText || "No question content available.")}
                                 </div>
                             )}
                             
-                            {/* Render Text / Answers (Crucial for Marking Scheme) */}
                             {isScheme && (
                                 <div className="mt-2 text-sm space-y-2">
                                     {item.correctAnswer && <div className="bg-gray-100 p-2 rounded inline-block"><strong>Answer:</strong> <span className="font-mono text-lg font-bold">{item.correctAnswer}</span></div>}
@@ -367,7 +358,6 @@
                             )}
                         </div>
                     </div>
-                    {/* Swap Button */}
                     {!isScheme && (
                         <button onClick={() => handleSwap(index, type)} className="no-print absolute top-0 right-0 p-2 bg-white shadow-md rounded-full text-primary opacity-0 group-hover:opacity-100 transition-opacity z-10 hover:bg-primary hover:text-white" title="Swap Question">
                             <Icons.Refresh />
@@ -377,7 +367,20 @@
             );
         };
 
-        if (!isFirebaseReady || !user) return <div className="h-screen flex items-center justify-center text-gray-500 font-medium"><div className="animate-spin w-6 h-6 border-2 border-primary border-t-transparent rounded-full mr-3"></div> Loading Exam Factory...</div>;
+        if (!isFirebaseReady) return <div className="h-screen flex items-center justify-center text-gray-500 font-medium"><div className="animate-spin w-6 h-6 border-2 border-primary border-t-transparent rounded-full mr-3"></div> Connecting...</div>;
+
+        if (!user) return (
+            <div className="h-screen w-full flex items-center justify-center bg-white flex-col gap-6 relative overflow-hidden">
+                <div className="z-10 flex flex-col items-center">
+                    <img src="https://raw.githubusercontent.com/darren6251/darnote/refs/heads/main/darNote%20logo.png" className="w-16 h-16 mb-6 rounded-2xl shadow-sm"/>
+                    <h1 className="text-3xl font-bold text-dark tracking-tight font-sans mb-3">Exam Factory</h1>
+                    <p className="text-sm text-gray-500 max-w-sm text-center mb-8">Sign in to access your error logs and generate mock papers.</p>
+                    <button onClick={() => window.firebase.signInWithPopup(window.firebase.auth, new window.firebase.GoogleAuthProvider())} className="bg-primary text-white px-8 py-3 rounded-full font-medium flex gap-3 items-center hover:bg-blue-600 transition-all shadow-md hover:shadow-lg justify-center text-sm">
+                        <Icons.Google /> Continue with Google
+                    </button>
+                </div>
+            </div>
+        );
 
         return (
             <div className="flex flex-col md:flex-row min-h-screen">
@@ -442,6 +445,12 @@
                             <button onClick={() => { setPrintMode('scheme'); setTimeout(()=>window.print(), 500); }} className="w-full py-2 bg-white border border-gray-300 text-dark rounded-lg text-sm hover:bg-gray-50 flex justify-center gap-2"><Icons.Check /> Marking Scheme</button>
                         </div>
                     )}
+                    
+                    <div className="mt-auto pt-4 border-t border-gray-200">
+                        <a href="el.html" className="flex items-center gap-2 text-sm text-gray-600 hover:text-primary transition-colors">
+                            <Icons.Left /> Back to Error Log
+                        </a>
+                    </div>
                 </div>
 
                 {/* PREVIEW AREA */}
