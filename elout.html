@@ -66,7 +66,6 @@
 
     /* --- LAYOUT ENGINES --- */
     
-    /* 1. QA Book (LQ) Layout - Has wide right margin for marking */
     .layout-qa .dse-layout-bg {
         background: white;
         background-image: linear-gradient(to right, transparent 0%, transparent calc(210mm - 90mm), black calc(210mm - 90mm), black calc(210mm - 90mm + 1px), transparent calc(210mm - 90mm + 1px));
@@ -77,17 +76,16 @@
         padding-top: 25mm;
         padding-bottom: 25mm;
         padding-left: 20mm;
-        padding-right: 95mm; /* Huge right margin */
+        padding-right: 95mm; 
     }
 
-    /* 2. Question Paper (MC) Layout - Full width, no marking column */
     .layout-std .dse-layout-bg {
-        background: white; /* No line */
+        background: white; 
     }
     .layout-std .dse-content-padding {
         padding-top: 25mm;
         padding-bottom: 25mm;
-        padding-left: 25mm; /* Balanced margins */
+        padding-left: 25mm; 
         padding-right: 25mm;
     }
 
@@ -107,10 +105,8 @@
         .no-print { display: none !important; }
         .print-only { display: flex !important; }
         
-        /* NUCLEAR OPTION: RESET ALL REACT CONTAINERS FOR PRINT */
         #root, #root > div { display: block !important; height: auto !important; width: 100% !important; margin: 0 !important; padding: 0 !important; }
         
-        /* Explicitly target the scroll wrapper */
         #preview-scroller {
             padding: 0 !important;
             margin: 0 !important;
@@ -121,7 +117,6 @@
             display: block !important;
         }
 
-        /* Explicitly target the centering wrapper */
         #preview-wrapper {
             width: 100% !important;
             max-width: none !important;
@@ -132,18 +127,22 @@
 
         .paper-preview {
             width: 210mm !important;
-            min-height: 297mm !important;
-            height: auto !important; 
+            /* CRITICAL FIX: Explicit height limit to prevent overflow page */
+            height: 296mm !important; 
+            min-height: 296mm !important;
+            max-height: 296mm !important;
+            overflow: hidden !important; 
             margin: 0 !important;
             box-shadow: none !important;
             transform: none !important; 
-            overflow: visible !important;
-            page-break-after: always; /* Force break after every sheet */
+            page-break-after: always; 
+            position: relative !important;
+            left: 0 !important;
+            top: 0 !important;
         }
 
-        /* Footer styling for print */
         .print-footer-container {
-            position: absolute; /* Relative to the page container */
+            position: absolute; 
             bottom: 15mm;
             left: 20mm;
             right: 20mm;
@@ -158,7 +157,6 @@
 
         .page-break-inside-avoid { page-break-inside: avoid; }
         
-        /* Ensure background graphics print */
         .dse-layout-bg {
             -webkit-print-color-adjust: exact;
             print-color-adjust: exact;
@@ -177,7 +175,6 @@
         transition: transform 0.3s ease;
     }
     
-    /* Footer for Web Preview */
     .print-footer-container {
         position: absolute;
         bottom: 15mm;
@@ -240,7 +237,7 @@
         const paperTitle = hasLQ ? "Question-Answer Book" : "Question Paper";
 
         return (
-            <div className="paper-preview relative h-[297mm] w-[210mm] overflow-hidden page-break-after">
+            <div className="paper-preview relative h-[296mm] w-[210mm] overflow-hidden page-break-after">
                 {/* Only show marking margin line on cover if it's a QA Book */}
                 {hasLQ && <div className="absolute top-0 right-[90mm] w-[1px] h-full bg-black z-0"></div>}
                 
@@ -341,7 +338,7 @@
                                     key={i} 
                                     src={src} 
                                     onError={(e) => {e.target.style.display='none'}}
-                                    className={`w-full max-w-full h-auto object-contain border border-transparent ${!isScheme ? imgFilter : ''} rounded-sm`} 
+                                    className={`max-w-full h-auto object-contain border border-transparent ${!isScheme ? imgFilter : ''} rounded-sm`} 
                                 />
                             ))
                         ) : (
@@ -374,7 +371,7 @@
 
     // Helper for explicit page numbering
     const ContentPage = ({ children, pageNum, hasLQ }) => (
-        <div className={`paper-preview ${hasLQ ? 'dse-layout-bg layout-qa' : 'layout-std'} dse-content-padding scale-[0.8] md:scale-100 origin-top bg-white h-auto min-h-[297mm]`}>
+        <div className={`paper-preview ${hasLQ ? 'dse-layout-bg layout-qa' : 'layout-std'} dse-content-padding scale-[0.8] md:scale-100 origin-top bg-white h-auto min-h-[296mm] overflow-hidden`}>
             {children}
             <div className="print-footer-container">
                 <span>Made with darNote Error Log</span>
