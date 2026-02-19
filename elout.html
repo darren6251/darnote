@@ -91,23 +91,13 @@
         padding-right: 25mm;
     }
 
-    /* Hidden Measuring Container */
-    #measure-container {
-        position: absolute;
-        top: -9999px;
-        left: -9999px;
-        visibility: hidden;
-        width: 210mm; /* A4 width */
-        pointer-events: none;
-    }
-
     @media print {
         @page { size: A4; margin: 0; }
         html, body { 
             height: 100%; 
             margin: 0 !important; 
             padding: 0 !important; 
-            background: white !important; 
+            background: white !important; /* Force white bg */
             color: black;
             -webkit-print-color-adjust: exact; 
             print-color-adjust: exact; 
@@ -116,8 +106,10 @@
         .no-print { display: none !important; }
         .print-only { display: block !important; }
         
+        /* NUCLEAR OPTION: RESET ALL REACT CONTAINERS FOR PRINT */
         #root, #root > div { display: block !important; height: auto !important; width: 100% !important; margin: 0 !important; padding: 0 !important; }
         
+        /* Explicitly target the scroll wrapper */
         #preview-scroller {
             padding: 0 !important;
             margin: 0 !important;
@@ -128,8 +120,9 @@
             display: block !important;
         }
 
+        /* Explicitly target the centering wrapper */
         #preview-wrapper {
-            width: 30% !important;
+            width: 100% !important;
             max-width: none !important;
             margin: 0 !important;
             padding: 0 !important;
@@ -138,15 +131,29 @@
 
         .paper-preview {
             width: 210mm !important;
-            height: 297mm !important; /* Force exact height */
+            min-height: 297mm !important;
+            height: auto !important; 
             margin: 0 !important;
             box-shadow: none !important;
             transform: none !important; 
-            overflow: hidden !important; /* Clip content */
-            page-break-after: always; /* Force break */
-            position: relative;
+            overflow: visible !important;
+            page-break-after: always;
         }
 
+        /* Allow footer to repeat */
+        .print-footer {
+            position: fixed;
+            bottom: 10mm;
+            right: 20mm;
+            font-size: 10px;
+            font-weight: bold;
+            display: block !important;
+        }
+
+        .page-break-after { page-break-after: always; }
+        .page-break-inside-avoid { page-break-inside: avoid; }
+        
+        /* Ensure background graphics print */
         .dse-layout-bg {
             -webkit-print-color-adjust: exact;
             print-color-adjust: exact;
@@ -157,13 +164,12 @@
     
     .paper-preview {
         width: 210mm;
-        height: 297mm; /* Exact A4 Height */
+        min-height: 297mm;
         background: white;
         box-shadow: 0 10px 30px -5px rgba(0, 0, 0, 0.1);
         margin: 2rem auto;
         position: relative;
         transition: transform 0.3s ease;
-        overflow: hidden;
     }
     
     .filter-bw { filter: grayscale(100%) contrast(150%) brightness(110%); }
@@ -174,7 +180,7 @@
 <div id="root"></div>
 
 <script type="text/babel">
-    const { useState, useEffect, useRef, useLayoutEffect } = React;
+    const { useState, useEffect, useRef, useMemo } = React;
 
     class ErrorBoundary extends React.Component {
         constructor(props) { super(props); this.state = { hasError: false, error: null }; }
@@ -283,16 +289,11 @@
                     </ol>
                 </div>
 
-                {/* QR and Credits - Added as requested */}
-                <div className="absolute bottom-[20mm] left-[20mm] flex items-center gap-4 border p-2 border-black bg-white z-20">
-                     <img src="https://lh3.googleusercontent.com/d/16ufgMjdObZP_crvaHyMMAtIkRpRmdBtS" className="w-16 h-16 object-contain" />
-                     <div className="text-xs font-mono leading-tight">
-                        <div className="font-bold">Made with darNote Error Log</div>
-                        <div>darNote.3-shot.com</div>
-                     </div>
-                </div>
-
                 {/* Footer */}
+                <div className="absolute bottom-[15mm] left-[20mm] font-bold text-xs">
+                    {year}-DSE-{info.code}--1
+                </div>
+                <div className="absolute bottom-[15mm] left-[50%] -translate-x-1/2 text-xs">1</div>
                 <div className="absolute bottom-[15mm] right-[20mm] font-bold text-xs">
                     * {year} HKDSE MOCK *
                 </div>
@@ -305,7 +306,7 @@
         const hasImages = images && images.length > 0;
 
         return (
-            <div className="question-block group relative mb-6" data-id={item.id}>
+            <div className="question-block group relative page-break-inside-avoid mb-8">
                 <div className="flex gap-4 items-start">
                     <div className="font-bold text-lg min-w-[30px]">{index + 1}.</div>
                     <div className="flex-1 space-y-4 w-full">
@@ -315,7 +316,7 @@
                                     key={i} 
                                     src={src} 
                                     onError={(e) => {e.target.style.display='none'}}
-                                    className={`block max-w-[90%] h-auto object-contain border border-transparent ${!isScheme ? imgFilter : ''} rounded-sm my-2`} 
+                                    className={`w-full max-w-full h-auto object-contain border border-transparent ${!isScheme ? imgFilter : ''} rounded-sm`} 
                                 />
                             ))
                         ) : (
@@ -364,11 +365,6 @@
         const [imgFilter, setImgFilter] = useState('');
         const [isGenerating, setIsGenerating] = useState(false);
 
-        // Pagination State
-        const [measuredPages, setMeasuredPages] = useState([]);
-        const [isCalculatingLayout, setIsCalculatingLayout] = useState(false);
-        const measureRef = useRef(null);
-
         useEffect(() => {
             const check = () => { if(window.firebase?.isReady) setIsFirebaseReady(true); };
             if(!check()) { window.addEventListener('firebase-ready', check); setInterval(check, 500); }
@@ -398,7 +394,6 @@
 
             setIsGenerating(true);
             setGeneratedAt(null);
-            setMeasuredPages([]); // Reset pages
             
             try {
                 const db = window.firebase.db;
@@ -424,7 +419,6 @@
 
                 setPaper({ mc, lq });
                 setGeneratedAt(new Date());
-                setIsCalculatingLayout(true); // Trigger layout calc
 
             } catch (e) { alert("Error: " + e.message); } finally { setIsGenerating(false); }
         };
@@ -438,66 +432,12 @@
             const newList = [...list];
             newList[idx] = avail[Math.floor(Math.random() * avail.length)];
             setPaper(prev => ({ ...prev, [type]: newList }));
-            setIsCalculatingLayout(true); // Re-calculate after swap
         };
 
-        // --- PAGINATION LOGIC ---
-        useLayoutEffect(() => {
-            if (isCalculatingLayout && measureRef.current) {
-                // Wait a tiny bit for render
-                setTimeout(() => calculatePages(), 100); 
-            }
-        }, [isCalculatingLayout, paper, printMode]);
-
-        const calculatePages = () => {
-            if (!measureRef.current) return;
-            
-            // Constants in MM (approximate conversion to px)
-            // A4 Height = 297mm. Top/Bottom Padding = 25mm + 25mm = 50mm.
-            // Usable Height = 247mm.
-            // Pixel conversion: 1mm approx 3.78px. 247mm approx 933px.
-            const PAGE_HEIGHT_PX = 930; // Safety buffer
-            const pages = [];
-            let currentPage = [];
-            let currentHeight = 0;
-
-            const elements = Array.from(measureRef.current.children);
-            
-            elements.forEach((el) => {
-                const height = el.offsetHeight;
-                const type = el.getAttribute('data-type'); // 'header', 'mc', 'lq', 'section-title'
-                const dataIndex = parseInt(el.getAttribute('data-index'));
-                const isItem = type === 'mc' || type === 'lq';
-
-                // If single item is huge, it must go on a new page anyway.
-                // If adding this item exceeds height, push old page and start new.
-                if (currentHeight + height > PAGE_HEIGHT_PX && currentPage.length > 0) {
-                    pages.push(currentPage);
-                    currentPage = [];
-                    currentHeight = 0;
-                }
-
-                // Push simplified representation for rendering
-                currentPage.push({
-                    type,
-                    item: isItem ? (type === 'mc' ? paper.mc[dataIndex] : paper.lq[dataIndex]) : null,
-                    index: dataIndex,
-                    content: el.innerHTML // Just in case we need raw HTML, but we prefer react render
-                });
-                currentHeight += height;
-            });
-
-            if (currentPage.length > 0) pages.push(currentPage);
-
-            setMeasuredPages(pages);
-            setIsCalculatingLayout(false);
-        };
-
-        const currentYear = new Date().getFullYear();
+        // Determine layout mode: If we have LQ, use "QA Book" style (layout-qa). If just MC, use "Standard" (layout-std).
         const hasLQ = paper.lq.length > 0;
-        
-        // Dynamic layout class for measuring container
-        const measureLayoutClass = (hasLQ && printMode !== 'scheme') ? 'layout-qa' : 'layout-std';
+        const layoutClass = (hasLQ && printMode !== 'scheme') ? 'layout-qa' : 'layout-std';
+        const currentYear = new Date().getFullYear();
 
         if (!isFirebaseReady) return <div className="h-screen flex items-center justify-center text-gray-500 font-medium"><div className="animate-spin w-6 h-6 border-2 border-primary border-t-transparent rounded-full mr-3"></div> Connecting...</div>;
 
@@ -516,58 +456,6 @@
 
         return (
             <div className="flex flex-col md:flex-row min-h-screen">
-                
-                {/* --- HIDDEN MEASURING LAYER --- */}
-                {/* This renders everything in one long strip to measure heights */}
-                <div id="measure-container" ref={measureRef} className={`bg-white ${measureLayoutClass}`}>
-                     {/* We render structure based on print mode to measure accurately */}
-                     {(printMode === 'question' || printMode === null) ? (
-                        <>
-                             {includeMC && paper.mc.length > 0 && (
-                                <div data-type="section-title" className="font-bold text-lg mb-6 border-b-2 border-black pb-2">Section A: Multiple Choice</div>
-                             )}
-                             {includeMC && paper.mc.map((q, i) => (
-                                <div key={`mc-${i}`} data-type="mc" data-index={i}>
-                                    <QuestionBlock item={q} index={i} isScheme={false} type="mc" onSwap={()=>{}} imgFilter={imgFilter} />
-                                </div>
-                             ))}
-                             {includeLQ && paper.lq.length > 0 && (
-                                <div data-type="section-title" className="font-bold text-lg mb-6 border-b-2 border-black pb-2 mt-8">Section B: Long Questions</div>
-                             )}
-                             {includeLQ && paper.lq.map((q, i) => (
-                                <div key={`lq-${i}`} data-type="lq" data-index={i}>
-                                    <QuestionBlock item={q} index={i} isScheme={false} type="lq" onSwap={()=>{}} imgFilter={imgFilter} />
-                                </div>
-                             ))}
-                             <div data-type="end-marker" className="text-center font-bold mt-16 mb-8 text-sm">END OF PAPER</div>
-                        </>
-                     ) : (
-                        // Scheme Mode Measurement
-                        <>
-                            <div data-type="header" className="text-center font-bold text-xl mb-8 underline uppercase">Marking Scheme</div>
-                             {includeMC && paper.mc.length > 0 && (
-                                <div data-type="section-title" className="font-bold text-lg mb-6">Section A: MC Answers</div>
-                             )}
-                             {/* MC Answer Grid - Measure as one block usually, but let's just dump it */}
-                             {includeMC && paper.mc.length > 0 && (
-                                 <div data-type="mc-grid" className="grid grid-cols-4 gap-4 mb-8">
-                                     {paper.mc.map((q, i) => (
-                                         <div key={i} className="flex gap-2 text-sm border-b border-gray-100 pb-1">
-                                             <span className="font-bold w-6">{i+1}.</span>
-                                             <span className="font-mono">{q.correctAnswer || '-'}</span>
-                                         </div>
-                                     ))}
-                                 </div>
-                             )}
-                             {includeLQ && paper.lq.map((q, i) => (
-                                <div key={`lq-${i}`} data-type="lq" data-index={i}>
-                                    <QuestionBlock item={q} index={i} isScheme={true} type="lq" />
-                                </div>
-                             ))}
-                        </>
-                     )}
-                </div>
-
                 {/* SIDEBAR CONTROLS */}
                 <div className="w-full md:w-80 bg-white border-r border-gray-200 p-6 flex flex-col gap-6 fixed md:sticky top-0 h-screen overflow-y-auto no-print shadow-xl z-20">
                     <div className="flex items-center gap-3">
@@ -625,21 +513,8 @@
                                 <div className="text-sm font-bold text-dark">Paper Ready</div>
                                 <div className="text-xs text-gray-500">{paper.mc.length} MC · {paper.lq.length} LQ</div>
                             </div>
-                            <button onClick={() => { setPrintMode('question'); setIsCalculatingLayout(true); }} className={`w-full py-2 ${printMode !== 'scheme' ? 'bg-dark text-white' : 'bg-white border text-dark'} rounded-lg text-sm flex justify-center gap-2`}>
-                                <Icons.Print /> Preview Question Paper
-                            </button>
-                            <button onClick={() => { setPrintMode('scheme'); setIsCalculatingLayout(true); }} className={`w-full py-2 ${printMode === 'scheme' ? 'bg-dark text-white' : 'bg-white border text-dark'} rounded-lg text-sm flex justify-center gap-2`}>
-                                <Icons.Check /> Preview Marking Scheme
-                            </button>
-                            
-                            <div className="flex gap-2 mt-2">
-                                <button onClick={()=>window.print()} className="flex-1 py-2 bg-accent text-white rounded-lg text-sm font-bold hover:bg-green-600 shadow">
-                                    <Icons.Print /> Print Now
-                                </button>
-                                <button onClick={()=>setIsCalculatingLayout(true)} className="w-10 py-2 bg-gray-200 text-gray-600 rounded-lg text-sm hover:bg-gray-300" title="Recalculate Layout">
-                                    <Icons.Refresh />
-                                </button>
-                            </div>
+                            <button onClick={() => { setPrintMode('question'); setTimeout(()=>window.print(), 500); }} className="w-full py-2 bg-dark text-white rounded-lg text-sm hover:bg-black flex justify-center gap-2"><Icons.Print /> Question Paper</button>
+                            <button onClick={() => { setPrintMode('scheme'); setTimeout(()=>window.print(), 500); }} className="w-full py-2 bg-white border border-gray-300 text-dark rounded-lg text-sm hover:bg-gray-50 flex justify-center gap-2"><Icons.Check /> Marking Scheme</button>
                         </div>
                     )}
                     
@@ -650,75 +525,92 @@
                     </div>
                 </div>
 
-                {/* PREVIEW AREA */}
-                <div id="preview-scroller" className="flex-1 bg-gray-200 p-8 overflow-y-auto h-screen">
+                {/* PREVIEW AREA - ADDED IDs for Print Targeting */}
+                <div id="preview-scroller" className={`flex-1 bg-gray-100 p-8 overflow-y-auto h-screen ${layoutClass}`}>
                     {!generatedAt ? (
                         <div className="h-full flex flex-col items-center justify-center text-gray-400">
                             <i className="fa-solid fa-print text-6xl mb-4 opacity-20"></i>
                             <p>Configure and generate to preview.</p>
                         </div>
                     ) : (
-                        <div id="preview-wrapper" className="w-fit mx-auto pb-20">
-                            
-                            {/* 1. Cover Page (Only in Question Mode) */}
-                            {printMode !== 'scheme' && (
-                                <DSECoverPage subject={selectedSubject} year={currentYear} hasLQ={hasLQ} />
+                        <div id="preview-wrapper" className="w-fit mx-auto">
+                            {/* Question Paper Mode */}
+                            {(printMode === 'question' || printMode === null) && (
+                                <div className={printMode === 'scheme' ? 'hidden' : 'block'}>
+                                    
+                                    {/* Page 1: Cover */}
+                                    <DSECoverPage subject={selectedSubject} year={currentYear} hasLQ={hasLQ} />
+                                    
+                                    {/* Subsequent Pages: Content with Sticky BG */}
+                                    <div className="paper-preview dse-layout-bg dse-content-padding scale-[0.8] md:scale-100 origin-top bg-white h-auto min-h-[297mm]">
+                                        
+                                        {/* Repeating Footer for pages 2+ */}
+                                        <div className="print-footer print-only">* {currentYear} HKDSE MOCK *</div>
+
+                                        {includeMC && paper.mc.length > 0 && (
+                                            <>
+                                                <div className="font-bold text-lg mb-6 border-b-2 border-black pb-2">Section A: Multiple Choice</div>
+                                                <div className="space-y-8 mb-12">
+                                                    {paper.mc.map((q, i) => <QuestionBlock key={q.id} item={q} index={i} isScheme={false} type="mc" onSwap={handleSwap} imgFilter={imgFilter} />)}
+                                                </div>
+                                            </>
+                                        )}
+
+                                        {includeLQ && paper.lq.length > 0 && (
+                                            <>
+                                                <div className={`font-bold text-lg mb-6 border-b-2 border-black pb-2 ${includeMC ? 'page-break-before' : ''}`}>Section B: Long Questions</div>
+                                                <div className="space-y-12">
+                                                    {paper.lq.map((q, i) => <QuestionBlock key={q.id} item={q} index={i} isScheme={false} type="lq" onSwap={handleSwap} imgFilter={imgFilter} />)}
+                                                </div>
+                                            </>
+                                        )}
+                                        
+                                        <div className="text-center font-bold mt-16 mb-8 text-sm">END OF PAPER</div>
+                                    </div>
+                                </div>
                             )}
 
-                            {/* 2. Content Pages */}
-                            {isCalculatingLayout ? (
-                                <div className="text-center p-12 text-gray-500">
-                                    <Icons.Spin /> Calculating Layout & Pagination...
-                                </div>
-                            ) : (
-                                measuredPages.map((pageContent, pageIdx) => (
-                                    <div 
-                                        key={pageIdx} 
-                                        className={`paper-preview ${printMode === 'scheme' ? 'layout-std' : measureLayoutClass} dse-content-padding bg-white relative overflow-hidden`}
-                                    >
-                                        <div className="h-full flex flex-col">
-                                            {/* Render Page Items */}
-                                            {pageContent.map((block, i) => {
-                                                if (block.type === 'section-title') return <div key={i} className="font-bold text-lg mb-6 border-b-2 border-black pb-2">{printMode === 'scheme' ? 'Section A: MC Answers' : (block.content.includes('Multiple') ? 'Section A: Multiple Choice' : 'Section B: Long Questions')}</div>;
-                                                if (block.type === 'end-marker') return <div key={i} className="text-center font-bold mt-16 mb-8 text-sm">END OF PAPER</div>;
-                                                if (block.type === 'header') return <div key={i} className="text-center font-bold text-xl mb-8 underline uppercase">{block.content}</div>;
-                                                if (block.type === 'mc-grid') {
-                                                    // Re-render MC grid
-                                                     return (
-                                                         <div key={i} className="grid grid-cols-4 gap-4 mb-8">
-                                                             {paper.mc.map((q, qIdx) => (
-                                                                 <div key={qIdx} className="flex gap-2 text-sm border-b border-gray-100 pb-1">
-                                                                     <span className="font-bold w-6">{qIdx+1}.</span>
-                                                                     <span className="font-mono">{q.correctAnswer || '-'}</span>
-                                                                 </div>
-                                                             ))}
-                                                         </div>
-                                                     );
-                                                }
-                                                // Questions
-                                                return (
-                                                    <QuestionBlock 
-                                                        key={`${block.type}-${block.index}`} 
-                                                        item={block.item} 
-                                                        index={block.index} 
-                                                        isScheme={printMode === 'scheme'} 
-                                                        type={block.type} 
-                                                        onSwap={handleSwap} 
-                                                        imgFilter={imgFilter} 
-                                                    />
-                                                );
-                                            })}
-                                        </div>
+                            {/* Marking Scheme Mode - Always Standard Layout */}
+                            {(printMode === 'scheme') && (
+                                <div className="paper-preview layout-std dse-content-padding scale-[0.8] md:scale-100 origin-top bg-white h-auto min-h-[297mm]">
+                                    <div className="text-center font-bold text-xl mb-8 underline uppercase">Marking Scheme: {selectedSubject}</div>
+                                    
+                                    {includeMC && paper.mc.length > 0 && (
+                                        <>
+                                            <div className="font-bold text-lg mb-6">Section A: MC Answers</div>
+                                            <div className="grid grid-cols-4 gap-4 mb-8">
+                                                {paper.mc.map((q, i) => (
+                                                    <div key={i} className="flex gap-2 text-sm border-b border-gray-100 pb-1">
+                                                        <span className="font-bold w-6">{i+1}.</span>
+                                                        <span className="font-mono">{q.correctAnswer || '-'}</span>
+                                                    </div>
+                                                ))}
+                                            </div>
+                                            
+                                            {/* MC Explanations */}
+                                            {paper.mc.some(q => q.sImgs?.length || q.explanation) && (
+                                                <div className="mb-8">
+                                                    <h3 className="font-bold text-md mb-4 bg-gray-100 p-2">MC Explanations / Notes</h3>
+                                                    {paper.mc.map((q, i) => (q.sImgs?.length || q.explanation) && (
+                                                        <div key={i} className="mb-6">
+                                                            <div className="font-bold text-sm mb-2">Q{i+1} Note:</div>
+                                                            <QuestionBlock item={q} index={i} isScheme={true} />
+                                                        </div>
+                                                    ))}
+                                                </div>
+                                            )}
+                                        </>
+                                    )}
 
-                                        {/* Footer: Page Number (Content starts at 1) */}
-                                        <div className="absolute bottom-[15mm] left-[50%] -translate-x-1/2 text-xs font-bold">
-                                            Page {pageIdx + 1}
-                                        </div>
-                                        <div className="absolute bottom-[15mm] right-[20mm] font-bold text-xs print-footer">
-                                            * {currentYear} HKDSE MOCK *
-                                        </div>
-                                    </div>
-                                ))
+                                    {includeLQ && paper.lq.length > 0 && (
+                                        <>
+                                            <div className="font-bold text-lg mb-6 border-b border-black pb-2 mt-8">Section B: Detailed Solutions</div>
+                                            <div className="space-y-8">
+                                                {paper.lq.map((q, i) => <QuestionBlock key={q.id} item={q} index={i} isScheme={true} type="lq" />)}
+                                            </div>
+                                        </>
+                                    )}
+                                </div>
                             )}
                         </div>
                     )}
