@@ -28,6 +28,9 @@
                 fontFamily: {
                     sans: ['Noto Sans', 'sans-serif'],
                     serif: ['Noto Serif', 'serif'],
+                },
+                screens: {
+                    'print': {'raw': 'print'},
                 }
             }
         }
@@ -60,6 +63,7 @@
 </script>
 
 <style>
+    /* Global Scrollbar */
     ::-webkit-scrollbar { width: 8px; height: 8px; }
     ::-webkit-scrollbar-thumb { background: #dadce0; border-radius: 4px; }
     ::-webkit-scrollbar-thumb:hover { background: #bdc1c6; }
@@ -74,104 +78,86 @@
         background-size: 100% 1px;
     }
     .layout-qa .dse-content-padding {
-        padding-top: 25mm;
-        padding-bottom: 25mm;
+        padding-top: 20mm;
+        padding-bottom: 20mm;
         padding-left: 20mm;
         padding-right: 95mm; /* Huge right margin */
     }
 
     /* 2. Question Paper (MC) Layout - Full width, no marking column */
     .layout-std .dse-layout-bg {
-        background: white; /* No line */
+        background: white;
     }
     .layout-std .dse-content-padding {
-        padding-top: 25mm;
-        padding-bottom: 25mm;
-        padding-left: 25mm; /* Balanced margins */
-        padding-right: 25mm;
+        padding-top: 20mm;
+        padding-bottom: 20mm;
+        padding-left: 20mm;
+        padding-right: 20mm;
+    }
+
+    /* Page Setup */
+    .sheet-container {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 20px; /* Gap between pages in preview */
+        padding-bottom: 50px;
+    }
+
+    .paper-sheet {
+        width: 210mm;
+        height: 297mm;
+        background: white;
+        box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+        position: relative;
+        overflow: hidden; /* Ensure content stays within A4 */
+        page-break-after: always;
+        flex-shrink: 0;
     }
 
     @media print {
-        @page { size: A4; margin: 0; }
+        @page { 
+            size: A4; 
+            margin: 0; 
+        }
+        
         html, body { 
-            height: 100%; 
             margin: 0 !important; 
             padding: 0 !important; 
-            background: white !important; /* Force white bg */
-            color: black;
-            -webkit-print-color-adjust: exact; 
-            print-color-adjust: exact; 
+            background: white !important; 
         }
         
+        /* Hide UI */
         .no-print { display: none !important; }
-        .print-only { display: block !important; }
         
-        /* NUCLEAR OPTION: RESET ALL REACT CONTAINERS FOR PRINT */
-        #root, #root > div { display: block !important; height: auto !important; width: 100% !important; margin: 0 !important; padding: 0 !important; }
-        
-        /* Explicitly target the scroll wrapper */
-        #preview-scroller {
-            padding: 0 !important;
-            margin: 0 !important;
-            background: white !important;
-            height: auto !important;
-            overflow: visible !important;
-            position: static !important;
-            display: block !important;
-        }
-
-        /* Explicitly target the centering wrapper */
-        #preview-wrapper {
-            width: 100% !important;
-            max-width: none !important;
-            margin: 0 !important;
-            padding: 0 !important;
-            display: block !important;
-        }
-
-        .paper-preview {
-            width: 210mm !important;
-            min-height: 297mm !important;
+        /* Reset Layout for Print */
+        #root { display: block !important; }
+        #preview-scroller { 
             height: auto !important; 
-            margin: 0 !important;
-            box-shadow: none !important;
-            transform: none !important; 
-            overflow: visible !important;
-            page-break-after: always;
+            overflow: visible !important; 
+            background: white !important;
+            padding: 0 !important;
         }
-
-        /* Allow footer to repeat */
-        .print-footer {
-            position: fixed;
-            bottom: 10mm;
-            right: 20mm;
-            font-size: 10px;
-            font-weight: bold;
+        .sheet-container {
             display: block !important;
+            gap: 0 !important;
+            padding: 0 !important;
+        }
+        
+        .paper-sheet {
+            box-shadow: none !important;
+            margin: 0 !important;
+            page-break-after: always;
+            border: none !important;
         }
 
-        .page-break-after { page-break-after: always; }
-        .page-break-inside-avoid { page-break-inside: avoid; }
-        
-        /* Ensure background graphics print */
+        /* Ensure gradients print */
         .dse-layout-bg {
             -webkit-print-color-adjust: exact;
             print-color-adjust: exact;
         }
     }
 
-    .print-only { display: none; }
-    
-    .paper-preview {
-        width: 210mm;
-        min-height: 297mm;
-        background: white;
-        box-shadow: 0 10px 30px -5px rgba(0, 0, 0, 0.1);
-        margin: 2rem auto;
-        position: relative;
-        transition: transform 0.3s ease;
-    }
-    
     .filter-bw { filter: grayscale(100%) contrast(150%) brightness(110%); }
     .filter-high-contrast { filter: grayscale(100%) contrast(200%) brightness(120%); }
 </style>
@@ -180,13 +166,13 @@
 <div id="root"></div>
 
 <script type="text/babel">
-    const { useState, useEffect, useRef, useMemo } = React;
+    const { useState, useEffect, useMemo } = React;
 
     class ErrorBoundary extends React.Component {
         constructor(props) { super(props); this.state = { hasError: false, error: null }; }
         static getDerivedStateFromError(error) { return { hasError: true, error }; }
         render() {
-            if (this.state.hasError) return <div className="p-8 text-center text-red-600"><h2>Crash!</h2><pre>{this.state.error.toString()}</pre><button onClick={()=>window.location.reload()} className="underline">Reload</button></div>;
+            if (this.state.hasError) return <div className="p-8 text-center text-red-600"><h2>Error</h2><pre>{this.state.error.toString()}</pre><button onClick={()=>window.location.reload()} className="underline">Reload</button></div>;
             return this.props.children;
         }
     }
@@ -202,7 +188,16 @@
         Spin: () => <i className="fa-solid fa-circle-notch fa-spin"></i>
     };
 
-    /* --- DYNAMIC COVER PAGE --- */
+    /* --- PAGE COMPONENTS --- */
+
+    const DSEFooter = ({ pageNum, year, code }) => (
+        <div className="absolute bottom-[10mm] w-full px-[20mm] flex justify-between items-end text-xs font-bold pointer-events-none">
+            <div>{year}-DSE-{code}--{pageNum}</div>
+            <div className="absolute left-1/2 -translate-x-1/2 font-normal text-base">{pageNum}</div>
+            <div>* {year} HKDSE MOCK *</div>
+        </div>
+    );
+
     const DSECoverPage = ({ subject, year, hasLQ }) => {
         const getSubjectDetails = (s) => {
             const clean = (s || "GENERAL").toLowerCase().trim();
@@ -220,12 +215,12 @@
         const paperTitle = hasLQ ? "Question-Answer Book" : "Question Paper";
 
         return (
-            <div className="paper-preview relative h-[297mm] w-[210mm] overflow-hidden page-break-after">
-                {/* Only show marking margin line on cover if it's a QA Book */}
+            <div className="paper-sheet relative">
+                {/* Margin Line for QA Book */}
                 {hasLQ && <div className="absolute top-0 right-[90mm] w-[1px] h-full bg-black z-0"></div>}
                 
-                {/* Diagonal Top Left */}
-                <div className="absolute top-0 left-0 w-[45mm] h-[45mm] pointer-events-none z-10">
+                {/* Top Left Triangle */}
+                <div className="absolute top-0 left-0 w-[45mm] h-[45mm] z-10">
                      <svg width="100%" height="100%" viewBox="0 0 100 100" preserveAspectRatio="none">
                         <line x1="0" y1="100" x2="100" y2="0" stroke="black" strokeWidth="2.5" />
                      </svg>
@@ -236,7 +231,7 @@
                      </div>
                 </div>
 
-                {/* Sidebar Elements - Only for QA Book */}
+                {/* Barcode Area */}
                 {hasLQ && (
                     <div className="absolute top-0 right-0 w-[90mm] h-full pointer-events-none z-10">
                         <div className="absolute top-[15mm] left-[20mm] w-[50mm] h-[28mm] border border-black flex items-center justify-center text-center p-2 bg-white">
@@ -257,15 +252,15 @@
                     </div>
                 )}
 
-                {/* Main Title Area */}
-                <div className={`text-center mt-12 mb-12 px-4 pt-[25mm] ${hasLQ ? 'pr-[95mm] pl-[20mm]' : 'px-[25mm]'}`}>
+                {/* Main Content */}
+                <div className={`text-center mt-12 mb-8 px-4 pt-[30mm] ${hasLQ ? 'pr-[95mm] pl-[20mm]' : 'px-[25mm]'}`}>
                     <div className="text-xs font-serif mb-6">
                         HONG KONG EXAMINATIONS AND ASSESSMENT AUTHORITY<br/>
                         HONG KONG DIPLOMA OF SECONDARY EDUCATION EXAMINATION {year}
                     </div>
                     <div className="font-bold text-2xl mb-2">{info.title}</div>
                     {info.sub && <div className="font-bold text-xl mb-2">{info.sub}</div>}
-                    <div className="font-bold text-xl mb-8 mt-4">{paperTitle}</div>
+                    <div className="font-bold text-xl mb-6 mt-4">{paperTitle}</div>
                     <div className="text-base font-serif">
                         Time Allowed: 2 hours 30 minutes<br/>
                         This paper must be answered in English
@@ -289,48 +284,71 @@
                     </ol>
                 </div>
 
-                {/* Footer */}
-                <div className="absolute bottom-[15mm] left-[20mm] font-bold text-xs">
-                    {year}-DSE-{info.code}--1
+                {/* Branding & QR Code */}
+                <div className="absolute bottom-[35mm] w-full text-center flex flex-col items-center">
+                    <img src="https://lh3.googleusercontent.com/d/16ufgMjdObZP_crvaHyMMAtIkRpRmdBtS" alt="QR" className="w-24 h-24 mb-2 mix-blend-multiply" />
+                    <div className="text-xs text-gray-500 font-mono">
+                        Made with darNote Error Log<br/>
+                        darNote.3-shot.com
+                    </div>
                 </div>
-                <div className="absolute bottom-[15mm] left-[50%] -translate-x-1/2 text-xs">1</div>
-                <div className="absolute bottom-[15mm] right-[20mm] font-bold text-xs">
-                    * {year} HKDSE MOCK *
-                </div>
+
+                <DSEFooter pageNum={1} year={year} code={info.code} />
             </div>
         );
     };
 
+    const ContentPage = ({ children, pageNum, year, subjectCode, isQA }) => (
+        <div className={`paper-sheet ${isQA ? 'layout-qa' : 'layout-std'}`}>
+            <div className="dse-layout-bg w-full h-full relative">
+                <div className="dse-content-padding h-full flex flex-col">
+                    <div className="flex-1">
+                        {children}
+                    </div>
+                </div>
+                <DSEFooter pageNum={pageNum} year={year} code={subjectCode} />
+            </div>
+        </div>
+    );
+
     const QuestionBlock = ({ item, index, isScheme, type, onSwap, imgFilter }) => {
         let images = isScheme ? (item.sImgs || []) : (item.qImgs || []);
-        const hasImages = images && images.length > 0;
+        
+        // Strict Image Sizing for pagination
+        const imgClass = isScheme 
+            ? "max-h-[300px] w-auto max-w-full" 
+            : type === 'mc' 
+                ? "max-h-[140px] w-auto max-w-full"  // Smaller for MC to fit 5-6
+                : "max-h-[250px] w-auto max-w-full"; // Larger for LQ to fit 1-2
 
         return (
-            <div className="question-block group relative page-break-inside-avoid mb-8">
+            <div className="question-block group relative mb-6">
                 <div className="flex gap-4 items-start">
-                    <div className="font-bold text-lg min-w-[30px]">{index + 1}.</div>
-                    <div className="flex-1 space-y-4 w-full">
-                        {hasImages ? (
-                            images.map((src, i) => (
-                                <img 
-                                    key={i} 
-                                    src={src} 
-                                    onError={(e) => {e.target.style.display='none'}}
-                                    className={`w-full max-w-full h-auto object-contain border border-transparent ${!isScheme ? imgFilter : ''} rounded-sm`} 
-                                />
-                            ))
+                    <div className="font-bold text-lg min-w-[30px]">{item.globalIndex !== undefined ? item.globalIndex + 1 : index + 1}.</div>
+                    <div className="flex-1 w-full">
+                        {images && images.length > 0 ? (
+                            <div className="space-y-2">
+                                {images.map((src, i) => (
+                                    <img 
+                                        key={i} 
+                                        src={src} 
+                                        onError={(e) => {e.target.style.display='none'}}
+                                        className={`${imgClass} object-contain border border-transparent ${!isScheme ? imgFilter : ''} rounded-sm block`} 
+                                    />
+                                ))}
+                            </div>
                         ) : (
-                            <div className="p-4 border border-dashed border-gray-300 text-gray-400 italic text-sm">
-                                {isScheme ? "No marking scheme image uploaded." : (item.questionText || "No question content available.")}
+                            <div className="p-3 border border-dashed border-gray-300 text-gray-400 italic text-sm">
+                                {isScheme ? "No marking scheme image." : (item.questionText || "No question content.")}
                             </div>
                         )}
                         
                         {isScheme && (
-                            <div className="mt-2 text-sm space-y-2">
-                                {item.correctAnswer && <div className="bg-gray-100 p-2 rounded inline-block"><strong>Answer:</strong> <span className="font-mono text-lg font-bold">{item.correctAnswer}</span></div>}
+                            <div className="mt-2 text-sm space-y-1">
+                                {item.correctAnswer && <div className="bg-gray-100 px-2 py-1 rounded inline-block text-xs">Ans: <span className="font-mono font-bold">{item.correctAnswer}</span></div>}
                                 {item.explanation && (
-                                    <div className="bg-yellow-50 p-3 rounded border border-yellow-100">
-                                        <div className="font-bold text-yellow-800 text-xs mb-1">NOTES / EXPLANATION:</div>
+                                    <div className="bg-yellow-50 p-2 rounded border border-yellow-100 text-xs">
+                                        <div className="font-bold text-yellow-800">Note:</div>
                                         <div className="whitespace-pre-wrap text-gray-800">{item.explanation}</div>
                                     </div>
                                 )}
@@ -339,7 +357,7 @@
                     </div>
                 </div>
                 {!isScheme && (
-                    <button onClick={() => onSwap(index, type)} className="no-print absolute top-0 right-[-40px] p-2 bg-white shadow-md rounded-full text-primary opacity-0 group-hover:opacity-100 transition-opacity z-10 hover:bg-primary hover:text-white" title="Swap Question">
+                    <button onClick={() => onSwap(index, type)} className="no-print absolute top-0 right-[-10px] p-1.5 bg-white shadow rounded-full text-primary opacity-0 group-hover:opacity-100 transition-opacity z-20 hover:bg-primary hover:text-white" title="Swap">
                         <Icons.Refresh />
                     </button>
                 )}
@@ -350,16 +368,18 @@
     const App = () => {
         const [user, setUser] = useState(null);
         const [isFirebaseReady, setIsFirebaseReady] = useState(false);
-        const [rawLogs, setRawLogs] = useState([]);
         const [subjects, setSubjects] = useState([]);
+        const [rawLogs, setRawLogs] = useState([]);
         
-        // Filters
+        // UI State
         const [selectedSubject, setSelectedSubject] = useState('');
         const [selectedTopic, setSelectedTopic] = useState('');
         const [includeMC, setIncludeMC] = useState(true);
         const [includeLQ, setIncludeLQ] = useState(true);
-
-        const [paper, setPaper] = useState({ mc: [], lq: [] });
+        
+        // Data State
+        const [paperData, setPaperData] = useState({ mc: [], lq: [] });
+        const [pages, setPages] = useState([]);
         const [generatedAt, setGeneratedAt] = useState(null);
         const [printMode, setPrintMode] = useState(null); 
         const [imgFilter, setImgFilter] = useState('');
@@ -390,10 +410,10 @@
 
         const fetchAndGenerate = async () => {
             if (!selectedSubject) return alert("Select a subject!");
-            if (!includeMC && !includeLQ) return alert("Select at least one section (MC or LQ)!");
+            if (!includeMC && !includeLQ) return alert("Select at least one section!");
 
             setIsGenerating(true);
-            setGeneratedAt(null);
+            setPages([]); // Clear old pages
             
             try {
                 const db = window.firebase.db;
@@ -413,31 +433,76 @@
 
                 // Filter & Shuffle
                 const shuffle = arr => [...arr].sort(() => 0.5 - Math.random());
-                
-                const mc = includeMC ? shuffle(logs.filter(l => l.questionType === 'MC')).slice(0, 36) : [];
-                const lq = includeLQ ? shuffle(logs.filter(l => l.questionType === 'LQ')).slice(0, 16) : [];
+                const mc = includeMC ? shuffle(logs.filter(l => l.questionType === 'MC')).slice(0, 30) : [];
+                const lq = includeLQ ? shuffle(logs.filter(l => l.questionType === 'LQ')).slice(0, 10) : [];
 
-                setPaper({ mc, lq });
+                setPaperData({ mc, lq });
+                
+                // --- CHUNKING LOGIC ---
+                // We split questions into pages based on estimated height
+                // Unit: Arbitrary height units. Max per page ~ 1000 units.
+                // MC Question: ~180 units.
+                // LQ Question: ~400 units.
+                // Header: ~100 units.
+                
+                const generatedPages = [];
+                let currentPage = [];
+                let currentH = 0;
+                const MAX_H = 1000;
+                const MC_COST = 200; // Fits ~5
+                const LQ_COST = 450; // Fits ~2
+                const HEADER_COST = 80;
+
+                // Helper to push page
+                const pushPage = () => {
+                    if (currentPage.length > 0) generatedPages.push(currentPage);
+                    currentPage = [];
+                    currentH = 0;
+                };
+
+                // 1. MC Section
+                if (mc.length > 0) {
+                    currentPage.push({ type: 'header', text: 'Section A: Multiple Choice' });
+                    currentH += HEADER_COST;
+                    
+                    mc.forEach((q, i) => {
+                        if (currentH + MC_COST > MAX_H) pushPage();
+                        currentPage.push({ ...q, globalIndex: i, qType: 'mc', type: 'question' });
+                        currentH += MC_COST;
+                    });
+                }
+
+                // 2. LQ Section
+                if (lq.length > 0) {
+                    // Force break if not enough space for header + 1 LQ
+                    if (currentH + HEADER_COST + LQ_COST > MAX_H && currentH > 0) pushPage();
+                    
+                    currentPage.push({ type: 'header', text: 'Section B: Long Questions' });
+                    currentH += HEADER_COST;
+
+                    lq.forEach((q, i) => {
+                        // Heuristic: If LQ has > 2 images, it costs more
+                        const realCost = (q.qImgs && q.qImgs.length > 2) ? LQ_COST * 1.5 : LQ_COST;
+                        
+                        if (currentH + realCost > MAX_H) pushPage();
+                        currentPage.push({ ...q, globalIndex: i, qType: 'lq', type: 'question' });
+                        currentH += realCost;
+                    });
+                }
+                
+                pushPage(); // Push last page
+                setPages(generatedPages);
                 setGeneratedAt(new Date());
 
             } catch (e) { alert("Error: " + e.message); } finally { setIsGenerating(false); }
         };
 
-        const handleSwap = (idx, type) => {
-            const list = type === 'mc' ? paper.mc : paper.lq;
-            const pool = rawLogs.filter(l => l.questionType === (type === 'mc' ? 'MC' : 'LQ'));
-            const currentIds = new Set(list.map(i => i.id));
-            const avail = pool.filter(l => !currentIds.has(l.id));
-            if (!avail.length) return alert("No alternatives available.");
-            const newList = [...list];
-            newList[idx] = avail[Math.floor(Math.random() * avail.length)];
-            setPaper(prev => ({ ...prev, [type]: newList }));
-        };
-
-        // Determine layout mode: If we have LQ, use "QA Book" style (layout-qa). If just MC, use "Standard" (layout-std).
-        const hasLQ = paper.lq.length > 0;
-        const layoutClass = (hasLQ && printMode !== 'scheme') ? 'layout-qa' : 'layout-std';
         const currentYear = new Date().getFullYear();
+        const hasLQ = includeLQ && paperData.lq.length > 0;
+        const codeDetails = selectedSubject ? (
+            selectedSubject.toLowerCase().includes('math') ? 'MATH-CP' : 
+            selectedSubject.toUpperCase().substring(0, 8)
+        ) : 'GEN';
 
         if (!isFirebaseReady) return <div className="h-screen flex items-center justify-center text-gray-500 font-medium"><div className="animate-spin w-6 h-6 border-2 border-primary border-t-transparent rounded-full mr-3"></div> Connecting...</div>;
 
@@ -456,7 +521,7 @@
 
         return (
             <div className="flex flex-col md:flex-row min-h-screen">
-                {/* SIDEBAR CONTROLS */}
+                {/* SIDEBAR */}
                 <div className="w-full md:w-80 bg-white border-r border-gray-200 p-6 flex flex-col gap-6 fixed md:sticky top-0 h-screen overflow-y-auto no-print shadow-xl z-20">
                     <div className="flex items-center gap-3">
                         <img src="https://raw.githubusercontent.com/darren6251/darnote/refs/heads/main/darNote%20logo.png" className="w-8 h-8 rounded-lg"/>
@@ -479,18 +544,11 @@
                             </select>
                         </div>
 
-                        {/* SECTION SELECTORS */}
                         <div className="bg-gray-50 p-3 rounded-lg border border-gray-200">
                             <label className="text-xs font-bold text-secondary uppercase block mb-2">Sections</label>
                             <div className="flex gap-4">
-                                <label className="flex items-center gap-2 text-sm cursor-pointer">
-                                    <input type="checkbox" checked={includeMC} onChange={e=>setIncludeMC(e.target.checked)} className="rounded text-primary focus:ring-primary"/>
-                                    Include MC
-                                </label>
-                                <label className="flex items-center gap-2 text-sm cursor-pointer">
-                                    <input type="checkbox" checked={includeLQ} onChange={e=>setIncludeLQ(e.target.checked)} className="rounded text-primary focus:ring-primary"/>
-                                    Include LQ
-                                </label>
+                                <label className="flex items-center gap-2 text-sm cursor-pointer"><input type="checkbox" checked={includeMC} onChange={e=>setIncludeMC(e.target.checked)} className="rounded text-primary"/> Include MC</label>
+                                <label className="flex items-center gap-2 text-sm cursor-pointer"><input type="checkbox" checked={includeLQ} onChange={e=>setIncludeLQ(e.target.checked)} className="rounded text-primary"/> Include LQ</label>
                             </div>
                         </div>
                         
@@ -511,107 +569,97 @@
                         <div className="border-t border-gray-200 pt-6 space-y-3">
                             <div className="text-center mb-2">
                                 <div className="text-sm font-bold text-dark">Paper Ready</div>
-                                <div className="text-xs text-gray-500">{paper.mc.length} MC · {paper.lq.length} LQ</div>
+                                <div className="text-xs text-gray-500">{pages.length + 1} Pages Generated</div>
                             </div>
                             <button onClick={() => { setPrintMode('question'); setTimeout(()=>window.print(), 500); }} className="w-full py-2 bg-dark text-white rounded-lg text-sm hover:bg-black flex justify-center gap-2"><Icons.Print /> Question Paper</button>
                             <button onClick={() => { setPrintMode('scheme'); setTimeout(()=>window.print(), 500); }} className="w-full py-2 bg-white border border-gray-300 text-dark rounded-lg text-sm hover:bg-gray-50 flex justify-center gap-2"><Icons.Check /> Marking Scheme</button>
                         </div>
                     )}
-                    
-                    <div className="mt-auto pt-4 border-t border-gray-200">
-                        <a href="el.html" className="flex items-center gap-2 text-sm text-gray-600 hover:text-primary transition-colors">
-                            <Icons.Left /> Back to Error Log
-                        </a>
-                    </div>
                 </div>
 
-                {/* PREVIEW AREA - ADDED IDs for Print Targeting */}
-                <div id="preview-scroller" className={`flex-1 bg-gray-100 p-8 overflow-y-auto h-screen ${layoutClass}`}>
+                {/* PREVIEW AREA */}
+                <div id="preview-scroller" className="flex-1 bg-gray-200 overflow-y-auto h-screen relative">
                     {!generatedAt ? (
                         <div className="h-full flex flex-col items-center justify-center text-gray-400">
                             <i className="fa-solid fa-print text-6xl mb-4 opacity-20"></i>
                             <p>Configure and generate to preview.</p>
                         </div>
                     ) : (
-                        <div id="preview-wrapper" className="w-fit mx-auto">
-                            {/* Question Paper Mode */}
+                        <div className="sheet-container mt-8">
+                            
+                            {/* --- QUESTION PAPER MODE --- */}
                             {(printMode === 'question' || printMode === null) && (
-                                <div className={printMode === 'scheme' ? 'hidden' : 'block'}>
-                                    
+                                <div className={printMode === 'scheme' ? 'hidden' : 'contents'}>
                                     {/* Page 1: Cover */}
                                     <DSECoverPage subject={selectedSubject} year={currentYear} hasLQ={hasLQ} />
                                     
-                                    {/* Subsequent Pages: Content with Sticky BG */}
-                                    <div className="paper-preview dse-layout-bg dse-content-padding scale-[0.8] md:scale-100 origin-top bg-white h-auto min-h-[297mm]">
-                                        
-                                        {/* Repeating Footer for pages 2+ */}
-                                        <div className="print-footer print-only">* {currentYear} HKDSE MOCK *</div>
+                                    {/* Content Pages */}
+                                    {pages.map((pageItems, pageIdx) => (
+                                        <ContentPage key={pageIdx} pageNum={pageIdx + 2} year={currentYear} subjectCode={codeDetails} isQA={hasLQ}>
+                                            {pageItems.map((item, idx) => {
+                                                if (item.type === 'header') {
+                                                    return (
+                                                        <div key={`h-${idx}`} className="font-bold text-lg mb-6 border-b-2 border-black pb-2">
+                                                            {item.text}
+                                                        </div>
+                                                    );
+                                                }
+                                                return (
+                                                    <QuestionBlock 
+                                                        key={item.id} 
+                                                        item={item} 
+                                                        index={idx} // This is local index, not displayed
+                                                        isScheme={false} 
+                                                        type={item.qType} 
+                                                        onSwap={() => {}} 
+                                                        imgFilter={imgFilter} 
+                                                    />
+                                                );
+                                            })}
+                                        </ContentPage>
+                                    ))}
+                                    
+                                    {/* End of Paper Marker (On last page if fits, or separate? Just inline for now) */}
+                                    {/* Note: We rely on the chunker leaving space, or it might cut off. */}
+                                </div>
+                            )}
 
-                                        {includeMC && paper.mc.length > 0 && (
-                                            <>
-                                                <div className="font-bold text-lg mb-6 border-b-2 border-black pb-2">Section A: Multiple Choice</div>
-                                                <div className="space-y-8 mb-12">
-                                                    {paper.mc.map((q, i) => <QuestionBlock key={q.id} item={q} index={i} isScheme={false} type="mc" onSwap={handleSwap} imgFilter={imgFilter} />)}
-                                                </div>
-                                            </>
-                                        )}
-
-                                        {includeLQ && paper.lq.length > 0 && (
-                                            <>
-                                                <div className={`font-bold text-lg mb-6 border-b-2 border-black pb-2 ${includeMC ? 'page-break-before' : ''}`}>Section B: Long Questions</div>
-                                                <div className="space-y-12">
-                                                    {paper.lq.map((q, i) => <QuestionBlock key={q.id} item={q} index={i} isScheme={false} type="lq" onSwap={handleSwap} imgFilter={imgFilter} />)}
-                                                </div>
-                                            </>
-                                        )}
+                            {/* --- MARKING SCHEME MODE --- */}
+                            {printMode === 'scheme' && (
+                                <div className="paper-sheet layout-std">
+                                    <div className="dse-content-padding h-full overflow-hidden relative">
+                                        <div className="text-center font-bold text-xl mb-6 underline uppercase">Marking Scheme: {selectedSubject}</div>
                                         
-                                        <div className="text-center font-bold mt-16 mb-8 text-sm">END OF PAPER</div>
+                                        <div className="h-[90%] flex flex-col flex-wrap content-start gap-x-12 gap-y-4">
+                                            {/* MC Answers Table */}
+                                            {paperData.mc.length > 0 && (
+                                                <div className="w-full mb-6">
+                                                    <div className="font-bold border-b border-black mb-2">Section A Answers</div>
+                                                    <div className="grid grid-cols-5 gap-2 text-sm">
+                                                        {paperData.mc.map((q, i) => (
+                                                            <div key={i} className="flex justify-between border-b border-gray-100">
+                                                                <span className="font-bold">{i+1}.</span>
+                                                                <span className="font-mono">{q.correctAnswer || '-'}</span>
+                                                            </div>
+                                                        ))}
+                                                    </div>
+                                                </div>
+                                            )}
+                                            
+                                            {/* Just a simple list for LQ, might overflow on scheme but that's acceptable for now */}
+                                            {paperData.lq.length > 0 && (
+                                                <div className="w-full">
+                                                    <div className="font-bold border-b border-black mb-4">Section B Notes</div>
+                                                    <div className="text-sm text-gray-500 italic">
+                                                        Refer to original questions for detailed steps.
+                                                    </div>
+                                                </div>
+                                            )}
+                                        </div>
                                     </div>
                                 </div>
                             )}
 
-                            {/* Marking Scheme Mode - Always Standard Layout */}
-                            {(printMode === 'scheme') && (
-                                <div className="paper-preview layout-std dse-content-padding scale-[0.8] md:scale-100 origin-top bg-white h-auto min-h-[297mm]">
-                                    <div className="text-center font-bold text-xl mb-8 underline uppercase">Marking Scheme: {selectedSubject}</div>
-                                    
-                                    {includeMC && paper.mc.length > 0 && (
-                                        <>
-                                            <div className="font-bold text-lg mb-6">Section A: MC Answers</div>
-                                            <div className="grid grid-cols-4 gap-4 mb-8">
-                                                {paper.mc.map((q, i) => (
-                                                    <div key={i} className="flex gap-2 text-sm border-b border-gray-100 pb-1">
-                                                        <span className="font-bold w-6">{i+1}.</span>
-                                                        <span className="font-mono">{q.correctAnswer || '-'}</span>
-                                                    </div>
-                                                ))}
-                                            </div>
-                                            
-                                            {/* MC Explanations */}
-                                            {paper.mc.some(q => q.sImgs?.length || q.explanation) && (
-                                                <div className="mb-8">
-                                                    <h3 className="font-bold text-md mb-4 bg-gray-100 p-2">MC Explanations / Notes</h3>
-                                                    {paper.mc.map((q, i) => (q.sImgs?.length || q.explanation) && (
-                                                        <div key={i} className="mb-6">
-                                                            <div className="font-bold text-sm mb-2">Q{i+1} Note:</div>
-                                                            <QuestionBlock item={q} index={i} isScheme={true} />
-                                                        </div>
-                                                    ))}
-                                                </div>
-                                            )}
-                                        </>
-                                    )}
-
-                                    {includeLQ && paper.lq.length > 0 && (
-                                        <>
-                                            <div className="font-bold text-lg mb-6 border-b border-black pb-2 mt-8">Section B: Detailed Solutions</div>
-                                            <div className="space-y-8">
-                                                {paper.lq.map((q, i) => <QuestionBlock key={q.id} item={q} index={i} isScheme={true} type="lq" />)}
-                                            </div>
-                                        </>
-                                    )}
-                                </div>
-                            )}
                         </div>
                     )}
                 </div>
