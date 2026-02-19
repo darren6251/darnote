@@ -129,7 +129,7 @@
         }
 
         #preview-wrapper {
-            width: 60% !important;
+            width: 100% !important;
             max-width: none !important;
             margin: 0 !important;
             padding: 0 !important;
@@ -315,7 +315,7 @@
                                     key={i} 
                                     src={src} 
                                     onError={(e) => {e.target.style.display='none'}}
-                                    className={`w-full max-w-full h-auto object-contain border border-transparent ${!isScheme ? imgFilter : ''} rounded-sm`} 
+                                    className={`block max-w-[90%] h-auto object-contain border border-transparent ${!isScheme ? imgFilter : ''} rounded-sm my-2`} 
                                 />
                             ))
                         ) : (
