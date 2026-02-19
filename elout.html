@@ -316,10 +316,10 @@
         
         // Strict Image Sizing for pagination
         const imgClass = isScheme 
-            ? "max-h-[300px] w-auto max-w-full" 
+            ? "max-h-[400px] w-auto max-w-full" // Increased height for scheme images
             : type === 'mc' 
-                ? "max-h-[140px] w-auto max-w-full"  // Smaller for MC to fit 5-6
-                : "max-h-[250px] w-auto max-w-full"; // Larger for LQ to fit 1-2
+                ? "max-h-[140px] w-auto max-w-full"
+                : "max-h-[250px] w-auto max-w-full";
 
         return (
             <div className="question-block group relative mb-6">
@@ -327,7 +327,7 @@
                     <div className="font-bold text-lg min-w-[30px]">{item.globalIndex !== undefined ? item.globalIndex + 1 : index + 1}.</div>
                     <div className="flex-1 w-full">
                         {images && images.length > 0 ? (
-                            <div className="space-y-2">
+                            <div className="space-y-4">
                                 {images.map((src, i) => (
                                     <img 
                                         key={i} 
@@ -347,7 +347,7 @@
                             <div className="mt-2 text-sm space-y-1">
                                 {item.correctAnswer && <div className="bg-gray-100 px-2 py-1 rounded inline-block text-xs">Ans: <span className="font-mono font-bold">{item.correctAnswer}</span></div>}
                                 {item.explanation && (
-                                    <div className="bg-yellow-50 p-2 rounded border border-yellow-100 text-xs">
+                                    <div className="bg-yellow-50 p-2 rounded border border-yellow-100 text-xs mt-1">
                                         <div className="font-bold text-yellow-800">Note:</div>
                                         <div className="whitespace-pre-wrap text-gray-800">{item.explanation}</div>
                                     </div>
@@ -380,6 +380,7 @@
         // Data State
         const [paperData, setPaperData] = useState({ mc: [], lq: [] });
         const [pages, setPages] = useState([]);
+        const [schemePages, setSchemePages] = useState([]);
         const [generatedAt, setGeneratedAt] = useState(null);
         const [printMode, setPrintMode] = useState(null); 
         const [imgFilter, setImgFilter] = useState('');
@@ -413,7 +414,8 @@
             if (!includeMC && !includeLQ) return alert("Select at least one section!");
 
             setIsGenerating(true);
-            setPages([]); // Clear old pages
+            setPages([]); 
+            setSchemePages([]);
             
             try {
                 const db = window.firebase.db;
@@ -438,33 +440,25 @@
 
                 setPaperData({ mc, lq });
                 
-                // --- CHUNKING LOGIC ---
-                // We split questions into pages based on estimated height
-                // Unit: Arbitrary height units. Max per page ~ 1000 units.
-                // MC Question: ~180 units.
-                // LQ Question: ~400 units.
-                // Header: ~100 units.
-                
+                const MAX_H = 1000;
+                const MC_COST = 200; 
+                const LQ_COST = 450; 
+                const HEADER_COST = 80;
+
+                // --- 1. QUESTION PAPER CHUNKING ---
                 const generatedPages = [];
                 let currentPage = [];
                 let currentH = 0;
-                const MAX_H = 1000;
-                const MC_COST = 200; // Fits ~5
-                const LQ_COST = 450; // Fits ~2
-                const HEADER_COST = 80;
 
-                // Helper to push page
                 const pushPage = () => {
                     if (currentPage.length > 0) generatedPages.push(currentPage);
                     currentPage = [];
                     currentH = 0;
                 };
 
-                // 1. MC Section
                 if (mc.length > 0) {
                     currentPage.push({ type: 'header', text: 'Section A: Multiple Choice' });
                     currentH += HEADER_COST;
-                    
                     mc.forEach((q, i) => {
                         if (currentH + MC_COST > MAX_H) pushPage();
                         currentPage.push({ ...q, globalIndex: i, qType: 'mc', type: 'question' });
@@ -472,26 +466,68 @@
                     });
                 }
 
-                // 2. LQ Section
                 if (lq.length > 0) {
-                    // Force break if not enough space for header + 1 LQ
                     if (currentH + HEADER_COST + LQ_COST > MAX_H && currentH > 0) pushPage();
-                    
                     currentPage.push({ type: 'header', text: 'Section B: Long Questions' });
                     currentH += HEADER_COST;
 
                     lq.forEach((q, i) => {
-                        // Heuristic: If LQ has > 2 images, it costs more
                         const realCost = (q.qImgs && q.qImgs.length > 2) ? LQ_COST * 1.5 : LQ_COST;
-                        
                         if (currentH + realCost > MAX_H) pushPage();
                         currentPage.push({ ...q, globalIndex: i, qType: 'lq', type: 'question' });
                         currentH += realCost;
                     });
                 }
-                
-                pushPage(); // Push last page
+                pushPage();
                 setPages(generatedPages);
+
+                // --- 2. MARKING SCHEME CHUNKING ---
+                const generatedSchemePages = [];
+                let currentSPage = [];
+                let currentSH = 0;
+                
+                const pushSPage = () => {
+                    if (currentSPage.length > 0) generatedSchemePages.push(currentSPage);
+                    currentSPage = [];
+                    currentSH = 0;
+                };
+
+                // Scheme Title
+                currentSPage.push({ type: 'header-main', text: `Marking Scheme: ${selectedSubject}` });
+                currentSH += 100;
+
+                if (mc.length > 0) {
+                    // All MC answers table block
+                    currentSPage.push({ type: 'mc-answers', data: mc });
+                    currentSH += 250; 
+
+                    // Iterate for MC Explanations/Images
+                    mc.forEach((q, i) => {
+                        if ((q.sImgs && q.sImgs.length > 0) || q.explanation) {
+                            const cost = 300; // Explanations can be bulky
+                            if (currentSH + cost > MAX_H) pushSPage();
+                            currentSPage.push({ ...q, globalIndex: i, qType: 'mc', type: 'scheme-block' });
+                            currentSH += cost;
+                        }
+                    });
+                }
+
+                if (lq.length > 0) {
+                    if (currentSH + HEADER_COST > MAX_H) pushSPage();
+                    currentSPage.push({ type: 'header', text: 'Section B: Detailed Solutions' });
+                    currentSH += HEADER_COST;
+
+                    lq.forEach((q, i) => {
+                        const cost = 500; // LQ solutions are usually large images
+                        if (currentSH + cost > MAX_H) pushSPage();
+                        currentSPage.push({ ...q, globalIndex: i, qType: 'lq', type: 'scheme-block' });
+                        currentSH += cost;
+                    });
+                }
+                
+                pushSPage();
+                setSchemePages(generatedSchemePages);
+                
                 setGeneratedAt(new Date());
 
             } catch (e) { alert("Error: " + e.message); } finally { setIsGenerating(false); }
@@ -569,7 +605,7 @@
                         <div className="border-t border-gray-200 pt-6 space-y-3">
                             <div className="text-center mb-2">
                                 <div className="text-sm font-bold text-dark">Paper Ready</div>
-                                <div className="text-xs text-gray-500">{pages.length + 1} Pages Generated</div>
+                                <div className="text-xs text-gray-500">{pages.length} Pages + {schemePages.length} Scheme Pages</div>
                             </div>
                             <button onClick={() => { setPrintMode('question'); setTimeout(()=>window.print(), 500); }} className="w-full py-2 bg-dark text-white rounded-lg text-sm hover:bg-black flex justify-center gap-2"><Icons.Print /> Question Paper</button>
                             <button onClick={() => { setPrintMode('scheme'); setTimeout(()=>window.print(), 500); }} className="w-full py-2 bg-white border border-gray-300 text-dark rounded-lg text-sm hover:bg-gray-50 flex justify-center gap-2"><Icons.Check /> Marking Scheme</button>
@@ -590,10 +626,8 @@
                             {/* --- QUESTION PAPER MODE --- */}
                             {(printMode === 'question' || printMode === null) && (
                                 <div className={printMode === 'scheme' ? 'hidden' : 'contents'}>
-                                    {/* Page 1: Cover */}
                                     <DSECoverPage subject={selectedSubject} year={currentYear} hasLQ={hasLQ} />
                                     
-                                    {/* Content Pages */}
                                     {pages.map((pageItems, pageIdx) => (
                                         <ContentPage key={pageIdx} pageNum={pageIdx + 2} year={currentYear} subjectCode={codeDetails} isQA={hasLQ}>
                                             {pageItems.map((item, idx) => {
@@ -608,7 +642,7 @@
                                                     <QuestionBlock 
                                                         key={item.id} 
                                                         item={item} 
-                                                        index={idx} // This is local index, not displayed
+                                                        index={idx} 
                                                         isScheme={false} 
                                                         type={item.qType} 
                                                         onSwap={() => {}} 
@@ -618,45 +652,51 @@
                                             })}
                                         </ContentPage>
                                     ))}
-                                    
-                                    {/* End of Paper Marker (On last page if fits, or separate? Just inline for now) */}
-                                    {/* Note: We rely on the chunker leaving space, or it might cut off. */}
                                 </div>
                             )}
 
                             {/* --- MARKING SCHEME MODE --- */}
                             {printMode === 'scheme' && (
-                                <div className="paper-sheet layout-std">
-                                    <div className="dse-content-padding h-full overflow-hidden relative">
-                                        <div className="text-center font-bold text-xl mb-6 underline uppercase">Marking Scheme: {selectedSubject}</div>
-                                        
-                                        <div className="h-[90%] flex flex-col flex-wrap content-start gap-x-12 gap-y-4">
-                                            {/* MC Answers Table */}
-                                            {paperData.mc.length > 0 && (
-                                                <div className="w-full mb-6">
-                                                    <div className="font-bold border-b border-black mb-2">Section A Answers</div>
-                                                    <div className="grid grid-cols-5 gap-2 text-sm">
-                                                        {paperData.mc.map((q, i) => (
-                                                            <div key={i} className="flex justify-between border-b border-gray-100">
-                                                                <span className="font-bold">{i+1}.</span>
-                                                                <span className="font-mono">{q.correctAnswer || '-'}</span>
+                                <div className="contents">
+                                    {schemePages.map((pageItems, pageIdx) => (
+                                        <ContentPage key={`s-${pageIdx}`} pageNum={pageIdx + 1} year={currentYear} subjectCode={codeDetails} isQA={false}>
+                                            {pageItems.map((item, idx) => {
+                                                if (item.type === 'header-main') {
+                                                    return <div key={idx} className="text-center font-bold text-xl mb-6 underline uppercase">{item.text}</div>;
+                                                }
+                                                if (item.type === 'header') {
+                                                    return <div key={idx} className="font-bold text-lg mb-6 border-b-2 border-black pb-2">{item.text}</div>;
+                                                }
+                                                if (item.type === 'mc-answers') {
+                                                    return (
+                                                        <div key={idx} className="w-full mb-8">
+                                                            <div className="font-bold border-b border-black mb-2">Section A Answers</div>
+                                                            <div className="grid grid-cols-5 gap-2 text-sm">
+                                                                {item.data.map((q, i) => (
+                                                                    <div key={i} className="flex justify-between border-b border-gray-100">
+                                                                        <span className="font-bold">{i+1}.</span>
+                                                                        <span className="font-mono">{q.correctAnswer || '-'}</span>
+                                                                    </div>
+                                                                ))}
                                                             </div>
-                                                        ))}
-                                                    </div>
-                                                </div>
-                                            )}
-                                            
-                                            {/* Just a simple list for LQ, might overflow on scheme but that's acceptable for now */}
-                                            {paperData.lq.length > 0 && (
-                                                <div className="w-full">
-                                                    <div className="font-bold border-b border-black mb-4">Section B Notes</div>
-                                                    <div className="text-sm text-gray-500 italic">
-                                                        Refer to original questions for detailed steps.
-                                                    </div>
-                                                </div>
-                                            )}
-                                        </div>
-                                    </div>
+                                                        </div>
+                                                    );
+                                                }
+                                                // Scheme Block (uses QuestionBlock in scheme mode)
+                                                return (
+                                                    <QuestionBlock 
+                                                        key={item.id || idx} 
+                                                        item={item} 
+                                                        index={item.globalIndex} 
+                                                        isScheme={true} 
+                                                        type={item.qType} 
+                                                        onSwap={() => {}} 
+                                                        imgFilter={imgFilter} 
+                                                    />
+                                                );
+                                            })}
+                                        </ContentPage>
+                                    ))}
                                 </div>
                             )}
 
