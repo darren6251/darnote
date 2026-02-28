@@ -1,0 +1,491 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"><title>darNote - Shared Workspace</title>
+<link rel="icon" type="image/png" href="https://raw.githubusercontent.com/darren6251/darnote/refs/heads/main/darNote%20logo.png">
+<script crossorigin src="https://unpkg.com/react@18/umd/react.development.js"></script><script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script><script src="https://unpkg.com/@babel/standalone/babel.min.js"></script><script src="https://cdn.tailwindcss.com"></script><script src="https://unpkg.com/framer-motion@10.16.4/dist/framer-motion.js"></script><script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+<script>
+    tailwind.config = { darkMode: 'class', theme: { extend: { colors: { primary: '#1a73e8', 'primary-light': '#4285f4', 'primary-dark': '#1557b0', danger: '#d93025', success: '#1e8e3e', dark: '#202124', light: '#f8fafc', gray: '#5f6368', 'light-gray': '#e8eaed', onyx: '#121212', surface: '#ffffff', 'surface-dark': '#1e1e20', border: '#dadce0', 'border-dark': '#3c4043' }, boxShadow: { ds: '0 1px 2px 0 rgba(60,64,67,0.3), 0 1px 3px 1px rgba(60,64,67,0.15)', 'ds-hover': '0 1px 3px 0 rgba(60,64,67,0.3), 0 4px 8px 3px rgba(60,64,67,0.15)' }, borderRadius: { ds: '16px', xl: '24px' }, fontFamily: { sans: ['Inter', 'sans-serif'] } } } }
+</script>
+<script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-app.js";
+    import { getAuth, signInWithPopup, GoogleAuthProvider, signOut, onAuthStateChanged, signInAnonymously } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-auth.js";
+    import { getFirestore, collection, doc, addDoc, updateDoc, deleteDoc, getDocs, getDoc, setDoc, query, where, orderBy } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-firestore.js";
+    const app = initializeApp({ apiKey: "AIzaSyAvPEac-03kE4oazvaq8K3T2gxLPsnZO20", authDomain: "darnote625.firebaseapp.com", projectId: "darnote625", storageBucket: "darnote625.firebasestorage.app", messagingSenderId: "16458322562", appId: "1:16458322562:web:8894d71f3e6c326eba1a9b" });
+    window.firebase = { app, auth: getAuth(app), db: getFirestore(app), signInWithPopup, GoogleAuthProvider, signOut, onAuthStateChanged, signInAnonymously, collection, doc, addDoc, updateDoc, deleteDoc, getDocs, getDoc, setDoc, query, where, orderBy };
+</script>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@400;500;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+    body { @apply bg-[#f0f4f9] text-[#202124] dark:bg-onyx dark:text-[#e8eaed]; font-family: 'Noto Sans SC', 'Inter', sans-serif; overflow-x: hidden; }
+    ::-webkit-scrollbar { width: 6px; height: 6px; } ::-webkit-scrollbar-thumb { @apply bg-gray/30 hover:bg-gray/50 dark:bg-gray/50 dark:hover:bg-gray/70; border-radius: 10px; }
+    .glass-panel { @apply bg-white/80 dark:bg-surface-dark/80 backdrop-blur-md border border-white/20 dark:border-white/5; }
+</style>
+</head>
+<body>
+<div id="root"></div>
+<script type="text/babel">
+    const { useState, useEffect, useMemo } = React; const { motion, AnimatePresence } = window.Motion;
+
+    const Icons={Plus:p=><svg {...p} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12h14"/><path d="M12 5v14"/></svg>,Trash:p=><svg {...p} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/></svg>,Check:p=><svg {...p} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>,X:p=><svg {...p} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M18 6 6 18"/><path d="m6 6 18 18"/></svg>,Google:p=><svg {...p} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 22C6.477 22 2 17.523 2 12S6.477 2 12 2s10 4.477 10 10-4.477 10-10 10z"/><path d="M12 11h9c.1 1.4.1 2.9-.4 4.3-1.1 3-4.1 5.3-7.6 5.6-5 .5-9.4-3.1-9.9-8.1C2.5 7.1 6 2.3 11 2c2.5-.1 4.9.9 6.7 2.6l-2.7 2.8c-1-.7-2.3-1.1-3.6-1-2.9.2-5.1 2.8-4.9 5.7.2 2.6 2.4 4.7 5 4.7 2 0 3.6-1.1 4.3-2.9H12v-3z" fill="currentColor"/></svg>,Share2:p=><svg {...p} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" x2="15.42" y1="13.51" y2="17.49"/><line x1="15.41" x2="8.59" y1="6.51" y2="10.49"/></svg>,Copy:p=><svg {...p} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect width="14" height="14" x="8" y="8" rx="2" ry="2"/><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/></svg>,ExternalLink:p=><svg {...p} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" x2="21" y1="14" y2="3"/></svg>,Brain:p=><svg {...p} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M9.5 2A2.5 2.5 0 0 1 12 4.5v15a2.5 2.5 0 0 1-4.96.44 2.5 2.5 0 0 1-2.96-3.08 3 3 0 0 1-.34-5.58 2.5 2.5 0 0 1 1.32-4.24 2.5 2.5 0 0 1 1.98-3A2.5 2.5 0 0 1 9.5 2Z"/><path d="M14.5 2A2.5 2.5 0 0 0 12 4.5v15a2.5 2.5 0 0 0 4.96.44 2.5 2.5 0 0 0 2.96-3.08 3 3 0 0 0 .34-5.58 2.5 2.5 0 0 0-1.32-4.24 2.5 2.5 0 0 0-1.98-3A2.5 2.5 0 0 0 14.5 2Z"/></svg>,Folder:p=><svg {...p} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M4 20h16a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-7.93a2 2 0 0 1-1.66-.9l-.82-1.2A2 2 0 0 0 7.93 3H4a2 2 0 0 0-2 2v13c0 1.1.9 2 2 2Z"/></svg>,Lock:p=><svg {...p} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>};
+
+    const cleanLatex = (t) => t ? t.replace(/\$\$/g,'\n').replace(/\$/g,'').replace(/\\text\{([^}]+)\}/g,'$1').replace(/\\times/g,'×').replace(/\\approx/g,'≈').replace(/\\le/g,'≤').replace(/\\ge/g,'≥').replace(/\\rightarrow/g,'→').replace(/\\cdot/g,'·').replace(/\\frac\{([^}]+)\}\{([^}]+)\}/g,'($1/$2)').replace(/\\/g,'') : '';
+
+    /* --- VIEWER COMPONENT (Read Only) --- */
+    const ViewerApp = ({ shareToken, user }) => {
+        const [loading, setLoading] = useState(true);
+        const [shareConfig, setShareConfig] = useState(null);
+        const [logs, setLogs] = useState([]);
+        const [error, setError] = useState(null);
+        const [activeLog, setActiveLog] = useState(null);
+
+        useEffect(() => {
+            const fetchSharedData = async () => {
+                if (!user) return; // Wait for anonymous auth
+                try {
+                    const db = window.firebase.db;
+                    const shareRef = window.firebase.doc(db, 'artifacts', "darnote-app", 'public', 'data', 'shares', shareToken);
+                    const shareSnap = await window.firebase.getDoc(shareRef);
+                    
+                    if (!shareSnap.exists()) {
+                        setError("This link is invalid or has been revoked by the owner.");
+                        setLoading(false);
+                        return;
+                    }
+
+                    const config = shareSnap.data();
+                    setShareConfig(config);
+
+                    // Now fetch logs from the owner's private collection using the criteria
+                    const logsRef = window.firebase.collection(db, 'artifacts', "darnote-app", 'users', config.ownerUid, 'error_logs');
+                    let constraints = [];
+                    
+                    if (config.shareType === 'log' && config.logId) {
+                        // Fetch specific log only
+                        const singleLogRef = window.firebase.doc(db, 'artifacts', "darnote-app", 'users', config.ownerUid, 'error_logs', config.logId);
+                        const singleSnap = await window.firebase.getDoc(singleLogRef);
+                        if (singleSnap.exists()) setLogs([{ id: singleSnap.id, ...singleSnap.data() }]);
+                    } else {
+                        // Fetch by subject/topic
+                        if (config.subject && config.subject !== 'All') constraints.push(window.firebase.where('subject', '==', config.subject));
+                        if (config.topic && config.topic !== 'All') constraints.push(window.firebase.where('topic', '==', config.topic));
+                        
+                        const q = window.firebase.query(logsRef, ...constraints);
+                        const querySnapshot = await window.firebase.getDocs(q);
+                        const fetchedLogs = querySnapshot.docs.map(d => ({ id: d.id, ...d.data() }));
+                        setLogs(fetchedLogs.sort((a,b) => new Date(b.createdAt) - new Date(a.createdAt)));
+                    }
+                    setLoading(false);
+                } catch (err) {
+                    console.error("Fetch Error:", err);
+                    setError("Failed to load shared content. The owner may have restricted access.");
+                    setLoading(false);
+                }
+            };
+            fetchSharedData();
+        }, [shareToken, user]);
+
+        if (loading) return <div className="h-screen w-full flex flex-col items-center justify-center bg-[#f0f4f9] dark:bg-onyx"><div className="w-10 h-10 border-4 border-primary/30 border-t-primary rounded-full animate-spin mb-4"></div><p className="text-gray font-medium">Decrypting secure transmission...</p></div>;
+        if (error) return <div className="h-screen w-full flex flex-col items-center justify-center bg-[#f0f4f9] dark:bg-onyx text-center px-4"><div className="w-16 h-16 bg-danger/10 rounded-full flex items-center justify-center mb-4"><Icons.Lock className="w-8 h-8 text-danger"/></div><h2 className="text-xl font-bold text-dark dark:text-light mb-2">Access Denied</h2><p className="text-gray">{error}</p></div>;
+
+        return (
+            <div className="min-h-screen bg-[#f0f4f9] dark:bg-onyx flex flex-col">
+                <header className="bg-white dark:bg-surface-dark border-b border-light-gray dark:border-border-dark px-6 py-4 flex items-center justify-between sticky top-0 z-30 shadow-sm">
+                    <div className="flex items-center gap-4">
+                        <img src="https://raw.githubusercontent.com/darren6251/darnote/refs/heads/main/darNote%20logo.png" className="w-10 h-10 rounded-xl shadow-sm"/>
+                        <div>
+                            <h1 className="font-bold text-lg text-dark dark:text-light leading-tight">{shareConfig.title || "Shared Workspace"}</h1>
+                            <p className="text-xs text-gray font-medium">Shared by <span className="text-primary">{shareConfig.ownerName}</span> • {logs.length} items</p>
+                        </div>
+                    </div>
+                    <a href="note.html" className="hidden sm:flex px-4 py-2 bg-primary/10 text-primary font-bold rounded-full text-sm hover:bg-primary/20 transition-colors">Create your own</a>
+                </header>
+
+                <main className="flex-1 max-w-7xl mx-auto w-full p-4 md:p-8">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+                        {logs.map((log) => (
+                            <motion.div key={log.id} initial={{opacity:0, y:20}} animate={{opacity:1, y:0}} onClick={() => setActiveLog(log)} className="bg-white dark:bg-surface-dark border border-light-gray dark:border-white/5 rounded-2xl p-5 shadow-sm hover:shadow-ds transition-all cursor-pointer group flex flex-col h-64">
+                                <div className="flex justify-between items-start mb-3">
+                                    <h3 className="font-bold text-dark dark:text-light text-base line-clamp-2 group-hover:text-primary transition-colors">{log.title || "Untitled Log"}</h3>
+                                    <div className="bg-light-gray/50 dark:bg-dark px-2 py-1 rounded text-[10px] font-bold text-gray uppercase tracking-wider shrink-0">{log.questionType}</div>
+                                </div>
+                                <div className="text-xs font-medium text-primary mb-4 flex items-center gap-1.5"><Icons.Folder className="w-3.5 h-3.5"/> {log.subject} {log.topic ? `> ${log.topic}` : ''}</div>
+                                <div className="flex-1 overflow-hidden relative rounded-xl bg-[#f8fafc] dark:bg-dark border border-light-gray dark:border-border-dark flex items-center justify-center group-hover:border-primary/30 transition-colors">
+                                    {(log.questionImages && log.questionImages.length > 0) || log.imageUrl ? (
+                                        <img src={log.questionImages?.[0] || log.imageUrl} className="w-full h-full object-cover opacity-90 group-hover:opacity-100 transition-opacity" />
+                                    ) : (
+                                        <div className="text-gray text-xs font-medium px-4 text-center line-clamp-4">{log.questionText || "No image or text provided."}</div>
+                                    )}
+                                    <div className="absolute inset-0 bg-black/0 group-hover:bg-black/5 dark:group-hover:bg-white/5 transition-colors flex items-center justify-center">
+                                        <div className="opacity-0 group-hover:opacity-100 bg-white dark:bg-onyx text-dark dark:text-light px-4 py-2 rounded-full font-bold text-xs shadow-md transition-all transform scale-95 group-hover:scale-100">View Log</div>
+                                    </div>
+                                </div>
+                            </motion.div>
+                        ))}
+                        {logs.length === 0 && (
+                            <div className="col-span-full py-20 text-center text-gray flex flex-col items-center">
+                                <Icons.Folder className="w-16 h-16 opacity-20 mb-4"/>
+                                <p className="text-lg font-medium">This shared folder is empty.</p>
+                            </div>
+                        )}
+                    </div>
+                </main>
+
+                <AnimatePresence>
+                    {activeLog && (
+                        <div className="fixed inset-0 z-50 bg-white/90 dark:bg-onyx/95 backdrop-blur-md flex flex-col">
+                            <header className="h-16 flex justify-between items-center px-6 border-b border-light-gray dark:border-white/10 shrink-0 bg-white/50 dark:bg-transparent">
+                                <div>
+                                    <div className="font-bold text-lg text-dark dark:text-light">{activeLog.title}</div>
+                                    <div className="text-xs text-gray">{activeLog.subject} • {activeLog.topic}</div>
+                                </div>
+                                <button onClick={() => setActiveLog(null)} className="p-2.5 bg-light-gray/50 dark:bg-white/10 rounded-full hover:bg-gray/20 transition-colors"><Icons.X className="w-5 h-5 text-dark dark:text-light"/></button>
+                            </header>
+                            <div className="flex-1 overflow-y-auto p-4 md:p-8 flex justify-center">
+                                <div className="max-w-5xl w-full grid grid-cols-1 lg:grid-cols-2 gap-8">
+                                    {/* Question Side */}
+                                    <div className="space-y-6">
+                                        <div className="text-xs font-bold text-gray uppercase tracking-wider mb-2">Original Material</div>
+                                        {((activeLog.questionImages && activeLog.questionImages.length > 0) || activeLog.imageUrl) ? (
+                                            <div className="space-y-4">
+                                                {(activeLog.questionImages && activeLog.questionImages.length > 0 ? activeLog.questionImages : [activeLog.imageUrl]).map((src, i) => (
+                                                    src.includes('drive.google.com') ? 
+                                                    <iframe key={i} src={src} className="w-full h-[500px] rounded-2xl shadow-sm border border-light-gray dark:border-white/10 bg-white" /> : 
+                                                    <img key={i} src={src} className="w-full rounded-2xl shadow-sm border border-light-gray dark:border-white/10 bg-white dark:bg-dark" />
+                                                ))}
+                                            </div>
+                                        ) : (
+                                            <div className="bg-white dark:bg-surface-dark p-6 rounded-2xl border border-light-gray dark:border-border-dark text-dark dark:text-light whitespace-pre-wrap">{activeLog.questionText || "No content provided."}</div>
+                                        )}
+                                    </div>
+                                    {/* Solution Side */}
+                                    <div className="space-y-6">
+                                        <div className="text-xs font-bold text-gray uppercase tracking-wider mb-2">Analysis & Solution</div>
+                                        
+                                        {(activeLog.correctAnswer || activeLog.marks) && (
+                                            <div className="flex gap-4">
+                                                {activeLog.correctAnswer && <div className="flex-1 bg-[#f0fdf4] dark:bg-[#12311e] rounded-2xl px-5 py-4 border border-success/20"><div className="text-xs text-success font-bold uppercase mb-1">Correct Answer</div><div className="text-xl font-mono font-bold text-success">{activeLog.correctAnswer}</div></div>}
+                                                {activeLog.marks && <div className="flex-1 bg-[#fef2f2] dark:bg-[#3f1616] rounded-2xl px-5 py-4 border border-danger/20"><div className="text-xs text-danger font-bold uppercase mb-1">Marks Deducted</div><div className="text-xl font-mono font-bold text-danger">{activeLog.marks}</div></div>}
+                                            </div>
+                                        )}
+
+                                        {activeLog.explanation && (
+                                            <div className="bg-white dark:bg-surface-dark rounded-2xl p-6 shadow-sm border border-light-gray dark:border-white/10 relative overflow-hidden">
+                                                <div className="absolute left-0 top-0 bottom-0 w-1.5 bg-primary"></div>
+                                                <div className="flex items-center gap-2 mb-4 text-primary font-bold text-sm"><Icons.Brain className="w-4 h-4"/> Owner's Notes</div>
+                                                <div className="text-base text-dark dark:text-light leading-relaxed whitespace-pre-wrap">{cleanLatex(activeLog.explanation)}</div>
+                                            </div>
+                                        )}
+
+                                        {((activeLog.schemeImages && activeLog.schemeImages.length > 0) || activeLog.markingSchemeUrl) && (
+                                            <div className="space-y-4 pt-4">
+                                                <div className="text-xs font-bold text-gray uppercase tracking-wider mb-2">Marking Scheme</div>
+                                                {(activeLog.schemeImages && activeLog.schemeImages.length > 0 ? activeLog.schemeImages : [activeLog.markingSchemeUrl]).map((src, i) => (
+                                                    src.includes('drive.google.com') ? 
+                                                    <iframe key={i} src={src} className="w-full h-[400px] rounded-2xl shadow-sm border border-light-gray dark:border-white/10 bg-white" /> : 
+                                                    <img key={i} src={src} className="w-full rounded-2xl shadow-sm border border-light-gray dark:border-white/10 bg-white dark:bg-dark" />
+                                                ))}
+                                            </div>
+                                        )}
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    )}
+                </AnimatePresence>
+            </div>
+        );
+    };
+
+    /* --- MANAGER COMPONENT (Logged In, Creating/Managing Links) --- */
+    const ManagerApp = ({ user, initialConfig }) => {
+        const [shares, setShares] = useState([]);
+        const [subjects, setSubjects] = useState([]);
+        const [logsList, setLogsList] = useState([]);
+        const [loading, setLoading] = useState(true);
+        const [isCreating, setIsCreating] = useState(!!(initialConfig.subject || initialConfig.logId));
+        const [newShare, setNewShare] = useState({ title: '', shareType: initialConfig.logId ? 'log' : (initialConfig.topic ? 'topic' : (initialConfig.subject ? 'subject' : 'all')), subject: initialConfig.subject || 'All', topic: initialConfig.topic || 'All', logId: initialConfig.logId || '' });
+        const [submitting, setSubmitting] = useState(false);
+        const [copiedId, setCopiedId] = useState(null);
+
+        useEffect(() => {
+            const fetchData = async () => {
+                const db = window.firebase.db;
+                try {
+                    // Fetch user's existing shares
+                    const sharesRef = window.firebase.collection(db, 'artifacts', "darnote-app", 'public', 'data', 'shares');
+                    const qShares = window.firebase.query(sharesRef, window.firebase.where('ownerUid', '==', user.uid));
+                    const sharesSnap = await window.firebase.getDocs(qShares);
+                    setShares(sharesSnap.docs.map(d => ({ id: d.id, ...d.data() })).sort((a,b) => new Date(b.createdAt) - new Date(a.createdAt)));
+
+                    // Fetch subjects for dropdowns
+                    const subSnap = await window.firebase.getDocs(window.firebase.collection(db, 'artifacts', "darnote-app", 'users', user.uid, 'subjects'));
+                    setSubjects([{id:'all', name:'All', topics:[]}, {id:'gen', name:'General', topics:[]}, ...subSnap.docs.map(d => ({id: d.id, name: d.data().name, topics: d.data().topics || []})).sort((a,b)=>a.name.localeCompare(b.name))]);
+
+                    // Fetch basic log info for specific log selection
+                    const logsRef = window.firebase.collection(db, 'artifacts', "darnote-app", 'users', user.uid, 'error_logs');
+                    const qLogs = window.firebase.query(logsRef, window.firebase.orderBy('createdAt', 'desc'));
+                    const logsSnap = await window.firebase.getDocs(qLogs);
+                    setLogsList(logsSnap.docs.map(d => ({ id: d.id, title: d.data().title || 'Untitled', subject: d.data().subject })));
+                } catch (e) {
+                    console.error("Data fetch error", e);
+                }
+                setLoading(false);
+            };
+            fetchData();
+        }, [user]);
+
+        const handleCreateShare = async () => {
+            if (!newShare.title.trim()) { alert("Please provide a name for this share link."); return; }
+            setSubmitting(true);
+            try {
+                const docRef = await window.firebase.addDoc(window.firebase.collection(window.firebase.db, 'artifacts', "darnote-app", 'public', 'data', 'shares'), {
+                    ownerUid: user.uid,
+                    ownerName: user.displayName || 'darNote User',
+                    title: newShare.title,
+                    shareType: newShare.shareType,
+                    subject: newShare.shareType === 'all' ? 'All' : newShare.subject,
+                    topic: (newShare.shareType === 'subject' || newShare.shareType === 'all') ? 'All' : newShare.topic,
+                    logId: newShare.shareType === 'log' ? newShare.logId : null,
+                    createdAt: new Date().toISOString()
+                });
+                const newShareData = { id: docRef.id, ownerUid: user.uid, title: newShare.title, shareType: newShare.shareType, subject: newShare.subject, topic: newShare.topic, logId: newShare.logId, createdAt: new Date().toISOString() };
+                setShares([newShareData, ...shares]);
+                setIsCreating(false);
+                setNewShare({ title: '', shareType: 'all', subject: 'All', topic: 'All', logId: '' });
+                handleCopyLink(docRef.id);
+            } catch (e) {
+                alert("Failed to create link: " + e.message);
+            }
+            setSubmitting(false);
+        };
+
+        const handleDeleteShare = async (id) => {
+            if (!confirm("Are you sure? Anyone with this link will immediately lose access.")) return;
+            try {
+                await window.firebase.deleteDoc(window.firebase.doc(window.firebase.db, 'artifacts', "darnote-app", 'public', 'data', 'shares', id));
+                setShares(shares.filter(s => s.id !== id));
+            } catch (e) { alert("Failed to delete."); }
+        };
+
+        const handleCopyLink = (id) => {
+            const url = `${window.location.origin}${window.location.pathname}?s=${id}`;
+            navigator.clipboard.writeText(url);
+            setCopiedId(id);
+            setTimeout(() => setCopiedId(null), 2000);
+        };
+
+        const currentSub = subjects.find(s => s.name === newShare.subject);
+
+        return (
+            <div className="min-h-screen bg-[#f0f4f9] dark:bg-onyx flex flex-col">
+                <header className="bg-white dark:bg-surface-dark border-b border-light-gray dark:border-border-dark px-6 py-4 flex items-center justify-between sticky top-0 z-30">
+                    <div className="flex items-center gap-4">
+                        <img src="https://raw.githubusercontent.com/darren6251/darnote/refs/heads/main/darNote%20logo.png" className="w-8 h-8 rounded-lg shadow-sm"/>
+                        <span className="font-bold text-lg text-dark dark:text-light tracking-tight">Share Manager</span>
+                    </div>
+                    <div className="flex items-center gap-4">
+                        <button onClick={() => window.location.href='el.html'} className="text-sm font-medium text-gray hover:text-dark dark:hover:text-light transition-colors">Back to Editor</button>
+                        {user.photoURL ? <img src={user.photoURL} className="w-8 h-8 rounded-full border border-light-gray dark:border-white/10"/> : <div className="w-8 h-8 rounded-full bg-primary text-white flex items-center justify-center font-bold text-xs">{user.displayName?.charAt(0) || 'U'}</div>}
+                    </div>
+                </header>
+
+                <main className="flex-1 max-w-5xl mx-auto w-full p-4 md:p-8 space-y-8">
+                    <div className="flex justify-between items-center">
+                        <div>
+                            <h2 className="text-2xl font-bold text-dark dark:text-light">Active Broadcasts</h2>
+                            <p className="text-sm text-gray mt-1">Manage who can see your pain and suffering.</p>
+                        </div>
+                        <button onClick={() => setIsCreating(true)} className="bg-primary text-white px-5 py-2.5 rounded-full font-medium flex items-center gap-2 shadow-md hover:bg-primary-dark transition-all"><Icons.Plus className="w-4 h-4"/> New Link</button>
+                    </div>
+
+                    {loading ? (
+                        <div className="text-center py-20"><div className="w-8 h-8 border-4 border-primary/30 border-t-primary rounded-full animate-spin mx-auto"></div></div>
+                    ) : shares.length === 0 ? (
+                        <div className="bg-white dark:bg-surface-dark border border-dashed border-gray/30 rounded-3xl p-12 text-center flex flex-col items-center justify-center">
+                            <Icons.Share2 className="w-16 h-16 text-gray opacity-30 mb-4"/>
+                            <h3 className="text-lg font-bold text-dark dark:text-light mb-2">No Active Links</h3>
+                            <p className="text-gray text-sm max-w-md mx-auto mb-6">You haven't shared any of your error logs yet. Create a link to share your study materials with friends or tutors.</p>
+                            <button onClick={() => setIsCreating(true)} className="bg-primary/10 text-primary font-bold px-6 py-2 rounded-full hover:bg-primary/20 transition-colors">Generate First Link</button>
+                        </div>
+                    ) : (
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            {shares.map(share => (
+                                <div key={share.id} className="bg-white dark:bg-surface-dark border border-light-gray dark:border-white/10 rounded-2xl p-5 shadow-sm hover:shadow-ds transition-all flex flex-col">
+                                    <div className="flex justify-between items-start mb-3">
+                                        <h3 className="font-bold text-dark dark:text-light text-lg">{share.title}</h3>
+                                        <div className="bg-light-gray/50 dark:bg-dark px-2 py-1 rounded text-[10px] font-bold text-gray uppercase tracking-wider">{share.shareType}</div>
+                                    </div>
+                                    <div className="text-sm text-gray mb-4 flex-1">
+                                        {share.shareType === 'log' ? <span>Specific Log ID: {share.logId}</span> :
+                                         share.shareType === 'topic' ? <span>{share.subject} &gt; {share.topic}</span> :
+                                         share.shareType === 'subject' ? <span>Subject: {share.subject} (All Topics)</span> :
+                                         <span>All Subjects & Topics</span>}
+                                    </div>
+                                    <div className="flex justify-between items-center pt-4 border-t border-light-gray dark:border-white/5">
+                                        <div className="text-xs text-gray">{new Date(share.createdAt).toLocaleDateString()}</div>
+                                        <div className="flex gap-2">
+                                            <a href={`?s=${share.id}`} target="_blank" className="p-2 bg-light-gray/50 dark:bg-white/5 rounded-full hover:text-primary transition-colors" title="Preview"><Icons.ExternalLink className="w-4 h-4"/></a>
+                                            <button onClick={() => handleCopyLink(share.id)} className={`p-2 rounded-full transition-colors flex items-center gap-1.5 px-3 text-xs font-bold ${copiedId === share.id ? 'bg-success/10 text-success' : 'bg-primary/10 text-primary hover:bg-primary/20'}`}>{copiedId === share.id ? <><Icons.Check className="w-3.5 h-3.5"/> Copied!</> : <><Icons.Copy className="w-3.5 h-3.5"/> Copy Link</>}</button>
+                                            <button onClick={() => handleDeleteShare(share.id)} className="p-2 bg-danger/5 text-danger rounded-full hover:bg-danger hover:text-white transition-colors"><Icons.Trash className="w-4 h-4"/></button>
+                                        </div>
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+                    )}
+                </main>
+
+                <AnimatePresence>
+                    {isCreating && (
+                        <div className="fixed inset-0 z-50 bg-dark/60 backdrop-blur-sm flex items-center justify-center p-4">
+                            <motion.div initial={{opacity:0, scale:0.95}} animate={{opacity:1, scale:1}} exit={{opacity:0, scale:0.95}} className="bg-white dark:bg-surface-dark w-full max-w-lg rounded-[24px] shadow-2xl overflow-hidden border border-white/20 dark:border-white/5 flex flex-col">
+                                <div className="p-6 border-b border-light-gray dark:border-white/5 flex justify-between items-center">
+                                    <h3 className="text-xl font-bold dark:text-light flex items-center gap-2"><Icons.Share2 className="w-5 h-5 text-primary"/> Generate Share Link</h3>
+                                    <button onClick={() => setIsCreating(false)} className="p-2 rounded-full hover:bg-light-gray dark:hover:bg-white/10 transition-colors"><Icons.X className="w-5 h-5 text-gray"/></button>
+                                </div>
+                                <div className="p-6 space-y-5 flex-1 overflow-y-auto">
+                                    <div>
+                                        <label className="text-sm font-semibold text-dark dark:text-light block mb-2">Link Alias / Note</label>
+                                        <input value={newShare.title} onChange={e=>setNewShare({...newShare, title: e.target.value})} placeholder="e.g., Study Guide for John" className="w-full bg-[#f8fafc] dark:bg-dark border border-light-gray dark:border-border-dark focus:border-primary dark:focus:border-primary rounded-xl px-4 py-3 text-sm focus:outline-none transition-all dark:text-light"/>
+                                    </div>
+                                    <div>
+                                        <label className="text-sm font-semibold text-dark dark:text-light block mb-2">What are you sharing?</label>
+                                        <div className="flex bg-light-gray/50 dark:bg-dark p-1 rounded-xl mb-4">
+                                            {[{id:'all', label:'Everything'}, {id:'subject', label:'Subject'}, {id:'topic', label:'Topic'}, {id:'log', label:'Specific Log'}].map(t => (
+                                                <button key={t.id} onClick={()=>setNewShare({...newShare, shareType: t.id})} className={`flex-1 py-2 rounded-lg text-xs font-bold transition-all ${newShare.shareType === t.id ? 'bg-white dark:bg-surface-dark shadow-sm text-primary dark:text-primary-light' : 'text-gray hover:text-dark dark:hover:text-light'}`}>{t.label}</button>
+                                            ))}
+                                        </div>
+
+                                        {newShare.shareType !== 'all' && (
+                                            <div className="space-y-4 p-4 border border-light-gray dark:border-white/5 rounded-xl bg-light-gray/20 dark:bg-black/10">
+                                                {(newShare.shareType === 'subject' || newShare.shareType === 'topic') && (
+                                                    <div>
+                                                        <label className="text-xs font-semibold text-gray block mb-1">Select Subject</label>
+                                                        <select value={newShare.subject} onChange={e=>setNewShare({...newShare, subject: e.target.value, topic: 'All'})} className="w-full bg-white dark:bg-surface-dark border border-light-gray dark:border-border-dark rounded-lg px-3 py-2 text-sm outline-none text-dark dark:text-light cursor-pointer">
+                                                            {subjects.map(s=><option key={s.id} value={s.name}>{s.name}</option>)}
+                                                        </select>
+                                                    </div>
+                                                )}
+                                                {newShare.shareType === 'topic' && (
+                                                    <div>
+                                                        <label className="text-xs font-semibold text-gray block mb-1">Select Topic</label>
+                                                        <select value={newShare.topic} onChange={e=>setNewShare({...newShare, topic: e.target.value})} className="w-full bg-white dark:bg-surface-dark border border-light-gray dark:border-border-dark rounded-lg px-3 py-2 text-sm outline-none text-dark dark:text-light cursor-pointer">
+                                                            <option value="All">All Topics in {newShare.subject}</option>
+                                                            {currentSub?.topics?.map(t => <option key={t} value={t}>{t}</option>)}
+                                                        </select>
+                                                    </div>
+                                                )}
+                                                {newShare.shareType === 'log' && (
+                                                    <div>
+                                                        <label className="text-xs font-semibold text-gray block mb-1">Select Log</label>
+                                                        <select value={newShare.logId} onChange={e=>setNewShare({...newShare, logId: e.target.value})} className="w-full bg-white dark:bg-surface-dark border border-light-gray dark:border-border-dark rounded-lg px-3 py-2 text-sm outline-none text-dark dark:text-light cursor-pointer">
+                                                            <option value="">-- Choose a specific log --</option>
+                                                            {logsList.map(l=><option key={l.id} value={l.id}>[{l.subject}] {l.title}</option>)}
+                                                        </select>
+                                                    </div>
+                                                )}
+                                            </div>
+                                        )}
+                                    </div>
+                                    <div className="bg-[#f0fdf4] dark:bg-[#12311e] p-3 rounded-lg border border-success/20 flex gap-3 text-sm">
+                                        <Icons.Lock className="w-5 h-5 text-success shrink-0"/>
+                                        <p className="text-success font-medium">Recipients will only have <b>read-only</b> access to the items matching this filter. They cannot edit your logs.</p>
+                                    </div>
+                                </div>
+                                <div className="p-6 border-t border-light-gray dark:border-white/5 bg-light-gray/30 dark:bg-black/20 flex justify-end gap-3">
+                                    <button onClick={() => setIsCreating(false)} className="px-5 py-2.5 rounded-full font-medium text-gray hover:bg-black/5 dark:hover:bg-white/5 transition-colors text-sm">Cancel</button>
+                                    <button onClick={handleCreateShare} disabled={submitting || (newShare.shareType === 'log' && !newShare.logId)} className="bg-primary text-white px-6 py-2.5 rounded-full font-bold text-sm hover:bg-primary-dark disabled:opacity-50 transition-all flex items-center gap-2 shadow-md">
+                                        {submitting ? <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin"/> : "Generate Link"}
+                                    </button>
+                                </div>
+                            </motion.div>
+                        </div>
+                    )}
+                </AnimatePresence>
+            </div>
+        );
+    };
+
+    /* --- MAIN ROUTER --- */
+    const App = () => {
+        const [user, setUser] = useState(null);
+        const [authResolved, setAuthResolved] = useState(false);
+        const [isDarkMode, setIsDarkMode] = useState(true);
+
+        const urlParams = new URLSearchParams(window.location.search);
+        const shareToken = urlParams.get('s');
+        
+        // Initial setup for the creator (reading URL from el.html)
+        const initialConfig = useMemo(() => ({
+            subject: urlParams.get('subject'),
+            topic: urlParams.get('topic'),
+            logId: urlParams.get('log')
+        }), []);
+
+        useEffect(() => {
+            const initAuth = async () => {
+                const auth = window.firebase.auth;
+                window.firebase.onAuthStateChanged(auth, async (u) => {
+                    if (u) {
+                        setUser(u);
+                        setAuthResolved(true);
+                    } else {
+                        if (shareToken) {
+                            // Viewers need anonymous auth to read public data securely
+                            try {
+                                await window.firebase.signInAnonymously(auth);
+                            } catch (e) {
+                                console.error("Anonymous auth failed", e);
+                                setAuthResolved(true); // Proceed anyway to show error
+                            }
+                        } else {
+                            setUser(null);
+                            setAuthResolved(true);
+                        }
+                    }
+                });
+            };
+            initAuth();
+        }, [shareToken]);
+
+        useEffect(() => { if(isDarkMode) document.documentElement.classList.add('dark'); else document.documentElement.classList.remove('dark'); }, [isDarkMode]);
+
+        if (!authResolved) {
+            return <div className="h-screen w-full flex items-center justify-center bg-[#f0f4f9] dark:bg-onyx"><div className="w-12 h-12 border-4 border-primary/30 border-t-primary rounded-full animate-spin"></div></div>;
+        }
+
+        // Mode 1: Viewing someone else's shared link
+        if (shareToken) {
+            return (
+                <div className="relative">
+                    <ViewerApp shareToken={shareToken} user={user} />
+                    <button onClick={()=>setIsDarkMode(!isDarkMode)} className="fixed bottom-6 right-6 p-3 bg-white dark:bg-surface-dark shadow-ds rounded-full text-gray hover:text-primary transition-colors z-50">
+                        {isDarkMode ? <Icons.Sun className="w-5 h-5"/> : <Icons.Moon className="w-5 h-5"/>}
+                    </button>
+                </div>
+            );
+        }
+
+        // Mode 2: Managing your own links
+        if (!user) {
+            return (
+                <div className="h-screen w-full flex items-center justify-center bg-white dark:bg-onyx flex-col gap-6 relative overflow-hidden">
+                    <div className="z-10 flex flex-col items-center">
+                        <img src="https://raw.githubusercontent.com/darren6251/darnote/refs/heads/main/darNote%20logo.png" className="w-20 h-20 mb-6 rounded-2xl shadow-ds"/>
+                        <h1 className="text-4xl font-bold text-dark dark:text-light tracking-tight font-sans mb-3">darNote Sharing</h1>
+                        <p className="text-base text-gray max-w-sm text-center mb-10">Sign in to securely manage your broadcast links and let others view your suffering.</p>
+                        <button onClick={() => window.firebase.signInWithPopup(window.firebase.auth, new window.firebase.GoogleAuthProvider())} className="bg-primary text-white px-8 py-4 rounded-full font-bold flex gap-3 items-center hover:bg-primary-dark transition-all shadow-md hover:shadow-lg justify-center text-sm">
+                            <Icons.Google className="w-5 h-5"/> Login to Manage Links
+                        </button>
+                    </div>
+                </div>
+            );
+        }
+
+        return <ManagerApp user={user} initialConfig={initialConfig} />;
+    };
+
+    const root = ReactDOM.createRoot(document.getElementById('root')); root.render(<App />);
+</script>
+</body>
+</html>
