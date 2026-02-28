@@ -10,9 +10,9 @@
 <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-app.js";
     import { getAuth, signInWithPopup, GoogleAuthProvider, signOut, onAuthStateChanged, signInAnonymously } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-auth.js";
-    import { getFirestore, collection, doc, addDoc, updateDoc, deleteDoc, getDocs, getDoc, setDoc, query, where, orderBy } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-firestore.js";
+    import { getFirestore, collection, doc, addDoc, updateDoc, deleteDoc, getDocs, getDoc, setDoc, query, where, orderBy, limit } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-firestore.js";
     const app = initializeApp({ apiKey: "AIzaSyAvPEac-03kE4oazvaq8K3T2gxLPsnZO20", authDomain: "darnote625.firebaseapp.com", projectId: "darnote625", storageBucket: "darnote625.firebasestorage.app", messagingSenderId: "16458322562", appId: "1:16458322562:web:8894d71f3e6c326eba1a9b" });
-    window.firebase = { app, auth: getAuth(app), db: getFirestore(app), signInWithPopup, GoogleAuthProvider, signOut, onAuthStateChanged, signInAnonymously, collection, doc, addDoc, updateDoc, deleteDoc, getDocs, getDoc, setDoc, query, where, orderBy };
+    window.firebase = { app, auth: getAuth(app), db: getFirestore(app), signInWithPopup, GoogleAuthProvider, signOut, onAuthStateChanged, signInAnonymously, collection, doc, addDoc, updateDoc, deleteDoc, getDocs, getDoc, setDoc, query, where, orderBy, limit };
 </script>
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@400;500;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 <style>
@@ -36,6 +36,7 @@
         const [shareConfig, setShareConfig] = useState(null);
         const [logs, setLogs] = useState([]);
         const [error, setError] = useState(null);
+        const [indexLink, setIndexLink] = useState(null);
         const [activeLog, setActiveLog] = useState(null);
 
         useEffect(() => {
@@ -55,7 +56,7 @@
                     const config = shareSnap.data();
                     setShareConfig(config);
 
-                    // Now fetch logs from the owner's private collection using the criteria
+                    // Fetch logs optimally using limits and direct sorting
                     const logsRef = window.firebase.collection(db, 'artifacts', "darnote-app", 'users', config.ownerUid, 'error_logs');
                     let constraints = [];
                     
@@ -65,18 +66,32 @@
                         const singleSnap = await window.firebase.getDoc(singleLogRef);
                         if (singleSnap.exists()) setLogs([{ id: singleSnap.id, ...singleSnap.data() }]);
                     } else {
-                        // Fetch by subject/topic
+                        // Advanced filtering with indexing to save read costs
                         if (config.subject && config.subject !== 'All') constraints.push(window.firebase.where('subject', '==', config.subject));
                         if (config.topic && config.topic !== 'All') constraints.push(window.firebase.where('topic', '==', config.topic));
+                        
+                        // Force Firebase to do the sorting so we only read what we need
+                        constraints.push(window.firebase.orderBy('createdAt', 'desc'));
+                        constraints.push(window.firebase.limit(100)); // Hard cap to prevent massive read bills
                         
                         const q = window.firebase.query(logsRef, ...constraints);
                         const querySnapshot = await window.firebase.getDocs(q);
                         const fetchedLogs = querySnapshot.docs.map(d => ({ id: d.id, ...d.data() }));
-                        setLogs(fetchedLogs.sort((a,b) => new Date(b.createdAt) - new Date(a.createdAt)));
+                        setLogs(fetchedLogs);
                     }
                     setLoading(false);
                 } catch (err) {
                     console.error("Fetch Error:", err);
+                    const msg = err.message || "";
+                    if (msg.includes("requires an index")) {
+                        const match = msg.match(/(https:\/\/console\.firebase\.google\.com[^\s]+)/);
+                        if (match) {
+                            setError("Firebase requires a database index to efficiently run this specific filter combination.");
+                            setIndexLink(match[0]);
+                            setLoading(false);
+                            return;
+                        }
+                    }
                     setError("Failed to load shared content. The owner may have restricted access.");
                     setLoading(false);
                 }
@@ -85,7 +100,21 @@
         }, [shareToken, user]);
 
         if (loading) return <div className="h-screen w-full flex flex-col items-center justify-center bg-[#f0f4f9] dark:bg-onyx"><div className="w-10 h-10 border-4 border-primary/30 border-t-primary rounded-full animate-spin mb-4"></div><p className="text-gray font-medium">Decrypting secure transmission...</p></div>;
-        if (error) return <div className="h-screen w-full flex flex-col items-center justify-center bg-[#f0f4f9] dark:bg-onyx text-center px-4"><div className="w-16 h-16 bg-danger/10 rounded-full flex items-center justify-center mb-4"><Icons.Lock className="w-8 h-8 text-danger"/></div><h2 className="text-xl font-bold text-dark dark:text-light mb-2">Access Denied</h2><p className="text-gray">{error}</p></div>;
+        if (error) return (
+            <div className="h-screen w-full flex flex-col items-center justify-center bg-[#f0f4f9] dark:bg-onyx text-center px-4">
+                <div className="w-16 h-16 bg-danger/10 rounded-full flex items-center justify-center mb-4"><Icons.Lock className="w-8 h-8 text-danger"/></div>
+                <h2 className="text-xl font-bold text-dark dark:text-light mb-2">Access Denied / Query Error</h2>
+                <p className="text-gray mb-6 max-w-md mx-auto">{error}</p>
+                {indexLink && (
+                    <div className="flex flex-col items-center">
+                        <a href={indexLink} target="_blank" rel="noopener noreferrer" className="bg-primary text-white px-8 py-3 rounded-full font-bold shadow-md hover:bg-primary-dark transition-all flex items-center gap-2 mb-3">
+                            <Icons.Check className="w-5 h-5"/> Build Required Index
+                        </a>
+                        <p className="text-xs text-gray font-medium uppercase tracking-wider">Only the database owner needs to click this</p>
+                    </div>
+                )}
+            </div>
+        );
 
         return (
             <div className="min-h-screen bg-[#f0f4f9] dark:bg-onyx flex flex-col">
@@ -202,6 +231,8 @@
         const [subjects, setSubjects] = useState([]);
         const [logsList, setLogsList] = useState([]);
         const [loading, setLoading] = useState(true);
+        const [fetchError, setFetchError] = useState(null);
+        const [indexLink, setIndexLink] = useState(null);
         const [isCreating, setIsCreating] = useState(!!(initialConfig.subject || initialConfig.logId));
         const [newShare, setNewShare] = useState({ title: '', shareType: initialConfig.logId ? 'log' : (initialConfig.topic ? 'topic' : (initialConfig.subject ? 'subject' : 'all')), subject: initialConfig.subject || 'All', topic: initialConfig.topic || 'All', logId: initialConfig.logId || '' });
         const [submitting, setSubmitting] = useState(false);
@@ -211,11 +242,11 @@
             const fetchData = async () => {
                 const db = window.firebase.db;
                 try {
-                    // Fetch user's existing shares
+                    // Fetch user's existing shares (using orderBy explicitly to optimize, which may trigger index prompt if missing)
                     const sharesRef = window.firebase.collection(db, 'artifacts', "darnote-app", 'public', 'data', 'shares');
-                    const qShares = window.firebase.query(sharesRef, window.firebase.where('ownerUid', '==', user.uid));
+                    const qShares = window.firebase.query(sharesRef, window.firebase.where('ownerUid', '==', user.uid), window.firebase.orderBy('createdAt', 'desc'));
                     const sharesSnap = await window.firebase.getDocs(qShares);
-                    setShares(sharesSnap.docs.map(d => ({ id: d.id, ...d.data() })).sort((a,b) => new Date(b.createdAt) - new Date(a.createdAt)));
+                    setShares(sharesSnap.docs.map(d => ({ id: d.id, ...d.data() })));
 
                     // Fetch subjects for dropdowns
                     const subSnap = await window.firebase.getDocs(window.firebase.collection(db, 'artifacts', "darnote-app", 'users', user.uid, 'subjects'));
@@ -223,11 +254,21 @@
 
                     // Fetch basic log info for specific log selection
                     const logsRef = window.firebase.collection(db, 'artifacts', "darnote-app", 'users', user.uid, 'error_logs');
-                    const qLogs = window.firebase.query(logsRef, window.firebase.orderBy('createdAt', 'desc'));
+                    const qLogs = window.firebase.query(logsRef, window.firebase.orderBy('createdAt', 'desc'), window.firebase.limit(100));
                     const logsSnap = await window.firebase.getDocs(qLogs);
                     setLogsList(logsSnap.docs.map(d => ({ id: d.id, title: d.data().title || 'Untitled', subject: d.data().subject })));
                 } catch (e) {
                     console.error("Data fetch error", e);
+                    const msg = e.message || "";
+                    if (msg.includes("requires an index")) {
+                        const match = msg.match(/(https:\/\/console\.firebase\.google\.com[^\s]+)/);
+                        if (match) {
+                            setFetchError("Firebase requires an index to load your dashboard efficiently.");
+                            setIndexLink(match[0]);
+                        }
+                    } else {
+                        setFetchError("Failed to fetch dashboard data.");
+                    }
                 }
                 setLoading(false);
             };
@@ -300,6 +341,17 @@
 
                     {loading ? (
                         <div className="text-center py-20"><div className="w-8 h-8 border-4 border-primary/30 border-t-primary rounded-full animate-spin mx-auto"></div></div>
+                    ) : fetchError ? (
+                        <div className="bg-white dark:bg-surface-dark border border-danger/30 rounded-3xl p-12 text-center flex flex-col items-center justify-center shadow-sm">
+                            <Icons.Lock className="w-16 h-16 text-danger opacity-50 mb-4"/>
+                            <h3 className="text-lg font-bold text-dark dark:text-light mb-2">Database Index Required</h3>
+                            <p className="text-gray text-sm max-w-md mx-auto mb-6">{fetchError}</p>
+                            {indexLink && (
+                                <a href={indexLink} target="_blank" rel="noopener noreferrer" className="bg-primary text-white font-bold px-6 py-3 rounded-full hover:bg-primary-dark transition-colors shadow-md flex items-center gap-2">
+                                    <Icons.Check className="w-4 h-4"/> Click Here to Build Index
+                                </a>
+                            )}
+                        </div>
                     ) : shares.length === 0 ? (
                         <div className="bg-white dark:bg-surface-dark border border-dashed border-gray/30 rounded-3xl p-12 text-center flex flex-col items-center justify-center">
                             <Icons.Share2 className="w-16 h-16 text-gray opacity-30 mb-4"/>
