@@ -66,8 +66,97 @@
     };
 
     const MultiImageUploader = ({ images = [], onUpdate, label, isUploading, onImageClick }) => {
-        const [isDragging, setIsDragging] = useState(false); const fileInputRef = useRef(null); const imageList = Array.isArray(images) ? images : (images ? [images] : []); const handleFiles = (files) => { Array.from(files).forEach(file => { if (file.type.startsWith('image/') || file.type === 'application/pdf') onUpdate(file, 'add'); }); }; const handlePasteClick = async () => { try { const items = await navigator.clipboard.read(); for (const item of items) { for (const type of item.types) { if (type.startsWith("image/") || type === 'application/pdf') { const blob = await item.getType(type); onUpdate(blob, 'add'); } } } } catch (err) { alert("Clipboard permission denied."); } };
-        return (<div className="space-y-3"><div className="flex justify-between items-center"><label className="text-sm font-semibold text-dark dark:text-light flex items-center gap-2">{label} <span className="text-[10px] font-medium text-gray bg-light-gray dark:bg-dark px-2 py-0.5 rounded-full">{imageList.length} files</span></label><div className="flex gap-2"><button onClick={handlePasteClick} className="text-xs font-medium flex items-center gap-1.5 text-primary hover:bg-primary/10 px-3 py-1.5 rounded-full transition-colors"><Icons.Clip className="w-3.5 h-3.5"/> Paste</button><button onClick={() => fileInputRef.current.click()} className="text-xs font-medium flex items-center gap-1.5 text-primary hover:bg-primary/10 px-3 py-1.5 rounded-full transition-colors"><Icons.Plus className="w-3.5 h-3.5"/> Add</button></div><input type="file" multiple ref={fileInputRef} style={{display:'none'}} onChange={(e) => handleFiles(e.target.files)} accept="image/*,application/pdf" /></div><div className={`w-full min-h-[140px] bg-[#f8fafc] dark:bg-dark border-2 border-dashed rounded-xl p-4 transition-all cursor-pointer ${isDragging ? 'border-primary bg-primary/5' : 'border-gray/30 hover:border-primary/50'}`} onClick={() => imageList.length === 0 && fileInputRef.current.click()} onDragOver={(e) => { e.preventDefault(); setIsDragging(true); }} onDragLeave={() => setIsDragging(false)} onDrop={(e) => { e.preventDefault(); setIsDragging(false); handleFiles(e.dataTransfer.files); }} onPaste={(e) => handleFiles(e.clipboardData.files)} tabIndex="0">{imageList.length === 0 ? (<div className="h-28 flex flex-col items-center justify-center pointer-events-none">{isUploading ? <div className="w-8 h-8 border-4 border-primary/30 border-t-primary rounded-full animate-spin mb-3"/> : <div className="w-10 h-10 bg-white dark:bg-surface-dark rounded-full shadow-sm flex items-center justify-center mb-3"><Icons.Image className="w-5 h-5 text-gray"/></div>}<span className="text-sm text-dark dark:text-light font-medium">{isUploading ? "Uploading to Drive..." : "Click or drag files here"}</span><span className="text-xs text-gray mt-1">Supports JPG, PNG, PDF</span></div>) : (<div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 gap-3">{imageList.map((url, idx) => (<div key={idx} onClick={(e) => {e.stopPropagation(); onImageClick()}} className="group relative aspect-square bg-white dark:bg-surface-dark rounded-xl overflow-hidden shadow-sm hover:shadow-md transition-all cursor-zoom-in border border-light-gray dark:border-border-dark">{url.includes('drive.google.com') ? <div className="w-full h-full flex flex-col items-center justify-center bg-[#fef2f2] dark:bg-[#3f1616] text-danger"><Icons.File className="w-8 h-8"/><span className="text-[10px] font-bold mt-2">PDF</span></div> : <img src={url} className="w-full h-full object-cover" />}<div className="absolute inset-0 bg-dark/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-3"><div className="p-2 bg-white/20 rounded-full text-white backdrop-blur-md"><Icons.ZoomIn className="w-4 h-4"/></div><button onClick={(e) => { e.stopPropagation(); onUpdate(idx, 'remove'); }} className="p-2 bg-danger rounded-full text-white shadow-lg hover:scale-110 transition-transform" title="Remove"><Icons.Trash className="w-4 h-4"/></button></div></div>))}{isUploading && (<div className="aspect-square rounded-xl bg-white dark:bg-surface-dark flex items-center justify-center border border-light-gray dark:border-border-dark shadow-sm"><div className="w-6 h-6 border-2 border-primary/30 border-t-primary rounded-full animate-spin"></div></div>)}</div>)}</div></div>);
+        const [isDragging, setIsDragging] = useState(false);
+        const [copiedUrl, setCopiedUrl] = useState(null);
+        const fileInputRef = useRef(null);
+        const imageList = Array.isArray(images) ? images : (images ? [images] : []);
+
+        const handleFiles = (files) => {
+            Array.from(files).forEach(file => {
+                if (file.type.startsWith('image/') || file.type === 'application/pdf') onUpdate(file, 'add');
+            });
+        };
+
+        const handleCopyUrl = async (url) => {
+            try {
+                await navigator.clipboard.writeText(url);
+                setCopiedUrl(url);
+                setTimeout(() => setCopiedUrl(null), 2000);
+            } catch (err) {
+                console.error("Failed to copy URL", err);
+            }
+        };
+
+        const handlePasteClick = async () => {
+            try {
+                const items = await navigator.clipboard.read();
+                let foundBlob = false;
+                for (const item of items) {
+                    for (const type of item.types) {
+                        if (type.startsWith("image/") || type === 'application/pdf') {
+                            const blob = await item.getType(type);
+                            onUpdate(blob, 'add');
+                            foundBlob = true;
+                        }
+                    }
+                }
+                if (!foundBlob) {
+                    const text = await navigator.clipboard.readText();
+                    if (text && (text.startsWith('http') || text.startsWith('data:'))) {
+                        onUpdate(text, 'add-url');
+                    } else {
+                        alert("No valid image or copied image link found in clipboard.");
+                    }
+                }
+            } catch (err) {
+                try {
+                    const text = await navigator.clipboard.readText();
+                    if (text && (text.startsWith('http') || text.startsWith('data:'))) {
+                        onUpdate(text, 'add-url');
+                    } else {
+                        alert("Clipboard permission denied or no valid link found.");
+                    }
+                } catch(e) {
+                    alert("Clipboard permission denied.");
+                }
+            }
+        };
+
+        return (
+            <div className="space-y-3">
+                <div className="flex justify-between items-center">
+                    <label className="text-sm font-semibold text-dark dark:text-light flex items-center gap-2">{label} <span className="text-[10px] font-medium text-gray bg-light-gray dark:bg-dark px-2 py-0.5 rounded-full">{imageList.length} files</span></label>
+                    <div className="flex gap-2">
+                        <button onClick={handlePasteClick} className="text-xs font-medium flex items-center gap-1.5 text-primary hover:bg-primary/10 px-3 py-1.5 rounded-full transition-colors"><Icons.Clip className="w-3.5 h-3.5"/> Paste</button>
+                        <button onClick={() => fileInputRef.current.click()} className="text-xs font-medium flex items-center gap-1.5 text-primary hover:bg-primary/10 px-3 py-1.5 rounded-full transition-colors"><Icons.Plus className="w-3.5 h-3.5"/> Add</button>
+                    </div>
+                    <input type="file" multiple ref={fileInputRef} style={{display:'none'}} onChange={(e) => handleFiles(e.target.files)} accept="image/*,application/pdf" />
+                </div>
+                <div className={`w-full min-h-[140px] bg-[#f8fafc] dark:bg-dark border-2 border-dashed rounded-xl p-4 transition-all cursor-pointer ${isDragging ? 'border-primary bg-primary/5' : 'border-gray/30 hover:border-primary/50'}`} onClick={() => imageList.length === 0 && fileInputRef.current.click()} onDragOver={(e) => { e.preventDefault(); setIsDragging(true); }} onDragLeave={() => setIsDragging(false)} onDrop={(e) => { e.preventDefault(); setIsDragging(false); handleFiles(e.dataTransfer.files); }} onPaste={(e) => { const files = e.clipboardData.files; if (files && files.length > 0) { handleFiles(files); } else { const text = e.clipboardData.getData('text'); if (text && (text.startsWith('http') || text.startsWith('data:'))) onUpdate(text, 'add-url'); } }} tabIndex="0">
+                    {imageList.length === 0 ? (
+                        <div className="h-28 flex flex-col items-center justify-center pointer-events-none">
+                            {isUploading ? <div className="w-8 h-8 border-4 border-primary/30 border-t-primary rounded-full animate-spin mb-3"/> : <div className="w-10 h-10 bg-white dark:bg-surface-dark rounded-full shadow-sm flex items-center justify-center mb-3"><Icons.Image className="w-5 h-5 text-gray"/></div>}
+                            <span className="text-sm text-dark dark:text-light font-medium">{isUploading ? "Uploading to Drive..." : "Click or drag files here"}</span>
+                            <span className="text-xs text-gray mt-1">Supports JPG, PNG, PDF</span>
+                        </div>
+                    ) : (
+                        <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 gap-3">
+                            {imageList.map((url, idx) => (
+                                <div key={idx} onClick={(e) => {e.stopPropagation(); onImageClick()}} className="group relative aspect-square bg-white dark:bg-surface-dark rounded-xl overflow-hidden shadow-sm hover:shadow-md transition-all cursor-zoom-in border border-light-gray dark:border-border-dark">
+                                    {url.includes('drive.google.com') ? <div className="w-full h-full flex flex-col items-center justify-center bg-[#fef2f2] dark:bg-[#3f1616] text-danger"><Icons.File className="w-8 h-8"/><span className="text-[10px] font-bold mt-2">PDF</span></div> : <img src={url} className="w-full h-full object-cover" />}
+                                    <div className="absolute inset-0 bg-dark/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2">
+                                        <div className="p-2 bg-white/20 rounded-full text-white backdrop-blur-md hover:bg-white/40 transition-colors" title="View"><Icons.ZoomIn className="w-4 h-4"/></div>
+                                        <button onClick={(e) => { e.stopPropagation(); handleCopyUrl(url); }} className="p-2 bg-primary rounded-full text-white shadow-lg hover:scale-110 transition-transform" title="Copy Image Link">{copiedUrl === url ? <Icons.Check className="w-4 h-4"/> : <Icons.Copy className="w-4 h-4"/>}</button>
+                                        <button onClick={(e) => { e.stopPropagation(); onUpdate(idx, 'remove'); }} className="p-2 bg-danger rounded-full text-white shadow-lg hover:scale-110 transition-transform" title="Remove"><Icons.Trash className="w-4 h-4"/></button>
+                                    </div>
+                                </div>
+                            ))}
+                            {isUploading && (<div className="aspect-square rounded-xl bg-white dark:bg-surface-dark flex items-center justify-center border border-light-gray dark:border-border-dark shadow-sm"><div className="w-6 h-6 border-2 border-primary/30 border-t-primary rounded-full animate-spin"></div></div>)}
+                        </div>
+                    )}
+                </div>
+            </div>
+        );
     };
 
     const cleanLatex=(t)=>t.replace(/\$\$/g,'\n').replace(/\$/g,'').replace(/\\text\{([^}]+)\}/g,'$1').replace(/\\times/g,'×').replace(/\\approx/g,'≈').replace(/\\le/g,'≤').replace(/\\ge/g,'≥').replace(/\\rightarrow/g,'→').replace(/\\cdot/g,'·').replace(/\\frac\{([^}]+)\}\{([^}]+)\}/g,'($1/$2)').replace(/\\/g,'');
@@ -208,12 +297,81 @@
         const handleDelete = async (id) => { if(!confirm("Move to trash?")) return; setLogs(prev => prev.filter(l => l.id !== id)); if (activeLogId === id) setActiveLogId(null); await window.firebase.deleteDoc(window.firebase.doc(window.firebase.db, 'artifacts', "darnote-app", 'users', user.uid, 'error_logs', id)); };
         const handleDuplicate = async (id) => { const original = logs.find(l => l.id === id); if (!original) return; const { id: _, ...data } = original; const newLog = { ...data, title: `${data.title} (Copy)`, createdAt: new Date().toISOString(), lastModified: new Date().toISOString() }; const docRef = await window.firebase.addDoc(window.firebase.collection(window.firebase.db, 'artifacts', "darnote-app", 'users', user.uid, 'error_logs'), newLog); setLogs(prev => [{...newLog, id: docRef.id}, ...prev]); };
         const handleCopy = (id) => { const original = logs.find(l => l.id === id); if (original) navigator.clipboard.writeText(JSON.stringify(original)); };
-        const handlePaste = async () => { try { const text = await navigator.clipboard.readText(); const data = JSON.parse(text); if (data.title && data.createdAt) { const { id, ...cleanData } = data; const newLog = { ...cleanData, title: `${cleanData.title} (Pasted)`, createdAt: new Date().toISOString(), lastModified: new Date().toISOString() }; const docRef = await window.firebase.addDoc(window.firebase.collection(window.firebase.db, 'artifacts', "darnote-app", 'users', user.uid, 'error_logs'), newLog); setLogs(prev => [{...newLog, id: docRef.id}, ...prev]); } } catch(e) { alert("Invalid log data in clipboard"); } };
+        const handlePaste = async () => { try { const text = await navigator.clipboard.readText(); const data = JSON.parse(text); if (data.title && data.createdAt) { const { id, ...cleanData } = data; const newLog = { ...cleanData, title: `${cleanData.title} (Pasted)`, createdAt: new Date().toISOString(), lastModified: new Date().toISOString() }; const docRef = await window.firebase.addDoc(window.firebase.collection(window.firebase.db, 'artifacts', "darnote-app", 'users', user.uid, 'error_logs'), newLog); setLogs(prev => [{...newLog, id: docRef.id}, ...prev]); } else { alert("Not a valid Log JSON snippet."); } } catch(e) { alert("Invalid log data in clipboard. Looking for JSON!"); } };
         const handleContextMenu = (e, logId) => { e.preventDefault(); setContextMenu({ visible: true, x: e.clientX, y: e.clientY, logId }); };
         const addTopicToSubject = async (subjectName) => { const subjectDoc = subjects.find(s => s.name === subjectName); if (!subjectDoc) { alert("Cannot add topic to General."); return; } const newTopic = prompt(`Add topic for ${subjectName}:`); if (!newTopic) return; setSubjects(prev => prev.map(s => s.id === subjectDoc.id ? {...s, topics: [...s.topics, newTopic]} : s)); const docRef = window.firebase.doc(window.firebase.db, 'artifacts', 'darnote-app', 'users', user.uid, 'subjects', subjectDoc.id); await window.firebase.updateDoc(docRef, { topics: window.firebase.arrayUnion(newTopic) }); };
 
         const performSmartOCR = async (images) => { setIsAutoTitleLoading(true); setOcrPendingToast(null); try { const schema = subjects.length > 0 ? subjects.map(s => `${s.name} (Topics: ${s.topics.join(', ')})`).join('\n') : "No existing subjects. Suggest 'General'."; const prompt = `Analyze these images for an error log.\n1. Extract the text exactly and identical layout as it appears.\n2. Generate a short, descriptive title.\n3. Determine Type: 'MC' or 'LQ'.\n4. Classify into best Subject/Topic from:\n${schema}\nOutput strictly JSON: { "text": "...", "title": "...", "type": "MC"|"LQ", "subject": "...", "topic": "..." }`; const res = await callGroq(prompt, "JSON Generator", images); const json = JSON.parse(res.substring(res.indexOf('{'), res.lastIndexOf('}') + 1)); updateLog(activeLogId, { title: json.title || activeLog.title, questionText: json.text || "", questionType: (json.type === 'MC' || json.type === 'LQ') ? json.type : activeLog.questionType, subject: json.subject || activeLog.subject, topic: json.topic || activeLog.topic }); } catch (e) { alert("AI Classification Failed: " + e.message); } setIsAutoTitleLoading(false); pendingOcrBlobs.current = []; };
-        const handleImageUpdate = async (data, action, type) => { if (!activeLogId) return; const isQ = type === 'question'; const setSpinner = isQ ? setUploadingQ : setUploadingS; const targetField = isQ ? 'questionImages' : 'schemeImages'; if (action === 'remove') { setLogs(currentLogs => currentLogs.map(l => { if (l.id === activeLogId) { const newArr = (l[targetField] || []).filter((_, i) => i !== data); updateLog(activeLogId, { [targetField]: newArr }); return { ...l, [targetField]: newArr }; } return l; })); return; } setSpinner(true); try { let blobToUpload = data; let preFetchedToken = null; if (data instanceof File || data instanceof Blob) { try { preFetchedToken = await getAccessToken(); } catch(err) { if (err.error === 'popup_blocked_by_browser') alert("Allow popups for GDrive."); throw err; } blobToUpload = (data.type === 'application/pdf') ? data : await compressImage(data); } if (isQ && blobToUpload.type !== 'application/pdf') { const reader = new FileReader(); reader.onloadend = () => pendingOcrBlobs.current.push(reader.result); reader.readAsDataURL(blobToUpload); if (ocrTimerRef.current) clearTimeout(ocrTimerRef.current); setOcrPendingToast(15); ocrTimerRef.current = setTimeout(async () => { const newQuota = await checkAndIncrementQuota(user, 'ocr'); if (newQuota === false) return; if (pendingOcrBlobs.current.length > 0) performSmartOCR([...pendingOcrBlobs.current]); }, 15000); } const finalUrl = await saveToDrive(blobToUpload, `ErrorLog_${type}_${Date.now()}.${blobToUpload.type==='application/pdf'?'pdf':'jpg'}`, preFetchedToken); setLogs(currentLogs => { const targetLog = currentLogs.find(l => l.id === activeLogId); if (!targetLog) return currentLogs; const newArr = [...(targetLog[targetField] || []), finalUrl]; updateLog(activeLogId, { [targetField]: newArr }); return currentLogs.map(l => l.id === activeLogId ? { ...l, [targetField]: newArr } : l); }); setSpinner(false); } catch(e) { alert("Upload Failed: " + e.message); setSpinner(false); } };
+        
+        const handleImageUpdate = async (data, action, type) => { 
+            if (!activeLogId) return; 
+            const isQ = type === 'question'; 
+            const setSpinner = isQ ? setUploadingQ : setUploadingS; 
+            const targetField = isQ ? 'questionImages' : 'schemeImages'; 
+            
+            if (action === 'remove') { 
+                setLogs(currentLogs => currentLogs.map(l => { 
+                    if (l.id === activeLogId) { 
+                        const newArr = (l[targetField] || []).filter((_, i) => i !== data); 
+                        updateLog(activeLogId, { [targetField]: newArr }); 
+                        return { ...l, [targetField]: newArr }; 
+                    } 
+                    return l; 
+                })); 
+                return; 
+            } 
+            
+            if (action === 'add-url') { 
+                setLogs(currentLogs => { 
+                    const targetLog = currentLogs.find(l => l.id === activeLogId); 
+                    if (!targetLog) return currentLogs; 
+                    const newArr = [...(targetLog[targetField] || []), data]; 
+                    updateLog(activeLogId, { [targetField]: newArr }); 
+                    return currentLogs.map(l => l.id === activeLogId ? { ...l, [targetField]: newArr } : l); 
+                }); 
+                return; 
+            } 
+
+            setSpinner(true); 
+            try { 
+                let blobToUpload = data; 
+                let preFetchedToken = null; 
+                if (data instanceof File || data instanceof Blob) { 
+                    try { 
+                        preFetchedToken = await getAccessToken(); 
+                    } catch(err) { 
+                        if (err.error === 'popup_blocked_by_browser') alert("Allow popups for GDrive."); 
+                        throw err; 
+                    } 
+                    blobToUpload = (data.type === 'application/pdf') ? data : await compressImage(data); 
+                } 
+                if (isQ && blobToUpload.type !== 'application/pdf') { 
+                    const reader = new FileReader(); 
+                    reader.onloadend = () => pendingOcrBlobs.current.push(reader.result); 
+                    reader.readAsDataURL(blobToUpload); 
+                    if (ocrTimerRef.current) clearTimeout(ocrTimerRef.current); 
+                    setOcrPendingToast(15); 
+                    ocrTimerRef.current = setTimeout(async () => { 
+                        const newQuota = await checkAndIncrementQuota(user, 'ocr'); 
+                        if (newQuota === false) return; 
+                        if (pendingOcrBlobs.current.length > 0) performSmartOCR([...pendingOcrBlobs.current]); 
+                    }, 15000); 
+                } 
+                const finalUrl = await saveToDrive(blobToUpload, `ErrorLog_${type}_${Date.now()}.${blobToUpload.type==='application/pdf'?'pdf':'jpg'}`, preFetchedToken); 
+                setLogs(currentLogs => { 
+                    const targetLog = currentLogs.find(l => l.id === activeLogId); 
+                    if (!targetLog) return currentLogs; 
+                    const newArr = [...(targetLog[targetField] || []), finalUrl]; 
+                    updateLog(activeLogId, { [targetField]: newArr }); 
+                    return currentLogs.map(l => l.id === activeLogId ? { ...l, [targetField]: newArr } : l); 
+                }); 
+                setSpinner(false); 
+            } catch(e) { 
+                alert("Upload Failed: " + e.message); 
+                setSpinner(false); 
+            } 
+        };
+
         useEffect(() => { if (ocrPendingToast !== null && ocrPendingToast > 0) { const timer = setTimeout(() => setOcrPendingToast(ocrPendingToast - 1), 1000); return () => clearTimeout(timer); } }, [ocrPendingToast]);
 
         const handleAutoTitle = async () => { if (!activeLog.questionImages?.length && !activeLog.imageUrl) { alert("Paste an image first, or drag an image directly onto this button!"); return; } const newQuota = await checkAndIncrementQuota(user, 'ocr'); if (newQuota === false) { alert("Daily OCR Limit Reached!"); return; } try { let imagesToProcess = []; if (pendingOcrBlobs.current.length > 0) { imagesToProcess = [...pendingOcrBlobs.current]; } else { const rawImages = activeLog.questionImages?.length ? activeLog.questionImages : (activeLog.imageUrl ? [activeLog.imageUrl] : []); for (const url of rawImages) { if (url.includes('drive.google.com')) continue; if (!url.startsWith('data:')) { try { const res = await fetch(url); const b = await res.blob(); const base64 = await new Promise(r=>{const rd=new FileReader(); rd.onload=()=>r(rd.result); rd.readAsDataURL(b);}); imagesToProcess.push(base64); } catch(e) {} } else { imagesToProcess.push(url); } } } if(imagesToProcess.length === 0) { alert("No valid images found for OCR."); return; } await performSmartOCR(imagesToProcess); } catch(e) { alert("OCR Failed: " + e.message); setIsAutoTitleLoading(false); } };
