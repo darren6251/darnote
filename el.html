@@ -283,6 +283,7 @@
         const [isOcrDragging, setIsOcrDragging] = useState(false);
         const [mobileView, setMobileView] = useState('logs');
         const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+        const [undoToast, setUndoToast] = useState(null);
 
         useEffect(() => { const unsub = window.firebase.onAuthStateChanged(window.firebase.auth, async (u) => { if (u) { setUser(u); const db = window.firebase.db; window.firebase.getDocs(window.firebase.collection(db, 'artifacts', "darnote-app", 'users', u.uid, 'subjects')).then(snap => { setSubjects(snap.docs.map(d => ({id: d.id, name: d.data().name, topics: d.data().topics || []})).sort((a,b)=>a.name.localeCompare(b.name))); }); window.firebase.onSnapshot(window.firebase.doc(db, 'artifacts', "darnote-app", 'users', u.uid, 'settings', 'profile'), (doc) => { if(doc.exists()) setStudentStatus(doc.data().studentStatus || 'none'); }); } else setUser(null); }); return () => unsub(); }, []);
         useEffect(() => { if(isDarkMode) document.documentElement.classList.add('dark'); else document.documentElement.classList.remove('dark'); }, [isDarkMode]);
@@ -303,6 +304,23 @@
 
         const performSmartOCR = async (images) => { setIsAutoTitleLoading(true); setOcrPendingToast(null); try { const schema = subjects.length > 0 ? subjects.map(s => `${s.name} (Topics: ${s.topics.join(', ')})`).join('\n') : "No existing subjects. Suggest 'General'."; const prompt = `Analyze these images for an error log.\n1. Extract the text exactly and identical layout as it appears.\n2. Generate a short, descriptive title.\n3. Determine Type: 'MC' or 'LQ'.\n4. Classify into best Subject/Topic from:\n${schema}\nOutput strictly JSON: { "text": "...", "title": "...", "type": "MC"|"LQ", "subject": "...", "topic": "..." }`; const res = await callGroq(prompt, "JSON Generator", images); const json = JSON.parse(res.substring(res.indexOf('{'), res.lastIndexOf('}') + 1)); updateLog(activeLogId, { title: json.title || activeLog.title, questionText: json.text || "", questionType: (json.type === 'MC' || json.type === 'LQ') ? json.type : activeLog.questionType, subject: json.subject || activeLog.subject, topic: json.topic || activeLog.topic }); } catch (e) { alert("AI Classification Failed: " + e.message); } setIsAutoTitleLoading(false); pendingOcrBlobs.current = []; };
         
+        const handleUndo = () => {
+            if (!undoToast) return;
+            if (undoToast.type === 'image') {
+                setLogs(currentLogs => currentLogs.map(l => {
+                    if (l.id === undoToast.logId) {
+                        const newArr = [...(l[undoToast.targetField] || [])];
+                        newArr.splice(undoToast.index, 0, undoToast.url);
+                        updateLog(undoToast.logId, { [undoToast.targetField]: newArr });
+                        return { ...l, [undoToast.targetField]: newArr };
+                    }
+                    return l;
+                }));
+            }
+            setUndoToast(null);
+            if (window.undoTimer) clearTimeout(window.undoTimer);
+        };
+
         const handleImageUpdate = async (data, action, type) => { 
             if (!activeLogId) return; 
             const isQ = type === 'question'; 
@@ -312,8 +330,14 @@
             if (action === 'remove') { 
                 setLogs(currentLogs => currentLogs.map(l => { 
                     if (l.id === activeLogId) { 
+                        const deletedUrl = (l[targetField] || [])[data];
                         const newArr = (l[targetField] || []).filter((_, i) => i !== data); 
                         updateLog(activeLogId, { [targetField]: newArr }); 
+                        
+                        setUndoToast({ type: 'image', logId: activeLogId, targetField, index: data, url: deletedUrl });
+                        if (window.undoTimer) clearTimeout(window.undoTimer);
+                        window.undoTimer = setTimeout(() => setUndoToast(null), 5000);
+                        
                         return { ...l, [targetField]: newArr }; 
                     } 
                     return l; 
@@ -608,6 +632,17 @@
                         <span className="text-[10px] font-medium">Stats</span>
                     </button>
                 </div>
+
+                <AnimatePresence>
+                    {undoToast && (
+                        <motion.div initial={{ y: 100, opacity: 0 }} animate={{ y: 0, opacity: 1 }} exit={{ y: 100, opacity: 0 }} className="fixed bottom-24 lg:bottom-10 left-1/2 -translate-x-1/2 z-[200] bg-onyx dark:bg-white text-white dark:text-onyx px-5 py-3 rounded-full shadow-2xl flex items-center gap-4 text-sm font-medium border border-white/10 dark:border-black/10">
+                            <span className="flex items-center gap-2 whitespace-nowrap"><Icons.Check className="w-4 h-4 text-success"/> Image removed</span>
+                            <div className="w-px h-4 bg-white/20 dark:bg-black/20"></div>
+                            <button onClick={handleUndo} className="text-primary-light dark:text-primary hover:opacity-80 transition-opacity uppercase font-bold tracking-wider text-xs whitespace-nowrap">Undo</button>
+                            <button onClick={() => { setUndoToast(null); if(window.undoTimer) clearTimeout(window.undoTimer); }} className="text-gray-400 hover:text-white dark:hover:text-black transition-colors ml-1"><Icons.X className="w-4 h-4"/></button>
+                        </motion.div>
+                    )}
+                </AnimatePresence>
             </div>
         );
     };
