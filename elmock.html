@@ -1219,14 +1219,31 @@ Here are my embarrassing confessions for the specific questions I bombed:
 ${confessionContext}
 
 Analyze my uploaded report card alongside my confessions. 
-1. Summarize my miserable overall performance.
-2. Highlight any strengths (if I have any) and my glaring weaknesses.
-3. Roast my "flawed logic" and "root causes" from my confessions. Connect them to the report.
-4. Suggest a highly actionable recovery plan so I don't humiliate myself next time.
-Use proper Markdown with clear bold headers. Keep it professional, highly educational, but let your disappointment shine through.`;
+You MUST return ONLY a valid JSON object representing your analysis. Do NOT use markdown code blocks to wrap the JSON. Just return the raw JSON object itself.
+Format exactly like this:
+{
+  "overallSummary": "Summarize my miserable overall performance. Highlight strengths and glaring weaknesses.",
+  "actionPlan": "Suggest a highly actionable recovery plan so I don't humiliate myself next time.",
+  "questionBreakdowns": [
+    {
+      "question": 1,
+      "aiComment": "Roast my flawed logic and root causes for this specific question. Connect it to the report."
+    }
+  ]
+}`;
 
                 const aiRes = await callAI(finalPrompt, "Report Analyst", imgB64s, GEMINI_PROXY_URL);
-                updateMock(activeMockId, { reportAnalysis: aiRes });
+                
+                let cleanJson = aiRes;
+                try {
+                    const jsonMatch = aiRes.match(/\{[\s\S]*\}/);
+                    if (jsonMatch) cleanJson = jsonMatch[0];
+                    JSON.parse(cleanJson); // Test parse
+                    updateMock(activeMockId, { reportAnalysis: cleanJson });
+                } catch (e) {
+                    console.error("AI returned invalid JSON, saving raw fallback", e);
+                    updateMock(activeMockId, { reportAnalysis: aiRes });
+                }
             } catch(e) { 
                 alert("AI Analysis failed: " + e.message); 
             }
@@ -1494,6 +1511,15 @@ Make sure to use proper Markdown format, bold formatting for emphasis, and clear
 
         // Sidebar hide logic
         const isActuallyHidden = isSidebarHidden && activePageId !== null;
+        
+        // Setup JSON parsing for the structured AI report
+        let parsedReportAnalysis = null;
+        if (activeMock && activeMock.reportAnalysis) {
+            try {
+                parsedReportAnalysis = JSON.parse(activeMock.reportAnalysis);
+                if (!parsedReportAnalysis.overallSummary) parsedReportAnalysis = null; // sanity check
+            } catch(e) { } // If it fails, we fall back to raw markdown rendering
+        }
 
         if (!user) return (<div className="h-screen w-full flex items-center justify-center bg-white dark:bg-onyx flex-col gap-6 relative overflow-hidden"><div className="z-10 flex flex-col items-center"><img src="https://raw.githubusercontent.com/darren6251/darnote/refs/heads/main/darNote%20logo.png" className="w-16 h-16 mb-6 rounded-2xl shadow-sm"/><h1 className="text-4xl font-bold text-dark dark:text-light tracking-tight font-sans mb-3">Mock Exam Review</h1><p className="text-base text-gray max-w-sm text-center mb-10">Sign in to securely stash and auto-analyze your mock exams.</p><button onClick={() => window.firebase.signInWithPopup(window.firebase.auth, new window.firebase.GoogleAuthProvider())} className="bg-primary text-white px-8 py-3.5 rounded-full font-medium flex gap-3 items-center hover:bg-primary-dark transition-all shadow-md hover:shadow-lg w-64 justify-center text-sm"><Icons.Google className="w-4 h-4"/> Continue with Google</button></div></div>);
 
@@ -1801,8 +1827,65 @@ Make sure to use proper Markdown format, bold formatting for emphasis, and clear
                                                             </div>
                                                         )}
 
-                                                        {activeMock.reportAnalysis ? (
-                                                            <div className="bg-[#f8fafc] dark:bg-dark border border-light-gray dark:border-white/5 rounded-2xl p-6 markdown-content text-sm text-dark dark:text-light">
+                                                        {parsedReportAnalysis ? (
+                                                            <div className="space-y-6 mt-6">
+                                                                {/* Overall Summary */}
+                                                                <div className="bg-[#fef2f2] dark:bg-[#3f1616] border border-danger/30 rounded-2xl p-6 md:p-8 shadow-sm">
+                                                                    <h4 className="font-black text-danger text-lg mb-4 uppercase tracking-wider flex items-center gap-2"><Icons.Target className="w-5 h-5"/> The Brutal Truth</h4>
+                                                                    <div className="markdown-content text-dark dark:text-light" dangerouslySetInnerHTML={{ __html: marked.parse(parsedReportAnalysis.overallSummary) }} />
+                                                                </div>
+                                                                
+                                                                {/* Specific Question Breakdown Cards */}
+                                                                {parsedReportAnalysis.questionBreakdowns && parsedReportAnalysis.questionBreakdowns.length > 0 && (
+                                                                    <div className="space-y-4">
+                                                                        <h4 className="font-bold text-dark dark:text-light text-lg flex items-center gap-2 mt-8 mb-4"><Icons.Scan className="w-5 h-5 text-warning"/> The Hall of Shame</h4>
+                                                                        <div className="grid grid-cols-1 gap-4">
+                                                                            {parsedReportAnalysis.questionBreakdowns.map((qb, i) => {
+                                                                                const matchedPage = mockPages.find(p => Number(p.pageNumber) === Number(qb.question));
+                                                                                return (
+                                                                                    <div key={i} className="flex flex-col md:flex-row gap-4 bg-white dark:bg-dark border border-light-gray dark:border-white/10 rounded-2xl p-5 shadow-sm hover:shadow-md transition-shadow relative overflow-hidden group">
+                                                                                        <div className="absolute left-0 top-0 bottom-0 w-1.5 bg-warning"></div>
+                                                                                        
+                                                                                        {matchedPage && (
+                                                                                            <div onClick={() => { setMockTab('pages'); setActivePageId(matchedPage.id); }} className="w-full md:w-56 shrink-0 cursor-pointer group-hover:opacity-80 transition-opacity flex flex-col gap-3">
+                                                                                                <div className="aspect-[4/3] bg-light-gray/30 dark:bg-black/30 rounded-xl overflow-hidden border border-light-gray dark:border-white/5 relative">
+                                                                                                    {matchedPage.questionImages?.[0] ? <img src={matchedPage.questionImages[0]} className="w-full h-full object-cover mix-blend-multiply dark:mix-blend-normal" /> : <div className="w-full h-full flex items-center justify-center text-gray text-xs"><Icons.Image className="w-6 h-6"/></div>}
+                                                                                                    <div className="absolute top-2 right-2 bg-black/60 text-white text-[10px] font-bold px-2 py-1 rounded-md backdrop-blur-md shadow-sm">Q{matchedPage.pageNumber}</div>
+                                                                                                </div>
+                                                                                                {(matchedPage.whatWrong || matchedPage.thoughtProcess) && (
+                                                                                                    <div className="text-[11px] text-gray dark:text-gray/80 italic border-l-2 border-danger/50 pl-2 line-clamp-3">
+                                                                                                        "{matchedPage.whatWrong || matchedPage.thoughtProcess}"
+                                                                                                    </div>
+                                                                                                )}
+                                                                                            </div>
+                                                                                        )}
+
+                                                                                        <div className="flex-1 pl-2 md:pl-0 flex flex-col justify-center">
+                                                                                            {!matchedPage && <div className="text-xs font-bold text-gray uppercase tracking-wider mb-2">Question {qb.question}</div>}
+                                                                                            <div className="markdown-content text-sm text-dark dark:text-light flex-1" dangerouslySetInnerHTML={{ __html: marked.parse(qb.aiComment) }} />
+                                                                                            
+                                                                                            {matchedPage && (
+                                                                                                <button onClick={() => { setMockTab('pages'); setActivePageId(matchedPage.id); }} className="mt-4 text-xs font-bold text-primary flex items-center gap-1 hover:underline w-fit">
+                                                                                                    <Icons.Bot className="w-3 h-3"/> Fix this mess →
+                                                                                                </button>
+                                                                                            )}
+                                                                                        </div>
+                                                                                    </div>
+                                                                                );
+                                                                            })}
+                                                                        </div>
+                                                                    </div>
+                                                                )}
+
+                                                                {/* Action Plan */}
+                                                                <div className="bg-[#f0fdf4] dark:bg-[#12311e] border border-success/30 rounded-2xl p-6 md:p-8 mt-8 shadow-sm">
+                                                                    <h4 className="font-black text-success text-lg mb-4 uppercase tracking-wider flex items-center gap-2"><Icons.ShieldCheck className="w-5 h-5"/> Action Plan (To save your GPA)</h4>
+                                                                    <div className="markdown-content text-dark dark:text-light" dangerouslySetInnerHTML={{ __html: marked.parse(parsedReportAnalysis.actionPlan) }} />
+                                                                </div>
+                                                            </div>
+                                                        ) : activeMock.reportAnalysis ? (
+                                                            /* Legacy Fallback for old string format */
+                                                            <div className="bg-[#f8fafc] dark:bg-dark border border-light-gray dark:border-white/5 rounded-2xl p-6 markdown-content text-sm text-dark dark:text-light mt-6">
                                                                 <div dangerouslySetInnerHTML={{ __html: marked.parse(activeMock.reportAnalysis, {breaks: true, gfm: true}) }} />
                                                             </div>
                                                         ) : (
