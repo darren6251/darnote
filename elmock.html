@@ -19,11 +19,10 @@
 
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 <script>
-    // THE MONOCHROME TUXEDO (Zinc & Slate)
+    // MONOCHROMATIC COOL THEME (Google Workspace layout, Darth Vader colors)
     tailwind.config = { darkMode: 'class', theme: { extend: { colors: { primary: '#18181b', 'primary-light': '#3f3f46', 'primary-dark': '#000000', secondary: '#71717a', accent: '#52525b', success: '#3f3f46', warning: '#71717a', danger: '#18181b', dark: '#09090b', light: '#fafafa', gray: '#a1a1aa', 'light-gray': '#f4f4f5', onyx: '#000000', surface: '#ffffff', 'surface-dark': '#09090b', border: '#e4e4e7', 'border-dark': '#27272a' }, boxShadow: { ds: '0 1px 2px 0 rgba(0,0,0,0.1), 0 1px 3px 1px rgba(0,0,0,0.05)', 'ds-hover': '0 10px 15px -3px rgba(0,0,0,0.1), 0 4px 6px -2px rgba(0,0,0,0.05)', 'ds-dark': '0 1px 2px 0 rgba(255,255,255,0.05), 0 1px 3px 1px rgba(255,255,255,0.02)' }, borderRadius: { ds: '16px', xl: '24px' }, fontFamily: { sans: ['Inter', 'sans-serif'] } } } }
 </script>
 <script type="module">
-    // EXACT SAME FIREBASE CONFIG
     import { initializeApp } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-app.js";
     import { getAuth, signInWithPopup, GoogleAuthProvider, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-auth.js";
     import { getFirestore, collection, doc, addDoc, updateDoc, deleteDoc, getDocs, getDoc, setDoc, increment, arrayUnion, writeBatch, query, limit, orderBy, startAfter, where, onSnapshot } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-firestore.js";
@@ -37,6 +36,7 @@
     .input-field { @apply w-full bg-light-gray/50 dark:bg-dark border border-transparent hover:border-light-gray dark:hover:border-border-dark focus:bg-white dark:focus:bg-[#111113] focus:border-primary dark:focus:border-primary-light rounded-xl px-4 py-3 text-sm focus:outline-none transition-all shadow-none; }
     .form-control { @apply w-full bg-light-gray/50 dark:bg-dark border border-transparent hover:border-light-gray dark:hover:border-border-dark focus:bg-white dark:focus:bg-[#111113] focus:border-primary dark:focus:border-primary-light rounded-xl px-4 py-3 text-sm focus:outline-none transition-all; }
     .markdown-content table { border-collapse: collapse; width: 100%; margin: 12px 0; font-size: 0.85rem; border-radius: 8px; overflow: hidden; } .markdown-content th { @apply bg-light-gray dark:bg-dark text-left font-semibold; padding: 8px 12px; } .markdown-content td { @apply border-b border-light-gray dark:border-border-dark; padding: 8px 12px; } .markdown-content ul, .markdown-content ol { padding-left: 24px; margin: 8px 0; list-style: disc; } .markdown-content pre { @apply bg-light-gray/50 dark:bg-dark border border-light-gray dark:border-border-dark rounded-xl p-4 my-2 overflow-x-auto text-sm; }
+    .context-menu { animation: scaleIn 0.15s cubic-bezier(0.2, 0, 0, 1); transform-origin: top left; } @keyframes scaleIn { from { opacity: 0; transform: scale(0.95); } to { opacity: 1; transform: scale(1); } }
     .glass-panel { @apply bg-white/80 dark:bg-surface-dark/80 backdrop-blur-md border border-white/20 dark:border-white/5; }
 </style>
 </head>
@@ -47,19 +47,15 @@
     const GEMINI_PROXY_URL = "https://gemini-proxy-513372702506.us-central1.run.app/proxy"; const GROQ_PROXY_URL = "https://groq-proxy-157237873670.us-central1.run.app/chat/completions";
     const { useState, useEffect, useRef, useMemo, useCallback } = React; const { motion, AnimatePresence } = window.Motion;
 
-    // ICON SET
-    const Icons={HelpCircle:p=><svg {...p} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><path d="M12 17h.01"/></svg>,Youtube:p=><svg {...p} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M22.54 6.42a2.78 2.78 0 0 0-1.94-2C18.88 4 12 4 12 4s-6.88 0-8.6.46a2.78 2.78 0 0 0-1.94 2A29 29 0 0 0 1 11.75a29 29 0 0 0 .46 5.33 2.78 2.78 0 0 0 1.94 2c1.72.46 8.6.46 8.6.46s6.88 0 8.6-.46a2.78 2.78 0 0 0 1.94-2 29 29 0 0 0 .46-5.33 29 29 0 0 0-.46-5.33z"/><polygon points="9.75 15.02 15.5 11.75 9.75 8.48 9.75 15.02"/></svg>,Clock:p=><svg {...p} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>,Plus:p=><svg {...p} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12h14"/><path d="M12 5v14"/></svg>,Trash:p=><svg {...p} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/></svg>,Bug:p=><svg {...p} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m8 2 1.88 1.88"/><path d="M14.12 3.88 16 2"/><path d="M9 7.13v-1a3.003 3.003 0 1 1 6 0v1"/><path d="M12 20c-3.3 0-6-2.7-6-6v-3a4 4 0 0 1 4-4h4a4 4 0 0 1 4 4v3c0 3.3-2.7 6-6 6"/><path d="M12 20v-9"/><path d="M6.53 9C4.6 8.8 3 7.1 3 5"/><path d="M6 13H2"/><path d="M3 21c0-2.1 1.7-3.9 3.8-4"/><path d="M20.97 5c0 2.1-1.6 3.8-3.5 4"/><path d="M22 13h-4"/><path d="M17.2 17c2.1.1 3.8 1.9 3.8 4"/></svg>,Check:p=><svg {...p} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>,Image:p=><svg {...p} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect width="18" height="18" x="3" y="3" rx="2" ry="2"/><circle cx="9" cy="9" r="2"/><path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21"/></svg>,Bot:p=><svg {...p} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 8V4H8"/><rect width="16" height="12" x="4" y="8" rx="2"/><path d="M2 14h2"/><path d="M20 14h2"/><path d="M15 13v2"/><path d="M9 13v2"/></svg>,X:p=><svg {...p} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M18 6 6 18"/><path d="m6 6 18 18"/></svg>,Logout:p=><svg {...p} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" x2="9" y1="12" y2="12"/></svg>,Google:p=><svg {...p} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 22C6.477 22 2 17.523 2 12S6.477 2 12 2s10 4.477 10 10-4.477 10-10 10z"/><path d="M12 11h9c.1 1.4.1 2.9-.4 4.3-1.1 3-4.1 5.3-7.6 5.6-5 .5-9.4-3.1-9.9-8.1C2.5 7.1 6 2.3 11 2c2.5-.1 4.9.9 6.7 2.6l-2.7 2.8c-1-.7-2.3-1.1-3.6-1-2.9.2-5.1 2.8-4.9 5.7.2 2.6 2.4 4.7 5 4.7 2 0 3.6-1.1 4.3-2.9H12v-3z" fill="currentColor"/></svg>,Sun:p=><svg {...p} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="5"/><path d="M12 1v2"/><path d="M12 21v2"/><path d="M4.22 4.22l1.42 1.42"/><path d="M18.36 18.36l1.42 1.42"/><path d="M1 12h2"/><path d="M21 12h2"/><path d="M4.22 19.78l1.42-1.42"/><path d="M18.36 5.64l1.42-1.42"/></svg>,Moon:p=><svg {...p} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>,User:p=><svg {...p} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>,Scan:p=><svg {...p} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 7V5a2 2 0 0 1 2-2h2"/><path d="M17 3h2a2 2 0 0 1 2 2v2"/><path d="M21 17v2a2 2 0 0 1-2 2h-2"/><path d="M7 21H5a2 2 0 0 1-2-2v-2"/><path d="M8 12h8"/><path d="M12 8v8"/></svg>,Lock:p=><svg {...p} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>,File:p=><svg {...p} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" x2="8" y1="13" y2="13"/><line x1="16" x2="8" y1="17" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>,Book:p=><svg {...p} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>,CloudUpload:p=><svg {...p} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M4 14.899A7 7 0 1 1 15.71 8h1.79a4.5 4.5 0 0 1 2.5 8.242"/><path d="M12 12v9"/><path d="m16 16-4-4-4 4"/></svg>,Refresh:p=><svg {...p} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 12a9 9 0 0 0-9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/><path d="M3 12a9 9 0 0 0 9 9 9.75 9.75 0 0 0 6.74-2.74L21 16"/><path d="M21 21v-5h-5"/></svg>,Clip:p=><svg {...p} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m21.44 11.05-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"/></svg>,ExternalLink:p=><svg {...p} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" x2="21" y1="14" y2="3"/></svg>,ChevronLeft:p=><svg {...p} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m15 18-6-6 6-6"/></svg>,ChevronRight:p=><svg {...p} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m9 18 6-6-6-6"/></svg>,ZoomIn:p=><svg {...p} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" x2="16.65" y1="21" y2="16.65"/><line x1="11" x2="11" y1="8" y2="14"/><line x1="8" x2="14" y1="11" y2="11"/></svg>,Undo:p=><svg {...p} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 7v6h6"/><path d="M21 17a9 9 0 0 0-9-9 9 9 0 0 0-6 2.3L3 13"/></svg>,Sort:p=><svg {...p} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="12" x2="12" y1="3" y2="21"/><polyline points="8 7 12 3 16 7"/><polyline points="8 17 12 21 16 17"/></svg>,Copy:p=><svg {...p} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect width="14" height="14" x="8" y="8" rx="2" ry="2"/><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/></svg>,Brain:p=><svg {...p} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M9.5 2A2.5 2.5 0 0 1 12 4.5v15a2.5 2.5 0 0 1-4.96.44 2.5 2.5 0 0 1-2.96-3.08 3 3 0 0 1-.34-5.58 2.5 2.5 0 0 1 1.32-4.24 2.5 2.5 0 0 1 1.98-3A2.5 2.5 0 0 1 9.5 2Z"/><path d="M14.5 2A2.5 2.5 0 0 0 12 4.5v15a2.5 2.5 0 0 0 4.96.44 2.5 2.5 0 0 0 2.96-3.08 3 3 0 0 0 .34-5.58 2.5 2.5 0 0 0-1.32-4.24 2.5 2.5 0 0 0-1.98-3A2.5 2.5 0 0 0 14.5 2Z"/></svg>,Target:p=><svg {...p} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/></svg>,GraduationCap:p=><svg {...p} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M22 10v6M2 10l10-5 10 5-10 5z"/><path d="M6 12v5c3 3 9 3 12 0v-5"/></svg>,ShieldCheck:p=><svg {...p} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><path d="m9 12 2 2 4-4"/></svg>,ShieldClock:p=><svg {...p} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><circle cx="12" cy="12" r="3"/><polyline points="12 10 12 12 13 13"/></svg>,Dashboard:p=><svg {...p} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="7" height="9" rx="1"/><rect x="14" y="3" width="7" height="5" rx="1"/><rect x="14" y="12" width="7" height="9" rx="1"/><rect x="3" y="16" width="7" height="5" rx="1"/></svg>,Search:p=><svg {...p} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>,Terminal:p=><svg {...p} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="4 17 10 11 4 5"/><line x1="12" x2="20" y1="19" y2="19"/></svg>,Folder:p=><svg {...p} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M4 20h16a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-7.93a2 2 0 0 1-1.66-.9l-.82-1.2A2 2 0 0 0 7.93 3H4a2 2 0 0 0-2 2v13c0 1.1.9 2 2 2Z"/></svg>,Menu:p=><svg {...p} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="4" x2="20" y1="12" y2="12"/><line x1="4" x2="20" y1="6" y2="6"/><line x1="4" x2="20" y1="18" y2="18"/></svg>,ArrowLeft:p=><svg {...p} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m12 19-7-7 7-7"/><path d="M19 12H5"/></svg>,FileText:p=><svg {...p} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"/><polyline points="14 2 14 8 20 8"/><line x1="16" x2="8" y1="13" y2="13"/><line x1="16" x2="8" y1="17" y2="17"/><line x1="10" x2="8" y1="9" y2="9"/></svg>,Sparkles:p=><svg {...p} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m12 3-1.912 5.813a2 2 0 0 1-1.275 1.275L3 12l5.813 1.912a2 2 0 0 1 1.275 1.275L12 21l1.912-5.813a2 2 0 0 1 1.275-1.275L21 12l-5.813-1.912a2 2 0 0 1-1.275-1.275L12 3Z"/><path d="M5 3v4"/><path d="M3 5h4"/></svg>};
+    const Icons={HelpCircle:p=><svg {...p} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><path d="M12 17h.01"/></svg>,Youtube:p=><svg {...p} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M22.54 6.42a2.78 2.78 0 0 0-1.94-2C18.88 4 12 4 12 4s-6.88 0-8.6.46a2.78 2.78 0 0 0-1.94 2A29 29 0 0 0 1 11.75a29 29 0 0 0 .46 5.33 2.78 2.78 0 0 0 1.94 2c1.72.46 8.6.46 8.6.46s6.88 0 8.6-.46a2.78 2.78 0 0 0 1.94-2 29 29 0 0 0 .46-5.33 29 29 0 0 0-.46-5.33z"/><polygon points="9.75 15.02 15.5 11.75 9.75 8.48 9.75 15.02"/></svg>,Clock:p=><svg {...p} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>,Plus:p=><svg {...p} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12h14"/><path d="M12 5v14"/></svg>,Trash:p=><svg {...p} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/></svg>,Bug:p=><svg {...p} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m8 2 1.88 1.88"/><path d="M14.12 3.88 16 2"/><path d="M9 7.13v-1a3.003 3.003 0 1 1 6 0v1"/><path d="M12 20c-3.3 0-6-2.7-6-6v-3a4 4 0 0 1 4-4h4a4 4 0 0 1 4 4v3c0 3.3-2.7 6-6 6"/><path d="M12 20v-9"/><path d="M6.53 9C4.6 8.8 3 7.1 3 5"/><path d="M6 13H2"/><path d="M3 21c0-2.1 1.7-3.9 3.8-4"/><path d="M20.97 5c0 2.1-1.6 3.8-3.5 4"/><path d="M22 13h-4"/><path d="M17.2 17c2.1.1 3.8 1.9 3.8 4"/></svg>,Check:p=><svg {...p} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>,Image:p=><svg {...p} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect width="18" height="18" x="3" y="3" rx="2" ry="2"/><circle cx="9" cy="9" r="2"/><path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21"/></svg>,Bot:p=><svg {...p} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 8V4H8"/><rect width="16" height="12" x="4" y="8" rx="2"/><path d="M2 14h2"/><path d="M20 14h2"/><path d="M15 13v2"/><path d="M9 13v2"/></svg>,X:p=><svg {...p} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M18 6 6 18"/><path d="m6 6 18 18"/></svg>,Logout:p=><svg {...p} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" x2="9" y1="12" y2="12"/></svg>,Google:p=><svg {...p} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 22C6.477 22 2 17.523 2 12S6.477 2 12 2s10 4.477 10 10-4.477 10-10 10z"/><path d="M12 11h9c.1 1.4.1 2.9-.4 4.3-1.1 3-4.1 5.3-7.6 5.6-5 .5-9.4-3.1-9.9-8.1C2.5 7.1 6 2.3 11 2c2.5-.1 4.9.9 6.7 2.6l-2.7 2.8c-1-.7-2.3-1.1-3.6-1-2.9.2-5.1 2.8-4.9 5.7.2 2.6 2.4 4.7 5 4.7 2 0 3.6-1.1 4.3-2.9H12v-3z" fill="currentColor"/></svg>,Sun:p=><svg {...p} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="5"/><path d="M12 1v2"/><path d="M12 21v2"/><path d="M4.22 4.22l1.42 1.42"/><path d="M18.36 18.36l1.42 1.42"/><path d="M1 12h2"/><path d="M21 12h2"/><path d="M4.22 19.78l1.42-1.42"/><path d="M18.36 5.64l1.42-1.42"/></svg>,Moon:p=><svg {...p} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>,User:p=><svg {...p} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>,Scan:p=><svg {...p} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 7V5a2 2 0 0 1 2-2h2"/><path d="M17 3h2a2 2 0 0 1 2 2v2"/><path d="M21 17v2a2 2 0 0 1-2 2h-2"/><path d="M7 21H5a2 2 0 0 1-2-2v-2"/><path d="M8 12h8"/><path d="M12 8v8"/></svg>,Lock:p=><svg {...p} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>,File:p=><svg {...p} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" x2="8" y1="13" y2="13"/><line x1="16" x2="8" y1="17" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>,Book:p=><svg {...p} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>,CloudUpload:p=><svg {...p} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M4 14.899A7 7 0 1 1 15.71 8h1.79a4.5 4.5 0 0 1 2.5 8.242"/><path d="M12 12v9"/><path d="m16 16-4-4-4 4"/></svg>,Refresh:p=><svg {...p} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 12a9 9 0 0 0-9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/><path d="M3 12a9 9 0 0 0 9 9 9.75 9.75 0 0 0 6.74-2.74L21 16"/><path d="M21 21v-5h-5"/></svg>,Clip:p=><svg {...p} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m21.44 11.05-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"/></svg>,ExternalLink:p=><svg {...p} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" x2="21" y1="14" y2="3"/></svg>,ChevronLeft:p=><svg {...p} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m15 18-6-6 6-6"/></svg>,ChevronRight:p=><svg {...p} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m9 18 6-6-6-6"/></svg>,ZoomIn:p=><svg {...p} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" x2="16.65" y1="21" y2="16.65"/><line x1="11" x2="11" y1="8" y2="14"/><line x1="8" x2="14" y1="11" y2="11"/></svg>,Undo:p=><svg {...p} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 7v6h6"/><path d="M21 17a9 9 0 0 0-9-9 9 9 0 0 0-6 2.3L3 13"/></svg>,Sort:p=><svg {...p} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="12" x2="12" y1="3" y2="21"/><polyline points="8 7 12 3 16 7"/><polyline points="8 17 12 21 16 17"/></svg>,Copy:p=><svg {...p} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect width="14" height="14" x="8" y="8" rx="2" ry="2"/><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/></svg>,Brain:p=><svg {...p} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M9.5 2A2.5 2.5 0 0 1 12 4.5v15a2.5 2.5 0 0 1-4.96.44 2.5 2.5 0 0 1-2.96-3.08 3 3 0 0 1-.34-5.58 2.5 2.5 0 0 1 1.32-4.24 2.5 2.5 0 0 1 1.98-3A2.5 2.5 0 0 1 9.5 2Z"/><path d="M14.5 2A2.5 2.5 0 0 0 12 4.5v15a2.5 2.5 0 0 0 4.96.44 2.5 2.5 0 0 0 2.96-3.08 3 3 0 0 0 .34-5.58 2.5 2.5 0 0 0-1.32-4.24 2.5 2.5 0 0 0-1.98-3A2.5 2.5 0 0 0 14.5 2Z"/></svg>,Target:p=><svg {...p} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/></svg>,GraduationCap:p=><svg {...p} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M22 10v6M2 10l10-5 10 5-10 5z"/><path d="M6 12v5c3 3 9 3 12 0v-5"/></svg>,ShieldCheck:p=><svg {...p} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><path d="m9 12 2 2 4-4"/></svg>,ShieldClock:p=><svg {...p} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><circle cx="12" cy="12" r="3"/><polyline points="12 10 12 12 13 13"/></svg>,Dashboard:p=><svg {...p} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="7" height="9" rx="1"/><rect x="14" y="3" width="7" height="5" rx="1"/><rect x="14" y="12" width="7" height="9" rx="1"/><rect x="3" y="16" width="7" height="5" rx="1"/></svg>,Search:p=><svg {...p} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>,Terminal:p=><svg {...p} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="4 17 10 11 4 5"/><line x1="12" x2="20" y1="19" y2="19"/></svg>,Folder:p=><svg {...p} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M4 20h16a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-7.93a2 2 0 0 1-1.66-.9l-.82-1.2A2 2 0 0 0 7.93 3H4a2 2 0 0 0-2 2v13c0 1.1.9 2 2 2Z"/></svg>,Menu:p=><svg {...p} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="4" x2="20" y1="12" y2="12"/><line x1="4" x2="20" y1="6" y2="6"/><line x1="4" x2="20" y1="18" y2="18"/></svg>,ArrowLeft:p=><svg {...p} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m12 19-7-7 7-7"/><path d="M19 12H5"/></svg>,FileText:p=><svg {...p} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"/><polyline points="14 2 14 8 20 8"/><line x1="16" x2="8" y1="13" y2="13"/><line x1="16" x2="8" y1="17" y2="17"/><line x1="10" x2="8" y1="9" y2="9"/></svg>,Sparkles:p=><svg {...p} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m12 3-1.912 5.813a2 2 0 0 1-1.275 1.275L3 12l5.813 1.912a2 2 0 0 1 1.275 1.275L12 21l1.912-5.813a2 2 0 0 1 1.275-1.275L21 12l-5.813-1.912a2 2 0 0 1-1.275-1.275L12 3Z"/><path d="M5 3v4"/><path d="M3 5h4"/></svg>,Share2:p=><svg {...p} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" x2="15.42" y1="13.51" y2="17.49"/><line x1="15.41" x2="8.59" y1="6.51" y2="10.49"/></svg>};
 
-    // UTILS
     const compressImage = async (fileOrBlob) => new Promise((resolve) => { const img = new Image(); const reader = new FileReader(); reader.onload = (e) => { img.src = e.target.result; img.onload = () => { const canvas = document.createElement('canvas'); const MAX_WIDTH = 2000; let width = img.width; let height = img.height; if (width > MAX_WIDTH) { height *= MAX_WIDTH / width; width = MAX_WIDTH; } canvas.width = width; canvas.height = height; const ctx = canvas.getContext('2d'); ctx.drawImage(img, 0, 0, width, height); canvas.toBlob((blob) => { resolve(blob); }, 'image/jpeg', 0.8); } }; reader.readAsDataURL(fileOrBlob); });
     const callAI = async (prompt, sys = "", images = [], apiUrl = GEMINI_PROXY_URL) => { const parts = [{ text: `${sys}\n\nUser: ${prompt}` }]; if (images?.length > 0) { images.forEach(img => { let mimeType = "image/png", data = img; if (img.includes(",")) { const s = img.split(","); mimeType = s[0].match(/:(.*?);/)[1]; data = s[1]; } parts.push({ inlineData: { mimeType, data } }); }); } try { const response = await fetch(apiUrl, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ contents: [{ parts }] }) }); if (!response.ok) return `Error: ${response.status}`; const data = await response.json(); if (data.error) return `API Error: ${data.error.message}`; return data.candidates?.[0]?.content?.parts?.[0]?.text || "Empty response."; } catch (error) { return `Error: ${error.message}`; } };
     const callGroq = async (prompt, sys = "", images = []) => { const userContent = [{ type: "text", text: prompt }]; if (images?.length > 0) { images.forEach(img => { userContent.push({ type: "image_url", image_url: { url: img } }); }); } const modelToUse = (images?.length > 0) ? "llama-3.2-90b-vision-preview" : "openai/gpt-oss-120b"; const payload = { model: modelToUse, messages: [ { role: "system", content: sys }, { role: "user", content: userContent } ] }; try { const response = await fetch(GROQ_PROXY_URL, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) }); if (!response.ok) return `Error: ${response.status}`; const data = await response.json(); if (data.error) return `API Error: ${data.error.message}`; return data.choices?.[0]?.message?.content || "Empty response."; } catch (error) { return `Error: ${error.message}`; } };
     const cleanLatex=(t)=>t.replace(/\$\$/g,'\n').replace(/\$/g,'').replace(/\\text\{([^}]+)\}/g,'$1').replace(/\\times/g,'×').replace(/\\approx/g,'≈').replace(/\\le/g,'≤').replace(/\\ge/g,'≥').replace(/\\rightarrow/g,'→').replace(/\\cdot/g,'·').replace(/\\frac\{([^}]+)\}\{([^}]+)\}/g,'($1/$2)').replace(/\\/g,'');
 
-    // GDRIVE HOOK
     const useGoogleDrive = () => { const [tokenClient, setTokenClient] = useState(null); useEffect(() => { if(!GDRIVE_API_KEY || !GDRIVE_CLIENT_ID) return; const load = async () => { if (window.gapi) { await new Promise(r => window.gapi.load('client', r)); await window.gapi.client.init({ apiKey: GDRIVE_API_KEY, discoveryDocs: ['https://www.googleapis.com/discovery/v1/apis/drive/v3/rest'] }); } if (window.google) setTokenClient(window.google.accounts.oauth2.initTokenClient({ client_id: GDRIVE_CLIENT_ID, scope: 'https://www.googleapis.com/auth/drive.file', callback: () => {} })); }; load(); }, []); const getAccessToken = () => new Promise((resolve, reject) => { if (!tokenClient) return reject("Auth not initialized"); const existing = window.gapi.client.getToken(); if (existing && Date.now() < existing.expiry) return resolve(existing.access_token); tokenClient.callback = (resp) => { if (resp.error) reject(resp); resolve(resp.access_token); }; tokenClient.requestAccessToken({ prompt: '' }); }); const saveToDrive = async (blob, filename, preFetchedToken = null, folderName = 'darNote_MockVault') => { const token = preFetchedToken || await getAccessToken(); let folderId; const q = `mimeType='application/vnd.google-apps.folder' and name='${folderName}' and trashed=false`; const search = await fetch(`https://www.googleapis.com/drive/v3/files?q=${encodeURIComponent(q)}`, { headers: { Authorization: `Bearer ${token}` } }); const searchData = await search.json(); if (searchData.files?.length) folderId = searchData.files[0].id; else { const create = await fetch('https://www.googleapis.com/drive/v3/files', { method: 'POST', headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' }, body: JSON.stringify({ name: folderName, mimeType: 'application/vnd.google-apps.folder' }) }); folderId = (await create.json()).id; } const metadata = { name: filename, mimeType: blob.type, parents: [folderId] }; const form = new FormData(); form.append('metadata', new Blob([JSON.stringify(metadata)], { type: 'application/json' })); form.append('file', blob); const upRes = await fetch('https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&fields=id', { method: 'POST', headers: { Authorization: `Bearer ${token}` }, body: form }); if(!upRes.ok) throw new Error(upRes.statusText); const fileId = (await upRes.json()).id; await fetch(`https://www.googleapis.com/drive/v3/files/${fileId}/permissions`, { method: 'POST', headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' }, body: JSON.stringify({ role: 'reader', type: 'anyone' }) }); return `https://lh3.googleusercontent.com/d/${fileId}`; }; return { saveToDrive, getAccessToken }; };
 
-    // PDF SLICER
     const processPDF = async (file) => {
         const arrayBuffer = await file.arrayBuffer();
         const pdf = await pdfjsLib.getDocument(arrayBuffer).promise;
@@ -78,7 +74,6 @@
         return blobs;
     };
 
-    // COMPONENTS
     const StudentModal = ({ isOpen, onClose, user, saveToDrive, getAccessToken, callGroq }) => {
         const [role, setRole] = useState('University'); const [file, setFile] = useState(null); const [uploading, setUploading] = useState(false); const [status, setStatus] = useState('none'); const [cooldownEnd, setCooldownEnd] = useState(null); const [uploadStatusMsg, setUploadStatusMsg] = useState(""); const [verifiedData, setVerifiedData] = useState(null);
         useEffect(() => { if(!isOpen || !user) return; const ref = window.firebase.doc(window.firebase.db, 'artifacts', "darnote-app", 'users', user.uid, 'settings', 'profile'); window.firebase.getDoc(ref).then(snap => { if(snap.exists()) { if (snap.data().studentStatus) setStatus(snap.data().studentStatus); if (snap.data().verifiedData) setVerifiedData(snap.data().verifiedData); const cd = snap.data().studentVerificationCooldown; if (cd && cd > Date.now()) setCooldownEnd(cd); } }); }, [isOpen, user]);
@@ -98,13 +93,30 @@
         return (<div className="flex flex-col h-full bg-[#f4f4f5] dark:bg-onyx border-l border-light-gray dark:border-white/5 shadow-2xl"><div className="px-5 py-4 border-b border-light-gray dark:border-white/5 bg-white dark:bg-surface-dark flex flex-col gap-4"><div className="flex justify-between items-center"><span className="font-bold text-base flex items-center gap-2 text-dark dark:text-light"><div className="w-8 h-8 rounded-full bg-black/5 dark:bg-white/10 flex items-center justify-center"><Icons.Sparkles className="w-4 h-4 text-primary dark:text-light"/></div> Vault AI</span><button onClick={onClose} className="p-2 rounded-full hover:bg-light-gray dark:hover:bg-white/10 transition-colors"><Icons.X className="w-5 h-5 text-gray"/></button></div></div><div className="flex-1 overflow-y-auto p-5 space-y-6 markdown-content">{messages.map((m, i) => <div key={i} className={`flex ${m.role==='user'?'justify-end':'justify-start'}`}><div className={`max-w-[85%] p-4 text-sm shadow-sm ${m.role==='user'?'bg-primary text-white dark:bg-light dark:text-dark rounded-2xl rounded-tr-sm':'bg-white dark:bg-surface-dark text-dark dark:text-light border border-light-gray dark:border-white/5 rounded-2xl rounded-tl-sm'}`} dangerouslySetInnerHTML={{ __html: marked.parse(m.text, {breaks: true, gfm: true}) }} /></div>)}{loading && <div className="flex gap-1 pl-4"><div className="w-2 h-2 bg-black/50 dark:bg-white/50 rounded-full animate-bounce"></div><div className="w-2 h-2 bg-black/50 dark:bg-white/50 rounded-full animate-bounce" style={{animationDelay:'0.1s'}}></div><div className="w-2 h-2 bg-black/50 dark:bg-white/50 rounded-full animate-bounce" style={{animationDelay:'0.2s'}}></div></div>} <div ref={messagesEndRef}/></div><div className="p-4 bg-white dark:bg-surface-dark border-t border-light-gray dark:border-white/5"><div className="flex gap-2 bg-[#f4f4f5] dark:bg-dark border border-light-gray dark:border-white/5 rounded-xl p-1 shadow-inner"><input value={input} onChange={e=>setInput(e.target.value)} onKeyDown={e=>e.key==='Enter'&&handleSend()} className="flex-1 bg-transparent px-4 py-2 text-sm focus:outline-none dark:text-light placeholder-gray" placeholder={`Ask about this page...`}/><button onClick={handleSend} disabled={loading || !input.trim()} className="bg-primary text-white dark:bg-light dark:text-dark rounded-lg px-4 flex items-center justify-center disabled:opacity-50 transition-colors shadow-sm shrink-0"><Icons.Bot className="w-4 h-4"/></button></div></div></div>);
     };
 
+    // NO TOPICS DROPDOWN SIDEBAR ITEM
+    const SidebarSubjectItem = ({ subject, currentFilter, onSelect }) => {
+        const isSelected = currentFilter === `subject:${subject.name}`;
+        return (
+            <div className="mb-0.5">
+                <button onClick={() => onSelect(`subject:${subject.name}`)} className={`w-full flex items-center justify-between px-3 py-2 rounded-r-full text-sm font-medium transition-colors ${isSelected ? 'text-primary dark:text-primary-light font-bold bg-primary/10 dark:bg-primary-light/15' : 'text-gray hover:bg-black/5 dark:hover:bg-white/5 hover:text-dark dark:hover:text-light'}`}>
+                    <span className="truncate flex items-center gap-3"><Icons.Folder className="w-4 h-4 opacity-70"/> {subject.name}</span>
+                </button>
+            </div>
+        );
+    };
+
     const App = () => {
         const [user, setUser] = useState(null); 
         const [mockPapers, setMockPapers] = useState([]); 
         const [subjects, setSubjects] = useState([]); 
-        const [activeMockId, setActiveMockId] = useState(null);
+        
+        // --- ROUTING BRUH ---
+        const [activeMockId, setActiveMockId] = useState(() => new URLSearchParams(window.location.search).get('mock'));
+        const [activePageId, setActivePageId] = useState(() => new URLSearchParams(window.location.search).get('page'));
+        
         const [mockPages, setMockPages] = useState([]);
-        const [activePageId, setActivePageId] = useState(null);
+        const [filter, setFilter] = useState('all');
+        const [searchQuery, setSearchQuery] = useState('');
         
         const [isDarkMode, setIsDarkMode] = useState(false); 
         const [isLoadingMocks, setIsLoadingMocks] = useState(true); 
@@ -116,19 +128,34 @@
         const [compareMode, setCompareMode] = useState(false);
         const [isAiOpen, setIsAiOpen] = useState(false); 
         const [chatMessages, setChatMessages] = useState([{role: 'ai', text: "How can I assist with this specific mock page?"}]);
+        
+        const [mobileView, setMobileView] = useState('mocks');
+        const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+        const [showHelpMenu, setShowHelpMenu] = useState(false);
 
         const { saveToDrive, getAccessToken } = useGoogleDrive(); 
         const saveTimeoutRef = useRef(null); 
         const pendingUpdatesRef = useRef({}); 
 
         // Auth & Subjects Init
-        useEffect(() => { const unsub = window.firebase.onAuthStateChanged(window.firebase.auth, async (u) => { if (u) { setUser(u); const db = window.firebase.db; window.firebase.getDocs(window.firebase.collection(db, 'artifacts', "darnote-app", 'users', u.uid, 'subjects')).then(snap => { setSubjects(snap.docs.map(d => ({id: d.id, name: d.data().name, topics: d.data().topics || []})).sort((a,b)=>a.name.localeCompare(b.name))); }); window.firebase.onSnapshot(window.firebase.doc(db, 'artifacts', "darnote-app", 'users', u.uid, 'settings', 'profile'), (doc) => { if(doc.exists()) setStudentStatus(doc.data().studentStatus || 'none'); }); fetchMockPapers(u.uid); } else setUser(null); }); return () => unsub(); }, []);
+        useEffect(() => { const unsub = window.firebase.onAuthStateChanged(window.firebase.auth, async (u) => { if (u) { setUser(u); const db = window.firebase.db; window.firebase.getDocs(window.firebase.collection(db, 'artifacts', "darnote-app", 'users', u.uid, 'subjects')).then(snap => { setSubjects(snap.docs.map(d => ({id: d.id, name: d.data().name, topics: d.data().topics || []})).sort((a,b)=>a.name.localeCompare(b.name))); }); window.firebase.onSnapshot(window.firebase.doc(db, 'artifacts', "darnote-app", 'users', u.uid, 'settings', 'profile'), (doc) => { if(doc.exists()) setStudentStatus(doc.data().studentStatus || 'none'); }); fetchMockPapers(u.uid); } else setUser(null); }); return () => unsub(); }, [filter]);
+        
         useEffect(() => { if(isDarkMode) document.documentElement.classList.add('dark'); else document.documentElement.classList.remove('dark'); }, [isDarkMode]);
+
+        // URL Updater Effect
+        useEffect(() => {
+            const url = new URL(window.location);
+            if (activeMockId) url.searchParams.set('mock', activeMockId); else url.searchParams.delete('mock');
+            if (activePageId) url.searchParams.set('page', activePageId); else url.searchParams.delete('page');
+            window.history.pushState({}, '', url);
+        }, [activeMockId, activePageId]);
 
         const fetchMockPapers = async (uid) => {
             setIsLoadingMocks(true);
             try {
-                const q = window.firebase.query(window.firebase.collection(window.firebase.db, 'artifacts', "darnote-app", 'users', uid, 'mock_papers'), window.firebase.orderBy('createdAt', 'desc'));
+                let constraints = [window.firebase.orderBy('createdAt', 'desc')];
+                if (filter.startsWith('subject:')) constraints.push(window.firebase.where('subject', '==', filter.split(':')[1]));
+                const q = window.firebase.query(window.firebase.collection(window.firebase.db, 'artifacts', "darnote-app", 'users', uid, 'mock_papers'), ...constraints);
                 const snap = await window.firebase.getDocs(q);
                 setMockPapers(snap.docs.map(d => ({id: d.id, ...d.data()})));
             } catch(e) { console.error(e); }
@@ -145,7 +172,7 @@
         };
 
         useEffect(() => {
-            if (activeMockId) { fetchMockPages(activeMockId); setActivePageId(null); }
+            if (activeMockId) { fetchMockPages(activeMockId); }
         }, [activeMockId]);
 
         // Cooldown Logic
@@ -171,11 +198,12 @@
             const newMock = { title: 'Untitled Mock Exam', subject: subjects[0]?.name || 'General', createdAt: new Date().toISOString() };
             const docRef = await window.firebase.addDoc(window.firebase.collection(window.firebase.db, 'artifacts', "darnote-app", 'users', user.uid, 'mock_papers'), newMock);
             
-            // Update Cooldown
             await window.firebase.setDoc(window.firebase.doc(window.firebase.db, 'artifacts', "darnote-app", 'users', user.uid, 'settings', 'profile'), { lastMockCreated: Date.now() }, { merge: true });
             
             setMockPapers(prev => [{...newMock, id: docRef.id}, ...prev]);
             setActiveMockId(docRef.id);
+            setActivePageId(null);
+            if (window.innerWidth < 1024) setIsMobileMenuOpen(false);
         };
 
         const updateMock = async (id, updates) => {
@@ -200,9 +228,8 @@
         const deleteMock = async (id) => {
             if(!confirm("Eradicate this entire mock paper and all its pages?")) return;
             setMockPapers(prev => prev.filter(m => m.id !== id));
-            if (activeMockId === id) setActiveMockId(null);
+            if (activeMockId === id) { setActiveMockId(null); setActivePageId(null); }
             await window.firebase.deleteDoc(window.firebase.doc(window.firebase.db, 'artifacts', "darnote-app", 'users', user.uid, 'mock_papers', id));
-            // Should technically delete children pages too, but simplified for single file.
         };
 
         // File Upload (Images & PDF)
@@ -259,7 +286,7 @@
                     const blob = await res.blob();
                     imgB64 = await new Promise(r=>{const rd=new FileReader(); rd.onload=()=>r(rd.result); rd.readAsDataURL(blob);});
                 } else {
-                    imgB64 = page.imageUrl; // Fallback, Groq won't read Drive URLs easily though
+                    imgB64 = page.imageUrl;
                 }
                 
                 const prompt = `Analyze this specific page from an exam. Identify the mistakes the student made. \nReturn strictly JSON format: { "whatWrong": "Short summary of the exact mistake", "whyWrong": "Underlying conceptual reason for the mistake", "thoughtProcess": "Probable flawed thought process the student had" }`;
@@ -287,55 +314,132 @@
         const activeMock = mockPapers.find(m => m.id === activeMockId);
         const activePage = mockPages.find(p => p.id === activePageId);
         const currentSub = activeMock ? subjects.find(s=>s.name===activeMock.subject) : null;
+        
+        const filteredMocks = mockPapers.filter(m => (m.title || '').toLowerCase().includes(searchQuery.toLowerCase()));
 
         if (!user) return (<div className="h-screen w-full flex items-center justify-center bg-white dark:bg-onyx flex-col gap-6 relative overflow-hidden"><div className="z-10 flex flex-col items-center"><img src="https://raw.githubusercontent.com/darren6251/darnote/refs/heads/main/darNote%20logo.png" className="w-16 h-16 mb-6 rounded-2xl shadow-sm grayscale opacity-80"/><h1 className="text-4xl font-bold text-dark dark:text-light tracking-tight font-sans mb-3">darNote Mock Vault</h1><p className="text-base text-gray max-w-sm text-center mb-10">Sign in to securely stash and analyze your mock exams.</p><button onClick={() => window.firebase.signInWithPopup(window.firebase.auth, new window.firebase.GoogleAuthProvider())} className="bg-primary text-white dark:bg-light dark:text-dark px-8 py-3.5 rounded-full font-medium flex gap-3 items-center hover:opacity-90 transition-all shadow-md w-64 justify-center text-sm"><Icons.Google className="w-4 h-4"/> Authenticate</button></div></div>);
 
         return (
-            <div className={`flex flex-col h-screen w-full transition-colors duration-300 ${isDarkMode ? 'dark bg-onyx' : 'bg-[#f4f4f5]'}`}>
+            <div className={`flex flex-col h-screen w-full transition-colors duration-300 ${isDarkMode ? 'dark bg-onyx' : 'bg-white'}`}>
                 <StudentModal isOpen={showStudentModal} onClose={() => setShowStudentModal(false)} user={user} saveToDrive={saveToDrive} getAccessToken={getAccessToken} callGroq={callGroq} />
                 <AnimatePresence>{compareMode && activePage && <CompareLightbox activePage={activePage} onClose={() => setCompareMode(false)} />}</AnimatePresence>
 
-                {/* Header */}
-                <header className="bg-white dark:bg-surface-dark text-dark dark:text-light px-4 py-2 flex justify-between items-center z-30 shrink-0 border-b border-light-gray dark:border-border-dark h-16 shadow-sm">
+                <AnimatePresence>{isMobileMenuOpen && (
+                    <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 z-50 bg-dark/60 backdrop-blur-sm lg:hidden" onClick={() => setIsMobileMenuOpen(false)}>
+                        <motion.div initial={{ x: '-100%' }} animate={{ x: 0 }} exit={{ x: '-100%' }} transition={{ type: 'spring', damping: 25, stiffness: 200 }} className="absolute top-0 bottom-0 left-0 w-[280px] bg-white dark:bg-surface-dark shadow-2xl flex flex-col" onClick={e => e.stopPropagation()}>
+                            <div className="p-6 border-b border-light-gray dark:border-white/10">
+                                <div className="flex items-center gap-3 mb-6">
+                                    <div className="w-8 h-8 rounded-lg bg-black dark:bg-white flex items-center justify-center"><Icons.Folder className="w-4 h-4 text-white dark:text-black"/></div>
+                                    <span className="font-bold text-lg dark:text-light">darNote Vault</span>
+                                </div>
+                                <button onClick={createMockPaper} className="w-full flex items-center justify-center gap-2 bg-primary text-white dark:bg-light dark:text-dark py-3 rounded-xl font-medium shadow-md hover:opacity-90 transition-all"><Icons.Plus className="w-5 h-5"/> New Mock Paper</button>
+                            </div>
+                            <div className="flex-1 overflow-y-auto p-4 space-y-1">
+                                <a href="el.html" className="flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium text-gray dark:text-zinc-400 hover:bg-light-gray dark:hover:bg-white/5 transition-colors"><Icons.Book className="w-5 h-5"/> Standard Error Logs</a>
+                                <div className="my-4 border-t border-light-gray dark:border-white/10"></div>
+                                <div className="px-4 text-[11px] font-bold text-gray uppercase tracking-wider mb-2">Filters</div>
+                                <button onClick={()=>{setFilter('all'); setIsMobileMenuOpen(false);}} className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium transition-colors ${filter==='all' ? 'bg-primary/10 text-primary dark:text-primary-light font-bold' : 'text-gray dark:text-zinc-400 hover:bg-light-gray dark:hover:bg-white/5'}`}><Icons.Dashboard className="w-5 h-5"/> All Mocks</button>
+                                <div className="my-4 border-t border-light-gray dark:border-white/10"></div>
+                                <div className="px-4 text-[11px] font-bold text-gray uppercase tracking-wider mb-2">Subjects</div>
+                                <div className="space-y-0.5">{subjects.map(s => (<SidebarSubjectItem key={s.id} subject={s} currentFilter={filter} onSelect={(f) => { setFilter(f); setIsMobileMenuOpen(false); }} />))}</div>
+                            </div>
+                        </motion.div>
+                    </motion.div>
+                )}</AnimatePresence>
+
+                {/* THE RETURN OF THE GOOGLE WORKSPACE HEADER */}
+                <header className="bg-white dark:bg-surface-dark text-dark dark:text-light px-4 py-2 flex justify-between items-center z-30 shrink-0 border-b border-light-gray dark:border-border-dark h-16">
                     <div className="flex items-center gap-3 font-medium text-lg tracking-tight cursor-pointer px-2" onClick={() => {setActiveMockId(null); setActivePageId(null);}}>
-                        <div className="w-8 h-8 rounded-lg bg-black dark:bg-white flex items-center justify-center"><Icons.Folder className="w-4 h-4 text-white dark:text-black"/></div>
-                        <span className="text-gray dark:text-gray/80 hidden lg:inline font-mono text-sm uppercase tracking-widest">Vault /</span> <span className="font-bold">Mocks</span>
+                        <button onClick={() => setIsMobileMenuOpen(true)} className="lg:hidden p-2 -ml-2 rounded-full hover:bg-light-gray dark:hover:bg-white/10 transition-colors"><Icons.Menu className="w-6 h-6 text-gray dark:text-zinc-400"/></button>
+                        <div className="hidden lg:flex w-8 h-8 rounded-lg bg-black dark:bg-white items-center justify-center shadow-sm"><Icons.Folder className="w-4 h-4 text-white dark:text-black"/></div>
+                        <span className="text-gray dark:text-gray/80 hidden lg:inline">darNote</span> <span className="font-semibold hidden lg:inline">Mock Vault</span>
+                        <span className="font-semibold lg:hidden">Mock Vault</span>
                     </div>
                     
-                    <div className="flex items-center gap-3">
+                    {/* Centered Search */}
+                    <div className="hidden lg:flex flex-1 max-w-2xl px-8">
+                         <div className="w-full bg-[#f4f4f5] dark:bg-dark flex items-center px-4 py-2.5 rounded-full border border-transparent focus-within:bg-white dark:focus-within:bg-surface-dark focus-within:border-light-gray dark:focus-within:border-white/10 focus-within:shadow-ds transition-all">
+                             <Icons.Search className="w-5 h-5 text-gray mr-3"/>
+                             <input type="text" placeholder="Search Mocks" value={searchQuery} onChange={e=>setSearchQuery(e.target.value)} className="bg-transparent border-none outline-none w-full text-sm text-dark dark:text-light placeholder-gray font-medium"/>
+                         </div>
+                    </div>
+
+                    <div className="flex items-center gap-2">
                         <button onClick={() => setShowStudentModal(true)} className="hidden md:flex items-center gap-2 px-4 py-2 rounded-full text-xs font-semibold text-primary bg-black/5 dark:bg-white/5 hover:bg-black/10 dark:hover:bg-white/10 transition-all border border-black/5 dark:border-white/5">
                             <Icons.GraduationCap className="w-4 h-4"/> Cooldown Pass
                         </button>
-                        <button onClick={()=>setIsDarkMode(!isDarkMode)} className="p-2 text-gray hover:bg-black/5 dark:hover:bg-white/5 rounded-full transition-colors mx-1" title="Toggle Theme">
+                        
+                        <div className="relative flex items-center">
+                            <button onClick={() => setShowHelpMenu(!showHelpMenu)} className="p-2 text-gray hover:bg-black/5 dark:hover:bg-white/5 rounded-full transition-colors mx-1" title="Get Help before your brain melts">
+                                <Icons.HelpCircle className="w-5 h-5"/>
+                            </button>
+                            {showHelpMenu && <div className="fixed inset-0 z-40" onClick={() => setShowHelpMenu(false)}></div>}
+                            {showHelpMenu && (
+                                <div className="absolute right-0 top-full mt-2 w-64 bg-white dark:bg-surface-dark border border-light-gray dark:border-white/10 rounded-xl shadow-ds-hover z-50 py-2 overflow-hidden transform origin-top-right transition-all">
+                                    <div className="px-4 py-2 text-[10px] font-bold text-gray uppercase tracking-wider bg-light-gray/30 dark:bg-black/20 border-b border-light-gray/50 dark:border-white/5 mb-1 flex items-center gap-2"><Icons.HelpCircle className="w-3 h-3"/> SOS / Lifeline</div>
+                                    <a href="mailto:darrenng@3-shot.com" onClick={() => setShowHelpMenu(false)} className="w-full text-left px-4 py-3 text-sm hover:bg-black/5 dark:hover:bg-white/5 text-dark dark:text-light flex items-center gap-3 transition-colors group">
+                                        <div className="w-8 h-8 rounded-full bg-black/5 dark:bg-white/10 flex items-center justify-center group-hover:scale-110 transition-transform"><Icons.Brain className="w-4 h-4 text-primary dark:text-light"/></div> 
+                                        <div><div className="font-semibold">Email Support</div><div className="text-[10px] text-gray">darrenng@3-shot.com</div></div>
+                                    </a>
+                                </div>
+                            )}
+                        </div>
+
+                        <button onClick={()=>setIsDarkMode(!isDarkMode)} className="p-2 text-gray hover:bg-black/5 dark:hover:bg-white/5 rounded-full transition-colors mx-1" title="Toggle Mode">
                             {isDarkMode ? <Icons.Sun className="w-5 h-5"/> : <Icons.Moon className="w-5 h-5"/>}
                         </button>
-                        <div className="flex items-center gap-3 pl-2 border-l border-light-gray dark:border-white/10">
-                            {user.photoURL ? <img src={user.photoURL} className="w-8 h-8 rounded-full border border-light-gray dark:border-white/10 grayscale opacity-90"/> : <div className="w-8 h-8 rounded-full bg-primary text-white flex items-center justify-center font-bold text-xs">U</div>}
+                        <div className="flex items-center gap-3 pl-2">
+                            {user.photoURL ? <img src={user.photoURL} className="w-8 h-8 rounded-full border border-light-gray dark:border-white/10 cursor-pointer hover:ring-4 ring-black/5 dark:ring-white/5 transition-all grayscale opacity-90"/> : <div className="w-8 h-8 rounded-full bg-primary text-white flex items-center justify-center font-bold text-xs">U</div>}
                         </div>
+                        <button onClick={()=>window.firebase.signOut(window.firebase.auth)} className="p-2 text-gray hover:text-danger hover:bg-danger/5 rounded-full transition-colors ml-1"><Icons.Logout className="w-5 h-5"/></button>
                     </div>
                 </header>
 
                 <div className="flex-1 flex overflow-hidden">
-                    {/* Left Sidebar - Mock Papers */}
-                    <div className={`flex-shrink-0 bg-white dark:bg-surface-dark flex-col z-20 border-r border-light-gray dark:border-border-dark w-[280px] hidden lg:flex transition-colors duration-300`}>
-                        <div className="p-4 border-b border-light-gray dark:border-border-dark">
-                            <button onClick={createMockPaper} className="w-full flex items-center justify-center gap-2 bg-primary text-white dark:bg-light dark:text-dark py-3 rounded-xl font-medium shadow-sm hover:opacity-90 transition-all"><Icons.Plus className="w-5 h-5"/> New Mock Paper</button>
+                    {/* LEFT SIDEBAR (Width exactly 260px like el.html) */}
+                    <div className="w-[260px] flex-shrink-0 bg-white dark:bg-surface-dark flex flex-col py-4 z-20 hidden lg:flex transition-colors duration-300">
+                        <div className="px-3 mb-6">
+                            <button onClick={createMockPaper} className="flex items-center gap-3 bg-white dark:bg-[#18181b] border border-light-gray dark:border-white/10 text-dark dark:text-light px-5 py-3.5 rounded-2xl shadow-sm hover:shadow-md hover:bg-[#f4f4f5] dark:hover:bg-[#27272a] transition-all font-medium text-sm w-max"><Icons.Plus className="w-5 h-5 text-primary dark:text-light"/><span className="pr-2">New Mock</span></button>
                         </div>
-                        <div className="px-4 py-3 bg-[#f4f4f5] dark:bg-onyx border-b border-light-gray dark:border-border-dark flex justify-between items-center shrink-0">
-                            <span className="text-xs font-bold text-gray uppercase tracking-wider">Archive ({mockPapers.length})</span>
+                        <nav className="space-y-0.5 mb-6">
+                            <a href="el.html" className="flex items-center gap-3 px-4 py-3 rounded-r-full text-sm font-medium transition-colors w-[95%] text-gray hover:bg-black/5 dark:hover:bg-white/5 hover:text-dark dark:hover:text-light"><Icons.Book className="w-5 h-5"/> Standard Error Logs</a>
+                            <button onClick={()=>setFilter('all')} className={`flex items-center gap-3 px-4 py-3 rounded-r-full text-sm font-medium transition-colors w-[95%] ${filter==='all' ? 'bg-primary/10 text-primary dark:bg-primary-light/15 dark:text-primary-light font-bold' : 'text-gray hover:bg-black/5 dark:hover:bg-white/5 hover:text-dark dark:hover:text-light'}`}><Icons.Dashboard className="w-5 h-5"/> All Mocks</button>
+                        </nav>
+                        <div className="flex-1 overflow-y-auto">
+                            <div className="px-5 text-[11px] font-bold text-gray mb-3 uppercase tracking-wider">Subjects</div>
+                            <div className="space-y-0.5">{subjects.map(s => (<SidebarSubjectItem key={s.id} subject={s} currentFilter={filter} onSelect={setFilter} />))}</div>
                         </div>
-                        <div className="flex-1 overflow-y-auto p-3 space-y-1">
-                            {isLoadingMocks ? <div className="text-center text-gray py-4 text-xs">Loading...</div> : mockPapers.map(m => (
-                                <button key={m.id} onClick={()=>{setActiveMockId(m.id); setActivePageId(null);}} className={`w-full text-left p-3 rounded-xl transition-all border ${activeMockId===m.id ? 'bg-black/5 dark:bg-white/10 border-transparent font-semibold shadow-sm text-dark dark:text-light' : 'bg-transparent border-transparent hover:bg-black/5 dark:hover:bg-white/5 text-gray hover:text-dark dark:hover:text-light'}`}>
-                                    <div className="truncate text-sm mb-1">{m.title}</div>
-                                    <div className="text-[10px] font-mono opacity-60 flex justify-between"><span>{m.subject}</span> <span>{new Date(m.createdAt).toLocaleDateString()}</span></div>
-                                </button>
+                    </div>
+                    
+                    {/* MIDDLE COLUMN: MOCK LIST (Width exactly 340px like el.html) */}
+                    <div className={`flex-shrink-0 bg-[#f4f4f5] dark:bg-onyx flex-col z-10 border-r border-light-gray dark:border-border-dark ${activeMockId || (mobileView !== 'mocks') ? 'hidden lg:flex w-[340px]' : 'flex w-full lg:w-[340px]'}`}>
+                        <div className="p-4 border-b border-light-gray dark:border-border-dark flex gap-2 shrink-0 lg:hidden">
+                             <div className="w-full bg-white dark:bg-dark flex items-center px-3 py-2 rounded-full border border-light-gray dark:border-white/10">
+                                 <Icons.Search className="w-4 h-4 text-gray mr-2"/>
+                                 <input type="text" placeholder="Search Mocks..." value={searchQuery} onChange={e=>setSearchQuery(e.target.value)} className="bg-transparent border-none outline-none w-full text-sm text-dark dark:text-light placeholder-gray"/>
+                             </div>
+                        </div>
+                        <div className="px-4 py-3 border-b border-light-gray dark:border-border-dark flex justify-between items-center bg-[#f4f4f5] dark:bg-onyx shrink-0">
+                            <span className="text-sm font-medium text-gray">Archive ({filteredMocks.length})</span>
+                        </div>
+                        <div className="flex-1 overflow-y-auto p-3 space-y-2 pb-20 lg:pb-3">
+                            {filteredMocks.map(m => (
+                                <motion.div key={m.id} onClick={()=>{setActiveMockId(m.id); setActivePageId(null);}} className={`p-4 rounded-2xl cursor-pointer transition-all border ${activeMockId===m.id ? 'bg-black/5 dark:bg-white/10 border-transparent shadow-sm' : 'bg-white dark:bg-surface-dark border-light-gray dark:border-white/5 hover:border-gray/30 hover:shadow-sm'}`}>
+                                    <div className="flex justify-between items-start mb-2">
+                                        <div className={`font-semibold text-sm truncate pr-2 w-full ${activeMockId===m.id ? 'text-primary dark:text-light' : 'text-dark dark:text-light'}`}>{m.title}</div>
+                                    </div>
+                                    <div className={`text-xs truncate mb-3 font-medium ${activeMockId===m.id ? 'text-primary dark:text-light/80' : 'text-gray'}`}>{m.subject}</div>
+                                    <div className="flex justify-end items-center">
+                                        <div className="text-[10px] text-gray">{new Date(m.createdAt).toLocaleDateString(undefined, {month:'short', day:'numeric'})}</div>
+                                    </div>
+                                </motion.div>
                             ))}
+                            {isLoadingMocks && <div className="text-center text-gray py-6 text-sm flex items-center justify-center gap-2"><div className="w-4 h-4 border-2 border-gray border-t-transparent rounded-full animate-spin"></div> Fetching...</div>}
                         </div>
                     </div>
 
-                    {/* Main Content Area */}
-                    <main className="flex-1 flex-col min-w-0 bg-[#f4f4f5] dark:bg-onyx relative transition-colors duration-300 flex w-full">
+                    {/* RIGHT COLUMN: MAIN CONTENT AREA */}
+                    <main className={`flex-1 flex-col min-w-0 bg-[#f4f4f5] dark:bg-onyx relative transition-colors duration-300 ${(!activeMockId && mobileView === 'mocks') ? 'hidden lg:flex' : 'flex w-full'}`}>
                         {!activeMockId ? (
                             <div className="h-full flex flex-col items-center justify-center text-gray space-y-4">
                                 <div className="w-20 h-20 bg-black/5 dark:bg-white/5 rounded-full flex items-center justify-center mb-2"><Icons.Folder className="w-10 h-10 opacity-50"/></div>
@@ -345,19 +449,22 @@
                         ) : !activePageId ? (
                             /* MOCK DETAIL VIEW (Grid of Pages) */
                             <div className="flex flex-col h-full">
-                                <header className="p-6 md:p-10 bg-white dark:bg-surface-dark shrink-0 border-b border-light-gray dark:border-border-dark flex justify-between items-start">
-                                    <div className="flex-1 max-w-2xl">
-                                        <input value={activeMock.title} onChange={e=>updateMock(activeMock.id, {title:e.target.value})} className="bg-transparent text-3xl font-bold outline-none w-full text-dark dark:text-light tracking-tight mb-4" placeholder="Untitled Mock"/>
-                                        <div className="flex items-center gap-4">
-                                            <div className="bg-light-gray/50 dark:bg-dark rounded-xl p-1 inline-flex border border-light-gray dark:border-white/5">
-                                                <select value={activeMock.subject} onChange={e=>updateMock(activeMock.id, {subject:e.target.value})} className="bg-transparent px-3 py-1.5 text-sm font-medium outline-none cursor-pointer text-dark dark:text-light"><option>General</option>{subjects.map(s=><option key={s.id} value={s.name}>{s.name}</option>)}</select>
+                                <header className="p-6 md:p-10 bg-white dark:bg-surface-dark shrink-0 border-b border-light-gray dark:border-border-dark flex justify-between items-start rounded-b-3xl md:rounded-b-none shadow-sm md:shadow-none mb-4 md:mb-0">
+                                    <div className="flex-1 max-w-2xl flex items-center gap-2 md:gap-4 overflow-hidden">
+                                        <button onClick={() => setActiveMockId(null)} className="lg:hidden p-2 rounded-full hover:bg-black/5 dark:hover:bg-white/10 text-gray shrink-0 -ml-2"><Icons.ChevronLeft className="w-5 h-5"/></button>
+                                        <div className="flex-1 min-w-0">
+                                            <input value={activeMock.title} onChange={e=>updateMock(activeMock.id, {title:e.target.value})} className="bg-transparent text-xl md:text-3xl font-bold outline-none w-full text-dark dark:text-light tracking-tight mb-2 truncate" placeholder="Untitled Mock"/>
+                                            <div className="flex items-center gap-4">
+                                                <div className="bg-light-gray/50 dark:bg-dark rounded-xl p-1 inline-flex border border-light-gray dark:border-white/5">
+                                                    <select value={activeMock.subject} onChange={e=>updateMock(activeMock.id, {subject:e.target.value})} className="bg-transparent px-3 py-1.5 text-sm font-medium outline-none cursor-pointer text-dark dark:text-light"><option>General</option>{subjects.map(s=><option key={s.id} value={s.name}>{s.name}</option>)}</select>
+                                                </div>
+                                                <span className="text-xs text-gray font-mono">{new Date(activeMock.createdAt).toLocaleDateString()}</span>
                                             </div>
-                                            <span className="text-xs text-gray font-mono">{new Date(activeMock.createdAt).toLocaleDateString()}</span>
                                         </div>
                                     </div>
-                                    <button onClick={() => deleteMock(activeMock.id)} className="p-2.5 rounded-full hover:bg-danger/10 text-gray hover:text-danger transition-colors"><Icons.Trash className="w-5 h-5"/></button>
+                                    <button onClick={() => deleteMock(activeMock.id)} className="p-2.5 rounded-full hover:bg-danger/10 text-gray hover:text-danger transition-colors shrink-0"><Icons.Trash className="w-5 h-5"/></button>
                                 </header>
-                                <div className="flex-1 overflow-y-auto p-6 md:p-10">
+                                <div className="flex-1 overflow-y-auto p-4 md:p-10 pb-24 md:pb-10 scroll-smooth">
                                     <div className="max-w-6xl mx-auto space-y-6">
                                         <div className="flex justify-between items-end mb-6">
                                             <h3 className="text-lg font-bold text-dark dark:text-light">Pages ({mockPages.length})</h3>
@@ -365,7 +472,8 @@
                                                 <input type="file" id="mockUpload" multiple accept="image/*,application/pdf" className="hidden" onChange={(e) => handleFileUpload(e.target.files)} />
                                                 <label htmlFor="mockUpload" className={`cursor-pointer bg-primary text-white dark:bg-light dark:text-dark px-5 py-2.5 rounded-xl font-medium shadow-sm hover:opacity-90 transition-all flex items-center gap-2 text-sm ${isUploading?'opacity-50 pointer-events-none':''}`}>
                                                     {isUploading ? <div className="w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin"/> : <Icons.CloudUpload className="w-4 h-4"/>}
-                                                    {isUploading ? "Processing..." : "Upload PDF / Images"}
+                                                    <span className="hidden sm:inline">{isUploading ? "Processing..." : "Upload PDF / Images"}</span>
+                                                    <span className="sm:hidden">{isUploading ? "Loading..." : "Upload"}</span>
                                                 </label>
                                             </div>
                                         </div>
@@ -374,7 +482,7 @@
                                         <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
                                             {mockPages.map((page, idx) => (
                                                 <motion.div initial={{opacity:0, y:10}} animate={{opacity:1, y:0}} key={page.id} onClick={() => setActivePageId(page.id)} className="bg-white dark:bg-surface-dark rounded-2xl overflow-hidden shadow-sm border border-light-gray dark:border-white/5 cursor-pointer hover:shadow-md hover:border-gray/30 transition-all group relative aspect-[3/4] flex flex-col">
-                                                    <div className="flex-1 bg-light-gray/30 dark:bg-black/20 p-2 overflow-hidden flex items-center justify-center">
+                                                    <div className="flex-1 bg-[#f4f4f5] dark:bg-[#111113] p-2 overflow-hidden flex items-center justify-center">
                                                         <img src={page.imageUrl} className="max-w-full max-h-full object-contain mix-blend-multiply dark:mix-blend-normal rounded-lg shadow-sm" />
                                                     </div>
                                                     <div className="p-3 bg-white dark:bg-surface-dark border-t border-light-gray dark:border-white/5 flex justify-between items-center">
@@ -388,7 +496,7 @@
                                         {mockPages.length === 0 && !isUploading && (
                                             <div className="text-center py-20 border-2 border-dashed border-gray/20 rounded-3xl">
                                                 <Icons.FileText className="w-12 h-12 mx-auto text-gray/30 mb-4"/>
-                                                <p className="text-gray font-medium">Drag and drop a Mock PDF here, or click Upload.</p>
+                                                <p className="text-gray font-medium px-4">Drag and drop a Mock PDF here, or click Upload.</p>
                                             </div>
                                         )}
                                     </div>
@@ -398,27 +506,28 @@
                             /* PAGE EDITOR VIEW */
                             <motion.div initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} className="flex flex-col h-full bg-white dark:bg-surface-dark">
                                 <header className="h-[64px] flex items-center justify-between px-4 border-b border-light-gray dark:border-border-dark shrink-0">
-                                    <div className="flex items-center gap-4">
-                                        <button onClick={() => setActivePageId(null)} className="p-2 rounded-full hover:bg-black/5 dark:hover:bg-white/10 text-gray transition-colors"><Icons.ArrowLeft className="w-5 h-5"/></button>
-                                        <div className="font-bold text-dark dark:text-light">Page {activePage.pageNumber}</div>
-                                        <div className="w-px h-5 bg-light-gray dark:bg-white/10"></div>
-                                        <select value={activePage.topic || ''} onChange={e=>updatePage(activePage.id, {topic:e.target.value})} className="bg-transparent text-sm font-medium text-gray outline-none cursor-pointer"><option value="">-- Assign Topic --</option>{currentSub?.topics.map(t => <option key={t} value={t}>{t}</option>)}</select>
+                                    <div className="flex items-center gap-2 md:gap-4 flex-1">
+                                        <button onClick={() => setActivePageId(null)} className="p-2 rounded-full hover:bg-black/5 dark:hover:bg-white/10 text-gray transition-colors shrink-0 -ml-2 md:ml-0"><Icons.ArrowLeft className="w-5 h-5"/></button>
+                                        <div className="font-bold text-dark dark:text-light text-sm md:text-base shrink-0">Page {activePage.pageNumber}</div>
+                                        <div className="w-px h-5 bg-light-gray dark:bg-white/10 shrink-0"></div>
+                                        <select value={activePage.topic || ''} onChange={e=>updatePage(activePage.id, {topic:e.target.value})} className="bg-transparent text-sm font-medium text-gray outline-none cursor-pointer w-full md:w-auto truncate"><option value="">-- Assign Topic --</option>{currentSub?.topics.map(t => <option key={t} value={t}>{t}</option>)}</select>
                                     </div>
-                                    <div className="flex items-center gap-2">
-                                        {isAiLoading && <div className="text-[10px] font-bold uppercase tracking-wider text-gray animate-pulse flex items-center gap-1"><Icons.Sparkles className="w-3 h-3"/> AI Analyzing...</div>}
-                                        <button onClick={()=>updatePage(activePage.id, {mastered: !activePage.mastered})} className={`px-4 py-1.5 rounded-full text-xs font-bold transition-all uppercase tracking-wider border ${activePage.mastered ? 'bg-primary text-white dark:bg-light dark:text-dark border-transparent' : 'bg-transparent border-gray/30 text-gray hover:text-dark dark:hover:text-light'}`}>{activePage.mastered ? 'Mastered' : 'Mark Mastered'}</button>
+                                    <div className="flex items-center gap-2 shrink-0">
+                                        {isAiLoading && <div className="hidden md:flex text-[10px] font-bold uppercase tracking-wider text-gray animate-pulse items-center gap-1"><Icons.Sparkles className="w-3 h-3"/> AI Analyzing...</div>}
+                                        <button onClick={()=>updatePage(activePage.id, {mastered: !activePage.mastered})} className={`hidden md:inline-flex px-4 py-1.5 rounded-full text-xs font-bold transition-all uppercase tracking-wider border ${activePage.mastered ? 'bg-primary text-white dark:bg-light dark:text-dark border-transparent' : 'bg-transparent border-gray/30 text-gray hover:text-dark dark:hover:text-light'}`}>{activePage.mastered ? 'Mastered' : 'Mark Mastered'}</button>
+                                        <button onClick={()=>updatePage(activePage.id, {mastered: !activePage.mastered})} className={`md:hidden p-2 rounded-full transition-all border ${activePage.mastered ? 'bg-primary text-white dark:bg-light dark:text-dark border-transparent' : 'bg-transparent border-gray/30 text-gray'}`}>{activePage.mastered ? <Icons.Check className="w-4 h-4"/> : <Icons.Target className="w-4 h-4"/>}</button>
                                         <div className="w-px h-5 bg-light-gray dark:bg-white/10 mx-1"></div>
                                         <button onClick={()=> user ? setIsAiOpen(!isAiOpen) : null} disabled={!user} className={`p-2 rounded-full transition-colors ${isAiOpen ? 'bg-black/5 dark:bg-white/10 text-primary dark:text-light' : 'text-gray hover:bg-black/5 dark:hover:bg-white/5'}`}><Icons.Bot className="w-5 h-5"/></button>
                                     </div>
                                 </header>
-                                <div className="flex-1 flex overflow-hidden">
+                                <div className="flex-1 flex flex-col md:flex-row overflow-hidden pb-16 md:pb-0">
                                     {/* Left: The Image */}
-                                    <div className="w-1/2 border-r border-light-gray dark:border-border-dark bg-[#f4f4f5] dark:bg-onyx p-6 flex flex-col items-center justify-center relative group">
+                                    <div className="w-full md:w-1/2 h-1/2 md:h-full border-b md:border-b-0 md:border-r border-light-gray dark:border-border-dark bg-[#f4f4f5] dark:bg-onyx p-4 md:p-6 flex flex-col items-center justify-center relative group">
                                         <img src={activePage.imageUrl} className="max-w-full max-h-full object-contain rounded-xl shadow-sm border border-black/5 dark:border-white/5 cursor-zoom-in" onClick={() => setCompareMode(true)}/>
                                         <button onClick={() => setCompareMode(true)} className="absolute bottom-6 right-6 p-3 bg-white dark:bg-surface-dark rounded-full shadow-lg opacity-0 group-hover:opacity-100 transition-opacity text-dark dark:text-light border border-light-gray dark:border-white/10"><Icons.ZoomIn className="w-5 h-5"/></button>
                                     </div>
                                     {/* Right: The Editor Fields */}
-                                    <div className="w-1/2 overflow-y-auto p-8 space-y-8 bg-white dark:bg-surface-dark relative">
+                                    <div className="w-full md:w-1/2 h-1/2 md:h-full overflow-y-auto p-4 md:p-8 space-y-6 md:space-y-8 bg-white dark:bg-surface-dark relative">
                                         <div className="absolute top-0 left-0 right-0 h-1 bg-black/5 dark:bg-white/5"></div>
                                         
                                         <div className="space-y-2 group">
@@ -446,8 +555,20 @@
                                 </div>
                             </motion.div>
                         )}
-                        <AnimatePresence>{isAiOpen && activePage && user && (<div className="absolute top-[64px] right-0 bottom-0 w-[400px] z-40 shadow-2xl"><AIChat activePage={activePage} onClose={()=>setIsAiOpen(false)} user={user} messages={chatMessages} setMessages={setChatMessages}/></div>)}</AnimatePresence>
+                        <AnimatePresence>{isAiOpen && activePage && user && (<div className="absolute top-[64px] right-0 bottom-0 w-full sm:w-[400px] z-40 shadow-2xl"><AIChat activePage={activePage} onClose={()=>setIsAiOpen(false)} user={user} messages={chatMessages} setMessages={setChatMessages}/></div>)}</AnimatePresence>
                     </main>
+                </div>
+
+                {/* Mobile Bottom Navigation (Identical to el.html but tailored for Mocks) */}
+                <div className="lg:hidden fixed bottom-0 left-0 right-0 h-16 bg-white dark:bg-surface-dark border-t border-light-gray dark:border-border-dark flex justify-around items-center px-2 z-50 pb-safe shadow-[0_-4px_10px_rgba(0,0,0,0.05)] dark:shadow-[0_-4px_10px_rgba(0,0,0,0.2)]">
+                    <button onClick={() => { setMobileView('mocks'); setActiveMockId(null); setActivePageId(null); }} className={`flex flex-col items-center justify-center w-16 h-full gap-1 transition-colors ${mobileView === 'mocks' && !activeMockId ? 'text-primary dark:text-light' : 'text-gray dark:text-zinc-400 hover:text-dark dark:hover:text-light'}`}>
+                        <Icons.Folder className="w-5 h-5"/>
+                        <span className="text-[10px] font-medium">Mocks</span>
+                    </button>
+                    <a href="el.html" className="flex flex-col items-center justify-center w-16 h-full gap-1 text-gray dark:text-zinc-400 hover:text-primary transition-colors">
+                        <Icons.Book className="w-5 h-5"/>
+                        <span className="text-[10px] font-medium">Logs</span>
+                    </a>
                 </div>
             </div>
         );
