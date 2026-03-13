@@ -441,13 +441,30 @@
         // Hide Context Menu on click
         useEffect(() => { const handleClick = () => setContextMenu({ ...contextMenu, visible: false }); window.addEventListener('click', handleClick); return () => window.removeEventListener('click', handleClick); }, [contextMenu]);
 
-        // URL Updater Effect
+        // URL Updater & Browser History Router
         useEffect(() => {
             const url = new URL(window.location);
-            if (activeMockId) url.searchParams.set('mock', activeMockId); else url.searchParams.delete('mock');
-            if (activePageId) url.searchParams.set('page', activePageId); else url.searchParams.delete('page');
-            window.history.pushState({}, '', url);
+            const currentMock = url.searchParams.get('mock');
+            const currentPage = url.searchParams.get('page');
+            
+            // Only push state if something actually changed so we don't spam browser history
+            if ((currentMock || null) !== (activeMockId || null) || (currentPage || null) !== (activePageId || null)) {
+                if (activeMockId) url.searchParams.set('mock', activeMockId); else url.searchParams.delete('mock');
+                if (activePageId) url.searchParams.set('page', activePageId); else url.searchParams.delete('page');
+                window.history.pushState({}, '', url);
+            }
         }, [activeMockId, activePageId]);
+
+        // Listen for browser Back/Forward buttons
+        useEffect(() => {
+            const handlePopState = () => {
+                const params = new URLSearchParams(window.location.search);
+                setActiveMockId(params.get('mock'));
+                setActivePageId(params.get('page'));
+            };
+            window.addEventListener('popstate', handlePopState);
+            return () => window.removeEventListener('popstate', handlePopState);
+        }, []);
 
         const fetchMockPapers = async (uid) => {
             setIsLoadingMocks(true);
@@ -481,9 +498,10 @@
             } catch(e) { console.error(e); }
         };
 
+        // THE FIX: Wait for the user to exist before trying to fetch pages!
         useEffect(() => {
-            if (activeMockId) { fetchMockPages(activeMockId); }
-        }, [activeMockId]);
+            if (activeMockId && user) { fetchMockPages(activeMockId); }
+        }, [activeMockId, user]);
 
         // Cooldown Logic
         const canCreateMock = async () => {
