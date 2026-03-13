@@ -959,7 +959,7 @@
         const [isAiLoading, setIsAiLoading] = useState(false);
         const [showStudentModal, setShowStudentModal] = useState(false); 
         const [studentStatus, setStudentStatus] = useState('none');
-        const [compareMode, setCompareMode] = useState(false);
+        const [compareMode, setCompareMode] = useState(() => new URLSearchParams(window.location.search).get('compare') === 'true');
         const [isAiOpen, setIsAiOpen] = useState(false); 
         const [chatMessages, setChatMessages] = useState([{role: 'ai', text: "How can I assist with this specific mock page?"}]);
         
@@ -978,7 +978,7 @@
         const [undoToast, setUndoToast] = useState(null);
 
         const [isSidebarHidden, setIsSidebarHidden] = useState(false);
-        const [mockTab, setMockTab] = useState(() => new URLSearchParams(window.location.search).get('roast') ? 'report' : 'pages'); 
+        const [mockTab, setMockTab] = useState(() => new URLSearchParams(window.location.search).get('tab') || (new URLSearchParams(window.location.search).get('roast') ? 'report' : 'pages')); 
         const [uploadingMockReport, setUploadingMockReport] = useState(false);
         const [isAnalyzingReport, setIsAnalyzingReport] = useState(false);
         const [reportAnalysisProgress, setReportAnalysisProgress] = useState("");
@@ -1025,18 +1025,28 @@
         // URL Updater & Browser History Router
         useEffect(() => {
             const url = new URL(window.location);
-            const currentMock = url.searchParams.get('mock');
-            const currentPage = url.searchParams.get('page');
-            const currentRoast = url.searchParams.get('roast');
+            let changed = false;
+
+            const updateParam = (key, val) => {
+                const currentVal = url.searchParams.get(key);
+                const newVal = val != null ? String(val) : null;
+                if (currentVal !== newVal) {
+                    if (newVal != null) url.searchParams.set(key, newVal);
+                    else url.searchParams.delete(key);
+                    changed = true;
+                }
+            };
+
+            updateParam('mock', activeMockId);
+            updateParam('page', activePageId);
+            updateParam('roast', activeRoastQ);
+            updateParam('tab', mockTab === 'report' ? 'report' : null); // Keep URL clean, default is pages
+            updateParam('compare', compareMode ? 'true' : null);
             
-            // Only push state if something actually changed so we don't spam browser history
-            if ((currentMock || null) !== (activeMockId || null) || (currentPage || null) !== (activePageId || null) || (currentRoast || null) !== (activeRoastQ || null)) {
-                if (activeMockId) url.searchParams.set('mock', activeMockId); else url.searchParams.delete('mock');
-                if (activePageId) url.searchParams.set('page', activePageId); else url.searchParams.delete('page');
-                if (activeRoastQ) url.searchParams.set('roast', activeRoastQ); else url.searchParams.delete('roast');
+            if (changed) {
                 window.history.pushState({}, '', url);
             }
-        }, [activeMockId, activePageId, activeRoastQ]);
+        }, [activeMockId, activePageId, activeRoastQ, mockTab, compareMode]);
 
         // Listen for browser Back/Forward buttons
         useEffect(() => {
@@ -1045,7 +1055,8 @@
                 setActiveMockId(params.get('mock'));
                 setActivePageId(params.get('page'));
                 setActiveRoastQ(params.get('roast'));
-                if (params.get('roast')) setMockTab('report');
+                setMockTab(params.get('tab') || (params.get('roast') ? 'report' : 'pages'));
+                setCompareMode(params.get('compare') === 'true');
             };
             window.addEventListener('popstate', handlePopState);
             return () => window.removeEventListener('popstate', handlePopState);
