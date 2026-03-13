@@ -1248,7 +1248,7 @@ Make sure to use proper Markdown format, bold formatting for emphasis, and clear
                                         <div className="w-px h-6 bg-light-gray dark:bg-white/10 shrink-0 mx-2 hidden md:block"></div>
 
                                         <div className="bg-[#f1f3f4] dark:bg-dark rounded-full px-1 py-0.5 border border-transparent hover:border-light-gray dark:hover:border-white/10 hidden md:block flex-1 max-w-[200px]">
-                                            <select value={activePage.topic || ''} onChange={e=>updatePage(activePage.id, {topic:e.target.value})} className="bg-transparent text-sm font-medium text-gray dark:text-light outline-none cursor-pointer w-full truncate py-1.5 px-3"><option value="">-- Assign Topic --</option>{currentSub?.topics.map(t => <option key={t} value={t}>{t}</option>)}</select>
+                                            <select value={activePage.topic || ''} onChange={e=>updatePage(activePage.id, {topic:e.target.value})} className="bg-transparent text-sm font-medium text-gray dark:text-light outline-none cursor-pointer w-full truncate py-1.5 px-3"><option value="">-- Assign Topic --</option>{(currentSub?.topics || []).map(t => <option key={t} value={t}>{t}</option>)}</select>
                                         </div>
                                     </div>
                                     <div className="flex items-center gap-2 shrink-0">
