@@ -1,549 +1,452 @@
 <!DOCTYPE html>
 <html lang="en" class="dark">
 <head>
-<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"><title>darNote - Mock Autopsy</title>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"><title>darNote - Mock Vault</title>
 <link rel="icon" type="image/png" href="https://raw.githubusercontent.com/darren6251/darnote/refs/heads/main/darNote%20logo.png">
-<!-- React & Tailwind -->
 <script crossorigin src="https://unpkg.com/react@18/umd/react.development.js"></script>
 <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
 <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
 <script src="https://cdn.tailwindcss.com"></script>
-<!-- Animation & Utilities -->
 <script src="https://unpkg.com/framer-motion@10.16.4/dist/framer-motion.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/spark-md5/3.0.2/spark-md5.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
-<!-- Google APIs -->
 <script src="https://apis.google.com/js/api.js" async defer></script>
 <script src="https://accounts.google.com/gsi/client" async defer></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <!-- PDF.js for client-side PDF slicing -->
 <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
 <script>pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';</script>
 
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 <script>
-    tailwind.config = { 
-        darkMode: 'class', 
-        theme: { 
-            extend: { 
-                colors: { 
-                    /* Monochrome Noir Theme */
-                    primary: '#000000', 'primary-light': '#27272a', 'primary-dark': '#000000', 
-                    secondary: '#52525b', accent: '#3f3f46', 
-                    success: '#18181b', warning: '#52525b', danger: '#7f1d1d', 
-                    dark: '#09090b', light: '#fafafa', 
-                    gray: '#71717a', 'light-gray': '#e4e4e7', 
-                    onyx: '#000000', surface: '#ffffff', 'surface-dark': '#111827', 
-                    border: '#d4d4d8', 'border-dark': '#27272a' 
-                }, 
-                boxShadow: { 
-                    ds: '0 1px 2px 0 rgba(0,0,0,0.05), 0 1px 3px 1px rgba(0,0,0,0.1)', 
-                    'ds-hover': '0 4px 6px -1px rgba(0,0,0,0.1), 0 2px 4px -1px rgba(0,0,0,0.06)', 
-                    'ds-dark': '0 1px 2px 0 rgba(0,0,0,1), 0 1px 3px 1px rgba(0,0,0,0.8)' 
-                }, 
-                fontFamily: { sans: ['Inter', 'sans-serif'] } 
-            } 
-        } 
-    }
+    // THE MONOCHROME TUXEDO (Zinc & Slate)
+    tailwind.config = { darkMode: 'class', theme: { extend: { colors: { primary: '#18181b', 'primary-light': '#3f3f46', 'primary-dark': '#000000', secondary: '#71717a', accent: '#52525b', success: '#3f3f46', warning: '#71717a', danger: '#18181b', dark: '#09090b', light: '#fafafa', gray: '#a1a1aa', 'light-gray': '#f4f4f5', onyx: '#000000', surface: '#ffffff', 'surface-dark': '#09090b', border: '#e4e4e7', 'border-dark': '#27272a' }, boxShadow: { ds: '0 1px 2px 0 rgba(0,0,0,0.1), 0 1px 3px 1px rgba(0,0,0,0.05)', 'ds-hover': '0 10px 15px -3px rgba(0,0,0,0.1), 0 4px 6px -2px rgba(0,0,0,0.05)', 'ds-dark': '0 1px 2px 0 rgba(255,255,255,0.05), 0 1px 3px 1px rgba(255,255,255,0.02)' }, borderRadius: { ds: '16px', xl: '24px' }, fontFamily: { sans: ['Inter', 'sans-serif'] } } } }
 </script>
 <script type="module">
+    // EXACT SAME FIREBASE CONFIG
     import { initializeApp } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-app.js";
     import { getAuth, signInWithPopup, GoogleAuthProvider, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-auth.js";
-    import { getFirestore, collection, doc, addDoc, updateDoc, deleteDoc, getDocs, getDoc, setDoc, query, orderBy, where } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-firestore.js";
+    import { getFirestore, collection, doc, addDoc, updateDoc, deleteDoc, getDocs, getDoc, setDoc, increment, arrayUnion, writeBatch, query, limit, orderBy, startAfter, where, onSnapshot } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-firestore.js";
     const app = initializeApp({ apiKey: "AIzaSyAvPEac-03kE4oazvaq8K3T2gxLPsnZO20", authDomain: "darnote625.firebaseapp.com", projectId: "darnote625", storageBucket: "darnote625.firebasestorage.app", messagingSenderId: "16458322562", appId: "1:16458322562:web:8894d71f3e6c326eba1a9b" });
-    window.firebase = { app, auth: getAuth(app), db: getFirestore(app), signInWithPopup, GoogleAuthProvider, signOut, onAuthStateChanged, collection, doc, addDoc, updateDoc, deleteDoc, getDocs, getDoc, setDoc, query, orderBy, where };
+    window.firebase = { app, auth: getAuth(app), db: getFirestore(app), signInWithPopup, GoogleAuthProvider, signOut, onAuthStateChanged, collection, doc, addDoc, updateDoc, deleteDoc, getDocs, getDoc, setDoc, increment, arrayUnion, writeBatch, query, limit, orderBy, startAfter, where, onSnapshot };
 </script>
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@400;500;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 <style>
-    body { @apply bg-[#f4f4f5] text-[#09090b] dark:bg-[#000000] dark:text-[#fafafa]; font-family: 'Inter', sans-serif; overflow: hidden; letter-spacing: -0.02em; }
-    ::-webkit-scrollbar { width: 4px; height: 4px; } ::-webkit-scrollbar-thumb { @apply bg-gray/30 hover:bg-gray/50 dark:bg-gray/50 dark:hover:bg-gray/70; border-radius: 10px; }
-    .input-field, .form-control { @apply w-full bg-light-gray/30 dark:bg-surface-dark border border-transparent hover:border-light-gray dark:hover:border-border-dark focus:bg-white dark:focus:bg-[#09090b] focus:border-primary dark:focus:border-primary-light rounded-xl px-4 py-3 text-sm focus:outline-none transition-all shadow-none text-dark dark:text-light; }
-    .glass-panel { @apply bg-white/80 dark:bg-[#111827]/80 backdrop-blur-md border border-white/20 dark:border-white/5; }
-    .markdown-content p { margin-bottom: 0.5rem; } .markdown-content strong { font-weight: 700; color: inherit; }
+    body { @apply bg-[#f4f4f5] text-[#09090b] dark:bg-onyx dark:text-[#fafafa]; font-family: 'Noto Sans SC', 'Inter', sans-serif; overflow: hidden; letter-spacing: -0.01em; }
+    ::-webkit-scrollbar { width: 6px; height: 6px; } ::-webkit-scrollbar-thumb { @apply bg-gray/30 hover:bg-gray/50 dark:bg-gray/50 dark:hover:bg-gray/70; border-radius: 10px; }
+    .input-field { @apply w-full bg-light-gray/50 dark:bg-dark border border-transparent hover:border-light-gray dark:hover:border-border-dark focus:bg-white dark:focus:bg-[#111113] focus:border-primary dark:focus:border-primary-light rounded-xl px-4 py-3 text-sm focus:outline-none transition-all shadow-none; }
+    .form-control { @apply w-full bg-light-gray/50 dark:bg-dark border border-transparent hover:border-light-gray dark:hover:border-border-dark focus:bg-white dark:focus:bg-[#111113] focus:border-primary dark:focus:border-primary-light rounded-xl px-4 py-3 text-sm focus:outline-none transition-all; }
+    .markdown-content table { border-collapse: collapse; width: 100%; margin: 12px 0; font-size: 0.85rem; border-radius: 8px; overflow: hidden; } .markdown-content th { @apply bg-light-gray dark:bg-dark text-left font-semibold; padding: 8px 12px; } .markdown-content td { @apply border-b border-light-gray dark:border-border-dark; padding: 8px 12px; } .markdown-content ul, .markdown-content ol { padding-left: 24px; margin: 8px 0; list-style: disc; } .markdown-content pre { @apply bg-light-gray/50 dark:bg-dark border border-light-gray dark:border-border-dark rounded-xl p-4 my-2 overflow-x-auto text-sm; }
+    .glass-panel { @apply bg-white/80 dark:bg-surface-dark/80 backdrop-blur-md border border-white/20 dark:border-white/5; }
 </style>
 </head>
 <body>
 <div id="root"></div>
 <script type="text/babel">
-    const GDRIVE_API_KEY = "AIzaSyCScFR_D0snZ6hrHob5fUQM7Y2NhK-kTIA"; 
-    const GDRIVE_CLIENT_ID = "256215327792-oglegui0q8qj507oao2c2733thcl9lrc.apps.googleusercontent.com"; 
-    const GEMINI_PROXY_URL = "https://gemini-proxy-513372702506.us-central1.run.app/proxy"; 
-    const GROQ_PROXY_URL = "https://groq-proxy-157237873670.us-central1.run.app/chat/completions";
-    
-    const { useState, useEffect, useRef } = React; 
-    const { motion, AnimatePresence } = window.Motion;
+    const GDRIVE_API_KEY = "AIzaSyCScFR_D0snZ6hrHob5fUQM7Y2NhK-kTIA"; const GDRIVE_CLIENT_ID = "256215327792-oglegui0q8qj507oao2c2733thcl9lrc.apps.googleusercontent.com"; 
+    const GEMINI_PROXY_URL = "https://gemini-proxy-513372702506.us-central1.run.app/proxy"; const GROQ_PROXY_URL = "https://groq-proxy-157237873670.us-central1.run.app/chat/completions";
+    const { useState, useEffect, useRef, useMemo, useCallback } = React; const { motion, AnimatePresence } = window.Motion;
 
-    // --- MONOCHROME ICONS ---
-    const Icons={
-        Plus:p=><svg {...p} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M5 12h14"/><path d="M12 5v14"/></svg>,
-        Trash:p=><svg {...p} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/></svg>,
-        Check:p=><svg {...p} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="20 6 9 17 4 12"/></svg>,
-        Image:p=><svg {...p} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect width="18" height="18" x="3" y="3" rx="2" ry="2"/><circle cx="9" cy="9" r="2"/><path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21"/></svg>,
-        Bot:p=><svg {...p} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M12 8V4H8"/><rect width="16" height="12" x="4" y="8" rx="2"/><path d="M2 14h2"/><path d="M20 14h2"/><path d="M15 13v2"/><path d="M9 13v2"/></svg>,
-        X:p=><svg {...p} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M18 6 6 18"/><path d="m6 6 18 18"/></svg>,
-        Logout:p=><svg {...p} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" x2="9" y1="12" y2="12"/></svg>,
-        Google:p=><svg {...p} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M12 22C6.477 22 2 17.523 2 12S6.477 2 12 2s10 4.477 10 10-4.477 10-10 10z"/><path d="M12 11h9c.1 1.4.1 2.9-.4 4.3-1.1 3-4.1 5.3-7.6 5.6-5 .5-9.4-3.1-9.9-8.1C2.5 7.1 6 2.3 11 2c2.5-.1 4.9.9 6.7 2.6l-2.7 2.8c-1-.7-2.3-1.1-3.6-1-2.9.2-5.1 2.8-4.9 5.7.2 2.6 2.4 4.7 5 4.7 2 0 3.6-1.1 4.3-2.9H12v-3z" fill="currentColor"/></svg>,
-        Sun:p=><svg {...p} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="5"/><path d="M12 1v2"/><path d="M12 21v2"/><path d="M4.22 4.22l1.42 1.42"/><path d="M18.36 18.36l1.42 1.42"/><path d="M1 12h2"/><path d="M21 12h2"/><path d="M4.22 19.78l1.42-1.42"/><path d="M18.36 5.64l1.42-1.42"/></svg>,
-        Moon:p=><svg {...p} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>,
-        File:p=><svg {...p} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" x2="8" y1="13" y2="13"/><line x1="16" x2="8" y1="17" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>,
-        Folder:p=><svg {...p} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M4 20h16a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-7.93a2 2 0 0 1-1.66-.9l-.82-1.2A2 2 0 0 0 7.93 3H4a2 2 0 0 0-2 2v13c0 1.1.9 2 2 2Z"/></svg>,
-        ChevronLeft:p=><svg {...p} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="m15 18-6-6 6-6"/></svg>,
-        ChevronRight:p=><svg {...p} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="m9 18 6-6-6-6"/></svg>,
-        ZoomIn:p=><svg {...p} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="11" cy="11" r="8"/><line x1="21" x2="16.65" y1="21" y2="16.65"/><line x1="11" x2="11" y1="8" y2="14"/><line x1="8" x2="14" y1="11" y2="11"/></svg>,
-        Copy:p=><svg {...p} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect width="14" height="14" x="8" y="8" rx="2" ry="2"/><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/></svg>,
-        Brain:p=><svg {...p} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M9.5 2A2.5 2.5 0 0 1 12 4.5v15a2.5 2.5 0 0 1-4.96.44 2.5 2.5 0 0 1-2.96-3.08 3 3 0 0 1-.34-5.58 2.5 2.5 0 0 1 1.32-4.24 2.5 2.5 0 0 1 1.98-3A2.5 2.5 0 0 1 9.5 2Z"/><path d="M14.5 2A2.5 2.5 0 0 0 12 4.5v15a2.5 2.5 0 0 0 4.96.44 2.5 2.5 0 0 0 2.96-3.08 3 3 0 0 0 .34-5.58 2.5 2.5 0 0 0-1.32-4.24 2.5 2.5 0 0 0-1.98-3A2.5 2.5 0 0 0 14.5 2Z"/></svg>,
-        Eye:p=><svg {...p} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/></svg>,
-        AlertCircle:p=><svg {...p} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>,
-        BookOpen:p=><svg {...p} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg>,
-        Clock:p=><svg {...p} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>,
-        Upload:p=><svg {...p} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>,
-        Shield:p=><svg {...p} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
-    };
+    // ICON SET
+    const Icons={HelpCircle:p=><svg {...p} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><path d="M12 17h.01"/></svg>,Youtube:p=><svg {...p} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M22.54 6.42a2.78 2.78 0 0 0-1.94-2C18.88 4 12 4 12 4s-6.88 0-8.6.46a2.78 2.78 0 0 0-1.94 2A29 29 0 0 0 1 11.75a29 29 0 0 0 .46 5.33 2.78 2.78 0 0 0 1.94 2c1.72.46 8.6.46 8.6.46s6.88 0 8.6-.46a2.78 2.78 0 0 0 1.94-2 29 29 0 0 0 .46-5.33 29 29 0 0 0-.46-5.33z"/><polygon points="9.75 15.02 15.5 11.75 9.75 8.48 9.75 15.02"/></svg>,Clock:p=><svg {...p} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>,Plus:p=><svg {...p} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12h14"/><path d="M12 5v14"/></svg>,Trash:p=><svg {...p} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/></svg>,Bug:p=><svg {...p} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m8 2 1.88 1.88"/><path d="M14.12 3.88 16 2"/><path d="M9 7.13v-1a3.003 3.003 0 1 1 6 0v1"/><path d="M12 20c-3.3 0-6-2.7-6-6v-3a4 4 0 0 1 4-4h4a4 4 0 0 1 4 4v3c0 3.3-2.7 6-6 6"/><path d="M12 20v-9"/><path d="M6.53 9C4.6 8.8 3 7.1 3 5"/><path d="M6 13H2"/><path d="M3 21c0-2.1 1.7-3.9 3.8-4"/><path d="M20.97 5c0 2.1-1.6 3.8-3.5 4"/><path d="M22 13h-4"/><path d="M17.2 17c2.1.1 3.8 1.9 3.8 4"/></svg>,Check:p=><svg {...p} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>,Image:p=><svg {...p} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect width="18" height="18" x="3" y="3" rx="2" ry="2"/><circle cx="9" cy="9" r="2"/><path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21"/></svg>,Bot:p=><svg {...p} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 8V4H8"/><rect width="16" height="12" x="4" y="8" rx="2"/><path d="M2 14h2"/><path d="M20 14h2"/><path d="M15 13v2"/><path d="M9 13v2"/></svg>,X:p=><svg {...p} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M18 6 6 18"/><path d="m6 6 18 18"/></svg>,Logout:p=><svg {...p} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" x2="9" y1="12" y2="12"/></svg>,Google:p=><svg {...p} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 22C6.477 22 2 17.523 2 12S6.477 2 12 2s10 4.477 10 10-4.477 10-10 10z"/><path d="M12 11h9c.1 1.4.1 2.9-.4 4.3-1.1 3-4.1 5.3-7.6 5.6-5 .5-9.4-3.1-9.9-8.1C2.5 7.1 6 2.3 11 2c2.5-.1 4.9.9 6.7 2.6l-2.7 2.8c-1-.7-2.3-1.1-3.6-1-2.9.2-5.1 2.8-4.9 5.7.2 2.6 2.4 4.7 5 4.7 2 0 3.6-1.1 4.3-2.9H12v-3z" fill="currentColor"/></svg>,Sun:p=><svg {...p} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="5"/><path d="M12 1v2"/><path d="M12 21v2"/><path d="M4.22 4.22l1.42 1.42"/><path d="M18.36 18.36l1.42 1.42"/><path d="M1 12h2"/><path d="M21 12h2"/><path d="M4.22 19.78l1.42-1.42"/><path d="M18.36 5.64l1.42-1.42"/></svg>,Moon:p=><svg {...p} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>,User:p=><svg {...p} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>,Scan:p=><svg {...p} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 7V5a2 2 0 0 1 2-2h2"/><path d="M17 3h2a2 2 0 0 1 2 2v2"/><path d="M21 17v2a2 2 0 0 1-2 2h-2"/><path d="M7 21H5a2 2 0 0 1-2-2v-2"/><path d="M8 12h8"/><path d="M12 8v8"/></svg>,Lock:p=><svg {...p} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>,File:p=><svg {...p} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" x2="8" y1="13" y2="13"/><line x1="16" x2="8" y1="17" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>,Book:p=><svg {...p} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>,CloudUpload:p=><svg {...p} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M4 14.899A7 7 0 1 1 15.71 8h1.79a4.5 4.5 0 0 1 2.5 8.242"/><path d="M12 12v9"/><path d="m16 16-4-4-4 4"/></svg>,Refresh:p=><svg {...p} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 12a9 9 0 0 0-9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/><path d="M3 12a9 9 0 0 0 9 9 9.75 9.75 0 0 0 6.74-2.74L21 16"/><path d="M21 21v-5h-5"/></svg>,Clip:p=><svg {...p} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m21.44 11.05-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"/></svg>,ExternalLink:p=><svg {...p} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" x2="21" y1="14" y2="3"/></svg>,ChevronLeft:p=><svg {...p} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m15 18-6-6 6-6"/></svg>,ChevronRight:p=><svg {...p} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m9 18 6-6-6-6"/></svg>,ZoomIn:p=><svg {...p} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" x2="16.65" y1="21" y2="16.65"/><line x1="11" x2="11" y1="8" y2="14"/><line x1="8" x2="14" y1="11" y2="11"/></svg>,Undo:p=><svg {...p} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 7v6h6"/><path d="M21 17a9 9 0 0 0-9-9 9 9 0 0 0-6 2.3L3 13"/></svg>,Sort:p=><svg {...p} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="12" x2="12" y1="3" y2="21"/><polyline points="8 7 12 3 16 7"/><polyline points="8 17 12 21 16 17"/></svg>,Copy:p=><svg {...p} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect width="14" height="14" x="8" y="8" rx="2" ry="2"/><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/></svg>,Brain:p=><svg {...p} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M9.5 2A2.5 2.5 0 0 1 12 4.5v15a2.5 2.5 0 0 1-4.96.44 2.5 2.5 0 0 1-2.96-3.08 3 3 0 0 1-.34-5.58 2.5 2.5 0 0 1 1.32-4.24 2.5 2.5 0 0 1 1.98-3A2.5 2.5 0 0 1 9.5 2Z"/><path d="M14.5 2A2.5 2.5 0 0 0 12 4.5v15a2.5 2.5 0 0 0 4.96.44 2.5 2.5 0 0 0 2.96-3.08 3 3 0 0 0 .34-5.58 2.5 2.5 0 0 0-1.32-4.24 2.5 2.5 0 0 0-1.98-3A2.5 2.5 0 0 0 14.5 2Z"/></svg>,Target:p=><svg {...p} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/></svg>,GraduationCap:p=><svg {...p} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M22 10v6M2 10l10-5 10 5-10 5z"/><path d="M6 12v5c3 3 9 3 12 0v-5"/></svg>,ShieldCheck:p=><svg {...p} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><path d="m9 12 2 2 4-4"/></svg>,ShieldClock:p=><svg {...p} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><circle cx="12" cy="12" r="3"/><polyline points="12 10 12 12 13 13"/></svg>,Dashboard:p=><svg {...p} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="7" height="9" rx="1"/><rect x="14" y="3" width="7" height="5" rx="1"/><rect x="14" y="12" width="7" height="9" rx="1"/><rect x="3" y="16" width="7" height="5" rx="1"/></svg>,Search:p=><svg {...p} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>,Terminal:p=><svg {...p} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="4 17 10 11 4 5"/><line x1="12" x2="20" y1="19" y2="19"/></svg>,Folder:p=><svg {...p} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M4 20h16a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-7.93a2 2 0 0 1-1.66-.9l-.82-1.2A2 2 0 0 0 7.93 3H4a2 2 0 0 0-2 2v13c0 1.1.9 2 2 2Z"/></svg>,Menu:p=><svg {...p} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="4" x2="20" y1="12" y2="12"/><line x1="4" x2="20" y1="6" y2="6"/><line x1="4" x2="20" y1="18" y2="18"/></svg>,ArrowLeft:p=><svg {...p} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m12 19-7-7 7-7"/><path d="M19 12H5"/></svg>,FileText:p=><svg {...p} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"/><polyline points="14 2 14 8 20 8"/><line x1="16" x2="8" y1="13" y2="13"/><line x1="16" x2="8" y1="17" y2="17"/><line x1="10" x2="8" y1="9" y2="9"/></svg>,Sparkles:p=><svg {...p} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m12 3-1.912 5.813a2 2 0 0 1-1.275 1.275L3 12l5.813 1.912a2 2 0 0 1 1.275 1.275L12 21l1.912-5.813a2 2 0 0 1 1.275-1.275L21 12l-5.813-1.912a2 2 0 0 1-1.275-1.275L12 3Z"/><path d="M5 3v4"/><path d="M3 5h4"/></svg>};
 
-    // --- AI & UTILS ---
-    const compressImage = async (fileOrBlob) => new Promise((resolve) => { const img = new Image(); const reader = new FileReader(); reader.onload = (e) => { img.src = e.target.result; img.onload = () => { const canvas = document.createElement('canvas'); const MAX_WIDTH = 2500; let width = img.width; let height = img.height; if (width > MAX_WIDTH) { height *= MAX_WIDTH / width; width = MAX_WIDTH; } canvas.width = width; canvas.height = height; const ctx = canvas.getContext('2d'); ctx.drawImage(img, 0, 0, width, height); canvas.toBlob((blob) => { resolve(blob); }, 'image/jpeg', 0.85); } }; reader.readAsDataURL(fileOrBlob); });
-    
-    // PDF Slicing Magic
-    const convertPdfToImages = async (file) => {
+    // UTILS
+    const compressImage = async (fileOrBlob) => new Promise((resolve) => { const img = new Image(); const reader = new FileReader(); reader.onload = (e) => { img.src = e.target.result; img.onload = () => { const canvas = document.createElement('canvas'); const MAX_WIDTH = 2000; let width = img.width; let height = img.height; if (width > MAX_WIDTH) { height *= MAX_WIDTH / width; width = MAX_WIDTH; } canvas.width = width; canvas.height = height; const ctx = canvas.getContext('2d'); ctx.drawImage(img, 0, 0, width, height); canvas.toBlob((blob) => { resolve(blob); }, 'image/jpeg', 0.8); } }; reader.readAsDataURL(fileOrBlob); });
+    const callAI = async (prompt, sys = "", images = [], apiUrl = GEMINI_PROXY_URL) => { const parts = [{ text: `${sys}\n\nUser: ${prompt}` }]; if (images?.length > 0) { images.forEach(img => { let mimeType = "image/png", data = img; if (img.includes(",")) { const s = img.split(","); mimeType = s[0].match(/:(.*?);/)[1]; data = s[1]; } parts.push({ inlineData: { mimeType, data } }); }); } try { const response = await fetch(apiUrl, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ contents: [{ parts }] }) }); if (!response.ok) return `Error: ${response.status}`; const data = await response.json(); if (data.error) return `API Error: ${data.error.message}`; return data.candidates?.[0]?.content?.parts?.[0]?.text || "Empty response."; } catch (error) { return `Error: ${error.message}`; } };
+    const callGroq = async (prompt, sys = "", images = []) => { const userContent = [{ type: "text", text: prompt }]; if (images?.length > 0) { images.forEach(img => { userContent.push({ type: "image_url", image_url: { url: img } }); }); } const modelToUse = (images?.length > 0) ? "llama-3.2-90b-vision-preview" : "openai/gpt-oss-120b"; const payload = { model: modelToUse, messages: [ { role: "system", content: sys }, { role: "user", content: userContent } ] }; try { const response = await fetch(GROQ_PROXY_URL, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) }); if (!response.ok) return `Error: ${response.status}`; const data = await response.json(); if (data.error) return `API Error: ${data.error.message}`; return data.choices?.[0]?.message?.content || "Empty response."; } catch (error) { return `Error: ${error.message}`; } };
+    const cleanLatex=(t)=>t.replace(/\$\$/g,'\n').replace(/\$/g,'').replace(/\\text\{([^}]+)\}/g,'$1').replace(/\\times/g,'×').replace(/\\approx/g,'≈').replace(/\\le/g,'≤').replace(/\\ge/g,'≥').replace(/\\rightarrow/g,'→').replace(/\\cdot/g,'·').replace(/\\frac\{([^}]+)\}\{([^}]+)\}/g,'($1/$2)').replace(/\\/g,'');
+
+    // GDRIVE HOOK
+    const useGoogleDrive = () => { const [tokenClient, setTokenClient] = useState(null); useEffect(() => { if(!GDRIVE_API_KEY || !GDRIVE_CLIENT_ID) return; const load = async () => { if (window.gapi) { await new Promise(r => window.gapi.load('client', r)); await window.gapi.client.init({ apiKey: GDRIVE_API_KEY, discoveryDocs: ['https://www.googleapis.com/discovery/v1/apis/drive/v3/rest'] }); } if (window.google) setTokenClient(window.google.accounts.oauth2.initTokenClient({ client_id: GDRIVE_CLIENT_ID, scope: 'https://www.googleapis.com/auth/drive.file', callback: () => {} })); }; load(); }, []); const getAccessToken = () => new Promise((resolve, reject) => { if (!tokenClient) return reject("Auth not initialized"); const existing = window.gapi.client.getToken(); if (existing && Date.now() < existing.expiry) return resolve(existing.access_token); tokenClient.callback = (resp) => { if (resp.error) reject(resp); resolve(resp.access_token); }; tokenClient.requestAccessToken({ prompt: '' }); }); const saveToDrive = async (blob, filename, preFetchedToken = null, folderName = 'darNote_MockVault') => { const token = preFetchedToken || await getAccessToken(); let folderId; const q = `mimeType='application/vnd.google-apps.folder' and name='${folderName}' and trashed=false`; const search = await fetch(`https://www.googleapis.com/drive/v3/files?q=${encodeURIComponent(q)}`, { headers: { Authorization: `Bearer ${token}` } }); const searchData = await search.json(); if (searchData.files?.length) folderId = searchData.files[0].id; else { const create = await fetch('https://www.googleapis.com/drive/v3/files', { method: 'POST', headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' }, body: JSON.stringify({ name: folderName, mimeType: 'application/vnd.google-apps.folder' }) }); folderId = (await create.json()).id; } const metadata = { name: filename, mimeType: blob.type, parents: [folderId] }; const form = new FormData(); form.append('metadata', new Blob([JSON.stringify(metadata)], { type: 'application/json' })); form.append('file', blob); const upRes = await fetch('https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&fields=id', { method: 'POST', headers: { Authorization: `Bearer ${token}` }, body: form }); if(!upRes.ok) throw new Error(upRes.statusText); const fileId = (await upRes.json()).id; await fetch(`https://www.googleapis.com/drive/v3/files/${fileId}/permissions`, { method: 'POST', headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' }, body: JSON.stringify({ role: 'reader', type: 'anyone' }) }); return `https://lh3.googleusercontent.com/d/${fileId}`; }; return { saveToDrive, getAccessToken }; };
+
+    // PDF SLICER
+    const processPDF = async (file) => {
         const arrayBuffer = await file.arrayBuffer();
         const pdf = await pdfjsLib.getDocument(arrayBuffer).promise;
         const blobs = [];
         for (let i = 1; i <= pdf.numPages; i++) {
             const page = await pdf.getPage(i);
-            const viewport = page.getViewport({ scale: 2.0 }); // High res
+            const viewport = page.getViewport({ scale: 2.0 });
             const canvas = document.createElement('canvas');
             const context = canvas.getContext('2d');
             canvas.height = viewport.height;
             canvas.width = viewport.width;
             await page.render({ canvasContext: context, viewport: viewport }).promise;
-            const blob = await new Promise(r => canvas.toBlob(r, 'image/jpeg', 0.85));
+            const blob = await new Promise(r => canvas.toBlob(r, 'image/jpeg', 0.8));
             blobs.push(blob);
         }
         return blobs;
     };
 
-    const callAI = async (prompt, sys = "", images = [], apiUrl = GEMINI_PROXY_URL) => { const parts = [{ text: `${sys}\n\nUser: ${prompt}` }]; if (images?.length > 0) { images.forEach(img => { let mimeType = "image/png", data = img; if (img.includes(",")) { const s = img.split(","); mimeType = s[0].match(/:(.*?);/)[1]; data = s[1]; } parts.push({ inlineData: { mimeType, data } }); }); } try { const response = await fetch(apiUrl, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ contents: [{ parts }] }) }); if (!response.ok) return `Error: ${response.status}`; const data = await response.json(); if (data.error) return `API Error: ${data.error.message}`; return data.candidates?.[0]?.content?.parts?.[0]?.text || "Empty response."; } catch (error) { return `Error: ${error.message}`; } };
-
-    const useGoogleDrive = () => { const [tokenClient, setTokenClient] = useState(null); useEffect(() => { if(!GDRIVE_API_KEY || !GDRIVE_CLIENT_ID) return; const load = async () => { if (window.gapi) { await new Promise(r => window.gapi.load('client', r)); await window.gapi.client.init({ apiKey: GDRIVE_API_KEY, discoveryDocs: ['https://www.googleapis.com/discovery/v1/apis/drive/v3/rest'] }); } if (window.google) setTokenClient(window.google.accounts.oauth2.initTokenClient({ client_id: GDRIVE_CLIENT_ID, scope: 'https://www.googleapis.com/auth/drive.file', callback: () => {} })); }; load(); }, []); const getAccessToken = () => new Promise((resolve, reject) => { if (!tokenClient) return reject("Auth not initialized"); const existing = window.gapi.client.getToken(); if (existing && Date.now() < existing.expiry) return resolve(existing.access_token); tokenClient.callback = (resp) => { if (resp.error) reject(resp); resolve(resp.access_token); }; tokenClient.requestAccessToken({ prompt: '' }); }); const saveToDrive = async (blob, filename, preFetchedToken = null, folderName = 'darNote_MockExams') => { const token = preFetchedToken || await getAccessToken(); let folderId; const q = `mimeType='application/vnd.google-apps.folder' and name='${folderName}' and trashed=false`; const search = await fetch(`https://www.googleapis.com/drive/v3/files?q=${encodeURIComponent(q)}`, { headers: { Authorization: `Bearer ${token}` } }); const searchData = await search.json(); if (searchData.files?.length) folderId = searchData.files[0].id; else { const create = await fetch('https://www.googleapis.com/drive/v3/files', { method: 'POST', headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' }, body: JSON.stringify({ name: folderName, mimeType: 'application/vnd.google-apps.folder' }) }); folderId = (await create.json()).id; } const metadata = { name: filename, mimeType: blob.type, parents: [folderId] }; const form = new FormData(); form.append('metadata', new Blob([JSON.stringify(metadata)], { type: 'application/json' })); form.append('file', blob); const upRes = await fetch('https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&fields=id', { method: 'POST', headers: { Authorization: `Bearer ${token}` }, body: form }); if(!upRes.ok) throw new Error(upRes.statusText); const fileId = (await upRes.json()).id; await fetch(`https://www.googleapis.com/drive/v3/files/${fileId}/permissions`, { method: 'POST', headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' }, body: JSON.stringify({ role: 'reader', type: 'anyone' }) }); return `https://lh3.googleusercontent.com/d/${fileId}`; }; return { saveToDrive, getAccessToken }; };
-
-    // --- COMPONENTS ---
-    const CompareLightbox = ({ qImages, sImages, onClose }) => {
-        useEffect(() => { const h = (e) => { if (e.key === 'Escape') onClose(); }; window.addEventListener('keydown', h); return () => window.removeEventListener('keydown', h); }, [onClose]); 
-        const rC = (src, i) => (<div key={i} className="relative group w-full flex justify-center"><img src={src} className="max-w-full h-auto rounded-xl shadow-ds bg-white dark:bg-dark" /><span className="absolute top-4 left-4 bg-black/70 text-white text-xs font-medium px-3 py-1 rounded-full backdrop-blur-md">Page {i+1}</span></div>); 
-        return (<motion.div initial={{opacity:0}} animate={{opacity:1}} exit={{opacity:0}} className="fixed inset-0 z-[100] bg-white/95 dark:bg-[#000000]/95 flex flex-col backdrop-blur-md" onClick={onClose}><div className="h-16 border-b border-light-gray dark:border-white/10 flex items-center justify-between px-8 shrink-0 bg-transparent" onClick={e=>e.stopPropagation()}><div className="flex-1 text-center font-bold text-dark dark:text-light text-lg uppercase tracking-widest">The Mistake</div><div className="w-px h-8 bg-light-gray dark:bg-white/10 mx-6"></div><div className="flex-1 text-center font-bold text-dark dark:text-light text-lg uppercase tracking-widest">The Reality (Scheme)</div><button onClick={onClose} className="absolute right-6 p-2.5 bg-light-gray dark:bg-white/10 rounded-full hover:bg-gray/20 transition-colors"><Icons.X className="w-6 h-6 text-dark dark:text-light"/></button></div><div className="flex-1 flex overflow-hidden relative" onClick={e=>e.stopPropagation()}><div className="flex-1 overflow-y-auto p-6 space-y-8 border-r border-light-gray dark:border-white/10">{qImages?.length ? qImages.map((src, i) => rC(src, i)) : <div className="flex h-full items-center justify-center text-gray uppercase font-bold tracking-widest text-xs">No Evidence</div>}</div><div className="flex-1 overflow-y-auto p-6 space-y-8">{sImages?.length ? sImages.map((src, i) => rC(src, i)) : <div className="flex h-full items-center justify-center text-gray uppercase font-bold tracking-widest text-xs">No Scheme</div>}</div></div></motion.div>);
+    // COMPONENTS
+    const StudentModal = ({ isOpen, onClose, user, saveToDrive, getAccessToken, callGroq }) => {
+        const [role, setRole] = useState('University'); const [file, setFile] = useState(null); const [uploading, setUploading] = useState(false); const [status, setStatus] = useState('none'); const [cooldownEnd, setCooldownEnd] = useState(null); const [uploadStatusMsg, setUploadStatusMsg] = useState(""); const [verifiedData, setVerifiedData] = useState(null);
+        useEffect(() => { if(!isOpen || !user) return; const ref = window.firebase.doc(window.firebase.db, 'artifacts', "darnote-app", 'users', user.uid, 'settings', 'profile'); window.firebase.getDoc(ref).then(snap => { if(snap.exists()) { if (snap.data().studentStatus) setStatus(snap.data().studentStatus); if (snap.data().verifiedData) setVerifiedData(snap.data().verifiedData); const cd = snap.data().studentVerificationCooldown; if (cd && cd > Date.now()) setCooldownEnd(cd); } }); }, [isOpen, user]);
+        const [timeLeft, setTimeLeft] = useState(""); useEffect(() => { if(!cooldownEnd) return; const i = setInterval(() => { const diff = cooldownEnd - Date.now(); if (diff <= 0) { setCooldownEnd(null); clearInterval(i); return; } const mins = Math.floor(diff / 60000); const secs = Math.floor((diff % 60000) / 1000); setTimeLeft(`${mins}m ${secs}s`); }, 1000); return () => clearInterval(i); }, [cooldownEnd]);
+        const handleSubmit = async () => { if (!file) { alert("Please upload a proof of identity."); return; } setUploading(true); setUploadStatusMsg("Uploading to secure storage..."); try { const token = await getAccessToken(); const url = await saveToDrive(file, `Proof_${user.uid}_${Date.now()}.jpg`, token, "darNote_personal image"); setUploadStatusMsg("AI Bouncer is analyzing ID..."); const b64 = await new Promise((r) => { const reader = new FileReader(); reader.onloadend = () => r(reader.result); reader.readAsDataURL(file); }); const prompt = `Analyze this student ID card carefully. Extract the "fullName" and "schoolName". \nReturn JSON ONLY: { "fullName": "...", "schoolName": "..." }.\nRules:\n1. Ignore ID numbers/DOB.\n2. If you cannot clearly read the Full Name OR School Name, return empty strings.\n3. Be strict.`; const aiRes = await callGroq(prompt, "JSON Parser", [b64]); let extractedData = {}; try { const jsonStr = aiRes.substring(aiRes.indexOf('{'), aiRes.lastIndexOf('}') + 1); extractedData = JSON.parse(jsonStr); } catch(e) {} const { fullName, schoolName } = extractedData; if (!fullName || !schoolName || fullName.length < 3 || schoolName.length < 3) { const cooldownTime = Date.now() + (2 * 60 * 60 * 1000); const ref = window.firebase.doc(window.firebase.db, 'artifacts', "darnote-app", 'users', user.uid, 'settings', 'profile'); await window.firebase.setDoc(ref, { studentVerificationCooldown: cooldownTime }, { merge: true }); setCooldownEnd(cooldownTime); setUploading(false); alert("AI Check Failed: Could not clearly identify Name or School. Cooldown activated."); return; } const docId = fullName.toLowerCase().trim().replace(/\s+/g, '_'); const registryRef = window.firebase.doc(window.firebase.db, 'artifacts', "darnote-app", 'public', 'data', 'verified_students', docId); const registrySnap = await window.firebase.getDoc(registryRef); if (registrySnap.exists() && registrySnap.data().uid !== user.uid) { setUploading(false); alert(`Verification Rejected: The name "${fullName}" is already registered by another account.`); const cooldownTime = Date.now() + (2 * 60 * 60 * 1000); const ref = window.firebase.doc(window.firebase.db, 'artifacts', "darnote-app", 'users', user.uid, 'settings', 'profile'); await window.firebase.setDoc(ref, { studentVerificationCooldown: cooldownTime }, { merge: true }); setCooldownEnd(cooldownTime); return; } const batch = window.firebase.writeBatch(window.firebase.db); const userRef = window.firebase.doc(window.firebase.db, 'artifacts', "darnote-app", 'users', user.uid, 'settings', 'profile'); batch.set(userRef, { studentStatus: 'temp_verified', studentRole: role, proofUrl: url, verifiedData: { fullName, schoolName }, submittedAt: new Date().toISOString() }, { merge: true }); batch.set(registryRef, { uid: user.uid, school: schoolName, role: role, registeredAt: new Date().toISOString() }); await batch.commit(); setStatus('temp_verified'); setVerifiedData({ fullName, schoolName }); setUploading(false); setUploadStatusMsg(""); alert("Success! Temporary Verification Granted."); } catch(e) { alert("Process Failed: " + e.message); setUploading(false); setUploadStatusMsg(""); } };
+        if (!isOpen) return null;
+        return (<div className="fixed inset-0 z-[100] bg-dark/80 backdrop-blur-md flex items-center justify-center p-4"><div className="bg-white dark:bg-surface-dark w-full max-w-md rounded-2xl shadow-2xl overflow-hidden border border-light-gray dark:border-white/5"><div className="p-8"><div className="flex justify-between items-start mb-6"><div><h3 className="text-2xl font-bold dark:text-light flex items-center gap-2"><Icons.GraduationCap className="w-6 h-6 text-primary"/> Education Plan</h3><p className="text-sm text-gray mt-1">Unlock 1-Day Mock Paper Cooldown.</p></div><button onClick={onClose} className="p-2 bg-light-gray/50 dark:bg-white/5 rounded-full hover:bg-light-gray dark:hover:bg-white/10 transition-colors"><Icons.X className="w-5 h-5 text-gray"/></button></div>{status === 'verified' ? (<div className="text-center py-8"><div className="w-20 h-20 bg-primary/10 rounded-full flex items-center justify-center mx-auto mb-4"><Icons.ShieldCheck className="w-10 h-10 text-primary"/></div><h4 className="font-bold text-xl text-primary mb-2">Verified Student</h4>{verifiedData && (<div className="bg-[#f8fafc] dark:bg-dark border border-light-gray dark:border-border-dark rounded-xl p-4 mb-4 mx-6"><div className="text-base font-bold text-dark dark:text-light">{verifiedData.fullName}</div><div className="text-sm text-gray">{verifiedData.schoolName}</div></div>)}<p className="text-sm text-gray">1-Day Cooldown Unlocked.</p></div>) : status === 'temp_verified' ? (<div className="text-center py-8 border border-gray/20 rounded-xl bg-light-gray/30 dark:bg-dark"><div className="w-20 h-20 bg-gray/10 rounded-full flex items-center justify-center mx-auto mb-4"><Icons.ShieldClock className="w-10 h-10 text-gray"/></div><h4 className="font-bold text-xl text-dark dark:text-light mb-1">Pending Approval</h4><div className="text-xs font-bold text-gray uppercase tracking-wider mb-4">Manual Review Required</div>{verifiedData && (<div className="bg-white dark:bg-surface-dark border border-light-gray dark:border-white/5 rounded-xl p-4 mb-4 mx-6"><div className="text-base font-bold text-dark dark:text-light">{verifiedData.fullName}</div><div className="text-sm text-gray">{verifiedData.schoolName}</div></div>)}<p className="text-sm text-gray px-4">Fast track granted while we review.</p></div>) : cooldownEnd ? (<div className="text-center py-10"><div className="w-20 h-20 bg-danger/10 rounded-full flex items-center justify-center mx-auto mb-4 animate-pulse"><Icons.Lock className="w-10 h-10 text-danger"/></div><h4 className="font-bold text-xl text-danger mb-2">Verification Locked</h4><p className="text-sm text-gray mb-6">Our AI could not verify your ID.</p><div className="bg-light-gray/50 dark:bg-dark rounded-xl py-3 font-mono text-xl font-bold text-gray border border-border-dark">Try again in {timeLeft}</div></div>) : (<div className="space-y-5"><div><label className="text-sm font-semibold text-dark dark:text-light block mb-2">Educational Institution</label><div className="flex gap-2 p-1 bg-light-gray/50 dark:bg-dark rounded-xl">{['University', 'High School', 'Middle School'].map(r => (<button key={r} onClick={() => setRole(r)} className={`flex-1 py-2 rounded-lg text-xs font-medium transition-all ${role === r ? 'bg-white dark:bg-surface-dark shadow-sm text-primary dark:text-light font-bold' : 'text-gray hover:text-dark dark:hover:text-light'}`}>{r}</button>))}</div></div><div><label className="text-sm font-semibold text-dark dark:text-light block mb-2">Proof of Identity</label><div className="border-2 border-dashed border-gray/30 dark:border-gray/50 rounded-xl p-8 text-center hover:bg-black/5 dark:hover:bg-white/5 transition-colors cursor-pointer relative group"><input type="file" accept="image/*" className="absolute inset-0 opacity-0 cursor-pointer" onChange={(e) => setFile(e.target.files[0])} /><div className="flex flex-col items-center"><div className="w-12 h-12 bg-black/5 dark:bg-white/5 rounded-full flex items-center justify-center mb-3 group-hover:scale-110 transition-transform"><Icons.CloudUpload className="w-6 h-6 text-primary dark:text-light"/></div><span className="text-sm font-semibold text-dark dark:text-light">{file ? file.name : "Upload Student ID"}</span><span className="text-xs text-gray mt-1">JPG or PNG</span></div></div></div><button onClick={handleSubmit} disabled={uploading || !file} className="w-full bg-primary text-white dark:bg-light dark:text-dark font-medium py-3 rounded-xl disabled:opacity-50 disabled:cursor-not-allowed flex justify-center items-center gap-2 shadow-sm transition-all">{uploading ? <div className="w-5 h-5 border-2 border-current border-t-transparent rounded-full animate-spin"/> : <Icons.Check className="w-5 h-5"/>}{uploading ? "Analyzing ID..." : "Verify"}</button>{uploading && <p className="text-center text-xs text-gray animate-pulse">{uploadStatusMsg}</p>}</div>)}</div></div></div>);
     };
 
-    const ImageUploader = ({ images = [], onUpdate, label, isUploading, onImageClick }) => {
-        const fileInputRef = useRef(null);
-        const imageList = Array.isArray(images) ? images : [];
-
-        const handleFiles = async (files) => {
-            for (let file of Array.from(files)) {
-                if (file.type === 'application/pdf') {
-                    onUpdate('START_PDF_PROCESSING', 'status');
-                    try {
-                        const blobs = await convertPdfToImages(file);
-                        for (let blob of blobs) {
-                            await onUpdate(blob, 'add');
-                        }
-                    } catch (e) { alert("Failed to slice PDF. File might be corrupted or too large."); }
-                    onUpdate('END_PDF_PROCESSING', 'status');
-                } else if (file.type.startsWith('image/')) {
-                    onUpdate(file, 'add');
-                }
-            }
-        };
-
-        const handlePasteClick = async () => {
-            try {
-                const items = await navigator.clipboard.read();
-                for (const item of items) {
-                    for (const type of item.types) {
-                        if (type.startsWith("image/")) {
-                            const blob = await item.getType(type);
-                            onUpdate(blob, 'add');
-                            return;
-                        }
-                    }
-                }
-            } catch (err) { alert("Clipboard permission denied or no valid image found."); }
-        };
-
-        return (
-            <div className="space-y-3">
-                <div className="flex justify-between items-center">
-                    <label className="text-sm font-bold text-dark dark:text-light flex items-center gap-2 uppercase tracking-widest">{label} <span className="text-[10px] font-medium text-gray bg-light-gray dark:bg-surface-dark px-2 py-0.5 rounded-full">{imageList.length}</span></label>
-                    <div className="flex gap-2">
-                        <button onClick={handlePasteClick} className="text-[10px] font-bold uppercase tracking-widest flex items-center gap-1.5 text-dark dark:text-light hover:bg-light-gray dark:hover:bg-surface-dark px-3 py-1.5 rounded-full transition-colors border border-light-gray dark:border-border-dark">Paste</button>
-                        <button onClick={() => fileInputRef.current.click()} className="text-[10px] font-bold uppercase tracking-widest flex items-center gap-1.5 bg-dark dark:bg-light text-light dark:text-dark px-3 py-1.5 rounded-full transition-colors"><Icons.Plus className="w-3.5 h-3.5"/> Add</button>
-                    </div>
-                    <input type="file" multiple ref={fileInputRef} style={{display:'none'}} onChange={(e) => handleFiles(e.target.files)} accept="image/*,application/pdf" />
-                </div>
-                <div className={`w-full min-h-[140px] bg-[#f8fafc] dark:bg-surface-dark border border-dashed rounded-xl p-4 transition-all ${isUploading ? 'border-dark dark:border-light bg-light-gray/20 dark:bg-white/5' : 'border-gray/30'}`} onDragOver={(e) => e.preventDefault()} onDrop={(e) => { e.preventDefault(); handleFiles(e.dataTransfer.files); }}>
-                    {imageList.length === 0 ? (
-                        <div className="h-28 flex flex-col items-center justify-center pointer-events-none opacity-60">
-                            {isUploading ? <div className="w-6 h-6 border-2 border-dark dark:border-light border-t-transparent rounded-full animate-spin mb-2"/> : <Icons.Upload className="w-6 h-6 mb-2"/>}
-                            <span className="text-xs font-semibold uppercase tracking-widest">{isUploading ? "Processing..." : "Drop images or PDF here"}</span>
-                        </div>
-                    ) : (
-                        <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 gap-3">
-                            {imageList.map((url, idx) => (
-                                <div key={idx} onClick={(e) => {e.stopPropagation(); onImageClick()}} className="group relative aspect-square bg-white dark:bg-[#000000] rounded-xl overflow-hidden shadow-sm cursor-zoom-in border border-light-gray dark:border-border-dark">
-                                    <img src={url} className="w-full h-full object-cover grayscale group-hover:grayscale-0 transition-all duration-300" />
-                                    <div className="absolute inset-0 bg-dark/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2">
-                                        <button onClick={(e) => { e.stopPropagation(); onUpdate(idx, 'remove'); }} className="p-2 bg-white text-dark rounded-full shadow-lg hover:scale-110 transition-transform"><Icons.Trash className="w-4 h-4"/></button>
-                                    </div>
-                                </div>
-                            ))}
-                            {isUploading && (<div className="aspect-square rounded-xl bg-light-gray/20 dark:bg-white/5 flex items-center justify-center border border-dashed border-gray/50"><div className="w-5 h-5 border-2 border-dark dark:border-light border-t-transparent rounded-full animate-spin"></div></div>)}
-                        </div>
-                    )}
-                </div>
-            </div>
-        );
+    const CompareLightbox = ({ activePage, onClose }) => {
+        if (!activePage) return null; const src = activePage.imageUrl; useEffect(() => { const h = (e) => { if (e.key === 'Escape') onClose(); }; window.addEventListener('keydown', h); return () => window.removeEventListener('keydown', h); }, [onClose]); return (<motion.div initial={{opacity:0}} animate={{opacity:1}} exit={{opacity:0}} className="fixed inset-0 z-[60] bg-white/95 dark:bg-[#09090b]/95 flex flex-col backdrop-blur-md" onClick={onClose}><div className="h-16 border-b border-light-gray dark:border-white/10 flex items-center justify-between px-8 shrink-0 bg-white/50 dark:bg-transparent" onClick={e=>e.stopPropagation()}><div className="flex-1 text-center font-semibold text-dark dark:text-light text-lg">Full Page View</div><button onClick={onClose} className="absolute right-6 p-2.5 bg-light-gray dark:bg-white/10 rounded-full hover:bg-black/10 transition-colors"><Icons.X className="w-6 h-6 text-dark dark:text-light"/></button></div><div className="flex-1 flex overflow-hidden relative justify-center items-center p-6" onClick={e=>e.stopPropagation()}><img src={src} className="max-w-full max-h-full rounded-xl shadow-2xl bg-white dark:bg-dark border border-light-gray dark:border-white/10" /></div></motion.div>);
     };
 
-    // --- MAIN APP ---
+    const AIChat = ({ activePage, onClose, user, messages, setMessages }) => {
+        const [input, setInput] = useState(""); const [loading, setLoading] = useState(false); const messagesEndRef = useRef(null); useEffect(() => { messagesEndRef.current?.scrollIntoView({ behavior: "smooth" }); }, [messages]); 
+        const handleSend = async () => { if(!input.trim()) return; const userMsg = input; setMessages(prev => [...prev, {role: 'user', text: userMsg}]); setInput(""); setLoading(true); let imgContexts = []; if (activePage.imageUrl && !activePage.imageUrl.includes('drive.google.com')) { try { const res = await fetch(activePage.imageUrl); const blob = await res.blob(); const base64 = await new Promise((r) => { const reader = new FileReader(); reader.onloadend = () => r(reader.result); reader.readAsDataURL(blob); }); imgContexts.push(base64); } catch(e) {} } const historyText = messages.slice(Math.max(messages.length - 6, 1)).map(m => `${m.role === 'user' ? 'Student' : 'Tutor'}: ${m.text}`).join('\n'); const context = `Topic: ${activePage.topic}. What I did wrong: ${activePage.whatWrong}. Why: ${activePage.whyWrong}. Thought process: ${activePage.thoughtProcess}.`; const systemPrompt = `You are a strict, monochromatic tutor. Context: ${context}. \nPREVIOUS CHAT:\n${historyText}\n\nINSTRUCTIONS:\n1. Be CONCISE.\n2. Markdown yes, LaTeX NO. Use Unicode math.`; let response = await callGroq(userMsg, systemPrompt, imgContexts); response = cleanLatex(response); setMessages(prev => [...prev, {role: 'ai', text: response}]); setLoading(false); };
+        return (<div className="flex flex-col h-full bg-[#f4f4f5] dark:bg-onyx border-l border-light-gray dark:border-white/5 shadow-2xl"><div className="px-5 py-4 border-b border-light-gray dark:border-white/5 bg-white dark:bg-surface-dark flex flex-col gap-4"><div className="flex justify-between items-center"><span className="font-bold text-base flex items-center gap-2 text-dark dark:text-light"><div className="w-8 h-8 rounded-full bg-black/5 dark:bg-white/10 flex items-center justify-center"><Icons.Sparkles className="w-4 h-4 text-primary dark:text-light"/></div> Vault AI</span><button onClick={onClose} className="p-2 rounded-full hover:bg-light-gray dark:hover:bg-white/10 transition-colors"><Icons.X className="w-5 h-5 text-gray"/></button></div></div><div className="flex-1 overflow-y-auto p-5 space-y-6 markdown-content">{messages.map((m, i) => <div key={i} className={`flex ${m.role==='user'?'justify-end':'justify-start'}`}><div className={`max-w-[85%] p-4 text-sm shadow-sm ${m.role==='user'?'bg-primary text-white dark:bg-light dark:text-dark rounded-2xl rounded-tr-sm':'bg-white dark:bg-surface-dark text-dark dark:text-light border border-light-gray dark:border-white/5 rounded-2xl rounded-tl-sm'}`} dangerouslySetInnerHTML={{ __html: marked.parse(m.text, {breaks: true, gfm: true}) }} /></div>)}{loading && <div className="flex gap-1 pl-4"><div className="w-2 h-2 bg-black/50 dark:bg-white/50 rounded-full animate-bounce"></div><div className="w-2 h-2 bg-black/50 dark:bg-white/50 rounded-full animate-bounce" style={{animationDelay:'0.1s'}}></div><div className="w-2 h-2 bg-black/50 dark:bg-white/50 rounded-full animate-bounce" style={{animationDelay:'0.2s'}}></div></div>} <div ref={messagesEndRef}/></div><div className="p-4 bg-white dark:bg-surface-dark border-t border-light-gray dark:border-white/5"><div className="flex gap-2 bg-[#f4f4f5] dark:bg-dark border border-light-gray dark:border-white/5 rounded-xl p-1 shadow-inner"><input value={input} onChange={e=>setInput(e.target.value)} onKeyDown={e=>e.key==='Enter'&&handleSend()} className="flex-1 bg-transparent px-4 py-2 text-sm focus:outline-none dark:text-light placeholder-gray" placeholder={`Ask about this page...`}/><button onClick={handleSend} disabled={loading || !input.trim()} className="bg-primary text-white dark:bg-light dark:text-dark rounded-lg px-4 flex items-center justify-center disabled:opacity-50 transition-colors shadow-sm shrink-0"><Icons.Bot className="w-4 h-4"/></button></div></div></div>);
+    };
+
     const App = () => {
-        const [user, setUser] = useState(null);
-        const [userProfile, setUserProfile] = useState({});
-        const [subjects, setSubjects] = useState([]);
-        const [mocks, setMocks] = useState([]);
+        const [user, setUser] = useState(null); 
+        const [mockPapers, setMockPapers] = useState([]); 
+        const [subjects, setSubjects] = useState([]); 
         const [activeMockId, setActiveMockId] = useState(null);
-        const [questions, setQuestions] = useState([]);
-        const [activeQuestionId, setActiveQuestionId] = useState(null);
+        const [mockPages, setMockPages] = useState([]);
+        const [activePageId, setActivePageId] = useState(null);
         
-        const [filterSubject, setFilterSubject] = useState('All');
-        const [isDarkMode, setIsDarkMode] = useState(true);
-        const { saveToDrive, getAccessToken } = useGoogleDrive();
-        const [loadingMsg, setLoadingMsg] = useState("");
+        const [isDarkMode, setIsDarkMode] = useState(false); 
+        const [isLoadingMocks, setIsLoadingMocks] = useState(true); 
+        const [isUploading, setIsUploading] = useState(false);
+        const [uploadStatus, setUploadStatus] = useState("");
+        const [isAiLoading, setIsAiLoading] = useState(false);
+        const [showStudentModal, setShowStudentModal] = useState(false); 
+        const [studentStatus, setStudentStatus] = useState('none');
         const [compareMode, setCompareMode] = useState(false);
-        const [cooldownAlert, setCooldownAlert] = useState(null);
+        const [isAiOpen, setIsAiOpen] = useState(false); 
+        const [chatMessages, setChatMessages] = useState([{role: 'ai', text: "How can I assist with this specific mock page?"}]);
 
-        // Upload Spinners
-        const [uploadingQ, setUploadingQ] = useState(false);
-        const [uploadingS, setUploadingS] = useState(false);
-        const saveTimeoutRef = useRef({});
+        const { saveToDrive, getAccessToken } = useGoogleDrive(); 
+        const saveTimeoutRef = useRef(null); 
+        const pendingUpdatesRef = useRef({}); 
 
-        // Auth & Init
-        useEffect(() => { 
-            const unsub = window.firebase.onAuthStateChanged(window.firebase.auth, async (u) => { 
-                if (u) { 
-                    setUser(u); 
-                    const db = window.firebase.db; 
-                    // Fetch profile for cooldown logic
-                    window.firebase.onSnapshot(window.firebase.doc(db, 'artifacts', "darnote-app", 'users', u.uid, 'settings', 'profile'), (doc) => { 
-                        if(doc.exists()) setUserProfile(doc.data()); 
-                    });
-                    // Fetch Subjects
-                    window.firebase.getDocs(window.firebase.collection(db, 'artifacts', "darnote-app", 'users', u.uid, 'subjects')).then(snap => { 
-                        setSubjects(snap.docs.map(d => ({id: d.id, name: d.data().name})).sort((a,b)=>a.name.localeCompare(b.name))); 
-                    }); 
-                    fetchMocks(u.uid);
-                } else {
-                    setUser(null); 
-                    setMocks([]);
-                }
-            }); 
-            return () => unsub(); 
-        }, []);
-
+        // Auth & Subjects Init
+        useEffect(() => { const unsub = window.firebase.onAuthStateChanged(window.firebase.auth, async (u) => { if (u) { setUser(u); const db = window.firebase.db; window.firebase.getDocs(window.firebase.collection(db, 'artifacts', "darnote-app", 'users', u.uid, 'subjects')).then(snap => { setSubjects(snap.docs.map(d => ({id: d.id, name: d.data().name, topics: d.data().topics || []})).sort((a,b)=>a.name.localeCompare(b.name))); }); window.firebase.onSnapshot(window.firebase.doc(db, 'artifacts', "darnote-app", 'users', u.uid, 'settings', 'profile'), (doc) => { if(doc.exists()) setStudentStatus(doc.data().studentStatus || 'none'); }); fetchMockPapers(u.uid); } else setUser(null); }); return () => unsub(); }, []);
         useEffect(() => { if(isDarkMode) document.documentElement.classList.add('dark'); else document.documentElement.classList.remove('dark'); }, [isDarkMode]);
 
-        const fetchMocks = async (uid) => {
-            const db = window.firebase.db;
-            const q = window.firebase.query(window.firebase.collection(db, 'artifacts', "darnote-app", 'users', uid, 'mock_exams'), window.firebase.orderBy('createdAt', 'desc'));
-            const snap = await window.firebase.getDocs(q);
-            setMocks(snap.docs.map(d => ({id: d.id, ...d.data()})));
+        const fetchMockPapers = async (uid) => {
+            setIsLoadingMocks(true);
+            try {
+                const q = window.firebase.query(window.firebase.collection(window.firebase.db, 'artifacts', "darnote-app", 'users', uid, 'mock_papers'), window.firebase.orderBy('createdAt', 'desc'));
+                const snap = await window.firebase.getDocs(q);
+                setMockPapers(snap.docs.map(d => ({id: d.id, ...d.data()})));
+            } catch(e) { console.error(e); }
+            setIsLoadingMocks(false);
         };
 
-        const fetchQuestions = async (mockId) => {
-            const db = window.firebase.db;
-            const q = window.firebase.query(window.firebase.collection(db, 'artifacts', "darnote-app", 'users', user.uid, 'mock_questions'), window.firebase.where('mockId', '==', mockId));
-            const snap = await window.firebase.getDocs(q);
-            setQuestions(snap.docs.map(d => ({id: d.id, ...d.data()})).sort((a,b) => a.order - b.order));
+        const fetchMockPages = async (mockId) => {
+            if (!mockId || !user) return;
+            try {
+                const q = window.firebase.query(window.firebase.collection(window.firebase.db, 'artifacts', "darnote-app", 'users', user.uid, 'elmock'), window.firebase.where('mockId', '==', mockId), window.firebase.orderBy('pageNumber', 'asc'));
+                const snap = await window.firebase.getDocs(q);
+                setMockPages(snap.docs.map(d => ({id: d.id, ...d.data()})));
+            } catch(e) { console.error(e); }
         };
 
         useEffect(() => {
-            if (activeMockId) fetchQuestions(activeMockId);
+            if (activeMockId) { fetchMockPages(activeMockId); setActivePageId(null); }
         }, [activeMockId]);
 
         // Cooldown Logic
-        const checkCooldown = () => {
-            const lastUpload = userProfile.lastMockUploadDate || 0;
-            const isVerified = userProfile.studentStatus === 'verified' || userProfile.studentStatus === 'temp_verified';
-            const cooldownDays = isVerified ? 1 : 3;
-            const cooldownMs = cooldownDays * 24 * 60 * 60 * 1000;
-            const timePassed = Date.now() - lastUpload;
-            
-            if (timePassed < cooldownMs) {
-                const remaining = cooldownMs - timePassed;
-                const hours = Math.floor(remaining / (1000 * 60 * 60));
-                setCooldownAlert(`Anti-Burnout Protocol: You must wait ${hours} more hours before adding a new full Mock Exam. Review your existing ones!`);
-                setTimeout(() => setCooldownAlert(null), 5000);
-                return false;
-            }
-            return true;
+        const canCreateMock = async () => {
+            const profileRef = window.firebase.doc(window.firebase.db, 'artifacts', "darnote-app", 'users', user.uid, 'settings', 'profile');
+            const snap = await window.firebase.getDoc(profileRef);
+            if (!snap.exists()) return true;
+            const data = snap.data();
+            const lastMock = data.lastMockCreated || 0;
+            const isStudent = data.studentStatus === 'verified' || data.studentStatus === 'temp_verified';
+            const cooldown = isStudent ? (24 * 60 * 60 * 1000) : (3 * 24 * 60 * 60 * 1000);
+            return (Date.now() - lastMock) > cooldown;
         };
 
-        const createMock = async () => {
-            if (!checkCooldown()) return;
-            const newMock = { title: 'Untitled Mock Exam', subject: 'General', createdAt: Date.now(), lastModified: Date.now() };
-            const docRef = await window.firebase.addDoc(window.firebase.collection(window.firebase.db, 'artifacts', "darnote-app", 'users', user.uid, 'mock_exams'), newMock);
+        const createMockPaper = async () => {
+            const canCreate = await canCreateMock();
+            if (!canCreate) {
+                const isStudent = studentStatus === 'verified' || studentStatus === 'temp_verified';
+                alert(`Cooldown active! You can only create 1 Mock Paper every ${isStudent ? '1 Day' : '3 Days'}.`);
+                if (!isStudent) setShowStudentModal(true);
+                return;
+            }
+            const newMock = { title: 'Untitled Mock Exam', subject: subjects[0]?.name || 'General', createdAt: new Date().toISOString() };
+            const docRef = await window.firebase.addDoc(window.firebase.collection(window.firebase.db, 'artifacts', "darnote-app", 'users', user.uid, 'mock_papers'), newMock);
             
             // Update Cooldown
-            await window.firebase.setDoc(window.firebase.doc(window.firebase.db, 'artifacts', "darnote-app", 'users', user.uid, 'settings', 'profile'), { lastMockUploadDate: Date.now() }, { merge: true });
+            await window.firebase.setDoc(window.firebase.doc(window.firebase.db, 'artifacts', "darnote-app", 'users', user.uid, 'settings', 'profile'), { lastMockCreated: Date.now() }, { merge: true });
             
-            setMocks(prev => [{...newMock, id: docRef.id}, ...prev]);
+            setMockPapers(prev => [{...newMock, id: docRef.id}, ...prev]);
             setActiveMockId(docRef.id);
         };
 
-        const createQuestion = async () => {
-            const newQ = { mockId: activeMockId, questionImages: [], schemeImages: [], whatWrong: '', whyWrong: '', whatThinking: '', aiReview: '', userNotes: '', order: questions.length, createdAt: Date.now() };
-            const docRef = await window.firebase.addDoc(window.firebase.collection(window.firebase.db, 'artifacts', "darnote-app", 'users', user.uid, 'mock_questions'), newQ);
-            setQuestions(prev => [...prev, {...newQ, id: docRef.id}]);
-            setActiveQuestionId(docRef.id);
-        };
-
         const updateMock = async (id, updates) => {
-            setMocks(prev => prev.map(m => m.id === id ? { ...m, ...updates } : m));
-            await window.firebase.updateDoc(window.firebase.doc(window.firebase.db, 'artifacts', "darnote-app", 'users', user.uid, 'mock_exams', id), updates);
+            setMockPapers(prev => prev.map(m => m.id === id ? { ...m, ...updates } : m));
+            await window.firebase.updateDoc(window.firebase.doc(window.firebase.db, 'artifacts', "darnote-app", 'users', user.uid, 'mock_papers', id), updates);
         };
 
-        const updateQuestion = (id, updates) => {
-            setQuestions(prev => prev.map(q => q.id === id ? { ...q, ...updates } : q));
-            if (saveTimeoutRef.current[id]) clearTimeout(saveTimeoutRef.current[id]);
-            saveTimeoutRef.current[id] = setTimeout(async () => {
-                await window.firebase.updateDoc(window.firebase.doc(window.firebase.db, 'artifacts', "darnote-app", 'users', user.uid, 'mock_questions', id), updates);
-            }, 1500);
+        const updatePage = (id, updates) => { 
+            setMockPages(prev => prev.map(p => p.id === id ? { ...p, ...updates } : p)); 
+            if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current); 
+            pendingUpdatesRef.current[id] = { ...(pendingUpdatesRef.current[id] || {}), ...updates }; 
+            saveTimeoutRef.current = setTimeout(async () => { 
+                const ids = Object.keys(pendingUpdatesRef.current); 
+                for (const pid of ids) { 
+                    const payload = pendingUpdatesRef.current[pid]; 
+                    delete pendingUpdatesRef.current[pid]; 
+                    await window.firebase.updateDoc(window.firebase.doc(window.firebase.db, 'artifacts', "darnote-app", 'users', user.uid, 'elmock', pid), payload); 
+                } 
+            }, 1000); 
         };
 
-        // Image Update Handler (Handles PDF slicing state too)
-        const handleImageUpdate = async (qId, data, action, type) => {
-            const isQ = type === 'question';
-            const setSpinner = isQ ? setUploadingQ : setUploadingS;
-            const targetField = isQ ? 'questionImages' : 'schemeImages';
-            
-            if (action === 'status') {
-                if (data === 'START_PDF_PROCESSING') setSpinner(true);
-                if (data === 'END_PDF_PROCESSING') setSpinner(false);
-                return;
-            }
+        const deleteMock = async (id) => {
+            if(!confirm("Eradicate this entire mock paper and all its pages?")) return;
+            setMockPapers(prev => prev.filter(m => m.id !== id));
+            if (activeMockId === id) setActiveMockId(null);
+            await window.firebase.deleteDoc(window.firebase.doc(window.firebase.db, 'artifacts', "darnote-app", 'users', user.uid, 'mock_papers', id));
+            // Should technically delete children pages too, but simplified for single file.
+        };
 
-            if (action === 'remove') {
-                setQuestions(prev => prev.map(q => {
-                    if (q.id === qId) {
-                        const newArr = q[targetField].filter((_, i) => i !== data);
-                        updateQuestion(qId, { [targetField]: newArr });
-                        return { ...q, [targetField]: newArr };
-                    }
-                    return q;
-                }));
-                return;
-            }
-
-            setSpinner(true);
+        // File Upload (Images & PDF)
+        const handleFileUpload = async (files) => {
+            if (!files || files.length === 0 || !activeMockId) return;
+            setIsUploading(true);
             try {
-                let token = await getAccessToken();
-                let blobToUpload = data instanceof Blob ? await compressImage(data) : data;
-                const finalUrl = await saveToDrive(blobToUpload, `MockImg_${Date.now()}.jpg`, token);
+                let token;
+                try { token = await getAccessToken(); } catch(e) { alert("Drive Auth required."); setIsUploading(false); return; }
                 
-                setQuestions(prev => prev.map(q => {
-                    if (q.id === qId) {
-                        const newArr = [...(q[targetField] || []), finalUrl];
-                        updateQuestion(qId, { [targetField]: newArr });
-                        return { ...q, [targetField]: newArr };
+                let currentMaxPage = mockPages.length;
+                
+                for (let i = 0; i < files.length; i++) {
+                    const file = files[i];
+                    if (file.type === 'application/pdf') {
+                        setUploadStatus("Slicing PDF...");
+                        const blobs = await processPDF(file);
+                        for (let j=0; j<blobs.length; j++) {
+                            setUploadStatus(`Uploading PDF Page ${j+1}/${blobs.length}...`);
+                            const compressed = await compressImage(blobs[j]);
+                            const url = await saveToDrive(compressed, `Mock_${activeMockId}_Page_${currentMaxPage+1}.jpg`, token);
+                            await createPageDoc(url, currentMaxPage+1);
+                            currentMaxPage++;
+                        }
+                    } else if (file.type.startsWith('image/')) {
+                        setUploadStatus(`Uploading Image ${i+1}/${files.length}...`);
+                        const compressed = await compressImage(file);
+                        const url = await saveToDrive(compressed, `Mock_${activeMockId}_Page_${currentMaxPage+1}.jpg`, token);
+                        await createPageDoc(url, currentMaxPage+1);
+                        currentMaxPage++;
                     }
-                    return q;
-                }));
-            } catch(e) { alert("Upload Error: " + e.message); }
-            setSpinner(false);
+                }
+                await fetchMockPages(activeMockId);
+            } catch(e) {
+                alert("Upload failed: " + e.message);
+            }
+            setIsUploading(false);
+            setUploadStatus("");
         };
 
-        // AI Auto-Review (Triggers only if aiReview is empty and images exist)
-        const autoRoast = async (qId) => {
-            const q = questions.find(x => x.id === qId);
-            if (!q || q.aiReview || !q.questionImages?.length) return;
-            
-            setLoadingMsg("Summoning the ghost of disappointed examiners...");
-            
+        const createPageDoc = async (url, pageNum) => {
+            const newPage = { mockId: activeMockId, pageNumber: pageNum, imageUrl: url, topic: '', whatWrong: '', whyWrong: '', thoughtProcess: '', markingNote: '', mastered: false, createdAt: new Date().toISOString() };
+            await window.firebase.addDoc(window.firebase.collection(window.firebase.db, 'artifacts', "darnote-app", 'users', user.uid, 'elmock'), newPage);
+        };
+
+        // Lazy AI Review
+        const doLazyAI = async (page) => {
+            if (page.whatWrong || page.whyWrong || page.thoughtProcess || isAiLoading) return;
+            setIsAiLoading(true);
             try {
-                // Fetch base64 of the first question image
-                const res = await fetch(q.questionImages[0]);
-                const blob = await res.blob();
-                const b64 = await new Promise(r => { const rd = new FileReader(); rd.onload = () => r(rd.result); rd.readAsDataURL(blob); });
+                let imgB64 = "";
+                if (!page.imageUrl.includes('drive.google.com')) {
+                    const res = await fetch(page.imageUrl);
+                    const blob = await res.blob();
+                    imgB64 = await new Promise(r=>{const rd=new FileReader(); rd.onload=()=>r(rd.result); rd.readAsDataURL(blob);});
+                } else {
+                    imgB64 = page.imageUrl; // Fallback, Groq won't read Drive URLs easily though
+                }
                 
-                const prompt = `Analyze this wrong exam question image. Be brutal, direct, and slightly hilarious (Noir tone). Tell the student: 1. What concept is tested. 2. Common traps here. Output plain text.`;
-                const aiRes = await callAI(prompt, "Examiner Roast", [b64]);
-                updateQuestion(qId, { aiReview: aiRes });
-            } catch(e) { console.error(e); }
-            setLoadingMsg("");
+                const prompt = `Analyze this specific page from an exam. Identify the mistakes the student made. \nReturn strictly JSON format: { "whatWrong": "Short summary of the exact mistake", "whyWrong": "Underlying conceptual reason for the mistake", "thoughtProcess": "Probable flawed thought process the student had" }`;
+                const aiRes = await callGroq(prompt, "JSON Generator", [imgB64]);
+                const jsonStr = aiRes.substring(aiRes.indexOf('{'), aiRes.lastIndexOf('}') + 1);
+                const result = JSON.parse(jsonStr);
+                
+                updatePage(page.id, {
+                    whatWrong: result.whatWrong || "Could not determine.",
+                    whyWrong: result.whyWrong || "Could not determine.",
+                    thoughtProcess: result.thoughtProcess || "Could not determine."
+                });
+            } catch(e) { console.error("Lazy AI Error", e); }
+            setIsAiLoading(false);
         };
 
         useEffect(() => {
-            if (activeQuestionId) autoRoast(activeQuestionId);
-        }, [activeQuestionId]);
+            if (activePageId) {
+                const page = mockPages.find(p => p.id === activePageId);
+                if (page) doLazyAI(page);
+                setChatMessages([{role: 'ai', text: "How can I assist with this specific mock page?"}]);
+            }
+        }, [activePageId]);
 
-        // Views
-        const filteredMocks = filterSubject === 'All' ? mocks : mocks.filter(m => m.subject === filterSubject);
-        const activeMock = mocks.find(m => m.id === activeMockId);
-        const activeQuestion = questions.find(q => q.id === activeQuestionId);
+        const activeMock = mockPapers.find(m => m.id === activeMockId);
+        const activePage = mockPages.find(p => p.id === activePageId);
+        const currentSub = activeMock ? subjects.find(s=>s.name===activeMock.subject) : null;
 
-        if (!user) return (
-            <div className="h-screen w-full flex items-center justify-center bg-[#f4f4f5] dark:bg-[#000000] flex-col relative overflow-hidden">
-                <div className="z-10 flex flex-col items-center text-center max-w-md p-8 bg-white dark:bg-surface-dark border border-light-gray dark:border-border-dark rounded-3xl shadow-ds">
-                    <Icons.BookOpen className="w-16 h-16 mb-6 text-dark dark:text-light opacity-80"/>
-                    <h1 className="text-3xl font-extrabold tracking-tighter mb-2 uppercase">Mock Autopsy</h1>
-                    <p className="text-sm text-gray mb-8 font-medium">Document your failures. Dissect them. Prevent them.</p>
-                    <button onClick={() => window.firebase.signInWithPopup(window.firebase.auth, new window.firebase.GoogleAuthProvider())} className="bg-dark dark:bg-light text-light dark:text-dark px-8 py-3.5 rounded-full font-bold uppercase tracking-widest text-xs flex gap-3 items-center hover:scale-105 transition-all shadow-md w-full justify-center"><Icons.Google className="w-4 h-4"/> Sign In</button>
-                </div>
-            </div>
-        );
+        if (!user) return (<div className="h-screen w-full flex items-center justify-center bg-white dark:bg-onyx flex-col gap-6 relative overflow-hidden"><div className="z-10 flex flex-col items-center"><img src="https://raw.githubusercontent.com/darren6251/darnote/refs/heads/main/darNote%20logo.png" className="w-16 h-16 mb-6 rounded-2xl shadow-sm grayscale opacity-80"/><h1 className="text-4xl font-bold text-dark dark:text-light tracking-tight font-sans mb-3">darNote Mock Vault</h1><p className="text-base text-gray max-w-sm text-center mb-10">Sign in to securely stash and analyze your mock exams.</p><button onClick={() => window.firebase.signInWithPopup(window.firebase.auth, new window.firebase.GoogleAuthProvider())} className="bg-primary text-white dark:bg-light dark:text-dark px-8 py-3.5 rounded-full font-medium flex gap-3 items-center hover:opacity-90 transition-all shadow-md w-64 justify-center text-sm"><Icons.Google className="w-4 h-4"/> Authenticate</button></div></div>);
 
         return (
-            <div className={`flex flex-col h-screen w-full transition-colors duration-300 ${isDarkMode ? 'dark' : ''}`}>
-                <AnimatePresence>{compareMode && activeQuestion && <CompareLightbox qImages={activeQuestion.questionImages} sImages={activeQuestion.schemeImages} onClose={() => setCompareMode(false)} />}</AnimatePresence>
-                <AnimatePresence>
-                    {cooldownAlert && (
-                        <motion.div initial={{ y: -50, opacity: 0 }} animate={{ y: 20, opacity: 1 }} exit={{ y: -50, opacity: 0 }} className="fixed top-0 left-1/2 -translate-x-1/2 z-[200] bg-danger text-white px-6 py-3 rounded-full shadow-2xl flex items-center gap-3 text-sm font-bold tracking-wide border border-white/20">
-                            <Icons.Shield className="w-5 h-5"/> {cooldownAlert}
-                        </motion.div>
-                    )}
-                </AnimatePresence>
-                
+            <div className={`flex flex-col h-screen w-full transition-colors duration-300 ${isDarkMode ? 'dark bg-onyx' : 'bg-[#f4f4f5]'}`}>
+                <StudentModal isOpen={showStudentModal} onClose={() => setShowStudentModal(false)} user={user} saveToDrive={saveToDrive} getAccessToken={getAccessToken} callGroq={callGroq} />
+                <AnimatePresence>{compareMode && activePage && <CompareLightbox activePage={activePage} onClose={() => setCompareMode(false)} />}</AnimatePresence>
+
                 {/* Header */}
-                <header className="bg-white dark:bg-[#000000] text-dark dark:text-light px-6 py-3 flex justify-between items-center z-30 shrink-0 border-b border-light-gray dark:border-border-dark h-16">
-                    <div className="flex items-center gap-3 font-bold text-lg tracking-tighter cursor-pointer uppercase" onClick={() => { setActiveMockId(null); setActiveQuestionId(null); }}>
-                        <Icons.BookOpen className="w-6 h-6"/> MOCK AUTOPSY
+                <header className="bg-white dark:bg-surface-dark text-dark dark:text-light px-4 py-2 flex justify-between items-center z-30 shrink-0 border-b border-light-gray dark:border-border-dark h-16 shadow-sm">
+                    <div className="flex items-center gap-3 font-medium text-lg tracking-tight cursor-pointer px-2" onClick={() => {setActiveMockId(null); setActivePageId(null);}}>
+                        <div className="w-8 h-8 rounded-lg bg-black dark:bg-white flex items-center justify-center"><Icons.Folder className="w-4 h-4 text-white dark:text-black"/></div>
+                        <span className="text-gray dark:text-gray/80 hidden lg:inline font-mono text-sm uppercase tracking-widest">Vault /</span> <span className="font-bold">Mocks</span>
                     </div>
-                    <div className="flex items-center gap-4">
-                        <button onClick={()=>setIsDarkMode(!isDarkMode)} className="p-2 text-gray hover:text-dark dark:hover:text-light transition-colors"><Icons.Sun className="w-5 h-5"/></button>
-                        <div className="w-8 h-8 rounded-full bg-dark dark:bg-light text-light dark:text-dark flex items-center justify-center font-bold text-xs shadow-md">{user.displayName?.charAt(0) || 'U'}</div>
-                        <button onClick={()=>window.firebase.signOut(window.firebase.auth)} className="text-gray hover:text-danger transition-colors"><Icons.Logout className="w-5 h-5"/></button>
+                    
+                    <div className="flex items-center gap-3">
+                        <button onClick={() => setShowStudentModal(true)} className="hidden md:flex items-center gap-2 px-4 py-2 rounded-full text-xs font-semibold text-primary bg-black/5 dark:bg-white/5 hover:bg-black/10 dark:hover:bg-white/10 transition-all border border-black/5 dark:border-white/5">
+                            <Icons.GraduationCap className="w-4 h-4"/> Cooldown Pass
+                        </button>
+                        <button onClick={()=>setIsDarkMode(!isDarkMode)} className="p-2 text-gray hover:bg-black/5 dark:hover:bg-white/5 rounded-full transition-colors mx-1" title="Toggle Theme">
+                            {isDarkMode ? <Icons.Sun className="w-5 h-5"/> : <Icons.Moon className="w-5 h-5"/>}
+                        </button>
+                        <div className="flex items-center gap-3 pl-2 border-l border-light-gray dark:border-white/10">
+                            {user.photoURL ? <img src={user.photoURL} className="w-8 h-8 rounded-full border border-light-gray dark:border-white/10 grayscale opacity-90"/> : <div className="w-8 h-8 rounded-full bg-primary text-white flex items-center justify-center font-bold text-xs">U</div>}
+                        </div>
                     </div>
                 </header>
 
                 <div className="flex-1 flex overflow-hidden">
-                    {/* Sidebar (Only visible when no Mock is active, or on large screens) */}
-                    <div className={`w-[260px] shrink-0 bg-[#fcfcfc] dark:bg-[#09090b] border-r border-light-gray dark:border-border-dark flex-col py-6 z-20 hidden lg:flex`}>
-                        <div className="px-6 mb-8">
-                            <button onClick={createMock} className="w-full flex items-center justify-center gap-2 bg-dark dark:bg-light text-light dark:text-dark px-4 py-3 rounded-xl shadow-md hover:scale-[1.02] transition-all font-bold text-xs uppercase tracking-widest"><Icons.Plus className="w-4 h-4"/> New Mock</button>
+                    {/* Left Sidebar - Mock Papers */}
+                    <div className={`flex-shrink-0 bg-white dark:bg-surface-dark flex-col z-20 border-r border-light-gray dark:border-border-dark w-[280px] hidden lg:flex transition-colors duration-300`}>
+                        <div className="p-4 border-b border-light-gray dark:border-border-dark">
+                            <button onClick={createMockPaper} className="w-full flex items-center justify-center gap-2 bg-primary text-white dark:bg-light dark:text-dark py-3 rounded-xl font-medium shadow-sm hover:opacity-90 transition-all"><Icons.Plus className="w-5 h-5"/> New Mock Paper</button>
                         </div>
-                        <div className="flex-1 overflow-y-auto px-4">
-                            <div className="text-[10px] font-bold text-gray mb-3 uppercase tracking-widest px-2">Filters</div>
-                            <button onClick={() => setFilterSubject('All')} className={`w-full text-left px-4 py-2.5 rounded-lg text-sm font-semibold transition-colors mb-1 ${filterSubject === 'All' ? 'bg-light-gray/50 dark:bg-surface-dark text-dark dark:text-light' : 'text-gray hover:text-dark dark:hover:text-light'}`}>All Subjects</button>
-                            {subjects.map(s => (
-                                <button key={s.id} onClick={() => setFilterSubject(s.name)} className={`w-full text-left px-4 py-2.5 rounded-lg text-sm font-semibold transition-colors mb-1 ${filterSubject === s.name ? 'bg-light-gray/50 dark:bg-surface-dark text-dark dark:text-light' : 'text-gray hover:text-dark dark:hover:text-light'}`}>{s.name}</button>
+                        <div className="px-4 py-3 bg-[#f4f4f5] dark:bg-onyx border-b border-light-gray dark:border-border-dark flex justify-between items-center shrink-0">
+                            <span className="text-xs font-bold text-gray uppercase tracking-wider">Archive ({mockPapers.length})</span>
+                        </div>
+                        <div className="flex-1 overflow-y-auto p-3 space-y-1">
+                            {isLoadingMocks ? <div className="text-center text-gray py-4 text-xs">Loading...</div> : mockPapers.map(m => (
+                                <button key={m.id} onClick={()=>{setActiveMockId(m.id); setActivePageId(null);}} className={`w-full text-left p-3 rounded-xl transition-all border ${activeMockId===m.id ? 'bg-black/5 dark:bg-white/10 border-transparent font-semibold shadow-sm text-dark dark:text-light' : 'bg-transparent border-transparent hover:bg-black/5 dark:hover:bg-white/5 text-gray hover:text-dark dark:hover:text-light'}`}>
+                                    <div className="truncate text-sm mb-1">{m.title}</div>
+                                    <div className="text-[10px] font-mono opacity-60 flex justify-between"><span>{m.subject}</span> <span>{new Date(m.createdAt).toLocaleDateString()}</span></div>
+                                </button>
                             ))}
                         </div>
                     </div>
 
                     {/* Main Content Area */}
-                    <main className="flex-1 flex-col min-w-0 bg-[#f4f4f5] dark:bg-[#000000] relative overflow-y-auto">
+                    <main className="flex-1 flex-col min-w-0 bg-[#f4f4f5] dark:bg-onyx relative transition-colors duration-300 flex w-full">
                         {!activeMockId ? (
-                            // MOCK LIST VIEW
-                            <div className="p-8 max-w-6xl mx-auto">
-                                <h2 className="text-2xl font-bold tracking-tight mb-8 uppercase">Your Autopsies</h2>
-                                <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
-                                    {filteredMocks.map(m => (
-                                        <div key={m.id} onClick={() => setActiveMockId(m.id)} className="group bg-white dark:bg-surface-dark p-6 rounded-2xl shadow-sm hover:shadow-ds-hover border border-light-gray dark:border-border-dark cursor-pointer transition-all flex flex-col justify-between min-h-[160px]">
-                                            <div>
-                                                <div className="flex justify-between items-start mb-2">
-                                                    <span className="text-[10px] font-bold text-gray uppercase tracking-widest bg-light-gray/30 dark:bg-black/30 px-2 py-1 rounded-md">{m.subject}</span>
-                                                </div>
-                                                <h3 className="font-bold text-lg leading-tight mb-2 group-hover:underline">{m.title}</h3>
-                                            </div>
-                                            <div className="text-xs text-gray font-medium flex items-center gap-1.5"><Icons.Clock className="w-3.5 h-3.5"/> {new Date(m.createdAt).toLocaleDateString()}</div>
-                                        </div>
-                                    ))}
-                                    {filteredMocks.length === 0 && <div className="col-span-full py-20 text-center text-gray font-semibold uppercase tracking-widest text-sm">No Mocks Found. Time to face reality.</div>}
-                                </div>
+                            <div className="h-full flex flex-col items-center justify-center text-gray space-y-4">
+                                <div className="w-20 h-20 bg-black/5 dark:bg-white/5 rounded-full flex items-center justify-center mb-2"><Icons.Folder className="w-10 h-10 opacity-50"/></div>
+                                <h2 className="text-xl font-bold text-dark dark:text-light tracking-tight">Vault is locked.</h2>
+                                <p className="text-sm">Select a Mock Paper from the sidebar to begin.</p>
                             </div>
-                        ) : !activeQuestionId ? (
-                            // MOCK DETAIL VIEW (List of Pages/Questions)
-                            <div className="p-8 max-w-5xl mx-auto">
-                                <button onClick={() => setActiveMockId(null)} className="flex items-center gap-2 text-xs font-bold text-gray hover:text-dark dark:hover:text-light transition-colors mb-6 uppercase tracking-widest"><Icons.ChevronLeft className="w-4 h-4"/> Back to Mocks</button>
-                                
-                                <div className="bg-white dark:bg-surface-dark p-8 rounded-3xl shadow-sm border border-light-gray dark:border-border-dark mb-8">
-                                    <input value={activeMock.title} onChange={e=>updateMock(activeMock.id, {title: e.target.value})} className="bg-transparent text-3xl font-extrabold outline-none w-full mb-4 tracking-tighter" placeholder="Mock Title"/>
-                                    <select value={activeMock.subject} onChange={e=>updateMock(activeMock.id, {subject: e.target.value})} className="bg-light-gray/30 dark:bg-black border border-transparent rounded-lg px-3 py-1.5 text-sm font-semibold outline-none text-gray">
-                                        <option>General</option>{subjects.map(s=><option key={s.id} value={s.name}>{s.name}</option>)}
-                                    </select>
-                                </div>
-
-                                <div className="flex justify-between items-end mb-6">
-                                    <h3 className="text-lg font-bold tracking-tight uppercase">Mistake Pages ({questions.length})</h3>
-                                    <button onClick={createQuestion} className="bg-dark dark:bg-light text-light dark:text-dark px-5 py-2 rounded-full font-bold text-xs uppercase tracking-widest flex gap-2 items-center hover:scale-105 transition-all shadow-sm"><Icons.Plus className="w-4 h-4"/> Add Page</button>
-                                </div>
-
-                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                    {questions.map((q, i) => (
-                                        <div key={q.id} onClick={() => setActiveQuestionId(q.id)} className="bg-white dark:bg-surface-dark p-4 rounded-2xl shadow-sm hover:shadow-ds-hover border border-light-gray dark:border-border-dark cursor-pointer flex gap-4 items-center">
-                                            <div className="w-16 h-16 bg-light-gray/50 dark:bg-black rounded-xl overflow-hidden shrink-0 border border-light-gray dark:border-border-dark flex items-center justify-center">
-                                                {q.questionImages?.length ? <img src={q.questionImages[0]} className="w-full h-full object-cover grayscale opacity-70" /> : <Icons.Image className="w-6 h-6 text-gray opacity-50"/>}
+                        ) : !activePageId ? (
+                            /* MOCK DETAIL VIEW (Grid of Pages) */
+                            <div className="flex flex-col h-full">
+                                <header className="p-6 md:p-10 bg-white dark:bg-surface-dark shrink-0 border-b border-light-gray dark:border-border-dark flex justify-between items-start">
+                                    <div className="flex-1 max-w-2xl">
+                                        <input value={activeMock.title} onChange={e=>updateMock(activeMock.id, {title:e.target.value})} className="bg-transparent text-3xl font-bold outline-none w-full text-dark dark:text-light tracking-tight mb-4" placeholder="Untitled Mock"/>
+                                        <div className="flex items-center gap-4">
+                                            <div className="bg-light-gray/50 dark:bg-dark rounded-xl p-1 inline-flex border border-light-gray dark:border-white/5">
+                                                <select value={activeMock.subject} onChange={e=>updateMock(activeMock.id, {subject:e.target.value})} className="bg-transparent px-3 py-1.5 text-sm font-medium outline-none cursor-pointer text-dark dark:text-light"><option>General</option>{subjects.map(s=><option key={s.id} value={s.name}>{s.name}</option>)}</select>
                                             </div>
-                                            <div className="flex-1 overflow-hidden">
-                                                <div className="font-bold text-sm mb-1 truncate">Page {i + 1}</div>
-                                                <div className="text-xs text-gray truncate">{q.whatWrong || "No analysis written yet."}</div>
-                                            </div>
+                                            <span className="text-xs text-gray font-mono">{new Date(activeMock.createdAt).toLocaleDateString()}</span>
                                         </div>
-                                    ))}
-                                </div>
-                            </div>
-                        ) : (
-                            // QUESTION DEEP DIVE (The Interrogation Room)
-                            <div className="flex flex-col h-full bg-[#f4f4f5] dark:bg-[#000000]">
-                                <header className="bg-white dark:bg-surface-dark px-6 py-4 border-b border-light-gray dark:border-border-dark flex justify-between items-center shrink-0">
-                                    <button onClick={() => setActiveQuestionId(null)} className="flex items-center gap-2 text-xs font-bold text-gray hover:text-dark dark:hover:text-light transition-colors uppercase tracking-widest"><Icons.ChevronLeft className="w-4 h-4"/> Back to Overview</button>
-                                    <div className="text-sm font-bold uppercase tracking-widest opacity-50">Autopsy File</div>
+                                    </div>
+                                    <button onClick={() => deleteMock(activeMock.id)} className="p-2.5 rounded-full hover:bg-danger/10 text-gray hover:text-danger transition-colors"><Icons.Trash className="w-5 h-5"/></button>
                                 </header>
-                                
-                                <div className="flex-1 overflow-y-auto p-6 md:p-8">
-                                    <div className="max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-2 gap-8">
+                                <div className="flex-1 overflow-y-auto p-6 md:p-10">
+                                    <div className="max-w-6xl mx-auto space-y-6">
+                                        <div className="flex justify-between items-end mb-6">
+                                            <h3 className="text-lg font-bold text-dark dark:text-light">Pages ({mockPages.length})</h3>
+                                            <div className="relative">
+                                                <input type="file" id="mockUpload" multiple accept="image/*,application/pdf" className="hidden" onChange={(e) => handleFileUpload(e.target.files)} />
+                                                <label htmlFor="mockUpload" className={`cursor-pointer bg-primary text-white dark:bg-light dark:text-dark px-5 py-2.5 rounded-xl font-medium shadow-sm hover:opacity-90 transition-all flex items-center gap-2 text-sm ${isUploading?'opacity-50 pointer-events-none':''}`}>
+                                                    {isUploading ? <div className="w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin"/> : <Icons.CloudUpload className="w-4 h-4"/>}
+                                                    {isUploading ? "Processing..." : "Upload PDF / Images"}
+                                                </label>
+                                            </div>
+                                        </div>
+                                        {isUploading && <div className="w-full bg-black/5 dark:bg-white/5 rounded-xl p-4 text-center text-sm font-medium animate-pulse border border-black/10 dark:border-white/10">{uploadStatus}</div>}
                                         
-                                        {/* Left Col: Evidence */}
-                                        <div className="space-y-6">
-                                            <div className="bg-white dark:bg-surface-dark p-6 rounded-3xl shadow-sm border border-light-gray dark:border-border-dark">
-                                                <ImageUploader images={activeQuestion.questionImages} onUpdate={(d, a, t) => handleImageUpdate(activeQuestion.id, d, a, 'question')} label="The Mistake (Your Ans)" isUploading={uploadingQ} onImageClick={() => setCompareMode(true)} />
-                                            </div>
-                                            <div className="bg-white dark:bg-surface-dark p-6 rounded-3xl shadow-sm border border-light-gray dark:border-border-dark">
-                                                <ImageUploader images={activeQuestion.schemeImages} onUpdate={(d, a, t) => handleImageUpdate(activeQuestion.id, d, a, 'scheme')} label="The Reality (Scheme)" isUploading={uploadingS} onImageClick={() => setCompareMode(true)} />
-                                            </div>
+                                        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
+                                            {mockPages.map((page, idx) => (
+                                                <motion.div initial={{opacity:0, y:10}} animate={{opacity:1, y:0}} key={page.id} onClick={() => setActivePageId(page.id)} className="bg-white dark:bg-surface-dark rounded-2xl overflow-hidden shadow-sm border border-light-gray dark:border-white/5 cursor-pointer hover:shadow-md hover:border-gray/30 transition-all group relative aspect-[3/4] flex flex-col">
+                                                    <div className="flex-1 bg-light-gray/30 dark:bg-black/20 p-2 overflow-hidden flex items-center justify-center">
+                                                        <img src={page.imageUrl} className="max-w-full max-h-full object-contain mix-blend-multiply dark:mix-blend-normal rounded-lg shadow-sm" />
+                                                    </div>
+                                                    <div className="p-3 bg-white dark:bg-surface-dark border-t border-light-gray dark:border-white/5 flex justify-between items-center">
+                                                        <span className="text-xs font-bold">Page {page.pageNumber}</span>
+                                                        {page.mastered && <Icons.Check className="w-3.5 h-3.5 text-success"/>}
+                                                    </div>
+                                                    <div className="absolute inset-0 bg-primary/0 group-hover:bg-primary/5 transition-colors"></div>
+                                                </motion.div>
+                                            ))}
                                         </div>
-
-                                        {/* Right Col: Interrogation */}
-                                        <div className="space-y-6">
-                                            {/* AI Auto Review Block */}
-                                            {(activeQuestion.aiReview || loadingMsg) && (
-                                                <div className="bg-dark text-white dark:bg-[#18181b] p-6 rounded-3xl shadow-ds border border-dark dark:border-border-dark relative overflow-hidden">
-                                                    <div className="absolute top-0 right-0 p-4 opacity-10"><Icons.Brain className="w-16 h-16"/></div>
-                                                    <div className="text-[10px] font-bold uppercase tracking-widest text-gray mb-3 flex items-center gap-2"><Icons.Bot className="w-4 h-4 text-white"/> Examiner Roast AI</div>
-                                                    {loadingMsg ? <div className="text-sm animate-pulse">{loadingMsg}</div> : <div className="text-sm leading-relaxed font-medium markdown-content" dangerouslySetInnerHTML={{ __html: marked.parse(activeQuestion.aiReview) }}></div>}
-                                                </div>
-                                            )}
-
-                                            <div className="bg-white dark:bg-surface-dark p-6 md:p-8 rounded-3xl shadow-sm border border-light-gray dark:border-border-dark space-y-6">
-                                                <div>
-                                                    <label className="text-[10px] font-bold text-gray uppercase tracking-widest block mb-2">1. What I did wrong</label>
-                                                    <textarea value={activeQuestion.whatWrong} onChange={e=>updateQuestion(activeQuestion.id, {whatWrong: e.target.value})} className="form-control resize-none h-20" placeholder="Did you copy the number wrong? Miss a negative sign? Confess."/>
-                                                </div>
-                                                <div>
-                                                    <label className="text-[10px] font-bold text-gray uppercase tracking-widest block mb-2">2. Why I did wrong</label>
-                                                    <textarea value={activeQuestion.whyWrong} onChange={e=>updateQuestion(activeQuestion.id, {whyWrong: e.target.value})} className="form-control resize-none h-20" placeholder="Conceptual failure? Time pressure? Be honest."/>
-                                                </div>
-                                                <div>
-                                                    <label className="text-[10px] font-bold text-gray uppercase tracking-widest block mb-2">3. What I was thinking</label>
-                                                    <textarea value={activeQuestion.whatThinking} onChange={e=>updateQuestion(activeQuestion.id, {whatThinking: e.target.value})} className="form-control resize-none h-20" placeholder="Walk through your broken logic."/>
-                                                </div>
-                                                <div>
-                                                    <label className="text-[10px] font-bold text-gray uppercase tracking-widest block mb-2">4. Final Notes / Reminder</label>
-                                                    <textarea value={activeQuestion.userNotes} onChange={e=>updateQuestion(activeQuestion.id, {userNotes: e.target.value})} className="form-control resize-none h-24" placeholder="Note to future self to not be stupid..."/>
-                                                </div>
+                                        {mockPages.length === 0 && !isUploading && (
+                                            <div className="text-center py-20 border-2 border-dashed border-gray/20 rounded-3xl">
+                                                <Icons.FileText className="w-12 h-12 mx-auto text-gray/30 mb-4"/>
+                                                <p className="text-gray font-medium">Drag and drop a Mock PDF here, or click Upload.</p>
                                             </div>
-                                        </div>
-
+                                        )}
                                     </div>
                                 </div>
                             </div>
+                        ) : (
+                            /* PAGE EDITOR VIEW */
+                            <motion.div initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} className="flex flex-col h-full bg-white dark:bg-surface-dark">
+                                <header className="h-[64px] flex items-center justify-between px-4 border-b border-light-gray dark:border-border-dark shrink-0">
+                                    <div className="flex items-center gap-4">
+                                        <button onClick={() => setActivePageId(null)} className="p-2 rounded-full hover:bg-black/5 dark:hover:bg-white/10 text-gray transition-colors"><Icons.ArrowLeft className="w-5 h-5"/></button>
+                                        <div className="font-bold text-dark dark:text-light">Page {activePage.pageNumber}</div>
+                                        <div className="w-px h-5 bg-light-gray dark:bg-white/10"></div>
+                                        <select value={activePage.topic || ''} onChange={e=>updatePage(activePage.id, {topic:e.target.value})} className="bg-transparent text-sm font-medium text-gray outline-none cursor-pointer"><option value="">-- Assign Topic --</option>{currentSub?.topics.map(t => <option key={t} value={t}>{t}</option>)}</select>
+                                    </div>
+                                    <div className="flex items-center gap-2">
+                                        {isAiLoading && <div className="text-[10px] font-bold uppercase tracking-wider text-gray animate-pulse flex items-center gap-1"><Icons.Sparkles className="w-3 h-3"/> AI Analyzing...</div>}
+                                        <button onClick={()=>updatePage(activePage.id, {mastered: !activePage.mastered})} className={`px-4 py-1.5 rounded-full text-xs font-bold transition-all uppercase tracking-wider border ${activePage.mastered ? 'bg-primary text-white dark:bg-light dark:text-dark border-transparent' : 'bg-transparent border-gray/30 text-gray hover:text-dark dark:hover:text-light'}`}>{activePage.mastered ? 'Mastered' : 'Mark Mastered'}</button>
+                                        <div className="w-px h-5 bg-light-gray dark:bg-white/10 mx-1"></div>
+                                        <button onClick={()=> user ? setIsAiOpen(!isAiOpen) : null} disabled={!user} className={`p-2 rounded-full transition-colors ${isAiOpen ? 'bg-black/5 dark:bg-white/10 text-primary dark:text-light' : 'text-gray hover:bg-black/5 dark:hover:bg-white/5'}`}><Icons.Bot className="w-5 h-5"/></button>
+                                    </div>
+                                </header>
+                                <div className="flex-1 flex overflow-hidden">
+                                    {/* Left: The Image */}
+                                    <div className="w-1/2 border-r border-light-gray dark:border-border-dark bg-[#f4f4f5] dark:bg-onyx p-6 flex flex-col items-center justify-center relative group">
+                                        <img src={activePage.imageUrl} className="max-w-full max-h-full object-contain rounded-xl shadow-sm border border-black/5 dark:border-white/5 cursor-zoom-in" onClick={() => setCompareMode(true)}/>
+                                        <button onClick={() => setCompareMode(true)} className="absolute bottom-6 right-6 p-3 bg-white dark:bg-surface-dark rounded-full shadow-lg opacity-0 group-hover:opacity-100 transition-opacity text-dark dark:text-light border border-light-gray dark:border-white/10"><Icons.ZoomIn className="w-5 h-5"/></button>
+                                    </div>
+                                    {/* Right: The Editor Fields */}
+                                    <div className="w-1/2 overflow-y-auto p-8 space-y-8 bg-white dark:bg-surface-dark relative">
+                                        <div className="absolute top-0 left-0 right-0 h-1 bg-black/5 dark:bg-white/5"></div>
+                                        
+                                        <div className="space-y-2 group">
+                                            <label className="text-xs font-bold text-gray uppercase tracking-wider flex items-center gap-2"><div className="w-1.5 h-1.5 rounded-full bg-danger"></div> What I got wrong</label>
+                                            <textarea value={activePage.whatWrong} onChange={e=>updatePage(activePage.id, {whatWrong:e.target.value})} className="w-full bg-[#f4f4f5] dark:bg-dark border border-transparent focus:border-gray/30 rounded-xl p-4 text-sm outline-none text-dark dark:text-light resize-none transition-all shadow-inner group-hover:bg-white dark:group-hover:bg-[#111113] group-hover:border-light-gray dark:group-hover:border-white/10" rows="3" placeholder="AI analysis or manual input..."/>
+                                        </div>
+
+                                        <div className="space-y-2 group">
+                                            <label className="text-xs font-bold text-gray uppercase tracking-wider flex items-center gap-2"><div className="w-1.5 h-1.5 rounded-full bg-warning"></div> Why I was wrong</label>
+                                            <textarea value={activePage.whyWrong} onChange={e=>updatePage(activePage.id, {whyWrong:e.target.value})} className="w-full bg-[#f4f4f5] dark:bg-dark border border-transparent focus:border-gray/30 rounded-xl p-4 text-sm outline-none text-dark dark:text-light resize-none transition-all shadow-inner group-hover:bg-white dark:group-hover:bg-[#111113] group-hover:border-light-gray dark:group-hover:border-white/10" rows="3" placeholder="AI analysis or manual input..."/>
+                                        </div>
+
+                                        <div className="space-y-2 group">
+                                            <label className="text-xs font-bold text-gray uppercase tracking-wider flex items-center gap-2"><div className="w-1.5 h-1.5 rounded-full bg-primary-light"></div> What I was thinking</label>
+                                            <textarea value={activePage.thoughtProcess} onChange={e=>updatePage(activePage.id, {thoughtProcess:e.target.value})} className="w-full bg-[#f4f4f5] dark:bg-dark border border-transparent focus:border-gray/30 rounded-xl p-4 text-sm outline-none text-dark dark:text-light resize-none transition-all shadow-inner group-hover:bg-white dark:group-hover:bg-[#111113] group-hover:border-light-gray dark:group-hover:border-white/10" rows="3" placeholder="AI analysis or manual input..."/>
+                                        </div>
+
+                                        <div className="h-px w-full bg-light-gray dark:bg-white/5"></div>
+
+                                        <div className="space-y-2 group">
+                                            <label className="text-xs font-bold text-gray uppercase tracking-wider flex items-center gap-2"><Icons.FileText className="w-3.5 h-3.5"/> Manual Marking Notes</label>
+                                            <textarea value={activePage.markingNote} onChange={e=>updatePage(activePage.id, {markingNote:e.target.value})} className="w-full bg-white dark:bg-surface-dark border border-light-gray dark:border-white/10 focus:border-primary dark:focus:border-light rounded-xl p-4 text-sm outline-none text-dark dark:text-light resize-none transition-all shadow-sm" rows="4" placeholder="Extra notes from the marking scheme..."/>
+                                        </div>
+                                    </div>
+                                </div>
+                            </motion.div>
                         )}
+                        <AnimatePresence>{isAiOpen && activePage && user && (<div className="absolute top-[64px] right-0 bottom-0 w-[400px] z-40 shadow-2xl"><AIChat activePage={activePage} onClose={()=>setIsAiOpen(false)} user={user} messages={chatMessages} setMessages={setChatMessages}/></div>)}</AnimatePresence>
                     </main>
                 </div>
             </div>
