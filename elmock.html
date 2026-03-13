@@ -223,7 +223,7 @@
                     await new Promise(r => window.gapi.load('client', r)); 
                     await window.gapi.client.init({ apiKey: GDRIVE_API_KEY, discoveryDocs: ['https://www.googleapis.com/discovery/v1/apis/drive/v3/rest'] }); 
                 } 
-                if (window.google) setTokenClient(window.google.accounts.oauth2.initTokenClient({ client_id: GDRIVE_CLIENT_ID, scope: 'https://www.googleapis.com/auth/drive.file', callback: () => {} })); 
+                if (window.google) setTokenClient(window.google.accounts.oauth2.initTokenClient({ client_id: GDRIVE_CLIENT_ID, scope: 'https://www.googleapis.com/auth/drive.file https://www.googleapis.com/auth/drive.readonly', callback: () => {} })); 
             }; 
             load(); 
         }, []); 
@@ -899,6 +899,7 @@
         const [mockTab, setMockTab] = useState('pages'); // 'pages' | 'report'
         const [uploadingMockReport, setUploadingMockReport] = useState(false);
         const [isAnalyzingReport, setIsAnalyzingReport] = useState(false);
+        const [reportAnalysisProgress, setReportAnalysisProgress] = useState("");
         const [isGeneratingSummary, setIsGeneratingSummary] = useState(false);
         
         const [viewerImages, setViewerImages] = useState(null); // { images: [], index: 0 }
@@ -1117,27 +1118,120 @@
 
         const analyzeUploadedReport = async () => {
             if (!activeMock || !activeMock.reportImages || activeMock.reportImages.length === 0) return;
+
+            const currentCount = activeMock.reportAnalysisCount || 0;
+            if (currentCount >= 2) {
+                alert("Woah there! The AI has already analyzed this report twice. Its digital brain is melting from the sheer volume of mistakes. Limit reached for this mock!");
+                return;
+            }
+
             setIsAnalyzingReport(true);
+            setReportAnalysisProgress("Warming up the interrogation room...");
+            
+            // Pre-emptively increment locally for instant UI update
+            setMockPapers(prev => prev.map(m => m.id === activeMockId ? { ...m, reportAnalysisCount: currentCount + 1 } : m));
+            
+            // Use Firebase's atomic increment to prevent race conditions (and make it harder to accidentally overwrite)
+            window.firebase.updateDoc(window.firebase.doc(window.firebase.db, 'artifacts', "darnote-app", 'users', user.uid, 'mock_papers', activeMockId), {
+                reportAnalysisCount: window.firebase.increment(1)
+            }).catch(e => console.error("Failed to increment count:", e));
+            
             try {
                 let imgB64s = [];
-                for (const imgUrl of activeMock.reportImages) {
-                    if (imgUrl && !imgUrl.includes('drive.google.com')) {
+                for (let i = 0; i < activeMock.reportImages.length; i++) {
+                    const imgUrl = activeMock.reportImages[i];
+                    setReportAnalysisProgress(`Extracting evidence from file ${i+1}/${activeMock.reportImages.length}...`);
+                    
+                    if (imgUrl && imgUrl.includes('drive.google.com/file/d/')) {
+                        const fileIdMatch = imgUrl.match(/\/d\/([a-zA-Z0-9_-]+)/);
+                        if (fileIdMatch && fileIdMatch[1]) {
+                            try {
+                                setReportAnalysisProgress(`Downloading PDF from Google's vault...`);
+                                const token = await getAccessToken();
+                                const res = await fetch(`https://www.googleapis.com/drive/v3/files/${fileIdMatch[1]}?alt=media`, {
+                                    headers: { Authorization: `Bearer ${token}` }
+                                });
+                                if (!res.ok) throw new Error("Failed to fetch PDF");
+                                const blob = await res.blob();
+                                
+                                setReportAnalysisProgress(`Slicing PDF into bite-sized failures...`);
+                                const imageBlobs = await processPDF(blob);
+                                for (let j = 0; j < imageBlobs.length; j++) {
+                                    setReportAnalysisProgress(`Converting page ${j+1} for AI consumption...`);
+                                    const b64 = await new Promise(r=>{const rd=new FileReader(); rd.onload=()=>r(rd.result); rd.readAsDataURL(imageBlobs[j]);});
+                                    imgB64s.push(b64);
+                                }
+                            } catch (err) {
+                                console.error("PDF Extraction error:", err);
+                                alert("Failed to slice the PDF. Ensure you allowed popups for Drive access.");
+                            }
+                        }
+                    } else if (imgUrl && !imgUrl.includes('drive.google.com')) {
                         try {
                             const res = await fetch(imgUrl); const blob = await res.blob();
                             const b64 = await new Promise(r=>{const rd=new FileReader(); rd.onload=()=>r(rd.result); rd.readAsDataURL(blob);});
                             imgB64s.push(b64);
                         } catch(e) {}
-                    } else if (imgUrl.startsWith('data:')) {
+                    } else if (imgUrl && imgUrl.startsWith('data:')) {
                         imgB64s.push(imgUrl);
                     }
                 }
-                if(imgB64s.length === 0) { alert("Cannot read PDF formats or external links directly via this AI yet. Please upload image formats (JPG/PNG)."); setIsAnalyzingReport(false); return; }
+                
+                if(imgB64s.length === 0) { 
+                    alert("I couldn't read the files. Give me standard images (JPG/PNG) or let me access the Drive PDF!"); 
+                    setIsAnalyzingReport(false); 
+                    setReportAnalysisProgress("");
+                    return; 
+                }
 
-                const prompt = `You are a strict but helpful academic tutor. Analyze this uploaded mock exam report. Summarize the student's overall performance, highlight key strengths, point out glaring weaknesses, and suggest an actionable improvement plan. Use formal Markdown with clear bold headers.`;
-                const aiRes = await callAI(prompt, "Report Analyst", imgB64s, GEMINI_PROXY_URL);
+                setReportAnalysisProgress("Scanning report for your academic crimes...");
+                const extractPrompt = `Analyze this exam report/grading sheet. Which specific question numbers did the student lose marks on, fail, or get incorrect? \nReturn ONLY a valid JSON array of integers. Example: [1, 4, 12]. If none found, return []. Do not include any markdown or other text.`;
+                const aiExtraction = await callAI(extractPrompt, "JSON Generator", imgB64s, GEMINI_PROXY_URL);
+                
+                let failedQuestions = [];
+                try {
+                    const cleanJson = aiExtraction.substring(aiExtraction.indexOf('['), aiExtraction.lastIndexOf(']') + 1);
+                    failedQuestions = JSON.parse(cleanJson);
+                } catch (e) {
+                    console.error("AI couldn't extract question numbers", e);
+                }
+
+                setReportAnalysisProgress("Cross-referencing your failures with your page logs...");
+                let confessionContext = "";
+                if (failedQuestions.length > 0) {
+                    const relevantPages = mockPages.filter(p => failedQuestions.includes(Number(p.pageNumber)));
+                    if (relevantPages.length > 0) {
+                        confessionContext = relevantPages.map(p => `Question ${p.pageNumber} (${p.topic || 'Unknown'}):
+- What I got wrong: ${p.whatWrong || 'No confession logged.'}
+- Why I was wrong: ${p.whyWrong || 'No confession logged.'}
+- My flawed logic: ${p.thoughtProcess || 'No confession logged.'}`).join('\n\n');
+                    } else {
+                        confessionContext = `The AI found mistakes on questions: ${failedQuestions.join(', ')}. However, the student hasn't logged any confessions for these specific pages yet. They are hiding their shame.`;
+                    }
+                } else {
+                    confessionContext = "The AI couldn't pinpoint specific failed question numbers from the report format, but analyze their general performance anyway.";
+                }
+
+                setReportAnalysisProgress("Drafting the final brutal analysis...");
+                const finalPrompt = `You are a strict, brutal, but hilarious academic tutor. I have uploaded my official exam report card/grading sheet. 
+Here are my embarrassing confessions for the specific questions I bombed:
+
+${confessionContext}
+
+Analyze my uploaded report card alongside my confessions. 
+1. Summarize my miserable overall performance.
+2. Highlight any strengths (if I have any) and my glaring weaknesses.
+3. Roast my "flawed logic" and "root causes" from my confessions. Connect them to the report.
+4. Suggest a highly actionable recovery plan so I don't humiliate myself next time.
+Use proper Markdown with clear bold headers. Keep it professional, highly educational, but let your disappointment shine through.`;
+
+                const aiRes = await callAI(finalPrompt, "Report Analyst", imgB64s, GEMINI_PROXY_URL);
                 updateMock(activeMockId, { reportAnalysis: aiRes });
-            } catch(e) { alert("AI Analysis failed: " + e.message); }
+            } catch(e) { 
+                alert("AI Analysis failed: " + e.message); 
+            }
             setIsAnalyzingReport(false);
+            setReportAnalysisProgress("");
         };
 
         const generateSummaryFromPages = async () => {
@@ -1693,19 +1787,30 @@ Make sure to use proper Markdown format, bold formatting for emphasis, and clear
                                                     <div className="mt-8 border-t border-light-gray dark:border-white/10 pt-6">
                                                         <div className="flex justify-between items-center mb-4">
                                                             <h4 className="font-bold text-dark dark:text-light flex items-center gap-2"><Icons.Bot className="w-5 h-5 text-primary"/> AI Report Analysis</h4>
-                                                            <button onClick={analyzeUploadedReport} disabled={isAnalyzingReport} className="bg-dark dark:bg-light text-white dark:text-dark px-4 py-2 rounded-lg text-sm font-bold hover:opacity-80 transition-opacity flex items-center gap-2 disabled:opacity-50">
-                                                                {isAnalyzingReport ? <div className="w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin"/> : <Icons.Search className="w-4 h-4"/>}
-                                                                {isAnalyzingReport ? "Analyzing..." : "Analyze Uploaded Report"}
+                                                            <button onClick={analyzeUploadedReport} disabled={isAnalyzingReport || (activeMock.reportAnalysisCount || 0) >= 2} className="bg-dark dark:bg-light text-white dark:text-dark px-4 py-2 rounded-lg text-sm font-bold hover:opacity-80 transition-opacity flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed">
+                                                                {isAnalyzingReport ? <div className="w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin"/> : ((activeMock.reportAnalysisCount || 0) >= 2 ? <Icons.Lock className="w-4 h-4"/> : <Icons.Search className="w-4 h-4"/>)}
+                                                                {isAnalyzingReport ? "Analyzing..." : ((activeMock.reportAnalysisCount || 0) >= 2 ? "Limit Reached (Max 2)" : `Analyze Uploaded Report (${activeMock.reportAnalysisCount || 0}/2)`)}
                                                             </button>
                                                         </div>
+                                                        
+                                                        {/* Status Updates below the button */}
+                                                        {isAnalyzingReport && reportAnalysisProgress && (
+                                                            <div className="mb-4 p-4 bg-primary/10 border border-primary/20 rounded-xl text-primary text-sm font-medium flex items-center gap-3 animate-pulse">
+                                                                <Icons.Sparkles className="w-5 h-5"/>
+                                                                {reportAnalysisProgress}
+                                                            </div>
+                                                        )}
+
                                                         {activeMock.reportAnalysis ? (
                                                             <div className="bg-[#f8fafc] dark:bg-dark border border-light-gray dark:border-white/5 rounded-2xl p-6 markdown-content text-sm text-dark dark:text-light">
                                                                 <div dangerouslySetInnerHTML={{ __html: marked.parse(activeMock.reportAnalysis, {breaks: true, gfm: true}) }} />
                                                             </div>
                                                         ) : (
-                                                            <div className="bg-[#f8fafc] dark:bg-dark border border-dashed border-gray/30 rounded-2xl p-8 text-center text-gray text-sm">
-                                                                Click "Analyze Uploaded Report" to let Gemini break down your scores.
-                                                            </div>
+                                                            !isAnalyzingReport && (
+                                                                <div className="bg-[#f8fafc] dark:bg-dark border border-dashed border-gray/30 rounded-2xl p-8 text-center text-gray text-sm">
+                                                                    Click "Analyze Uploaded Report" to let Gemini break down your scores and cross-reference them with your confessions.
+                                                                </div>
+                                                            )
                                                         )}
                                                     </div>
                                                 )}
