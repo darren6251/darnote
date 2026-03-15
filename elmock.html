@@ -1564,22 +1564,26 @@ Make sure to use proper Markdown format, bold formatting for emphasis, and clear
                     } else {
                         // 3. External CDNs (lh3.googleusercontent, Imgur, etc.)
                         try {
-                            // Try standard fetch first
                             const res = await fetch(imgUrl);
+                            if (!res.ok) throw new Error("Fetch failed");
                             const blob = await res.blob();
+                            // If it's not an image, abort this fetch attempt
+                            if (!blob.type.startsWith('image/')) throw new Error("Not an image");
                             const b64 = await new Promise(r=>{const rd=new FileReader(); rd.onload=()=>r(rd.result); rd.readAsDataURL(blob);});
                             imgB64s.push(b64);
                         } catch(e) { 
-                            console.warn("Fetch failed (CORS block). Calling in the proxy reinforcements...", e); 
-                            // 4. The CORS Proxy By-Pass for strict CDNs
+                            console.warn("Fetch blocked (CORS). Calling in heavy proxy artillery...", e); 
+                            // 4. The Strong CORS Proxy By-Pass for strict CDNs
                             try {
-                                const proxyUrl = `https://api.allorigins.win/raw?url=${encodeURIComponent(imgUrl)}`;
+                                const proxyUrl = `https://corsproxy.io/?${encodeURIComponent(imgUrl)}`;
                                 const res = await fetch(proxyUrl);
+                                if (!res.ok) throw new Error("Proxy fetch failed");
                                 const blob = await res.blob();
+                                if (!blob.type.startsWith('image/')) throw new Error("Proxy returned HTML, not an image.");
                                 const b64 = await new Promise(r=>{const rd=new FileReader(); rd.onload=()=>r(rd.result); rd.readAsDataURL(blob);});
                                 imgB64s.push(b64);
                             } catch (err) {
-                                console.error("Proxy fallback failed. This CDN is built like a fortress.", err);
+                                console.error("Proxy fallback failed. Image is locked down tight.", err);
                             }
                         }
                     }
@@ -1623,16 +1627,16 @@ Make sure to use proper Markdown format, bold formatting for emphasis, and clear
 
         // Auto-trigger Lazy AI when images are ACTUALLY uploaded to the page
         useEffect(() => {
-            const activePageInstance = mockPages.find(p => p.id === activePageId);
-            if (activePageId && activePageInstance) {
-                // If the page has images, but hasn't been roasted yet, unleash the AI
-                if (activePageInstance.questionImages?.length > 0 && 
-                    !activePageInstance.whatWrong && 
-                    !activePageInstance.whyWrong && 
-                    !activePageInstance.thoughtProcess) {
-                    doLazyAI(activePageInstance);
+            const page = mockPages.find(p => p.id === activePageId);
+            if (activePageId && page) {
+                const hasImages = page.questionImages && page.questionImages.length > 0;
+                const notAnalyzed = !page.whatWrong && !page.whyWrong && !page.thoughtProcess;
+                
+                if (hasImages && notAnalyzed && !isAiLoading) {
+                    doLazyAI(page);
                 }
             }
+        // This specific dependency array forces React to re-evaluate when an image is added/removed
         }, [activePageId, mockPages.find(p => p.id === activePageId)?.questionImages?.length]);
 
         const activeMock = mockPapers.find(m => m.id === activeMockId);
