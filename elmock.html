@@ -1559,8 +1559,7 @@ Make sure to use proper Markdown format, bold formatting for emphasis, and clear
                         // 1. Instantly grab Base64 (Pasted images or local renders)
                         imgB64s.push(imgUrl);
                     } else if (imgUrl.includes('drive.google.com')) {
-                        // 2. Drive Links (PDF previews). Requires auth tokens.
-                        // Skipped in Lazy AI to prevent crashes. Use "Report Session" for deep PDF scans.
+                        // 2. Drive Links (Skipped in Lazy AI to prevent auth crashes)
                         console.warn("Lazy AI skipped a Drive link.");
                     } else {
                         // 3. External CDNs (lh3.googleusercontent, Imgur, etc.)
@@ -1571,24 +1570,16 @@ Make sure to use proper Markdown format, bold formatting for emphasis, and clear
                             const b64 = await new Promise(r=>{const rd=new FileReader(); rd.onload=()=>r(rd.result); rd.readAsDataURL(blob);});
                             imgB64s.push(b64);
                         } catch(e) { 
-                            console.warn("Fetch failed (CORS block). Attempting Canvas bypass...", e); 
-                            // 4. The Canvas By-Pass for strict CORS CDNs
+                            console.warn("Fetch failed (CORS block). Calling in the proxy reinforcements...", e); 
+                            // 4. The CORS Proxy By-Pass for strict CDNs
                             try {
-                                const b64 = await new Promise((resolve, reject) => {
-                                    const img = new Image();
-                                    img.crossOrigin = "Anonymous"; // Begs the CDN for permission
-                                    img.onload = () => {
-                                        const canvas = document.createElement('canvas');
-                                        canvas.width = img.width; canvas.height = img.height;
-                                        canvas.getContext('2d').drawImage(img, 0, 0);
-                                        resolve(canvas.toDataURL('image/jpeg', 0.8));
-                                    };
-                                    img.onerror = reject;
-                                    img.src = imgUrl;
-                                });
+                                const proxyUrl = `https://api.allorigins.win/raw?url=${encodeURIComponent(imgUrl)}`;
+                                const res = await fetch(proxyUrl);
+                                const blob = await res.blob();
+                                const b64 = await new Promise(r=>{const rd=new FileReader(); rd.onload=()=>r(rd.result); rd.readAsDataURL(blob);});
                                 imgB64s.push(b64);
                             } catch (err) {
-                                console.error("Canvas fallback failed. CDN is strictly blocking.", err);
+                                console.error("Proxy fallback failed. This CDN is built like a fortress.", err);
                             }
                         }
                     }
@@ -1596,7 +1587,6 @@ Make sure to use proper Markdown format, bold formatting for emphasis, and clear
 
                 if(imgB64s.length === 0) { setIsAiLoading(false); return; }
 
-                // Retrieve active mock to get subjects and their available topics
                 const activeMockInstance = mockPapers.find(m => m.id === activeMockId);
                 const currentSubInstance = activeMockInstance ? subjects.find(s => s.name === activeMockInstance.subject) : null;
                 const availableTopics = currentSubInstance?.topics || [];
@@ -1624,13 +1614,26 @@ Make sure to use proper Markdown format, bold formatting for emphasis, and clear
             setIsAiLoading(false);
         };
 
+        // Reset AI Chat ONLY when navigating to a different page
         useEffect(() => {
             if (activePageId) {
-                const page = mockPages.find(p => p.id === activePageId);
-                if (page) doLazyAI(page);
                 setChatMessages([{role: 'ai', text: "How can I assist with this specific mock page?"}]);
             }
         }, [activePageId]);
+
+        // Auto-trigger Lazy AI when images are ACTUALLY uploaded to the page
+        useEffect(() => {
+            const activePageInstance = mockPages.find(p => p.id === activePageId);
+            if (activePageId && activePageInstance) {
+                // If the page has images, but hasn't been roasted yet, unleash the AI
+                if (activePageInstance.questionImages?.length > 0 && 
+                    !activePageInstance.whatWrong && 
+                    !activePageInstance.whyWrong && 
+                    !activePageInstance.thoughtProcess) {
+                    doLazyAI(activePageInstance);
+                }
+            }
+        }, [activePageId, mockPages.find(p => p.id === activePageId)?.questionImages?.length]);
 
         const activeMock = mockPapers.find(m => m.id === activeMockId);
         const activePage = mockPages.find(p => p.id === activePageId);
