@@ -1569,7 +1569,7 @@ Make sure to use proper Markdown format, bold formatting for emphasis, and clear
                     ? `Choose the most relevant topic from this exact list: [${availableTopics.join(', ')}]. If none match well, return an empty string.` 
                     : "Return an empty string for the topic.";
 
-                const prompt = `You are an efficient, professional AI tutor analyzing an exam. Identify the mistakes the student made or appreciate good part student made (just write on The Confession Box). Be highly accurate but concise so can be easily understand with this summery. \nReturn strictly JSON format: { "whatWrong": "Short summary of the exact mistake", "whyWrong": "Underlying conceptual reason for the mistake", "thoughtProcess": "Probable flawed thought process the student had", "topic": "Matched topic string" }. ${topicsStr}`;
+                const prompt = `You are an efficient, professional AI tutor analyzing an exam. Identify the marking of this page by marker (just write on The Confession Box). Be highly accurate but concise so can be easily understand with this summery. \nReturn strictly JSON format: { "whatWrong": "Short summary of the exact mistake", "whyWrong": "Underlying conceptual reason for the mistake", "thoughtProcess": "Probable flawed thought process the student had", "topic": "Matched topic string" }. ${topicsStr}`;
                 
                 // Using Gemini (callAI) instead of Groq
                 const aiRes = await callAI(prompt, "JSON Generator", [imgB64], GEMINI_PROXY_URL);
