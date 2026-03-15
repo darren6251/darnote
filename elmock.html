@@ -1540,8 +1540,12 @@ Make sure to use proper Markdown format, bold formatting for emphasis, and clear
             setIsUploading(false);
             setUploadStatus("");
         };
+// GEMINI & GROQ POWERED AUTO ANALYSIS
+        const activeMock = mockPapers.find(m => m.id === activeMockId);
+        const activePage = mockPages.find(p => p.id === activePageId);
+        const currentSub = activeMock ? subjects.find(s=>s.name===activeMock.subject) : null;
+        const questionImageCount = activePage?.questionImages?.length || 0;
 
-// GEMINI POWERED AUTO ANALYSIS
         const doLazyAI = async (page) => {
             if (page.whatWrong || page.whyWrong || page.thoughtProcess || isAiLoading) return;
             const newQuota = await checkAndIncrementQuota(user, 'ocr'); 
@@ -1549,59 +1553,50 @@ Make sure to use proper Markdown format, bold formatting for emphasis, and clear
 
             setIsAiLoading(true);
             try {
-                let imgB64s = [];
+                let imgDataForAI = [];
+                let useGroqFallback = false;
                 const rawImages = page.questionImages || [];
                 
                 for (const imgUrl of rawImages) {
                     if (!imgUrl) continue;
                     
                     if (imgUrl.startsWith('data:')) {
-                        // 1. Instantly grab Base64 (Pasted images or local renders)
-                        imgB64s.push(imgUrl);
+                        imgDataForAI.push(imgUrl); // Base64 is natively safe
                     } else if (imgUrl.includes('drive.google.com')) {
-                        // 2. Drive Links (Skipped in Lazy AI to prevent auth crashes)
                         console.warn("Lazy AI skipped a Drive link.");
                     } else {
-                        // 3. External CDNs (lh3.googleusercontent, Imgur, etc.)
                         try {
                             const res = await fetch(imgUrl);
                             if (!res.ok) throw new Error("Fetch failed");
                             const blob = await res.blob();
-                            // If it's not an image, abort this fetch attempt
                             if (!blob.type.startsWith('image/')) throw new Error("Not an image");
                             const b64 = await new Promise(r=>{const rd=new FileReader(); rd.onload=()=>r(rd.result); rd.readAsDataURL(blob);});
-                            imgB64s.push(b64);
+                            imgDataForAI.push(b64);
                         } catch(e) { 
-                            console.warn("Fetch blocked (CORS). Calling in heavy proxy artillery...", e); 
-                            // 4. The Strong CORS Proxy By-Pass for strict CDNs
-                            try {
-                                const proxyUrl = `https://corsproxy.io/?${encodeURIComponent(imgUrl)}`;
-                                const res = await fetch(proxyUrl);
-                                if (!res.ok) throw new Error("Proxy fetch failed");
-                                const blob = await res.blob();
-                                if (!blob.type.startsWith('image/')) throw new Error("Proxy returned HTML, not an image.");
-                                const b64 = await new Promise(r=>{const rd=new FileReader(); rd.onload=()=>r(rd.result); rd.readAsDataURL(blob);});
-                                imgB64s.push(b64);
-                            } catch (err) {
-                                console.error("Proxy fallback failed. Image is locked down tight.", err);
-                            }
+                            console.warn("CORS Blocked client fetch. Routing raw URL to Groq server...", e); 
+                            // THE BRUTAL FIX: If the browser blocks us, send the raw URL directly to Groq.
+                            // Servers do not care about browser CORS policies.
+                            imgDataForAI.push(imgUrl);
+                            useGroqFallback = true;
                         }
                     }
                 }
 
-                if(imgB64s.length === 0) { setIsAiLoading(false); return; }
+                if(imgDataForAI.length === 0) { setIsAiLoading(false); return; }
 
-                const activeMockInstance = mockPapers.find(m => m.id === activeMockId);
-                const currentSubInstance = activeMockInstance ? subjects.find(s => s.name === activeMockInstance.subject) : null;
-                const availableTopics = currentSubInstance?.topics || [];
-                
+                const availableTopics = currentSub?.topics || [];
                 const topicsStr = availableTopics.length 
                     ? `Choose the most relevant topic from this exact list: [${availableTopics.join(', ')}]. If none match well, return an empty string.` 
                     : "Return an empty string for the topic.";
 
                 const prompt = `You are an efficient AI assistant analyzing a GRADED exam. Ignore your own impulse to grade the paper. Instead, strictly analyze the EXAMINER'S MARKINGS (red ink, crosses, deductions, or teacher comments) on the page. Translate the actual marker's corrections into The Confession Box. Be highly accurate but concise. \nReturn strictly JSON format: { "whatWrong": "Short summary of the exact mistake based ON THE MARKER'S CORRECTIONS", "whyWrong": "Underlying conceptual reason for the mistake", "thoughtProcess": "Probable flawed thought process the student had", "topic": "Matched topic string" }. ${topicsStr}`;
                 
-                const aiRes = await callAI(prompt, "JSON Generator", imgB64s, GEMINI_PROXY_URL);
+                let aiRes = "";
+                if (useGroqFallback) {
+                    aiRes = await callGroq(prompt, "JSON Generator", imgDataForAI);
+                } else {
+                    aiRes = await callAI(prompt, "JSON Generator", imgDataForAI, GEMINI_PROXY_URL);
+                }
                 
                 let jsonStr = aiRes;
                 const match = jsonStr.match(/\{[\s\S]*\}/);
@@ -1614,7 +1609,7 @@ Make sure to use proper Markdown format, bold formatting for emphasis, and clear
                     thoughtProcess: result.thoughtProcess || "Could not determine.",
                     topic: result.topic && availableTopics.includes(result.topic) ? result.topic : (page.topic || '')
                 });
-            } catch(e) { console.error("Gemini Auto-Analysis Error", e); }
+            } catch(e) { console.error("Auto-Analysis Error", e); }
             setIsAiLoading(false);
         };
 
@@ -1625,23 +1620,15 @@ Make sure to use proper Markdown format, bold formatting for emphasis, and clear
             }
         }, [activePageId]);
 
-        // Auto-trigger Lazy AI when images are ACTUALLY uploaded to the page
+        // Auto-trigger Lazy AI with a ROCK SOLID primitive dependency
         useEffect(() => {
-            const page = mockPages.find(p => p.id === activePageId);
-            if (activePageId && page) {
-                const hasImages = page.questionImages && page.questionImages.length > 0;
-                const notAnalyzed = !page.whatWrong && !page.whyWrong && !page.thoughtProcess;
-                
-                if (hasImages && notAnalyzed && !isAiLoading) {
-                    doLazyAI(page);
+            if (activePageId && activePage) {
+                const notAnalyzed = !activePage.whatWrong && !activePage.whyWrong && !activePage.thoughtProcess;
+                if (questionImageCount > 0 && notAnalyzed && !isAiLoading) {
+                    doLazyAI(activePage);
                 }
             }
-        // This specific dependency array forces React to re-evaluate when an image is added/removed
-        }, [activePageId, mockPages.find(p => p.id === activePageId)?.questionImages?.length]);
-
-        const activeMock = mockPapers.find(m => m.id === activeMockId);
-        const activePage = mockPages.find(p => p.id === activePageId);
-        const currentSub = activeMock ? subjects.find(s=>s.name===activeMock.subject) : null;
+        }, [activePageId, questionImageCount]);
         
         const filteredMocks = mockPapers.filter(m => (m.title || '').toLowerCase().includes(searchQuery.toLowerCase()));
 
