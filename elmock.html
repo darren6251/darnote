@@ -1541,7 +1541,7 @@ Make sure to use proper Markdown format, bold formatting for emphasis, and clear
             setUploadStatus("");
         };
 
-        // GEMINI POWERED AUTO ANALYSIS
+// GEMINI POWERED AUTO ANALYSIS
         const doLazyAI = async (page) => {
             if (page.whatWrong || page.whyWrong || page.thoughtProcess || isAiLoading) return;
             const newQuota = await checkAndIncrementQuota(user, 'ocr'); 
@@ -1549,16 +1549,24 @@ Make sure to use proper Markdown format, bold formatting for emphasis, and clear
 
             setIsAiLoading(true);
             try {
-                let imgB64 = "";
-                const imgUrl = page.questionImages?.[0];
-                if (imgUrl && !imgUrl.includes('drive.google.com')) {
-                    const res = await fetch(imgUrl);
-                    const blob = await res.blob();
-                    imgB64 = await new Promise(r=>{const rd=new FileReader(); rd.onload=()=>r(rd.result); rd.readAsDataURL(blob);});
-                } else if (imgUrl) {
-                    imgB64 = imgUrl; 
+                let imgB64s = [];
+                const rawImages = page.questionImages || [];
+                
+                // NO MORE BLINDFOLDS! Loop through ALL images.
+                for (const imgUrl of rawImages) {
+                    if (imgUrl && !imgUrl.includes('drive.google.com')) {
+                        try {
+                            const res = await fetch(imgUrl);
+                            const blob = await res.blob();
+                            const b64 = await new Promise(r=>{const rd=new FileReader(); rd.onload=()=>r(rd.result); rd.readAsDataURL(blob);});
+                            imgB64s.push(b64);
+                        } catch(e) { console.error("Failed to load image for AI", e); }
+                    } else if (imgUrl && imgUrl.startsWith('data:')) {
+                        imgB64s.push(imgUrl);
+                    }
                 }
-                if(!imgB64) { setIsAiLoading(false); return; }
+
+                if(imgB64s.length === 0) { setIsAiLoading(false); return; }
 
                 // Retrieve active mock to get subjects and their available topics
                 const activeMockInstance = mockPapers.find(m => m.id === activeMockId);
@@ -1569,10 +1577,11 @@ Make sure to use proper Markdown format, bold formatting for emphasis, and clear
                     ? `Choose the most relevant topic from this exact list: [${availableTopics.join(', ')}]. If none match well, return an empty string.` 
                     : "Return an empty string for the topic.";
 
-                const prompt = `You are an efficient AI assistant analyzing a GRADED exam. Ignore your own impulse to grade the paper. Instead, strictly analyze the EXAMINER'S MARKINGS (red ink or in marking sheet, crosses, deductions, or teacher comments) on the page. Translate the actual marker's corrections into The Confession Box. Be highly accurate but concise. \nReturn strictly JSON format: { "whatWrong": "Short summary of the exact mistake based ON THE MARKER'S CORRECTIONS", "whyWrong": "Underlying conceptual reason for the mistake", "thoughtProcess": "Probable flawed thought process the student had", "topic": "Matched topic string" }. ${topicsStr}`;
+                // The legally binding contract forcing me to respect the teacher's red ink
+                const prompt = `You are an efficient AI assistant analyzing a GRADED exam. Ignore your own impulse to grade the paper. Instead, strictly analyze the EXAMINER'S MARKINGS (red ink, crosses, deductions, or teacher comments) on the page. Translate the actual marker's corrections into The Confession Box. Be highly accurate but concise. \nReturn strictly JSON format: { "whatWrong": "Short summary of the exact mistake based ON THE MARKER'S CORRECTIONS", "whyWrong": "Underlying conceptual reason for the mistake", "thoughtProcess": "Probable flawed thought process the student had", "topic": "Matched topic string" }. ${topicsStr}`;
                 
-                // Using Gemini (callAI) instead of Groq
-                const aiRes = await callAI(prompt, "JSON Generator", [imgB64], GEMINI_PROXY_URL);
+                // Sending the full array of images (imgB64s) so I can actually see!
+                const aiRes = await callAI(prompt, "JSON Generator", imgB64s, GEMINI_PROXY_URL);
                 
                 let jsonStr = aiRes;
                 const match = jsonStr.match(/\{[\s\S]*\}/);
