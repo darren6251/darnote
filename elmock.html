@@ -1552,18 +1552,45 @@ Make sure to use proper Markdown format, bold formatting for emphasis, and clear
                 let imgB64s = [];
                 const rawImages = page.questionImages || [];
                 
-                // FIXED LOOP: Now it actually accepts Google Drive links again!
                 for (const imgUrl of rawImages) {
-                    if (imgUrl && !imgUrl.includes('drive.google.com')) {
+                    if (!imgUrl) continue;
+                    
+                    if (imgUrl.startsWith('data:')) {
+                        // 1. Instantly grab Base64 (Pasted images or local renders)
+                        imgB64s.push(imgUrl);
+                    } else if (imgUrl.includes('drive.google.com')) {
+                        // 2. Drive Links (PDF previews). Requires auth tokens.
+                        // Skipped in Lazy AI to prevent crashes. Use "Report Session" for deep PDF scans.
+                        console.warn("Lazy AI skipped a Drive link.");
+                    } else {
+                        // 3. External CDNs (lh3.googleusercontent, Imgur, etc.)
                         try {
+                            // Try standard fetch first
                             const res = await fetch(imgUrl);
                             const blob = await res.blob();
                             const b64 = await new Promise(r=>{const rd=new FileReader(); rd.onload=()=>r(rd.result); rd.readAsDataURL(blob);});
                             imgB64s.push(b64);
-                        } catch(e) { console.error("Failed to load image for AI", e); }
-                    } else if (imgUrl) {
-                        // This puts the Drive URL directly in, just like your original code did
-                        imgB64s.push(imgUrl);
+                        } catch(e) { 
+                            console.warn("Fetch failed (CORS block). Attempting Canvas bypass...", e); 
+                            // 4. The Canvas By-Pass for strict CORS CDNs
+                            try {
+                                const b64 = await new Promise((resolve, reject) => {
+                                    const img = new Image();
+                                    img.crossOrigin = "Anonymous"; // Begs the CDN for permission
+                                    img.onload = () => {
+                                        const canvas = document.createElement('canvas');
+                                        canvas.width = img.width; canvas.height = img.height;
+                                        canvas.getContext('2d').drawImage(img, 0, 0);
+                                        resolve(canvas.toDataURL('image/jpeg', 0.8));
+                                    };
+                                    img.onerror = reject;
+                                    img.src = imgUrl;
+                                });
+                                imgB64s.push(b64);
+                            } catch (err) {
+                                console.error("Canvas fallback failed. CDN is strictly blocking.", err);
+                            }
+                        }
                     }
                 }
 
