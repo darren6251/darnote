@@ -1,0 +1,629 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>darNote - DSE Chinese</title>
+<link rel="icon" type="image/png" href="https://raw.githubusercontent.com/darren6251/darnote/refs/heads/main/darNote%20logo.png">
+
+<!-- Core Libraries -->
+<script crossorigin src="https://unpkg.com/react@18/umd/react.development.js"></script>
+<script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+<script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+<script src="https://cdn.tailwindcss.com"></script>
+<script src="https://unpkg.com/framer-motion@10.16.4/dist/framer-motion.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+
+<script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-app.js";
+    import { getAuth, signInWithPopup, GoogleAuthProvider, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-auth.js";
+    import { getFirestore, collection, doc, addDoc, deleteDoc, onSnapshot, query, orderBy } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-firestore.js";
+    
+    const app = initializeApp({ apiKey: "AIzaSyAvPEac-03kE4oazvaq8K3T2gxLPsnZO20", authDomain: "darnote625.firebaseapp.com", projectId: "darnote625", storageBucket: "darnote625.firebasestorage.app", messagingSenderId: "16458322562", appId: "1:16458322562:web:8894d71f3e6c326eba1a9b" });
+    window.firebase = { app, auth: getAuth(app), db: getFirestore(app), signInWithPopup, GoogleAuthProvider, signOut, onAuthStateChanged, collection, doc, addDoc, deleteDoc, onSnapshot, query, orderBy };
+</script>
+
+<script>
+    tailwind.config = { darkMode: 'class', theme: { extend: { colors: { primary: '#1a73e8', 'primary-light': '#4285f4', 'primary-dark': '#1557b0', secondary: '#5f6368', accent: '#0f9d58', success: '#1e8e3e', warning: '#f9ab00', danger: '#d93025', dark: '#202124', light: '#f8fafc', gray: '#5f6368', 'light-gray': '#e8eaed', onyx: '#121212', surface: '#ffffff', 'surface-dark': '#1e1e20', border: '#dadce0', 'border-dark': '#3c4043' }, boxShadow: { ds: '0 1px 2px 0 rgba(60,64,67,0.3), 0 1px 3px 1px rgba(60,64,67,0.15)', 'ds-hover': '0 1px 3px 0 rgba(60,64,67,0.3), 0 4px 8px 3px rgba(60,64,67,0.15)', 'ds-dark': '0 1px 2px 0 rgba(0,0,0,0.5), 0 1px 3px 1px rgba(0,0,0,0.3)' }, borderRadius: { ds: '16px', xl: '24px' }, fontFamily: { sans: ['Inter', 'sans-serif'], chinese: ['"Noto Sans HK"', '"Noto Sans SC"', 'sans-serif'] } } } }
+</script>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+HK:wght@400;500;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+    body { @apply bg-[#f0f4f9] text-[#202124] dark:bg-onyx dark:text-[#e8eaed]; font-family: 'Inter', sans-serif; overflow: hidden; letter-spacing: -0.01em; }
+    ::-webkit-scrollbar { width: 6px; height: 6px; } ::-webkit-scrollbar-thumb { @apply bg-gray/30 hover:bg-gray/50 dark:bg-gray/50 dark:hover:bg-gray/70; border-radius: 10px; }
+    .chinese-text { font-family: 'Noto Sans HK', 'Microsoft JhengHei', sans-serif; }
+    .ios-popup { animation: scaleIn 0.15s cubic-bezier(0.2, 0, 0, 1); transform-origin: bottom center; }
+    @keyframes scaleIn { from { opacity: 0; transform: scale(0.9) translateY(10px) translateX(-50%); } to { opacity: 1; transform: scale(1) translateY(0) translateX(-50%); } }
+    .recite-input { width: 2ch; text-align: center; border-bottom: 2px solid #5f6368; background: transparent; outline: none; transition: all 0.2s; }
+    .recite-input:focus { border-color: #1a73e8; background: rgba(26, 115, 232, 0.1); }
+    .recite-input.correct { border-color: #1e8e3e; color: #1e8e3e; pointer-events: none; }
+    .recite-input.wrong { border-color: #d93025; color: #d93025; animation: shake 0.4s; }
+    @keyframes shake { 0%, 100% {transform: translateX(0);} 25% {transform: translateX(-3px);} 75% {transform: translateX(3px);} }
+</style>
+</head>
+<body>
+<div id="root"></div>
+<script type="text/babel">
+    const { useState, useEffect, useRef, useMemo } = React; 
+    const { motion, AnimatePresence } = window.Motion;
+
+    // DEEPSEEK CONFIG
+    const DEEPSEEK_PROXY_URL = "https://deepseek-proxy-166884560507.us-central1.run.app/";
+
+    // ICONS (Copied entirely from el.html)
+    const Icons={HelpCircle:p=><svg {...p} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><path d="M12 17h.01"/></svg>,Youtube:p=><svg {...p} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M22.54 6.42a2.78 2.78 0 0 0-1.94-2C18.88 4 12 4 12 4s-6.88 0-8.6.46a2.78 2.78 0 0 0-1.94 2A29 29 0 0 0 1 11.75a29 29 0 0 0 .46 5.33 2.78 2.78 0 0 0 1.94 2c1.72.46 8.6.46 8.6.46s6.88 0 8.6-.46a2.78 2.78 0 0 0 1.94-2 29 29 0 0 0 .46-5.33 29 29 0 0 0-.46-5.33z"/><polygon points="9.75 15.02 15.5 11.75 9.75 8.48 9.75 15.02"/></svg>,Clock:p=><svg {...p} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>,Plus:p=><svg {...p} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12h14"/><path d="M12 5v14"/></svg>,Trash:p=><svg {...p} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/></svg>,Check:p=><svg {...p} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>,Image:p=><svg {...p} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect width="18" height="18" x="3" y="3" rx="2" ry="2"/><circle cx="9" cy="9" r="2"/><path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21"/></svg>,Bot:p=><svg {...p} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 8V4H8"/><rect width="16" height="12" x="4" y="8" rx="2"/><path d="M2 14h2"/><path d="M20 14h2"/><path d="M15 13v2"/><path d="M9 13v2"/></svg>,X:p=><svg {...p} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M18 6 6 18"/><path d="m6 6 18 18"/></svg>,Logout:p=><svg {...p} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" x2="9" y1="12" y2="12"/></svg>,Google:p=><svg {...p} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 22C6.477 22 2 17.523 2 12S6.477 2 12 2s10 4.477 10 10-4.477 10-10 10z"/><path d="M12 11h9c.1 1.4.1 2.9-.4 4.3-1.1 3-4.1 5.3-7.6 5.6-5 .5-9.4-3.1-9.9-8.1C2.5 7.1 6 2.3 11 2c2.5-.1 4.9.9 6.7 2.6l-2.7 2.8c-1-.7-2.3-1.1-3.6-1-2.9.2-5.1 2.8-4.9 5.7.2 2.6 2.4 4.7 5 4.7 2 0 3.6-1.1 4.3-2.9H12v-3z" fill="currentColor"/></svg>,Sun:p=><svg {...p} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="5"/><path d="M12 1v2"/><path d="M12 21v2"/><path d="M4.22 4.22l1.42 1.42"/><path d="M18.36 18.36l1.42 1.42"/><path d="M1 12h2"/><path d="M21 12h2"/><path d="M4.22 19.78l1.42-1.42"/><path d="M18.36 5.64l1.42-1.42"/></svg>,Moon:p=><svg {...p} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>,File:p=><svg {...p} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" x2="8" y1="13" y2="13"/><line x1="16" x2="8" y1="17" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>,Book:p=><svg {...p} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>,ChevronRight:p=><svg {...p} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m9 18 6-6-6-6"/></svg>,Brain:p=><svg {...p} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M9.5 2A2.5 2.5 0 0 1 12 4.5v15a2.5 2.5 0 0 1-4.96.44 2.5 2.5 0 0 1-2.96-3.08 3 3 0 0 1-.34-5.58 2.5 2.5 0 0 1 1.32-4.24 2.5 2.5 0 0 1 1.98-3A2.5 2.5 0 0 1 9.5 2Z"/><path d="M14.5 2A2.5 2.5 0 0 0 12 4.5v15a2.5 2.5 0 0 0 4.96.44 2.5 2.5 0 0 0 2.96-3.08 3 3 0 0 0 .34-5.58 2.5 2.5 0 0 0-1.32-4.24 2.5 2.5 0 0 0-1.98-3A2.5 2.5 0 0 0 14.5 2Z"/></svg>,Target:p=><svg {...p} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/></svg>,Zap:p=><svg {...p} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>,GraduationCap:p=><svg {...p} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M22 10v6M2 10l10-5 10 5-10 5z"/><path d="M6 12v5c3 3 9 3 12 0v-5"/></svg>,Dashboard:p=><svg {...p} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="7" height="9" rx="1"/><rect x="14" y="3" width="7" height="5" rx="1"/><rect x="14" y="12" width="7" height="9" rx="1"/><rect x="3" y="16" width="7" height="5" rx="1"/></svg>,Search:p=><svg {...p} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>,Folder:p=><svg {...p} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M4 20h16a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-7.93a2 2 0 0 1-1.66-.9l-.82-1.2A2 2 0 0 0 7.93 3H4a2 2 0 0 0-2 2v13c0 1.1.9 2 2 2Z"/></svg>,ChartBar:p=><svg {...p} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 3v18h18"/><path d="M18 17V9"/><path d="M13 17V5"/><path d="M8 17v-3"/></svg>,Menu:p=><svg {...p} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="4" x2="20" y1="12" y2="12"/><line x1="4" x2="20" y1="6" y2="6"/><line x1="4" x2="20" y1="18" y2="18"/></svg>,Share2:p=><svg {...p} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" x2="15.42" y1="13.51" y2="17.49"/><line x1="15.41" x2="8.59" y1="6.51" y2="10.49"/></svg>,Skull:p=><svg {...p} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="9" cy="12" r="1"/><circle cx="15" cy="12" r="1"/><path d="M8 20v2h8v-2"/><path d="m12.5 17-.5-1-.5 1h1z"/><path d="M16 20a2 2 0 0 0 1.56-3.25 8 8 0 1 0-11.12 0A2 2 0 0 0 8 20"/></svg>};
+
+    // MOCK DATA 
+    const MOCK_TEXTS = [
+        { id: 't1', title: "勸學 (節錄)", author: "荀子", paragraphs: ["君子曰：學不可以已。", "青，取之於藍，而青於藍；冰，水為之，而寒於水。木直中繩，輮以為輪，其曲中規；雖有槁暴，不復挺者，輮使之然也。故木受繩則直，金就礪則利，君子博學而日參省乎己，則知明而行無過矣。", "吾嘗終日而思矣，不如須臾之所學也；吾嘗跂而望矣，不如登高之博見也。登高而招，臂非加長也，而見者遠；順風而呼，聲非加疾也，而聞者彰。假輿馬者，非利足也，而致千里；假舟楫者，非能水也，而絕江河。君子生非異也，善假於物也。"] },
+        { id: 't2', title: "師說", author: "韓愈", paragraphs: ["古之學者必有師。師者，所以傳道受業解惑也。人非生而知之者，孰能無惑？惑而不從師，其為惑也，終不解矣。"] },
+        { id: 't3', title: "逍遙遊 (節錄)", author: "莊子", paragraphs: ["北冥有魚，其名為鯤。鯤之大，不知其幾千里也。化而為鳥，其名為鵬。鵬之背，不知其幾千里也；怒而飛，其翼若垂天之雲。是鳥也，海運則將徙於南冥。南冥者，天池也。"] }
+    ];
+
+    // SYSTEM PROMPTS
+    const SYS_TUTOR = "你是一位 darNote app 旗下的 DSE 中文科 AI 補習名師。你說話一針見血、極度幽默、會用流利的廣東話/書面語單打學生，但最後一定會給出極度精準、符合 HKEAA 考評局標準的文言文解釋。直接回答，不要廢話。";
+    const SYS_DRILL_MC = "你是一位嚴格的 HKEAA 考評局擬卷員。請根據提供的《指定範文》段落，設計 5 條符合 DSE 中文卷一格式的多項選擇題 (MC)。包含：實詞解釋、寫作手法、內容主旨。必須以 JSON Array 格式輸出，不要其他文字：[{\"q\": \"問題\", \"options\": [\"A. xx\", \"B. yy\", \"C. zz\", \"D. ww\"], \"ans\": \"A\", \"exp\": \"解釋\"}]。必須使用繁體中文。";
+    const SYS_DRILL_LQ = "你是一位 DSE 中文科閱卷員。請根據段落，設計 1 條結構性的長題目 (LQ)，分為 (a) 及 (b) 兩部分，總分 6 分。請模仿考評局「評卷參考」的格式，提供題目及詳細的得分點。必須以 JSON 格式輸出：{\"context\": \"引文...\", \"parts\": [{\"id\": \"a\", \"text\": \"問題a\", \"marks\": 2}], \"marking_scheme\": \"詳細評分準則...\"}。使用繁體中文。";
+
+    // --- DEEPSEEK API CALLER ---
+    const callDeepSeek = async (prompt, sysPrompt) => {
+        try {
+            const res = await fetch(DEEPSEEK_PROXY_URL, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    model: "deepseek-reasoner",
+                    messages: [
+                        { role: "system", content: sysPrompt },
+                        { role: "user", content: prompt }
+                    ]
+                })
+            });
+            if (!res.ok) throw new Error(`HTTP error! status: ${res.status}`);
+            const data = await res.json();
+            const message = data.choices?.[0]?.message || data.message || data; 
+            return {
+                reasoning: message.reasoning_content || "DeepSeek 思考中被干擾，無留下思考痕跡...",
+                content: message.content || "生成失敗，請再試一次。"
+            };
+        } catch (e) {
+            console.error(e);
+            return { reasoning: "我的大腦短路了...", content: `API 連線失敗：請檢查 Proxy URL 是否正確運行。\n\n詳細錯誤: ${e.message}` };
+        }
+    };
+
+    const App = () => {
+        const [user, setUser] = useState(null);
+        const [isDarkMode, setIsDarkMode] = useState(true);
+        const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+        const [showHelpMenu, setShowHelpMenu] = useState(false);
+        const [searchQuery, setSearchQuery] = useState('');
+        
+        const [activeTab, setActiveTab] = useState('read'); // read, recite, drill, graveyard
+        const [selectedDocId, setSelectedDocId] = useState(MOCK_TEXTS[0].id);
+        const [graveyard, setGraveyard] = useState([]); 
+
+        // Firebase Auth Listener
+        useEffect(() => {
+            if (!window.firebase) return;
+            const unsub = window.firebase.onAuthStateChanged(window.firebase.auth, (u) => setUser(u));
+            return () => unsub();
+        }, []);
+
+        // Fetch Graveyard from darNote-Chinese Database
+        useEffect(() => {
+            if (!user || !window.firebase) return;
+            const q = window.firebase.query(window.firebase.collection(window.firebase.db, 'artifacts', 'darNote-Chinese', 'users', user.uid, 'graveyard'), window.firebase.orderBy('addedAt', 'desc'));
+            const unsub = window.firebase.onSnapshot(q, (snap) => {
+                setGraveyard(snap.docs.map(d => ({id: d.id, ...d.data()})));
+            });
+            return () => unsub();
+        }, [user]);
+
+        // Apply dark mode class
+        useEffect(() => {
+            if(isDarkMode) document.documentElement.classList.add('dark');
+            else document.documentElement.classList.remove('dark');
+        }, [isDarkMode]);
+
+        const activeDoc = MOCK_TEXTS.find(t => t.id === selectedDocId) || MOCK_TEXTS[0];
+        const filteredDocs = MOCK_TEXTS.filter(t => t.title.includes(searchQuery) || t.author.includes(searchQuery));
+
+        // Highlight & Popup State
+        const [popup, setPopup] = useState(null); 
+        const [aiPanel, setAiPanel] = useState({ isOpen: false, loading: false, data: null, queryText: '' });
+
+        // --- HIGHLIGHT LOGIC ---
+        const handleTextSelection = () => {
+            const selection = window.getSelection();
+            const text = selection.toString().trim();
+            if (text.length > 0) {
+                const range = selection.getRangeAt(0);
+                const rect = range.getBoundingClientRect();
+                setPopup({ 
+                    x: rect.left + (rect.width / 2), 
+                    y: rect.top - 10, 
+                    text 
+                });
+            } else {
+                setPopup(null);
+            }
+        };
+
+        useEffect(() => {
+            document.addEventListener('selectionchange', () => {
+                if (window.getSelection().toString().trim() === '') setPopup(null);
+            });
+        }, []);
+
+        const askAI = async (text) => {
+            setPopup(null);
+            setAiPanel({ isOpen: true, loading: true, data: null, queryText: text });
+            const prompt = `學生表示不懂這句：「${text}」。請以 HKEAA 考評局標準，結合前後文解釋。`;
+            const res = await callDeepSeek(prompt, SYS_TUTOR);
+            setAiPanel({ isOpen: true, loading: false, data: res, queryText: text });
+        };
+
+        const addToGraveyard = async (text) => {
+            setPopup(null);
+            if (graveyard.find(g => g.text === text)) {
+                alert("This word is already rotting in the graveyard.");
+                return;
+            }
+            try {
+                if (user && window.firebase) {
+                    await window.firebase.addDoc(window.firebase.collection(window.firebase.db, 'artifacts', 'darNote-Chinese', 'users', user.uid, 'graveyard'), {
+                        text, docTitle: activeDoc.title, addedAt: new Date().toISOString()
+                    });
+                } else {
+                    setGraveyard(prev => [{ id: Date.now(), text, docTitle: activeDoc.title, addedAt: new Date().toISOString() }, ...prev]);
+                    alert("已打入冷宮 (Sent to Graveyard) 🪦 (Local only, please login to sync)");
+                }
+            } catch(e) {
+                alert("Failed to bury word. Database error.");
+            }
+        };
+
+        const deleteFromGraveyard = async (id) => {
+            if(!confirm("Release this word from the graveyard?")) return;
+            try {
+                if (user && window.firebase) {
+                    await window.firebase.deleteDoc(window.firebase.doc(window.firebase.db, 'artifacts', 'darNote-Chinese', 'users', user.uid, 'graveyard', id));
+                } else {
+                    setGraveyard(prev => prev.filter(g => g.id !== id));
+                }
+            } catch(e) {}
+        };
+
+        // --- COMPONENTS ---
+
+        const renderReadMode = () => (
+            <div className="max-w-3xl mx-auto py-10 px-6" onMouseUp={handleTextSelection} onTouchEnd={handleTextSelection}>
+                <div className="text-center mb-12">
+                    <h1 className="text-4xl font-bold text-dark dark:text-light chinese-text mb-3">{activeDoc.title}</h1>
+                    <p className="text-lg text-gray font-medium chinese-text">{activeDoc.author}</p>
+                </div>
+                <div className="space-y-8 chinese-text text-lg leading-loose text-dark dark:text-light tracking-wide">
+                    {activeDoc.paragraphs.map((p, i) => (
+                        <p key={i} className="indent-8">{p}</p>
+                    ))}
+                </div>
+            </div>
+        );
+
+        const RecitationMode = () => {
+            const [difficulty, setDifficulty] = useState(0.3);
+            const [blanks, setBlanks] = useState([]);
+            
+            useEffect(() => {
+                let newBlanks = [];
+                let globalIdx = 0;
+                activeDoc.paragraphs.forEach(p => {
+                    let paragraphBlanks = [];
+                    for(let char of p) {
+                        const isPunc = /[，。；：！？、「」]/g.test(char);
+                        const isHidden = !isPunc && Math.random() < difficulty;
+                        paragraphBlanks.push({ id: globalIdx++, char, isHidden, userInput: '', solved: false });
+                    }
+                    newBlanks.push(paragraphBlanks);
+                });
+                setBlanks(newBlanks);
+            }, [activeDoc, difficulty]);
+
+            const handleInput = (pIdx, cIdx, val, targetChar) => {
+                const newBlanks = [...blanks];
+                const cell = newBlanks[pIdx][cIdx];
+                cell.userInput = val;
+                if (val === targetChar) {
+                    cell.solved = true;
+                    setTimeout(() => {
+                        const nextInput = document.getElementById(`recite-${cell.id + 1}`);
+                        if(nextInput) nextInput.focus();
+                    }, 50);
+                }
+                setBlanks(newBlanks);
+            };
+
+            return (
+                <div className="max-w-4xl mx-auto py-8 px-6">
+                    <div className="bg-white dark:bg-surface-dark p-6 md:p-8 rounded-3xl shadow-sm border border-light-gray dark:border-border-dark mb-8 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+                        <div>
+                            <h2 className="text-xl font-bold dark:text-light flex items-center gap-2"><Icons.Skull className="w-5 h-5 text-danger"/> The Torture Chamber</h2>
+                            <p className="text-sm text-gray mt-1">Type the exact Chinese character to survive.</p>
+                        </div>
+                        <div className="flex gap-2 bg-light-gray/50 dark:bg-dark p-1 rounded-xl w-full md:w-auto">
+                            {[0.3, 0.6, 1.0].map(d => (
+                                <button key={d} onClick={()=>setDifficulty(d)} className={`flex-1 md:flex-none px-4 py-1.5 text-xs font-bold rounded-lg transition-all ${difficulty===d ? 'bg-white dark:bg-surface-dark shadow-sm text-danger' : 'text-gray hover:text-dark dark:hover:text-light'}`}>
+                                    {d*100}% Blind
+                                </button>
+                            ))}
+                        </div>
+                    </div>
+
+                    <div className="space-y-8 chinese-text text-xl leading-[3rem]">
+                        {blanks.map((p, pIdx) => (
+                            <div key={pIdx} className="bg-white/50 dark:bg-surface-dark/50 p-6 md:p-8 rounded-3xl border border-light-gray/50 dark:border-white/5 shadow-sm">
+                                {p.map((cell, cIdx) => {
+                                    if (!cell.isHidden || cell.solved) {
+                                        return <span key={cell.id} className={cell.solved ? "text-success font-bold" : "text-dark dark:text-light"}>{cell.char}</span>;
+                                    }
+                                    return (
+                                        <input 
+                                            key={cell.id} 
+                                            id={`recite-${cell.id}`}
+                                            maxLength={1}
+                                            value={cell.userInput}
+                                            onChange={(e) => handleInput(pIdx, cIdx, e.target.value, cell.char)}
+                                            className={`recite-input mx-1 ${cell.userInput && cell.userInput !== cell.char ? 'wrong' : ''}`}
+                                        />
+                                    );
+                                })}
+                            </div>
+                        ))}
+                    </div>
+                </div>
+            );
+        };
+
+        const SmartDrill = () => {
+            const [status, setStatus] = useState('idle');
+            const [drillType, setDrillType] = useState('MC');
+            const [data, setData] = useState(null);
+            
+            const generateDrill = async () => {
+                setStatus('loading');
+                const prompt = `為《${activeDoc.title}》出題。段落內容：「${activeDoc.paragraphs.join('')}」`;
+                const sysPrompt = drillType === 'MC' ? SYS_DRILL_MC : SYS_DRILL_LQ;
+                const res = await callDeepSeek(prompt, sysPrompt);
+                
+                try {
+                    const jsonStr = res.content.substring(res.content.indexOf('['), res.content.lastIndexOf(']') + 1) || res.content.substring(res.content.indexOf('{'), res.content.lastIndexOf('}') + 1);
+                    setData(JSON.parse(jsonStr || res.content));
+                    setStatus('result');
+                } catch (e) {
+                    alert("AI failed to output proper JSON. DarNote AI says: '我今日好攰，出唔到卷，請重試。'");
+                    setStatus('idle');
+                }
+            };
+
+            return (
+                <div className="max-w-4xl mx-auto py-8 px-6">
+                    <div className="bg-white dark:bg-surface-dark p-6 md:p-8 rounded-3xl shadow-sm border border-light-gray dark:border-border-dark mb-8 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+                        <div>
+                            <h2 className="text-xl font-bold dark:text-light flex items-center gap-2"><Icons.Target className="w-5 h-5 text-primary"/> Smart Drill Studio</h2>
+                            <p className="text-sm text-gray mt-1">Generate HKEAA style questions instantly.</p>
+                        </div>
+                        <div className="flex gap-4 items-center w-full md:w-auto">
+                            <select value={drillType} onChange={e=>setDrillType(e.target.value)} className="bg-light-gray/30 dark:bg-dark border border-transparent rounded-xl px-4 py-2 text-sm font-bold text-primary outline-none cursor-pointer flex-1 md:flex-none">
+                                <option value="MC">5 MCQs</option>
+                                <option value="LQ">1 Long Question</option>
+                            </select>
+                            <button onClick={generateDrill} disabled={status==='loading'} className="bg-primary text-white px-6 py-2 rounded-full text-sm font-medium hover:bg-primary-dark shadow-md transition-all flex items-center justify-center gap-2 flex-1 md:flex-none">
+                                {status==='loading' ? <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin"/> : <Icons.Zap className="w-4 h-4"/>}
+                                Generate Paper
+                            </button>
+                        </div>
+                    </div>
+
+                    {status === 'loading' && (
+                        <div className="flex flex-col items-center justify-center py-20">
+                            <div className="w-12 h-12 border-4 border-primary/30 border-t-primary rounded-full animate-spin mb-4"></div>
+                            <p className="text-gray font-medium">AI is consulting the HKEAA marking schemes...</p>
+                        </div>
+                    )}
+
+                    {status === 'result' && data && drillType === 'MC' && (
+                        <div className="space-y-6">
+                            {data.map((q, idx) => (
+                                <div key={idx} className="bg-white dark:bg-surface-dark p-6 md:p-8 rounded-3xl shadow-sm border border-light-gray dark:border-border-dark">
+                                    <div className="font-semibold text-lg dark:text-light mb-4 chinese-text">{idx+1}. {q.q}</div>
+                                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-4">
+                                        {q.options.map(opt => (
+                                            <button key={opt} className="text-left p-4 rounded-xl border border-light-gray dark:border-border-dark hover:bg-light-gray/50 dark:hover:bg-white/5 transition-colors chinese-text dark:text-light">{opt}</button>
+                                        ))}
+                                    </div>
+                                    <details className="text-sm text-gray bg-[#f8fafc] dark:bg-dark p-4 rounded-xl border border-light-gray dark:border-border-dark cursor-pointer">
+                                        <summary className="font-bold text-primary outline-none">Show Answer & Explanation</summary>
+                                        <div className="mt-3 text-dark dark:text-light chinese-text"><span className="text-success font-bold mr-2">Ans: {q.ans}</span> {q.exp}</div>
+                                    </details>
+                                </div>
+                            ))}
+                        </div>
+                    )}
+
+                    {status === 'result' && data && drillType === 'LQ' && (
+                        <div className="space-y-6 bg-white dark:bg-surface-dark p-6 md:p-8 rounded-3xl shadow-sm border border-light-gray dark:border-border-dark">
+                            <div className="text-sm font-bold text-primary uppercase tracking-wider mb-2">Context</div>
+                            <div className="p-4 bg-[#f8fafc] dark:bg-dark rounded-xl border border-light-gray dark:border-border-dark chinese-text text-dark dark:text-light leading-relaxed mb-6">{data.context}</div>
+                            
+                            {data.parts.map(part => (
+                                <div key={part.id} className="mb-6">
+                                    <div className="flex justify-between items-start">
+                                        <span className="font-semibold text-lg dark:text-light chinese-text">({part.id}) {part.text}</span>
+                                        <span className="text-sm text-gray font-bold bg-light-gray/50 dark:bg-dark px-2 py-1 rounded-md">[{part.marks} 分]</span>
+                                    </div>
+                                    <textarea className="w-full mt-3 bg-[#f8fafc] dark:bg-dark border border-light-gray dark:border-border-dark rounded-xl p-4 text-sm focus:outline-none focus:border-primary transition-all" rows="4" placeholder="Draft your answer..."></textarea>
+                                </div>
+                            ))}
+
+                            <details className="mt-8 text-sm text-gray bg-[#fef2f2] dark:bg-[#3f1616]/30 p-4 rounded-xl border border-danger/20 cursor-pointer">
+                                <summary className="font-bold text-danger outline-none flex items-center gap-2"><Icons.Check className="w-4 h-4"/> 考評局評卷參考 (Marking Scheme)</summary>
+                                <div className="mt-3 text-dark dark:text-light chinese-text leading-relaxed whitespace-pre-wrap">{data.marking_scheme}</div>
+                            </details>
+                        </div>
+                    )}
+                </div>
+            );
+        };
+
+        const Graveyard = () => (
+            <div className="max-w-4xl mx-auto py-8 px-6">
+                <div className="mb-8 bg-white dark:bg-surface-dark p-6 md:p-8 rounded-3xl shadow-sm border border-light-gray dark:border-border-dark flex items-center gap-4">
+                    <div className="w-12 h-12 rounded-full bg-gray/10 flex items-center justify-center shrink-0"><Icons.Skull className="w-6 h-6 text-gray"/></div>
+                    <div>
+                        <h2 className="text-xl font-bold dark:text-light">The Graveyard</h2>
+                        <p className="text-sm text-gray mt-1">Where difficult vocabulary goes to rest (until you review it).</p>
+                    </div>
+                </div>
+                
+                {graveyard.length === 0 ? (
+                    <div className="text-center py-20 text-gray">
+                        <Icons.Check className="w-16 h-16 mx-auto mb-4 opacity-50"/>
+                        <p>Your graveyard is empty. You are a DSE God.</p>
+                    </div>
+                ) : (
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        {graveyard.map(item => (
+                            <div key={item.id} className="bg-white dark:bg-surface-dark p-6 rounded-3xl shadow-sm border border-light-gray dark:border-border-dark flex justify-between items-start">
+                                <div>
+                                    <div className="font-bold text-lg dark:text-light chinese-text mb-1">{item.text}</div>
+                                    <div className="text-xs text-primary font-medium">{item.docTitle}</div>
+                                </div>
+                                <div className="flex gap-2">
+                                    <button onClick={()=>askAI(item.text)} className="p-3 bg-primary/10 text-primary rounded-full hover:bg-primary/20 transition-colors" title="Ask AI for meaning"><Icons.Brain className="w-5 h-5"/></button>
+                                    <button onClick={()=>deleteFromGraveyard(item.id)} className="p-3 bg-danger/10 text-danger rounded-full hover:bg-danger/20 transition-colors" title="Remove from Graveyard"><Icons.Trash className="w-5 h-5"/></button>
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+                )}
+            </div>
+        );
+
+        if (!user) return (<div className="h-screen w-full flex items-center justify-center bg-white dark:bg-onyx flex-col gap-6 relative overflow-hidden"><div className="z-10 flex flex-col items-center"><img src="https://raw.githubusercontent.com/darren6251/darnote/refs/heads/main/darNote%20logo.png" className="w-16 h-16 mb-6 rounded-2xl shadow-sm"/><h1 className="text-4xl font-bold text-dark dark:text-light tracking-tight font-sans mb-3">darNote-Chinese</h1><p className="text-base text-gray max-w-sm text-center mb-10">Sign in to sync your DSE survival progress and Graveyard.</p><button onClick={() => window.firebase?.signInWithPopup(window.firebase.auth, new window.firebase.GoogleAuthProvider())} className="bg-primary text-white px-8 py-3.5 rounded-full font-medium flex gap-3 items-center hover:bg-primary-dark transition-all shadow-md hover:shadow-lg w-64 justify-center text-sm"><Icons.Google className="w-4 h-4"/> Continue with Google</button></div></div>);
+
+        return (
+            <div className={`flex flex-col h-screen w-full transition-colors duration-300 ${isDarkMode ? 'dark bg-onyx' : 'bg-white'}`}>
+                
+                {/* Global Top Header - darNote el.html Style */}
+                <header className="bg-white dark:bg-surface-dark text-dark dark:text-light px-4 py-2 flex justify-between items-center z-30 shrink-0 border-b border-light-gray dark:border-border-dark h-16">
+                    <div className="flex items-center gap-3 font-medium text-lg tracking-tight cursor-pointer px-2">
+                        <button onClick={() => setIsMobileMenuOpen(true)} className="lg:hidden p-2 -ml-2 rounded-full hover:bg-light-gray dark:hover:bg-white/10 transition-colors"><Icons.Menu className="w-6 h-6 text-gray dark:text-zinc-400"/></button>
+                        <img src="https://raw.githubusercontent.com/darren6251/darnote/refs/heads/main/darNote%20logo.png" className="hidden lg:block w-8 h-8 rounded-lg shadow-sm"/> 
+                        <span className="text-gray dark:text-gray/80 hidden lg:inline">darNote</span> <span className="font-semibold hidden lg:inline">Chinese Tutor</span>
+                        <span className="font-semibold lg:hidden">Chinese Tutor</span>
+                    </div>
+                    
+                    {/* Centered Search */}
+                    <div className="hidden lg:flex flex-1 max-w-2xl px-8">
+                         <div className="w-full bg-[#f1f3f4] dark:bg-dark flex items-center px-4 py-2.5 rounded-full border border-transparent focus-within:bg-white dark:focus-within:bg-surface-dark focus-within:border-light-gray dark:focus-within:border-white/10 focus-within:shadow-ds transition-all">
+                             <Icons.Search className="w-5 h-5 text-gray mr-3"/>
+                             <input type="text" placeholder="Search the 12 prescribed texts..." value={searchQuery} onChange={e=>setSearchQuery(e.target.value)} className="bg-transparent border-none outline-none w-full text-sm text-dark dark:text-light placeholder-gray font-medium"/>
+                         </div>
+                    </div>
+
+                    <div className="flex items-center gap-2">
+                        <button className="hidden md:flex items-center gap-2 px-4 py-2 rounded-full text-xs font-semibold text-primary bg-primary/10 hover:bg-primary/20 transition-all">
+                            <Icons.GraduationCap className="w-4 h-4"/> DSE 2026
+                        </button>
+                        
+                        {/* Help Dropdown */}
+                        <div className="relative flex items-center">
+                            <button onClick={() => setShowHelpMenu(!showHelpMenu)} className="p-2 text-gray hover:bg-black/5 dark:hover:bg-white/5 rounded-full transition-colors mx-1" title="Get Help before your brain melts">
+                                <Icons.HelpCircle className="w-5 h-5"/>
+                            </button>
+                            {showHelpMenu && <div className="fixed inset-0 z-40" onClick={() => setShowHelpMenu(false)}></div>}
+                            {showHelpMenu && (
+                                <div className="absolute right-0 top-full mt-2 w-64 bg-white dark:bg-surface-dark border border-light-gray dark:border-white/10 rounded-xl shadow-ds-hover z-50 py-2 overflow-hidden transform origin-top-right transition-all">
+                                    <div className="px-4 py-2 text-[10px] font-bold text-gray uppercase tracking-wider bg-light-gray/30 dark:bg-black/20 border-b border-light-gray/50 dark:border-white/5 mb-1 flex items-center gap-2"><Icons.HelpCircle className="w-3 h-3"/> SOS / Lifeline</div>
+                                    <a href="mailto:darrenng@3-shot.com" onClick={() => setShowHelpMenu(false)} className="w-full text-left px-4 py-3 text-sm hover:bg-primary/5 text-dark dark:text-light flex items-center gap-3 transition-colors group">
+                                        <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center group-hover:scale-110 transition-transform"><Icons.Brain className="w-4 h-4 text-primary"/></div> 
+                                        <div><div className="font-semibold">Email Support</div><div className="text-[10px] text-gray">darrenng@3-shot.com</div></div>
+                                    </a>
+                                </div>
+                            )}
+                        </div>
+
+                        <button onClick={()=>setIsDarkMode(!isDarkMode)} className="p-2 text-gray hover:bg-black/5 dark:hover:bg-white/5 rounded-full transition-colors mx-1" title="Toggle Mode">
+                            {isDarkMode ? <Icons.Sun className="w-5 h-5"/> : <Icons.Moon className="w-5 h-5"/>}
+                        </button>
+                        <div className="flex items-center gap-3 pl-2">
+                            {user?.photoURL ? <img src={user.photoURL} className="w-8 h-8 rounded-full border border-light-gray dark:border-white/10 cursor-pointer hover:ring-4 ring-black/5 dark:ring-white/5 transition-all"/> : <div className="w-8 h-8 rounded-full bg-primary text-white flex items-center justify-center font-bold text-xs">{user?.displayName?.charAt(0) || 'U'}</div>}
+                            <button onClick={()=>window.firebase?.signOut(window.firebase.auth)} className="p-2 text-gray hover:text-danger hover:bg-danger/5 rounded-full transition-colors ml-1"><Icons.Logout className="w-5 h-5"/></button>
+                        </div>
+                    </div>
+                </header>
+
+                <div className="flex-1 flex overflow-hidden">
+                    {/* Left Sidebar - el.html style */}
+                    <div className="w-[260px] flex-shrink-0 bg-white dark:bg-surface-dark flex flex-col py-4 z-20 hidden lg:flex transition-colors duration-300">
+                        <nav className="space-y-0.5 mb-6">
+                            {[{id: 'read', icon: 'Book', label: 'Reading & Analysis'}, 
+                              {id: 'recite', icon: 'Brain', label: 'Torture Chamber'}, 
+                              {id: 'drill', icon: 'Target', label: 'Smart Drill Studio'},
+                              {id: 'graveyard', icon: 'Skull', label: 'The Graveyard'}].map(item => {
+                                const Icon = Icons[item.icon];
+                                return (
+                                    <button key={item.id} onClick={()=>setActiveTab(item.id)} className={`flex items-center gap-3 px-4 py-3 rounded-r-full text-sm font-medium transition-colors w-[95%] ${activeTab===item.id ? 'bg-primary/10 text-primary dark:bg-primary-light/15 dark:text-primary-light font-bold' : 'text-gray hover:bg-black/5 dark:hover:bg-white/5 hover:text-dark dark:hover:text-light'}`}>
+                                        <Icon className="w-5 h-5"/> {item.label}
+                                    </button>
+                                );
+                            })}
+                            <div className="h-4"></div>
+                            <button className="flex items-center gap-3 px-4 py-3 rounded-r-full text-sm font-medium transition-colors w-[95%] text-dark dark:text-light hover:bg-black/5 dark:hover:bg-white/5"><Icons.Share2 className="w-5 h-5 text-primary"/> Share & Export</button>
+                        </nav>
+                        <div className="flex-1 overflow-y-auto">
+                            <div className="px-5 text-[11px] font-bold text-gray mb-3 uppercase tracking-wider">12 Prescribed Texts</div>
+                            <div className="space-y-0.5">
+                                {filteredDocs.map(doc => (
+                                    <button key={doc.id} onClick={()=>setSelectedDocId(doc.id)} className={`w-full flex items-center justify-between px-5 py-2.5 rounded-r-full text-sm font-medium transition-colors ${selectedDocId === doc.id ? 'text-primary dark:text-primary-light font-bold bg-primary/5 dark:bg-white/5' : 'text-gray hover:bg-black/5 dark:hover:bg-white/5 hover:text-dark dark:hover:text-light'}`}>
+                                        <span className="truncate flex items-center gap-3"><Icons.Folder className="w-4 h-4 opacity-70"/> {doc.title}</span>
+                                    </button>
+                                ))}
+                            </div>
+                        </div>
+                    </div>
+                    
+                    {/* Main Content Area */}
+                    <main className="flex-1 flex-col min-w-0 bg-[#f0f4f9] dark:bg-onyx relative transition-colors duration-300 flex w-full overflow-y-auto">
+                        {/* Mobile Search - shown only on small screens */}
+                        <div className="p-4 flex gap-2 shrink-0 lg:hidden">
+                             <div className="w-full bg-white dark:bg-surface-dark flex items-center px-4 py-2.5 rounded-full border border-light-gray dark:border-white/10 shadow-sm">
+                                 <Icons.Search className="w-4 h-4 text-gray mr-2"/>
+                                 <input type="text" placeholder="Search texts..." value={searchQuery} onChange={e=>setSearchQuery(e.target.value)} className="bg-transparent border-none outline-none w-full text-sm text-dark dark:text-light placeholder-gray"/>
+                             </div>
+                        </div>
+
+                        {activeTab === 'read' && renderReadMode()}
+                        {activeTab === 'recite' && <RecitationMode />}
+                        {activeTab === 'drill' && <SmartDrill />}
+                        {activeTab === 'graveyard' && <Graveyard />}
+                    </main>
+                </div>
+
+                {/* Mobile Bottom Navigation - el.html style */}
+                <div className="lg:hidden fixed bottom-0 left-0 right-0 h-16 bg-white dark:bg-surface-dark border-t border-light-gray dark:border-border-dark flex justify-around items-center px-2 z-40 pb-safe shadow-[0_-4px_10px_rgba(0,0,0,0.05)] dark:shadow-[0_-4px_10px_rgba(0,0,0,0.2)]">
+                    <button onClick={() => setActiveTab('read')} className={`flex flex-col items-center justify-center w-16 h-full gap-1 transition-colors ${activeTab === 'read' ? 'text-primary' : 'text-gray dark:text-zinc-400 hover:text-dark dark:hover:text-light'}`}>
+                        <Icons.Book className="w-5 h-5"/>
+                        <span className="text-[10px] font-medium">Read</span>
+                    </button>
+                    <button onClick={() => setActiveTab('recite')} className={`flex flex-col items-center justify-center w-16 h-full gap-1 transition-colors ${activeTab === 'recite' ? 'text-primary' : 'text-gray dark:text-zinc-400 hover:text-dark dark:hover:text-light'}`}>
+                        <Icons.Brain className="w-5 h-5"/>
+                        <span className="text-[10px] font-medium">Recite</span>
+                    </button>
+                    <button onClick={() => setActiveTab('drill')} className={`flex flex-col items-center justify-center w-16 h-full gap-1 transition-colors ${activeTab === 'drill' ? 'text-primary' : 'text-gray dark:text-zinc-400 hover:text-dark dark:hover:text-light'}`}>
+                        <Icons.Target className="w-5 h-5"/>
+                        <span className="text-[10px] font-medium">Drill</span>
+                    </button>
+                    <button onClick={() => setActiveTab('graveyard')} className={`flex flex-col items-center justify-center w-16 h-full gap-1 transition-colors ${activeTab === 'graveyard' ? 'text-primary' : 'text-gray dark:text-zinc-400 hover:text-dark dark:hover:text-light'}`}>
+                        <Icons.Skull className="w-5 h-5"/>
+                        <span className="text-[10px] font-medium">Graveyard</span>
+                    </button>
+                </div>
+
+                {/* Mobile Menu Drawer (AnimatePresence style from el.html) */}
+                <AnimatePresence>
+                    {isMobileMenuOpen && (
+                        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 z-50 bg-dark/60 backdrop-blur-sm lg:hidden" onClick={() => setIsMobileMenuOpen(false)}>
+                            <motion.div initial={{ x: '-100%' }} animate={{ x: 0 }} exit={{ x: '-100%' }} transition={{ type: 'spring', damping: 25, stiffness: 200 }} className="absolute top-0 bottom-0 left-0 w-[280px] bg-white dark:bg-surface-dark shadow-2xl flex flex-col" onClick={e => e.stopPropagation()}>
+                                <div className="p-6 border-b border-light-gray dark:border-white/10">
+                                    <div className="flex items-center gap-3 mb-2">
+                                        <img src="https://raw.githubusercontent.com/darren6251/darnote/refs/heads/main/darNote%20logo.png" className="w-8 h-8 rounded-lg shadow-sm"/> 
+                                        <span className="font-bold text-lg dark:text-light">darNote</span>
+                                    </div>
+                                    <div className="text-xs text-gray font-medium">DSE Chinese Tutor</div>
+                                </div>
+                                <div className="flex-1 overflow-y-auto p-4 space-y-1">
+                                    <div className="px-4 text-[11px] font-bold text-gray uppercase tracking-wider mb-2">Prescribed Texts</div>
+                                    <div className="space-y-0.5">
+                                        {MOCK_TEXTS.map(doc => (
+                                            <button key={doc.id} onClick={()=>{setSelectedDocId(doc.id); setIsMobileMenuOpen(false);}} className={`w-full flex items-center justify-between px-4 py-3 rounded-xl text-sm font-medium transition-colors ${selectedDocId === doc.id ? 'bg-primary/10 text-primary dark:text-primary-light font-bold' : 'text-gray dark:text-zinc-400 hover:bg-light-gray dark:hover:bg-white/5'}`}>
+                                                <span className="truncate flex items-center gap-3"><Icons.Folder className="w-4 h-4 opacity-70"/> {doc.title}</span>
+                                            </button>
+                                        ))}
+                                    </div>
+                                    <div className="my-4 border-t border-light-gray dark:border-white/10"></div>
+                                    <button className="flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium transition-colors w-[95%] text-dark dark:text-light hover:bg-black/5 dark:hover:bg-white/5"><Icons.Share2 className="w-5 h-5 text-primary"/> Share & Export</button>
+                                </div>
+                            </motion.div>
+                        </motion.div>
+                    )}
+                </AnimatePresence>
+
+                {/* iOS Selection Popup Bubble */}
+                {popup && (
+                    <div 
+                        className="fixed z-50 bg-[#1e1e1e] text-white px-3 py-2 rounded-xl shadow-[0_10px_25px_rgba(0,0,0,0.5)] flex items-center gap-1 ios-popup"
+                        style={{ top: popup.y, left: popup.x, transform: 'translate(-50%, -100%)' }}
+                    >
+                        <button onClick={() => askAI(popup.text)} className="flex items-center gap-2 px-3 py-1.5 hover:bg-white/10 rounded-lg text-sm font-medium transition-colors whitespace-nowrap">
+                            <Icons.Brain className="w-4 h-4 text-primary-light"/> 問 AI
+                        </button>
+                        <div className="w-px h-5 bg-white/20 mx-1"></div>
+                        <button onClick={() => addToGraveyard(popup.text)} className="flex items-center gap-2 px-3 py-1.5 hover:bg-white/10 rounded-lg text-sm font-medium transition-colors whitespace-nowrap text-gray-300">
+                            <Icons.Skull className="w-4 h-4"/> 入土為安
+                        </button>
+                        <div className="absolute -bottom-2 left-1/2 -translate-x-1/2 w-0 h-0 border-l-[6px] border-r-[6px] border-t-[8px] border-l-transparent border-r-transparent border-t-[#1e1e1e]"></div>
+                    </div>
+                )}
+
+                {/* AI Sliding Panel (el.html style sidebar overlay) */}
+                <AnimatePresence>
+                    {aiPanel.isOpen && (
+                        <motion.div initial={{ x: '100%' }} animate={{ x: 0 }} exit={{ x: '100%' }} className="fixed top-0 right-0 bottom-0 w-full sm:w-[450px] bg-[#f8fafc] dark:bg-onyx shadow-2xl z-[100] border-l border-light-gray dark:border-border-dark flex flex-col">
+                            <div className="px-5 py-4 border-b border-light-gray dark:border-white/5 flex justify-between items-center bg-white dark:bg-surface-dark">
+                                <span className="font-bold text-base flex items-center gap-2 text-dark dark:text-light">
+                                    <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center"><Icons.Bot className="w-4 h-4 text-primary"/></div> 
+                                    AI 補習天王
+                                </span>
+                                <button onClick={()=>setAiPanel({...aiPanel, isOpen: false})} className="p-2 rounded-full hover:bg-light-gray dark:hover:bg-white/10 transition-colors"><Icons.X className="w-5 h-5 text-gray"/></button>
+                            </div>
+                            
+                            <div className="flex-1 overflow-y-auto p-6 space-y-6">
+                                <div className="p-4 bg-primary/5 dark:bg-primary/10 rounded-2xl border border-primary/20 text-dark dark:text-light font-medium chinese-text shadow-sm">
+                                    <span className="text-primary font-bold mr-2">你問：</span>"{aiPanel.queryText}"
+                                </div>
+
+                                {aiPanel.loading ? (
+                                    <div className="flex flex-col items-center justify-center py-20 space-y-4">
+                                        <div className="w-10 h-10 border-4 border-primary/30 border-t-primary rounded-full animate-spin"></div>
+                                        <p className="text-sm text-gray font-medium">AI 正在翻閱 HKEAA 歷屆試題...</p>
+                                    </div>
+                                ) : (
+                                    <div className="space-y-6">
+                                        {/* DeepSeek Reasoning Block */}
+                                        <details className="group bg-white dark:bg-surface-dark border border-light-gray dark:border-border-dark rounded-2xl overflow-hidden shadow-sm">
+                                            <summary className="px-5 py-4 font-bold text-sm text-gray cursor-pointer outline-none flex items-center gap-2 group-open:border-b border-light-gray dark:border-border-dark hover:bg-[#f8fafc] dark:hover:bg-white/5 transition-colors">
+                                                <Icons.Brain className="w-4 h-4"/> 🧠 AI 內部掙扎 (Thinking Process)
+                                            </summary>
+                                            <div className="p-5 text-sm text-gray dark:text-gray/80 chinese-text leading-relaxed whitespace-pre-wrap font-mono bg-[#f8fafc] dark:bg-[#1a1a1c]">
+                                                {aiPanel.data?.reasoning}
+                                            </div>
+                                        </details>
+
+                                        {/* Final Answer Block */}
+                                        <div className="text-dark dark:text-light chinese-text leading-relaxed tracking-wide text-lg bg-white dark:bg-surface-dark p-6 rounded-3xl border border-light-gray dark:border-white/5 shadow-sm" dangerouslySetInnerHTML={{ __html: marked.parse(aiPanel.data?.content || '', {breaks: true}) }} />
+                                    </div>
+                                )}
+                            </div>
+                        </motion.div>
+                    )}
+                </AnimatePresence>
+
+            </div>
+        );
+    };
+
+    const root = ReactDOM.createRoot(document.getElementById('root')); 
+    root.render(<App />);
+</script>
+</body>
+</html>
