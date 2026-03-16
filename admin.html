@@ -112,19 +112,14 @@
             try {
                 const usersMap = new Map();
 
-                // 1. Fetch directly from the users folder natively
-                const usersRef = window.firebase.collection(window.firebase.db, 'artifacts', APP_ID, 'users');
-                const usersSnap = await window.firebase.getDocs(usersRef);
-                usersSnap.docs.forEach(d => {
-                    usersMap.set(d.id, { uid: d.id, profile: {} });
-                });
-
-                // 2. Fetch via collectionGroup to ensure we catch nested profiles (Robust fallback)
+                // Fetch via collectionGroup to ensure we catch nested profiles.
+                // NOTE: Requires Firebase Rule: match /{path=**}/settings/{doc} { allow read: if isAdmin(); }
                 const settingsGroup = window.firebase.collectionGroup(window.firebase.db, 'settings');
                 const settingsSnap = await window.firebase.getDocs(settingsGroup);
                 
                 settingsSnap.docs.forEach(d => {
                     if (d.id === 'profile') {
+                        // The path is structured like: artifacts/APP_ID/users/USER_UID/settings/profile
                         const uid = d.ref.parent.parent.id;
                         if (usersMap.has(uid)) {
                             usersMap.get(uid).profile = d.data();
@@ -134,10 +129,11 @@
                     }
                 });
 
-                // Set final state
                 setAllUsers(Array.from(usersMap.values()));
             } catch(e) {
-                console.error("Error fetching all users", e);
+                console.error("Error fetching all users:", e);
+                // Expose the error directly to the UI so you can see if rules are blocking it
+                alert("Failed to fetch users: " + e.message + "\n\nMake sure you added the collectionGroup rule for 'settings'.");
             }
             setLoadingUsers(false);
         };
@@ -392,7 +388,6 @@
                                             <div className="text-center text-gray-500 py-8 text-sm">No users found.</div>
                                         ) : (
                                             allUsers.map(u => {
-                                                // Intelligent Name Resolver to replace "Anonymous User"
                                                 const displayName = u.profile?.displayName || u.profile?.name || u.profile?.verifiedData?.fullName || u.profile?.email || "Unnamed User";
                                                 
                                                 return (
