@@ -46,6 +46,7 @@
 <script type="text/babel">
     const GDRIVE_API_KEY = "AIzaSyCScFR_D0snZ6hrHob5fUQM7Y2NhK-kTIA"; const GDRIVE_CLIENT_ID = "256215327792-oglegui0q8qj507oao2c2733thcl9lrc.apps.googleusercontent.com"; 
     const GEMINI_PROXY_URL = "https://gemini-proxy-513372702506.us-central1.run.app/proxy"; const GROQ_PROXY_URL = "https://groq-proxy-157237873670.us-central1.run.app/chat/completions";
+    const DEEPSEEK_PROXY_URL = "https://deepseek-proxy-166884560507.us-central1.run.app/api/deepseek";
     const { useState, useEffect, useRef, useMemo, useCallback } = React; const { motion, AnimatePresence, Reorder } = window.Motion;
 
     const Icons={
@@ -161,6 +162,25 @@
             const data = await response.json(); 
             if (data.error) return `API Error: ${data.error.message}`; 
             return data.choices?.[0]?.message?.content || "Empty response."; 
+        } catch (error) { 
+            return `Error: ${error.message}`; 
+        } 
+    };
+
+    const callDeepSeek = async (prompt, sys = "") => { 
+        // Using standard OpenAI chat completion format which DeepSeek natively uses
+        const payload = { model: "deepseek-chat", messages: [ { role: "system", content: sys }, { role: "user", content: prompt } ] }; 
+        try { 
+            const response = await fetch(DEEPSEEK_PROXY_URL, { 
+                method: 'POST', 
+                headers: { 'Content-Type': 'application/json' }, 
+                body: JSON.stringify(payload) 
+            }); 
+            if (!response.ok) return `Error: ${response.status}`; 
+            const data = await response.json(); 
+            if (data.error) return `API Error: ${data.error.message || JSON.stringify(data.error)}`; 
+            // Added fallbacks just in case your custom proxy unwraps the OpenAI format
+            return data.choices?.[0]?.message?.content || data.response || data.message || "DeepSeek is speechless."; 
         } catch (error) { 
             return `Error: ${error.message}`; 
         } 
@@ -1376,7 +1396,7 @@ Include:
 4. **Actionable Recovery Plan** (What exactly should I study next to fix this before my brain melts).
 Make sure to use proper Markdown format, bold formatting for emphasis, and clear headings. Make it sound highly professional yet slightly disappointed in my life choices.`;
 
-                const aiRes = await callAI(prompt, "Post-Mortem Generator", [], GEMINI_PROXY_URL);
+                const aiRes = await callDeepSeek(prompt, "Post-Mortem Generator");
                 updateMock(activeMockId, { generatedSummary: aiRes });
             } catch(e) { alert("Generation failed: " + e.message); }
             setIsGeneratingSummary(false);
