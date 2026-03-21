@@ -3,8 +3,10 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>darNote - Notes, Mind Maps, Error Logs</title>
+    <title>darNote - Your Brain's Operating System</title>
     <link rel="icon" type="image/png" href="https://raw.githubusercontent.com/darren6251/darnote/refs/heads/main/darNote%20logo.png">
+    
+    <!-- Tailwind CSS with Merged Config -->
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
         tailwind.config = {
@@ -22,16 +24,18 @@
                     animation: {
                         'float': 'float 6s ease-in-out infinite',
                         'float-delayed': 'float 6s ease-in-out 3s infinite',
+                        'pulse-slow': 'pulse 4s cubic-bezier(0.4, 0, 0.6, 1) infinite',
                         'blob': 'blob 7s infinite',
                         'fade-up': 'fadeUp 0.8s ease-out forwards',
                         'cursor-move': 'cursorMove 8s infinite',
-                        'menu-pop': 'menuPop 8s infinite',
-                        // Note: timer-text is now in CSS <style> block to ensure it loads
                         'timer-cursor': 'timerCursor 6s ease-in-out infinite',
                         'play-button': 'playButton 6s step-end infinite',
                     },
                     keyframes: {
-                        float: { '0%, 100%': { transform: 'translateY(0)' }, '50%': { transform: 'translateY(-20px)' } },
+                        float: {
+                            '0%, 100%': { transform: 'translateY(0)' },
+                            '50%': { transform: 'translateY(-20px)' },
+                        },
                         blob: {
                             '0%': { transform: 'translate(0px, 0px) scale(1)' },
                             '33%': { transform: 'translate(30px, -50px) scale(1.1)' },
@@ -52,27 +56,19 @@
                             '51%': { opacity: '0' },
                             '100%': { opacity: '0' }
                         },
-                        menuPop: {
-                            '0%, 35%': { opacity: '0', transform: 'scale(0.9)' },
-                            '36%': { opacity: '1', transform: 'scale(1)' },
-                            '48%': { opacity: '1', transform: 'scale(1)' },
-                            '50%': { opacity: '0', transform: 'scale(0.9)' },
-                            '100%': { opacity: '0' }
-                        },
-                        // Timer Animations
                         timerCursor: {
                             '0%, 10%': { opacity: '0', transform: 'translate(30px, 30px)' },
                             '15%': { opacity: '1', transform: 'translate(30px, 30px)' },
-                            '30%': { transform: 'translate(0px, 0px)' }, /* Over button */
-                            '35%': { transform: 'scale(0.8)' }, /* Click */
-                            '40%': { transform: 'scale(1)' }, /* Release */
+                            '30%': { transform: 'translate(0px, 0px)' }, 
+                            '35%': { transform: 'scale(0.8)' }, 
+                            '40%': { transform: 'scale(1)' }, 
                             '60%': { opacity: '1' },
                             '80%, 100%': { opacity: '0', transform: 'translate(30px, 30px)' }
                         },
                         playButton: {
                             '0%, 35%': { transform: 'scale(1)', opacity: '1' },
-                            '36%': { transform: 'scale(0.9)', opacity: '0.5' }, // Pressed
-                            '40%, 100%': { transform: 'scale(1)', opacity: '1', color: '#6366f1' } // Active state
+                            '36%': { transform: 'scale(0.9)', opacity: '0.5' }, 
+                            '40%, 100%': { transform: 'scale(1)', opacity: '1', color: '#6366f1' } 
                         }
                     }
                 }
@@ -80,7 +76,14 @@
         }
     </script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600&family=Outfit:wght@500;700;800&display=swap" rel="stylesheet">
+    
+    <!-- React, Babel, Framer Motion & Lucide -->
+    <script crossorigin src="https://unpkg.com/react@18/umd/react.development.js"></script>
+    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <script src="https://unpkg.com/framer-motion@10.16.4/dist/framer-motion.js"></script>
     <script src="https://unpkg.com/lucide@latest"></script>
+
     <style>
         body { background-color: #050505; color: white; overflow-x: hidden; }
         
@@ -110,16 +113,20 @@
             -webkit-text-fill-color: transparent;
         }
 
-        /* Animated Elements using Pseudo-classes for content switching */
+        .hide-scrollbar::-webkit-scrollbar { display: none; }
+        .hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+        
+        /* 3D Visual Effects */
+        .perspective-1000 { perspective: 1000px; }
+        .transform-style-3d { transform-style: preserve-3d; }
+        .backface-hidden { backface-visibility: hidden; }
+        .rotate-y-180 { transform: rotateY(180deg); }
+
+        /* Timer Animation */
         .timer-display::after {
             content: "25:00";
             animation: timerText 6s step-end infinite;
         }
-
-        /* MOVED HERE: Timer Animation Keyframes 
-           Moving this to pure CSS ensures it works even if Tailwind doesn't 
-           detect the class usage.
-        */
         @keyframes timerText {
             0%, 35% { content: "25:00"; color: white; }
             36% { content: "24:59"; color: #6366f1; }
@@ -152,14 +159,14 @@
     </div>
 
     <!-- Navigation -->
-    <nav class="fixed w-full z-40 top-0 start-0 border-b border-white/5 bg-black/50 backdrop-blur-md">
+    <nav class="fixed w-full z-50 top-0 start-0 border-b border-white/5 bg-black/50 backdrop-blur-md">
         <div class="max-w-7xl mx-auto flex flex-wrap items-center justify-between px-6 py-4">
-            <a href="#" class="flex items-center space-x-3 rtl:space-x-reverse">
+            <a href="#" class="flex items-center space-x-3">
                 <img src="https://raw.githubusercontent.com/darren6251/darnote/refs/heads/main/darNote%20logo.png" class="w-8 h-8 drop-shadow-[0_0_10px_rgba(99,102,241,0.5)]">
-                <span class="self-center text-xl font-semibold whitespace-nowrap dark:text-white font-display tracking-tight">darNote</span>
+                <span class="self-center text-xl font-semibold whitespace-nowrap text-white font-display tracking-tight">darNote</span>
             </a>
-            <div class="flex md:order-2 space-x-3 md:space-x-0 rtl:space-x-reverse">
-                <button onclick="triggerLogin()" class="relative inline-flex h-9 overflow-hidden rounded-full p-[1px] focus:outline-none focus:ring-2 focus:ring-indigo-400 focus:ring-offset-2 focus:ring-offset-slate-950 transition-transform active:scale-95">
+            <div class="flex space-x-3">
+                <button onclick="window.triggerLogin()" class="relative inline-flex h-9 overflow-hidden rounded-full p-[1px] focus:outline-none focus:ring-2 focus:ring-indigo-400 focus:ring-offset-2 focus:ring-offset-slate-950 transition-transform active:scale-95">
                     <span class="absolute inset-[-1000%] animate-[spin_2s_linear_infinite] bg-[conic-gradient(from_90deg_at_50%_50%,#E2E8F0_0%,#6366f1_50%,#E2E8F0_100%)]"></span>
                     <span class="inline-flex h-full w-full cursor-pointer items-center justify-center rounded-full bg-slate-950 px-6 py-1 text-sm font-medium text-white backdrop-blur-3xl">
                         Sign In
@@ -169,37 +176,37 @@
         </div>
     </nav>
 
-    <!-- Hero Section -->
-    <section class="relative min-h-screen flex items-center justify-center overflow-hidden pt-20">
-        <!-- Background Blobs -->
+    <!-- Hero Section (The Sizzle) -->
+    <section class="relative min-h-[90vh] flex items-center justify-center overflow-hidden pt-20">
+        <!-- Background Blobs & Grid -->
         <div class="absolute top-0 -left-4 w-72 h-72 bg-purple-500 rounded-full mix-blend-multiply filter blur-3xl opacity-20 animate-blob"></div>
-        <div class="absolute top-0 -right-4 w-72 h-72 bg-indigo-500 rounded-full mix-blend-multiply filter blur-3xl opacity-20 animate-blob animation-delay-2000"></div>
-        <div class="absolute -bottom-8 left-20 w-72 h-72 bg-pink-500 rounded-full mix-blend-multiply filter blur-3xl opacity-20 animate-blob animation-delay-4000"></div>
+        <div class="absolute top-0 -right-4 w-72 h-72 bg-indigo-500 rounded-full mix-blend-multiply filter blur-3xl opacity-20 animate-blob" style="animation-delay: 2s;"></div>
+        <div class="absolute -bottom-8 left-20 w-72 h-72 bg-pink-500 rounded-full mix-blend-multiply filter blur-3xl opacity-20 animate-blob" style="animation-delay: 4s;"></div>
         <div class="absolute inset-0 grid-bg z-0 pointer-events-none"></div>
 
-        <div class="container mx-auto px-4 z-10 grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
+        <div class="container mx-auto px-4 z-10 grid grid-cols-1 lg:grid-cols-2 gap-12 items-center mt-10">
             
             <!-- Left: Text -->
             <div class="text-center lg:text-left space-y-8">
                 <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/5 border border-white/10 text-indigo-300 text-xs font-medium uppercase tracking-widest animate-fade-up">
-                    <span class="w-2 h-2 rounded-full bg-indigo-500 animate-pulse"></span> Final Release
+                    <span class="w-2 h-2 rounded-full bg-indigo-500 animate-pulse"></span> Interactive Demo Active
                 </div>
                 <h1 class="text-5xl md:text-7xl font-bold font-display leading-tight animate-fade-up" style="animation-delay: 0.1s;">
-                    Notes. Mind Maps.<br>
-                    <span class="text-gradient">Error Logs.</span>
+                    Your brain's<br>
+                    <span class="text-gradient">operating system.</span>
                 </h1>
                 <p class="text-lg text-zinc-400 max-w-xl mx-auto lg:mx-0 animate-fade-up leading-relaxed" style="animation-delay: 0.2s;">
-                    A unified workspace for students. Organize your lecture notes, visualize concepts with nodes, and track your mistakes to stop making them.
+                    Don't just read about it. Touch it. Try out the darNote suite right here, right now, before you even log in.
                 </p>
                 
                 <div class="flex flex-col sm:flex-row gap-4 justify-center lg:justify-start animate-fade-up" style="animation-delay: 0.3s;">
-                    <button onclick="triggerLogin()" class="px-8 py-4 bg-white text-black rounded-xl font-bold hover:bg-zinc-200 transition-colors flex items-center justify-center gap-2 group">
-                        Get Started
-                        <i data-lucide="arrow-right" class="w-4 h-4 group-hover:translate-x-1 transition-transform"></i>
-                    </button>
-                    <a href="#features" class="px-8 py-4 bg-transparent border border-white/20 text-white rounded-xl font-bold hover:bg-white/5 transition-colors flex items-center justify-center">
-                        See Features
+                    <a href="#sandbox-root" class="px-8 py-4 bg-white text-black rounded-xl font-bold hover:bg-zinc-200 transition-colors flex items-center justify-center gap-2 group shadow-[0_0_20px_rgba(255,255,255,0.2)]">
+                        Play with Demo
+                        <i data-lucide="arrow-down" class="w-4 h-4 group-hover:translate-y-1 transition-transform"></i>
                     </a>
+                    <button onclick="window.triggerLogin()" class="px-8 py-4 bg-transparent border border-white/20 text-white rounded-xl font-bold hover:bg-white/5 transition-colors flex items-center justify-center">
+                        Start for Free
+                    </button>
                 </div>
             </div>
 
@@ -207,16 +214,14 @@
             <div class="relative hidden lg:block perspective-1000 group">
                 <div id="tiltCard" class="relative w-full aspect-square transition-transform duration-100 ease-out transform-style-3d">
                     
-                    <!-- Main App Interface (Simulating Note App) -->
+                    <!-- Main App Interface Fake -->
                     <div class="absolute inset-x-4 inset-y-12 bg-[#09090b] border border-white/10 rounded-2xl shadow-2xl overflow-hidden glass-card z-10 transform transition-transform group-hover:scale-[1.02] flex">
-                        <!-- Simulated Sidebar -->
                         <div class="w-16 border-r border-white/5 bg-zinc-900/50 flex flex-col items-center py-4 gap-4">
                             <div class="w-8 h-8 rounded-full bg-white/10"></div>
                             <div class="w-6 h-6 rounded bg-indigo-500/20"></div>
                             <div class="w-6 h-6 rounded bg-white/5"></div>
                             <div class="w-6 h-6 rounded bg-white/5"></div>
                         </div>
-                        <!-- Simulated Editor -->
                         <div class="flex-1 p-6 space-y-4 bg-[#0c0c0c]">
                             <div class="h-8 w-1/3 bg-white/10 rounded animate-pulse mb-6"></div>
                             <div class="h-4 w-full bg-white/5 rounded"></div>
@@ -230,7 +235,7 @@
                         </div>
                     </div>
 
-                    <!-- Floating Widget 1: Task (Bottom Left) -->
+                    <!-- Floating Widgets -->
                     <div class="absolute bottom-20 -left-4 p-4 bg-zinc-900 border border-white/10 rounded-xl shadow-xl z-20 animate-float w-48">
                         <div class="flex items-center gap-3">
                             <div class="w-6 h-6 rounded bg-green-500/20 flex items-center justify-center border border-green-500/50">
@@ -243,7 +248,6 @@
                         </div>
                     </div>
 
-                    <!-- Floating Widget 2: Error Log (Top Right) -->
                     <div class="absolute top-10 -right-4 p-4 bg-zinc-900 border border-white/10 rounded-xl shadow-xl z-20 animate-float-delayed w-48">
                         <div class="flex items-center gap-3">
                             <div class="w-8 h-8 rounded bg-red-500/10 flex items-center justify-center text-red-500 font-bold text-xs">EL</div>
@@ -253,14 +257,13 @@
                             </div>
                         </div>
                     </div>
-
                 </div>
             </div>
         </div>
     </section>
 
     <!-- Features Marquee -->
-    <div class="py-12 border-y border-white/5 bg-white/[0.02] overflow-hidden">
+    <div class="py-8 border-y border-white/5 bg-white/[0.02] overflow-hidden relative z-20">
         <div class="flex gap-12 animate-[marquee_20s_linear_infinite] whitespace-nowrap min-w-full">
             <span class="text-2xl font-display font-bold text-white/20 uppercase">Rich Text Editor</span>
             <span class="text-2xl font-display font-bold text-white/20 uppercase">Infinite Mind Maps</span>
@@ -275,12 +278,23 @@
         @keyframes marquee { 0% { transform: translateX(0); } 100% { transform: translateX(-50%); } }
     </style>
 
-    <!-- Feature Grid -->
-    <section id="features" class="py-24 relative">
+    <!-- Interactive Sandbox Section (The Steak) -->
+    <section class="py-24 relative z-20">
+        <div class="text-center max-w-2xl mx-auto mb-12 px-4">
+            <h2 class="text-3xl md:text-5xl font-bold font-display mb-4">Stop scrolling. <br>Start playing.</h2>
+            <p class="text-zinc-400">Interact with the real darNote UI below. Warning: highly addictive.</p>
+        </div>
+        
+        <!-- React Mount Point -->
+        <div id="sandbox-root" class="w-full max-w-6xl mx-auto px-4 lg:px-8 relative"></div>
+    </section>
+
+    <!-- Feature Grid Section -->
+    <section id="features" class="py-24 relative border-t border-white/5 bg-zinc-950/50">
         <div class="container mx-auto px-4">
             
-            <!-- MOVED WIDGET: Focus Timer -->
-            <div class="relative mx-auto mb-12 p-5 bg-zinc-800 border border-indigo-500/30 rounded-2xl shadow-[0_0_40px_rgba(99,102,241,0.3)] z-30 animate-float w-64 backdrop-blur-xl">
+            <!-- Focus Timer Widget -->
+            <div class="relative mx-auto mb-16 p-5 bg-zinc-800 border border-indigo-500/30 rounded-2xl shadow-[0_0_40px_rgba(99,102,241,0.3)] z-30 animate-float w-64 backdrop-blur-xl">
                 <div class="flex justify-between items-center mb-3">
                     <div class="flex items-center gap-2 text-indigo-300">
                         <i data-lucide="timer" class="w-4 h-4"></i>
@@ -293,36 +307,27 @@
                     </div>
                 </div>
                 <div class="flex items-center justify-between relative bg-black/20 p-3 rounded-xl border border-white/5">
-                    <!-- Animated Timer Text -->
                     <span class="timer-display text-3xl font-mono font-bold tracking-widest"></span> 
-                    
-                    <div class="w-10 h-10 rounded-full bg-indigo-500 hover:bg-indigo-400 transition-colors flex items-center justify-center relative group cursor-pointer shadow-lg shadow-indigo-500/20">
+                    <div class="w-10 h-10 rounded-full bg-indigo-500 flex items-center justify-center relative shadow-lg shadow-indigo-500/20">
                         <i data-lucide="play" class="w-4 h-4 text-white fill-white animate-play-button"></i>
-                        
-                        <!-- Fake Cursor for Animation -->
                         <div class="absolute top-2 left-2 w-3 h-3 bg-white rounded-full shadow-[0_0_10px_white] z-50 pointer-events-none animate-timer-cursor"></div>
                     </div>
                 </div>
             </div>
 
-            <div class="text-center max-w-2xl mx-auto mb-16">
-                <h2 class="text-3xl md:text-4xl font-bold font-display mb-4">Your entire workflow.<br>Uncomplicated.</h2>
-                <p class="text-zinc-400">Everything you need to study effectively, without the clutter.</p>
-            </div>
-
-            <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
-                <!-- Card 1: Workspace -->
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-6 max-w-6xl mx-auto">
+                <!-- Card 1 -->
                 <div class="glass-card p-8 rounded-3xl relative overflow-hidden group">
                     <div class="absolute top-0 right-0 p-8 opacity-20 group-hover:opacity-40 transition-opacity">
                         <i data-lucide="file-text" class="w-24 h-24 text-indigo-500"></i>
                     </div>
                     <h3 class="text-xl font-bold mb-2 relative z-10">Smart Workspace</h3>
                     <p class="text-zinc-400 text-sm relative z-10 leading-relaxed">
-                        Create rich notes, manage to-do lists, <b>use the focus timer</b>, and organize subjects in one unified dashboard.
+                        Create rich notes, manage to-do lists, use the focus timer, and organize subjects in one unified dashboard.
                     </p>
                 </div>
                 
-                <!-- Card 2: Error Log -->
+                <!-- Card 2 -->
                 <div class="glass-card p-8 rounded-3xl relative overflow-hidden group">
                     <div class="absolute top-0 right-0 p-8 opacity-20 group-hover:opacity-40 transition-opacity">
                         <i data-lucide="alert-triangle" class="w-24 h-24 text-red-500"></i>
@@ -333,18 +338,15 @@
                     </p>
                 </div>
 
-                <!-- Card 3: AI & Mind Maps -->
+                <!-- Card 3 -->
                 <div class="glass-card p-8 rounded-3xl relative overflow-hidden group flex flex-col justify-between min-h-[220px]">
                     <div class="absolute top-0 right-0 p-8 opacity-20 group-hover:opacity-40 transition-opacity">
                         <i data-lucide="brain-circuit" class="w-24 h-24 text-emerald-500"></i>
                     </div>
-                    
                     <div>
                         <h3 class="text-xl font-bold mb-2 relative z-10">AI & Visual Thinking</h3>
                         <p class="text-zinc-400 text-sm relative z-10 mb-4">Fix grammar, summarize notes, or switch to an infinite mind map view.</p>
                     </div>
-
-                    <!-- Animation Container -->
                     <div class="relative z-10 bg-black/50 border border-white/5 rounded-lg p-3 font-mono text-xs shadow-inner h-20 flex items-center overflow-hidden">
                         <span class="ai-text-demo block w-full"></span>
                         <div class="absolute w-3 h-3 bg-white rounded-full opacity-0 shadow-[0_0_10px_rgba(255,255,255,0.8)] pointer-events-none animate-cursor-move" style="top:0; left:0; margin-left: -5px; margin-top: -5px;"></div>
@@ -355,14 +357,292 @@
     </section>
 
     <!-- Footer -->
-    <footer class="border-t border-white/5 py-12 text-center text-zinc-600 text-sm">
-        <div class="flex flex-col items-center gap-2">
-            <p class="font-medium text-zinc-500">&copy; 2026 darNote. Designed by Darren Ng</p>
-            <a href="mailto:darren_0625@mc-zero.com" class="hover:text-indigo-400 transition-colors">darren_0625@mc-zero.com</a>
-        </div>
+    <footer class="border-t border-white/5 py-12 text-center text-zinc-500 text-sm bg-black">
+        <p>© 2026 darNote. Built for massive brains in Seoul.</p>
     </footer>
 
-    <!-- Scripts -->
+    <!-- React Sandbox Application Code -->
+    <script type="text/babel">
+        const { useState, useEffect, useRef } = React;
+        const { motion, AnimatePresence } = window.Motion;
+
+        const Icons = {
+            Notes: () => <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" /></svg>,
+            ErrorLog: () => <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>,
+            DefLog: () => <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 002-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" /></svg>,
+            MockExam: () => <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>,
+            Sparkles: () => <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z" /></svg>,
+            Lock: () => <svg className="w-12 h-12" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" /></svg>,
+            Crop: () => <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 8V4m0 0h4M4 4l5 5m11-1V4m0 0h-4m4 0l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5l-5-5m5 5v-4m0 4h-4" /></svg>
+        };
+
+        const LoginWall = ({ action, onClose }) => (
+            <motion.div 
+                initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+                className="absolute inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm rounded-2xl"
+            >
+                <motion.div 
+                    initial={{ scale: 0.9, y: 20 }} animate={{ scale: 1, y: 0 }} exit={{ scale: 0.9, y: 20 }}
+                    className="bg-zinc-900 border border-zinc-700/50 rounded-2xl p-8 max-w-sm w-full text-center shadow-2xl relative overflow-hidden"
+                >
+                    <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-accent to-purple-500"></div>
+                    <button onClick={onClose} className="absolute top-4 right-4 text-zinc-500 hover:text-white">
+                        <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
+                    </button>
+                    
+                    <div className="w-20 h-20 mx-auto bg-zinc-800 rounded-full flex items-center justify-center mb-6 border border-zinc-700 text-accent">
+                        <Icons.Lock />
+                    </div>
+                    
+                    <h3 className="text-xl font-display font-bold text-white mb-2">Hold your horses!</h3>
+                    <p className="text-zinc-400 text-sm mb-6 leading-relaxed">
+                        Trying to <strong className="text-white">{action}</strong>? You'll need to log in to save this masterpiece permanently. Don't worry, it's free.
+                    </p>
+                    
+                    <button onClick={() => window.triggerLogin()} className="w-full py-3 rounded-xl bg-white text-black font-semibold hover:bg-zinc-200 transition-colors flex items-center justify-center gap-2">
+                        <svg className="w-5 h-5" viewBox="0 0 24 24"><path fill="currentColor" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/><path fill="currentColor" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/><path fill="currentColor" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/><path fill="currentColor" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/></svg>
+                        Continue with Google
+                    </button>
+                </motion.div>
+            </motion.div>
+        );
+
+        const MiniNotes = ({ onTriggerWall }) => {
+            const [text, setText] = useState("# The Meaning of Life\n\nTurns out, it's not 42. It's actually finishing all your pending tasks in darNote.\n\nHere are some things I need to remember:\n- The mitochondria is the powerhouse of the cell.\n- Buy more coffee.\n- Pretend to understand React Hooks.");
+            return (
+                <div className="h-full flex flex-col p-6 relative">
+                    <div className="flex items-center justify-between mb-4 border-b border-white/5 pb-4">
+                        <div className="flex items-center gap-2 text-zinc-400 text-sm"><Icons.Notes /> <span>Draft Note</span></div>
+                        <button onClick={() => onTriggerWall("unleash the AI overmind")} className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-indigo-500/10 text-indigo-400 hover:bg-indigo-500/20 text-xs font-medium transition-colors border border-indigo-500/20">
+                            <Icons.Sparkles /> Ask AI
+                        </button>
+                    </div>
+                    <textarea 
+                        className="flex-1 w-full bg-transparent resize-none outline-none text-zinc-300 font-sans leading-relaxed hide-scrollbar"
+                        value={text}
+                        onChange={(e) => setText(e.target.value)}
+                        placeholder="Start typing your genius thoughts here..."
+                    />
+                    <div className="absolute bottom-6 right-6 flex gap-2">
+                        <button onClick={() => onTriggerWall("save this note to the cloud")} className="px-4 py-2 bg-zinc-800 text-sm font-medium rounded-lg hover:bg-zinc-700 transition-colors shadow-lg">
+                            Save Note
+                        </button>
+                    </div>
+                </div>
+            );
+        };
+
+        const MiniErrorLog = ({ onTriggerWall }) => {
+            const errors = [
+                { id: 1, tag: "Math", q: "Integral of e^x?", a: "e^x + C (Don't forget the C!)" },
+                { id: 2, tag: "Bio", q: "What carries oxygen in blood?", a: "Hemoglobin." }
+            ];
+            const [revealed, setRevealed] = useState({});
+            const toggle = (id) => setRevealed(prev => ({...prev, [id]: !prev[id]}));
+
+            return (
+                <div className="h-full flex flex-col p-6">
+                    <div className="flex items-center justify-between mb-6">
+                        <h2 className="text-lg font-bold">Recent Mistakes</h2>
+                        <button onClick={() => onTriggerWall("upload a new embarrassing mistake")} className="px-3 py-1.5 bg-accent rounded-lg text-sm font-medium hover:bg-indigo-500 shadow-lg shadow-indigo-500/20">
+                            + Add Error
+                        </button>
+                    </div>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 flex-1 overflow-y-auto hide-scrollbar">
+                        {errors.map(err => (
+                            <div key={err.id} className="bg-zinc-800/50 border border-zinc-700/50 rounded-xl p-4 flex flex-col cursor-pointer hover:border-zinc-500 transition-colors" onClick={() => toggle(err.id)}>
+                                <span className="text-xs text-accent bg-accent/10 w-max px-2 py-0.5 rounded font-medium mb-2">{err.tag}</span>
+                                <p className="text-white font-medium mb-4 flex-1">{err.q}</p>
+                                <div className={`text-sm p-3 rounded-lg bg-black/30 border border-white/5 transition-all ${revealed[err.id] ? 'opacity-100' : 'opacity-0 blur-sm'}`}>
+                                    <span className="text-emerald-400 font-bold mr-2">A:</span>{err.a}
+                                </div>
+                            </div>
+                        ))}
+                        <div onClick={() => onTriggerWall("view your stats")} className="bg-zinc-800/20 border border-dashed border-zinc-700 rounded-xl p-4 flex items-center justify-center text-zinc-500 cursor-pointer hover:text-white hover:border-zinc-500 transition-colors">
+                            Click to view analytics
+                        </div>
+                    </div>
+                </div>
+            );
+        };
+
+        const MiniDefLog = ({ onTriggerWall }) => {
+            const [flipped, setFlipped] = useState(false);
+            return (
+                <div className="h-full flex flex-col items-center justify-center p-6 perspective-1000 relative">
+                     <div className="absolute top-6 w-full px-6 flex justify-between items-center">
+                        <span className="text-zinc-500 font-medium text-sm">Deck: SAT Vocab</span>
+                        <span className="text-zinc-500 text-sm">1 / 50</span>
+                    </div>
+
+                    <motion.div 
+                        className="w-full max-w-sm h-64 relative cursor-pointer transform-style-3d"
+                        animate={{ rotateY: flipped ? 180 : 0 }}
+                        transition={{ duration: 0.6, type: "spring", stiffness: 260, damping: 20 }}
+                        onClick={() => setFlipped(!flipped)}
+                    >
+                        <div className="absolute inset-0 backface-hidden bg-gradient-to-br from-zinc-800 to-zinc-900 border border-zinc-700 rounded-2xl p-8 flex flex-col items-center justify-center shadow-xl">
+                            <span className="text-xs text-zinc-500 uppercase tracking-widest mb-4">Term</span>
+                            <h2 className="text-3xl font-display font-bold text-center text-white">Ephemeral</h2>
+                            <p className="text-zinc-500 mt-6 text-sm flex items-center gap-2"><Icons.Sparkles className="w-4" /> Tap to flip</p>
+                        </div>
+                        <div className="absolute inset-0 backface-hidden rotate-y-180 bg-gradient-to-br from-indigo-900/40 to-purple-900/40 border border-indigo-500/30 rounded-2xl p-8 flex flex-col items-center justify-center shadow-xl">
+                             <span className="text-xs text-indigo-400 uppercase tracking-widest mb-4">Definition</span>
+                             <p className="text-xl text-center text-white leading-relaxed">Lasting for a very short time; short-lived.</p>
+                        </div>
+                    </motion.div>
+
+                    <div className="mt-12 flex gap-4">
+                        <button onClick={() => onTriggerWall("save your progress")} className="w-12 h-12 rounded-full bg-red-500/10 text-red-500 flex items-center justify-center hover:bg-red-500/20 transition-colors border border-red-500/20">
+                            <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
+                        </button>
+                        <button onClick={() => onTriggerWall("sync your study data")} className="w-12 h-12 rounded-full bg-emerald-500/10 text-emerald-500 flex items-center justify-center hover:bg-emerald-500/20 transition-colors border border-emerald-500/20">
+                            <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" /></svg>
+                        </button>
+                    </div>
+                </div>
+            );
+        };
+
+        const MiniMock = ({ onTriggerWall }) => {
+            const [cropping, setCropping] = useState(false);
+            const [extracted, setExtracted] = useState(false);
+
+            const handleSimulateCrop = () => {
+                if(extracted) return;
+                setCropping(true);
+                setTimeout(() => {
+                    setCropping(false);
+                    setExtracted(true);
+                }, 1200);
+            };
+
+            return (
+                <div className="h-full flex flex-col md:flex-row bg-black/40">
+                    <div className="flex-1 p-4 relative flex items-center justify-center border-r border-white/5 cursor-crosshair overflow-hidden" onClick={handleSimulateCrop}>
+                        <div className="w-full max-w-sm aspect-[1/1.4] bg-white rounded shadow-lg p-6 text-black relative select-none">
+                            <h3 className="font-bold text-lg mb-4 border-b pb-2">AP Calculus BC - Practice Test</h3>
+                            <div className="space-y-4">
+                                <div><span className="font-bold">1.</span> Evaluate the limit as x approaches 0 of sin(x)/x.</div>
+                                <div className="pl-4 space-y-1"><p>(A) 0</p><p>(B) 1</p><p>(C) Infinity</p><p>(D) Undefined</p></div>
+                                <div className="mt-8"><span className="font-bold">2.</span> Find the derivative of f(x) = x^2 ln(x).</div>
+                            </div>
+                            <AnimatePresence>
+                                {cropping && (
+                                    <motion.div 
+                                        initial={{ width: 0, height: 0, top: '20%', left: '10%' }}
+                                        animate={{ width: '80%', height: '30%', top: '20%', left: '10%' }}
+                                        exit={{ opacity: 0 }}
+                                        className="absolute bg-accent/20 border-2 border-accent/50 z-10 rounded-sm"
+                                    />
+                                )}
+                            </AnimatePresence>
+                        </div>
+                        
+                        {!extracted && !cropping && (
+                            <div className="absolute bottom-6 flex items-center gap-2 px-4 py-2 bg-zinc-900 rounded-full text-xs font-medium border border-zinc-700 text-zinc-400 pointer-events-none shadow-xl">
+                                <Icons.Crop /> Click anywhere to extract a question
+                            </div>
+                        )}
+                    </div>
+
+                    <div className="w-full md:w-80 bg-zinc-950 p-4 flex flex-col border-t md:border-t-0 border-white/5">
+                        <h4 className="text-sm font-medium text-zinc-400 mb-4">Extracted Snippets</h4>
+                        {extracted ? (
+                            <motion.div initial={{ x: 50, opacity: 0 }} animate={{ x: 0, opacity: 1 }} className="flex-1 flex flex-col gap-3">
+                                <div className="bg-white p-3 rounded text-black text-sm shadow">
+                                    <span className="font-bold">1.</span> Evaluate the limit as x approaches 0 of sin(x)/x.
+                                </div>
+                                <button onClick={() => onTriggerWall("generate an AI Roast for this question")} className="w-full py-2 bg-gradient-to-r from-accent to-purple-600 rounded-lg text-sm font-bold flex items-center justify-center gap-2 mt-2 shadow-lg shadow-accent/20">
+                                    <Icons.Sparkles /> AI Analyze Issue
+                                </button>
+                                <button onClick={() => setExtracted(false)} className="text-xs text-zinc-500 hover:text-white mt-2">Reset demo</button>
+                            </motion.div>
+                        ) : (
+                            <div className="flex-1 flex items-center justify-center text-zinc-600 text-sm italic">
+                                Slice a question to view it here.
+                            </div>
+                        )}
+                    </div>
+                </div>
+            );
+        };
+
+        const SandboxApp = () => {
+            const [activeTab, setActiveTab] = useState('notes');
+            const [wallAction, setWallAction] = useState(null);
+
+            const tabs = [
+                { id: 'notes', label: 'Notes', icon: Icons.Notes },
+                { id: 'errorLog', label: 'Error Log', icon: Icons.ErrorLog },
+                { id: 'defLog', label: 'Definition Log', icon: Icons.DefLog },
+                { id: 'mock', label: 'Mock Exam', icon: Icons.MockExam },
+            ];
+
+            const renderContent = () => {
+                switch(activeTab) {
+                    case 'notes': return <MiniNotes onTriggerWall={setWallAction} />;
+                    case 'errorLog': return <MiniErrorLog onTriggerWall={setWallAction} />;
+                    case 'defLog': return <MiniDefLog onTriggerWall={setWallAction} />;
+                    case 'mock': return <MiniMock onTriggerWall={setWallAction} />;
+                    default: return null;
+                }
+            };
+
+            return (
+                <div className="relative w-full max-w-5xl mx-auto rounded-2xl border border-white/10 bg-zinc-950 shadow-[0_0_50px_rgba(0,0,0,0.5)] overflow-hidden flex flex-col h-[700px]">
+                    
+                    <div className="h-14 border-b border-white/5 flex items-center px-4 bg-zinc-900/50 justify-between backdrop-blur-md">
+                        <div className="flex gap-2">
+                            <div className="w-3 h-3 rounded-full bg-red-500/80"></div>
+                            <div className="w-3 h-3 rounded-full bg-yellow-500/80"></div>
+                            <div className="w-3 h-3 rounded-full bg-green-500/80"></div>
+                        </div>
+                        
+                        <div className="flex items-center bg-black/40 p-1 rounded-xl border border-white/5">
+                            {tabs.map(tab => (
+                                <button
+                                    key={tab.id}
+                                    onClick={() => setActiveTab(tab.id)}
+                                    className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm font-medium transition-all ${activeTab === tab.id ? 'bg-zinc-800 text-white shadow-sm' : 'text-zinc-500 hover:text-zinc-300'}`}
+                                >
+                                    <tab.icon />
+                                    <span className="hidden sm:inline">{tab.label}</span>
+                                </button>
+                            ))}
+                        </div>
+                        <div className="w-16"></div>
+                    </div>
+
+                    <div className="flex-1 relative overflow-hidden bg-gradient-to-b from-transparent to-zinc-900/20">
+                        <AnimatePresence mode="wait">
+                            <motion.div
+                                key={activeTab}
+                                initial={{ opacity: 0, y: 10 }}
+                                animate={{ opacity: 1, y: 0 }}
+                                exit={{ opacity: 0, y: -10 }}
+                                transition={{ duration: 0.2 }}
+                                className="h-full w-full absolute inset-0"
+                            >
+                                {renderContent()}
+                            </motion.div>
+                        </AnimatePresence>
+                    </div>
+
+                    <AnimatePresence>
+                        {wallAction && (
+                            <LoginWall action={wallAction} onClose={() => setWallAction(null)} />
+                        )}
+                    </AnimatePresence>
+                </div>
+            );
+        };
+
+        const root = ReactDOM.createRoot(document.getElementById('sandbox-root'));
+        root.render(<SandboxApp />);
+    </script>
+
+    <!-- Firebase Auth & Vanilla JS -->
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-app.js";
         import { getAuth, signInWithPopup, GoogleAuthProvider, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-auth.js";
@@ -376,42 +656,37 @@
             const loader = document.getElementById('authLoader');
             if (user) {
                 console.log("User detected.");
-                // Redirect based on device width
                 if (window.innerWidth < 768) {
-                    console.log("Mobile device detected. Redirecting to app...");
                     window.location.href = 'mobile.html';
                 } else {
-                    console.log("Desktop device detected. Redirecting to workspace...");
                     window.location.href = 'home.html';
                 }
             } else {
-                // No user, hide loader and show landing page
-                loader.classList.add('opacity-0', 'pointer-events-none');
+                if (loader) loader.classList.add('opacity-0', 'pointer-events-none');
             }
         });
 
         window.triggerLogin = () => {
             const provider = new GoogleAuthProvider();
-            signInWithPopup(auth, provider)
-                .then((result) => {
-                    // Successful login will trigger onAuthStateChanged above
-                }).catch((error) => {
-                    console.error(error);
-                    alert("Login failed: " + error.message);
-                });
+            signInWithPopup(auth, provider).catch((error) => {
+                console.error(error);
+                alert("Login failed: " + error.message);
+            });
         };
 
-        // Icons
+        // Initialize static Lucide icons
         lucide.createIcons();
 
         // Parallax Effect for Hero (Desktop Only)
         const tiltCard = document.getElementById('tiltCard');
-        document.addEventListener('mousemove', (e) => {
-            if(window.innerWidth < 1024) return;
-            const x = (window.innerWidth - e.pageX * 2) / 100;
-            const y = (window.innerHeight - e.pageY * 2) / 100;
-            tiltCard.style.transform = `rotateY(${x}deg) rotateX(${y}deg)`;
-        });
+        if (tiltCard) {
+            document.addEventListener('mousemove', (e) => {
+                if(window.innerWidth < 1024) return;
+                const x = (window.innerWidth - e.pageX * 2) / 100;
+                const y = (window.innerHeight - e.pageY * 2) / 100;
+                tiltCard.style.transform = `rotateY(${x}deg) rotateX(${y}deg)`;
+            });
+        }
     </script>
 </body>
 </html>
