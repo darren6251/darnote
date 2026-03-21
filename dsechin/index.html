@@ -16,10 +16,10 @@
 <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-app.js";
     import { getAuth, signInWithPopup, GoogleAuthProvider, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-auth.js";
-    import { getFirestore, collection, doc, addDoc, deleteDoc, onSnapshot, query, orderBy } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-firestore.js";
+    import { getFirestore, collection, doc, addDoc, deleteDoc, onSnapshot, query, orderBy, getDoc, setDoc, increment } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-firestore.js";
     
     const app = initializeApp({ apiKey: "AIzaSyAvPEac-03kE4oazvaq8K3T2gxLPsnZO20", authDomain: "darnote625.firebaseapp.com", projectId: "darnote625", storageBucket: "darnote625.firebasestorage.app", messagingSenderId: "16458322562", appId: "1:16458322562:web:8894d71f3e6c326eba1a9b" });
-    window.firebase = { app, auth: getAuth(app), db: getFirestore(app), signInWithPopup, GoogleAuthProvider, signOut, onAuthStateChanged, collection, doc, addDoc, deleteDoc, onSnapshot, query, orderBy };
+    window.firebase = { app, auth: getAuth(app), db: getFirestore(app), signInWithPopup, GoogleAuthProvider, signOut, onAuthStateChanged, collection, doc, addDoc, deleteDoc, onSnapshot, query, orderBy, getDoc, setDoc, increment };
 </script>
 
 <script>
@@ -88,6 +88,39 @@
         }
     };
 
+    // --- FIREBASE AI QUOTA CHECKER ---
+    const checkAndIncrementQuota = async (user, type) => {
+        if (!user || !window.firebase) return false;
+        try {
+            const today = new Date().toISOString().split('T')[0];
+            const ref = window.firebase.doc(window.firebase.db, 'artifacts', "darnote-app", 'users', user.uid, 'ai_usage', today);
+            
+            // The anti-F12 student verification check
+            const profileRef = window.firebase.doc(window.firebase.db, 'artifacts', "darnote-app", 'users', user.uid, 'settings', 'profile');
+            const [snap, profileSnap] = await Promise.all([
+                window.firebase.getDoc(ref),
+                window.firebase.getDoc(profileRef)
+            ]);
+            
+            const isStudent = profileSnap.exists() && ['verified', 'temp_verified'].includes(profileSnap.data().studentStatus);
+            const limit = isStudent ? 10 : 5;
+            
+            let currentVal = snap.exists() ? (snap.data()[type] || 0) : 0;
+            
+            if (currentVal >= limit) return false; // The bouncer says NO
+            
+            const newDocData = { [type]: window.firebase.increment(1) };
+            if (!snap.exists()) {
+                newDocData[type] = 1; 
+            }
+            await window.firebase.setDoc(ref, newDocData, { merge: true });
+            return currentVal + 1; // The bouncer says YES
+        } catch (e) {
+            console.error("Quota check failed:", e);
+            return false;
+        }
+    };
+
     const App = () => {
         const [user, setUser] = useState(null);
         const [isDarkMode, setIsDarkMode] = useState(true);
@@ -95,13 +128,34 @@
         const [showHelpMenu, setShowHelpMenu] = useState(false);
         const [searchQuery, setSearchQuery] = useState('');
         
-        const [activeTab, setActiveTab] = useState('read'); // read, recite, drill, graveyard
-        const [selectedDocId, setSelectedDocId] = useState('t1');
+        // --- ROUTING MEMORY INITIALIZATION ---
+        const [activeTab, setActiveTab] = useState(() => new URLSearchParams(window.location.search).get('tab') || 'read'); 
+        const [selectedDocId, setSelectedDocId] = useState(() => new URLSearchParams(window.location.search).get('doc') || 't1');
+        
         const [graveyard, setGraveyard] = useState([]); 
 
         const [articles, setArticles] = useState(MOCK_TEXTS);
         const [notesData, setNotesData] = useState({});
         const [isNotesPanelOpen, setIsNotesPanelOpen] = useState(false);
+
+        // --- URL ROUTING SYNC ---
+        useEffect(() => {
+            const url = new URL(window.location);
+            url.searchParams.set('tab', activeTab);
+            url.searchParams.set('doc', selectedDocId);
+            window.history.pushState({}, '', url);
+        }, [activeTab, selectedDocId]);
+
+        // Listen for browser back/forward buttons
+        useEffect(() => {
+            const handlePopState = () => {
+                const params = new URLSearchParams(window.location.search);
+                if (params.get('tab')) setActiveTab(params.get('tab'));
+                if (params.get('doc')) setSelectedDocId(params.get('doc'));
+            };
+            window.addEventListener('popstate', handlePopState);
+            return () => window.removeEventListener('popstate', handlePopState);
+        }, []);
 
         // Firebase Auth Listener
         useEffect(() => {
@@ -134,8 +188,10 @@
                 .then(data => {
                     if (data && data.length > 0) {
                         setArticles(data);
-                        // Default to the first loaded article if needed
-                        setSelectedDocId(data[0].id);
+                        // Only default if not set by URL memory
+                        if (!new URLSearchParams(window.location.search).get('doc')) {
+                            setSelectedDocId(data[0].id);
+                        }
                     }
                 })
                 .catch(err => console.warn("Failed to load articles.json", err));
@@ -179,6 +235,14 @@
 
         const askAI = async (text) => {
             setPopup(null);
+            
+            // --- QUOTA CHECK INTERCEPTION ---
+            const quotaAllowed = await checkAndIncrementQuota(user, 'chinese_ai_count');
+            if (quotaAllowed === false) {
+                alert("🛑 Daily AI Limit Reached!\n\nVerified students get 10 free requests, standard mortals get 5. Your brain must do the heavy lifting until tomorrow.");
+                return;
+            }
+
             setAiPanel({ isOpen: true, loading: true, data: null, queryText: text });
             
             // Integrate description into AI prompt if available
@@ -322,6 +386,13 @@
             const [data, setData] = useState(null);
             
             const generateDrill = async () => {
+                // --- QUOTA CHECK INTERCEPTION ---
+                const quotaAllowed = await checkAndIncrementQuota(user, 'chinese_ai_count');
+                if (quotaAllowed === false) {
+                    alert("🛑 Daily AI Limit Reached!\n\nVerified students get 10 free drills, standard mortals get 5. Save some processing power for tomorrow!");
+                    return;
+                }
+
                 setStatus('loading');
                 const descriptionContext = activeDoc.description ? `。參考主旨：${activeDoc.description}` : '';
                 const prompt = `為《${activeDoc.title}》出題${descriptionContext}。段落內容：「${activeDoc.paragraphs.join('')}」`;
@@ -442,10 +513,10 @@
             </div>
         );
 
-        if (!user) return (<div className="h-screen w-full flex items-center justify-center bg-white dark:bg-onyx flex-col gap-6 relative overflow-hidden"><div className="z-10 flex flex-col items-center"><img src="https://raw.githubusercontent.com/darren6251/darnote/refs/heads/main/darNote%20logo.png" className="w-16 h-16 mb-6 rounded-2xl shadow-sm"/><h1 className="text-4xl font-bold text-dark dark:text-light tracking-tight font-sans mb-3">darNote-Chinese</h1><p className="text-base text-gray max-w-sm text-center mb-10">Sign in to sync your DSE survival progress and Graveyard.</p><button onClick={() => window.firebase?.signInWithPopup(window.firebase.auth, new window.firebase.GoogleAuthProvider())} className="bg-primary text-white px-8 py-3.5 rounded-full font-medium flex gap-3 items-center hover:bg-primary-dark transition-all shadow-md hover:shadow-lg w-64 justify-center text-sm"><Icons.Google className="w-4 h-4"/> Continue with Google</button></div></div>);
+        if (!user) return (<div className="h-[100dvh] w-full flex items-center justify-center bg-white dark:bg-onyx flex-col gap-6 relative overflow-hidden"><div className="z-10 flex flex-col items-center"><img src="https://raw.githubusercontent.com/darren6251/darnote/refs/heads/main/darNote%20logo.png" className="w-16 h-16 mb-6 rounded-2xl shadow-sm"/><h1 className="text-4xl font-bold text-dark dark:text-light tracking-tight font-sans mb-3">darNote-Chinese</h1><p className="text-base text-gray max-w-sm text-center mb-10">Sign in to sync your DSE survival progress and Graveyard.</p><button onClick={() => window.firebase?.signInWithPopup(window.firebase.auth, new window.firebase.GoogleAuthProvider())} className="bg-primary text-white px-8 py-3.5 rounded-full font-medium flex gap-3 items-center hover:bg-primary-dark transition-all shadow-md hover:shadow-lg w-64 justify-center text-sm"><Icons.Google className="w-4 h-4"/> Continue with Google</button></div></div>);
 
         return (
-            <div className={`flex flex-col h-screen w-full transition-colors duration-300 ${isDarkMode ? 'dark bg-onyx' : 'bg-white'}`}>
+            <div className={`flex flex-col h-[100dvh] w-full transition-colors duration-300 ${isDarkMode ? 'dark bg-onyx' : 'bg-white'}`}>
                 
                 {/* Global Top Header - darNote el.html Style */}
                 <header className="bg-white dark:bg-surface-dark text-dark dark:text-light px-4 py-2 flex justify-between items-center z-30 shrink-0 border-b border-light-gray dark:border-border-dark h-16">
@@ -527,7 +598,7 @@
                     </div>
                     
                     {/* Main Content Area */}
-                    <main className="flex-1 flex-col min-w-0 bg-[#f0f4f9] dark:bg-onyx relative transition-colors duration-300 flex w-full overflow-y-auto">
+                    <main className="flex-1 flex-col min-w-0 bg-[#f0f4f9] dark:bg-onyx relative transition-colors duration-300 flex w-full overflow-y-auto pb-24 lg:pb-0">
                         {/* Mobile Search - shown only on small screens */}
                         <div className="p-4 flex gap-2 shrink-0 lg:hidden">
                              <div className="w-full bg-white dark:bg-surface-dark flex items-center px-4 py-2.5 rounded-full border border-light-gray dark:border-white/10 shadow-sm">
@@ -535,6 +606,19 @@
                                  <input type="text" placeholder="Search texts..." value={searchQuery} onChange={e=>setSearchQuery(e.target.value)} className="bg-transparent border-none outline-none w-full text-sm text-dark dark:text-light placeholder-gray"/>
                              </div>
                         </div>
+
+                        {/* Mobile Context Banner for specific modes */}
+                        {['recite', 'drill', 'graveyard'].includes(activeTab) && (
+                            <div className="lg:hidden px-4 pt-2 pb-2 shrink-0">
+                                <div className="bg-primary/10 dark:bg-primary/20 text-primary dark:text-primary-light px-4 py-3 rounded-2xl flex items-center gap-3 shadow-sm border border-primary/20 dark:border-primary/30">
+                                    <Icons.Book className="w-5 h-5 shrink-0"/>
+                                    <div className="flex flex-col">
+                                        <span className="text-[10px] uppercase tracking-wider font-bold opacity-80">Active Text</span>
+                                        <span className="text-sm font-bold truncate chinese-text">{activeDoc.title}</span>
+                                    </div>
+                                </div>
+                            </div>
+                        )}
 
                         {activeTab === 'read' && renderReadMode()}
                         {activeTab === 'recite' && <RecitationMode />}
@@ -645,6 +729,16 @@
 
                                         {/* Final Answer Block */}
                                         <div className="text-dark dark:text-light chinese-text leading-relaxed tracking-wide text-lg bg-white dark:bg-surface-dark p-6 rounded-3xl border border-light-gray dark:border-white/5 shadow-sm" dangerouslySetInnerHTML={{ __html: marked.parse(aiPanel.data?.content || '', {breaks: true}) }} />
+                                        
+                                        {/* Action Buttons */}
+                                        <div className="flex gap-3 pt-4 border-t border-light-gray dark:border-white/5 mt-4">
+                                            <button onClick={() => { addToGraveyard(aiPanel.queryText); setAiPanel({...aiPanel, isOpen: false}); }} className="flex-1 bg-primary/10 text-primary hover:bg-primary hover:text-white py-3 rounded-2xl font-bold flex justify-center items-center gap-2 transition-all shadow-sm text-sm">
+                                                <Icons.Skull className="w-4 h-4"/> Save to Graveyard
+                                            </button>
+                                            <button onClick={() => setAiPanel({...aiPanel, isOpen: false})} className="flex-1 bg-light-gray/50 dark:bg-white/5 text-dark dark:text-light py-3 rounded-2xl font-bold flex justify-center items-center gap-2 hover:bg-light-gray dark:hover:bg-white/10 transition-all text-sm">
+                                                <Icons.Book className="w-4 h-4"/> Continue Reading
+                                            </button>
+                                        </div>
                                     </div>
                                 )}
                             </div>
