@@ -407,7 +407,11 @@
 
         useEffect(() => { const unsub = window.firebase.onAuthStateChanged(window.firebase.auth, async (u) => { if (u) { setUser(u); const db = window.firebase.db; window.firebase.getDocs(window.firebase.collection(db, 'artifacts', "darnote-app", 'users', u.uid, 'subjects')).then(snap => { setSubjects(snap.docs.map(d => ({id: d.id, name: d.data().name, topics: d.data().topics || []})).sort((a,b)=>a.name.localeCompare(b.name))); }); window.firebase.onSnapshot(window.firebase.doc(db, 'artifacts', "darnote-app", 'users', u.uid, 'settings', 'profile'), (doc) => { if(doc.exists()) setStudentStatus(doc.data().studentStatus || 'none'); }); } else { setUser(null); setIsLoadingLogs(false); } }); return () => unsub(); }, []);
         useEffect(() => { if(isDarkMode) document.documentElement.classList.add('dark'); else document.documentElement.classList.remove('dark'); }, [isDarkMode]);
-        useEffect(() => { const url = new URL(window.location); if (activeLogId) url.searchParams.set('log', activeLogId); else url.searchParams.delete('log'); window.history.pushState({}, '', url); }, [activeLogId]);
+        
+        // FIX: The Magic Popstate URL Sync
+        useEffect(() => { const url = new URL(window.location); const currentLog = url.searchParams.get('log'); if (activeLogId !== currentLog) { if (activeLogId) url.searchParams.set('log', activeLogId); else url.searchParams.delete('log'); window.history.pushState({}, '', url); } }, [activeLogId]);
+        useEffect(() => { const handlePop = () => { const logId = new URLSearchParams(window.location.search).get('log'); setActiveLogId(logId); if (!logId) setTourStep(0); }; window.addEventListener('popstate', handlePop); return () => window.removeEventListener('popstate', handlePop); }, []);
+
         useEffect(() => { const handleClick = () => setContextMenu({ ...contextMenu, visible: false }); window.addEventListener('click', handleClick); return () => window.removeEventListener('click', handleClick); }, [contextMenu]);
 
         const handleOpenShare = () => {
@@ -454,7 +458,7 @@
         };
 
         const updateLog = (id, updates) => { const timestampedUpdates = { ...updates, lastModified: new Date().toISOString() }; setLogs(prev => prev.map(l => l.id === id ? { ...l, ...timestampedUpdates } : l)); if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current); pendingUpdatesRef.current[id] = { ...(pendingUpdatesRef.current[id] || {}), ...timestampedUpdates }; saveTimeoutRef.current = setTimeout(async () => { const ids = Object.keys(pendingUpdatesRef.current); for (const logId of ids) { const payload = pendingUpdatesRef.current[logId]; delete pendingUpdatesRef.current[logId]; await window.firebase.updateDoc(window.firebase.doc(window.firebase.db, 'artifacts', "darnote-app", 'users', user.uid, 'definition_logs', logId), payload); } }, 3000); };
-        const handleDelete = async (id) => { if(!confirm("Confirm deletion of record. Data retrieval impossible.")) return; setLogs(prev => prev.filter(l => l.id !== id)); if (activeLogId === id) setActiveLogId(null); await window.firebase.deleteDoc(window.firebase.doc(window.firebase.db, 'artifacts', "darnote-app", 'users', user.uid, 'definition_logs', id)); };
+        const handleDelete = async (id) => { if(!confirm("Confirm deletion of record. Data retrieval impossible.")) return; setLogs(prev => prev.filter(l => l.id !== id)); if (activeLogId === id) { setActiveLogId(null); setTourStep(0); } await window.firebase.deleteDoc(window.firebase.doc(window.firebase.db, 'artifacts', "darnote-app", 'users', user.uid, 'definition_logs', id)); };
         const handleDuplicate = async (id) => { const original = logs.find(l => l.id === id); if (!original) return; const { id: _, ...data } = original; const newLog = { ...data, title: `${data.title} (Clone)`, createdAt: new Date().toISOString(), lastModified: new Date().toISOString() }; const docRef = await window.firebase.addDoc(window.firebase.collection(window.firebase.db, 'artifacts', "darnote-app", 'users', user.uid, 'definition_logs'), newLog); setLogs(prev => [{...newLog, id: docRef.id}, ...prev]); };
         const handleCopy = (id) => { const original = logs.find(l => l.id === id); if (original) navigator.clipboard.writeText(JSON.stringify(original)); };
         const handlePaste = async () => { try { const text = await navigator.clipboard.readText(); const data = JSON.parse(text); if (data.title && data.createdAt) { const { id, ...cleanData } = data; const newLog = { ...cleanData, title: `${cleanData.title} (Import)`, createdAt: new Date().toISOString(), lastModified: new Date().toISOString() }; const docRef = await window.firebase.addDoc(window.firebase.collection(window.firebase.db, 'artifacts', "darnote-app", 'users', user.uid, 'definition_logs'), newLog); setLogs(prev => [{...newLog, id: docRef.id}, ...prev]); } else { alert("Payload rejection: Invalid format."); } } catch(e) { alert("Payload rejection: Check clipboard contents."); } };
@@ -610,8 +614,8 @@
                 
                 {/* Global Top Header */}
                 <header className="bg-white dark:bg-surface-dark text-dark dark:text-light px-5 flex justify-between items-center z-30 shrink-0 border-b border-light-gray dark:border-border-dark h-[72px]">
-                    <div className="flex items-center gap-4 font-bold text-xl tracking-tight cursor-pointer px-2" onClick={() => setActiveLogId(null)}>
-                        <button onClick={() => setIsMobileMenuOpen(true)} className="lg:hidden p-2 -ml-2 rounded-full hover:bg-light-gray dark:hover:bg-white/10 transition-colors"><Icons.Menu className="w-6 h-6 text-gray dark:text-zinc-400"/></button>
+                    <div className="flex items-center gap-4 font-bold text-xl tracking-tight cursor-pointer px-2" onClick={() => { setActiveLogId(null); setTourStep(0); }}>
+                        <button onClick={(e) => { e.stopPropagation(); setIsMobileMenuOpen(true); }} className="lg:hidden p-2 -ml-2 rounded-full hover:bg-light-gray dark:hover:bg-white/10 transition-colors"><Icons.Menu className="w-6 h-6 text-gray dark:text-zinc-400"/></button>
                         <img src="https://raw.githubusercontent.com/darren6251/darnote/refs/heads/main/darNote%20logo.png" className="hidden lg:block w-9 h-9 rounded-xl border border-light-gray dark:border-white/10 shadow-sm"/> 
                         <span className="text-dark dark:text-light hidden lg:inline tracking-tight">darNote <span className="font-semibold text-gray">| Vault</span></span>
                         <span className="font-bold lg:hidden">Vault</span>
@@ -737,7 +741,7 @@
                                 {/* Header */}
                                 <header className="h-[72px] flex items-center justify-between px-5 md:px-8 bg-white dark:bg-surface-dark shrink-0 z-10 border-b border-light-gray dark:border-border-dark shadow-sm">
                                     <div className="flex items-center gap-3 overflow-hidden">
-                                        <button onClick={() => setActiveLogId(null)} className="lg:hidden p-2 rounded-full hover:bg-light-gray dark:hover:bg-white/10 text-gray shrink-0 -ml-2"><Icons.ChevronLeft className="w-6 h-6"/></button>
+                                        <button onClick={() => { setActiveLogId(null); setTourStep(0); }} className="lg:hidden p-2 rounded-full hover:bg-light-gray dark:hover:bg-white/10 text-gray shrink-0 -ml-2"><Icons.ChevronLeft className="w-6 h-6"/></button>
                                         <div className="flex items-center gap-2 text-[11px] font-bold text-gray uppercase tracking-widest bg-light-gray/30 dark:bg-dark px-4 py-2 rounded-full">
                                             {activeLog.subject} <Icons.ChevronRight className="w-3.5 h-3.5 opacity-40"/> {activeLog.topic || 'Root'}
                                         </div>
@@ -974,7 +978,11 @@
 
                 <AnimatePresence>
                     {tourStep > 0 && (
-                        <motion.div initial={{opacity: 0}} animate={{opacity: 1}} exit={{opacity: 0}} className="fixed inset-0 z-[150] bg-dark/80 backdrop-blur-sm pointer-events-auto" onClick={handleTourEnd} />
+                        <motion.div initial={{opacity: 0}} animate={{opacity: 1}} exit={{opacity: 0}} className="fixed inset-0 z-[150] bg-dark/80 backdrop-blur-sm pointer-events-auto flex flex-col items-center justify-end pb-24" onClick={handleTourEnd}>
+                            <div className="bg-white/10 backdrop-blur-md px-6 py-3 rounded-full text-white font-bold tracking-widest uppercase text-xs border border-white/20 shadow-2xl animate-pulse pointer-events-none mb-10">
+                                Tap anywhere to exit tour
+                            </div>
+                        </motion.div>
                     )}
                 </AnimatePresence>
 
