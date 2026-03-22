@@ -403,6 +403,7 @@
         const [undoToast, setUndoToast] = useState(null);
         const [showHelpMenu, setShowHelpMenu] = useState(false);
         const [expandedExtras, setExpandedExtras] = useState(false);
+        const [tourStep, setTourStep] = useState(0);
 
         useEffect(() => { const unsub = window.firebase.onAuthStateChanged(window.firebase.auth, async (u) => { if (u) { setUser(u); const db = window.firebase.db; window.firebase.getDocs(window.firebase.collection(db, 'artifacts', "darnote-app", 'users', u.uid, 'subjects')).then(snap => { setSubjects(snap.docs.map(d => ({id: d.id, name: d.data().name, topics: d.data().topics || []})).sort((a,b)=>a.name.localeCompare(b.name))); }); window.firebase.onSnapshot(window.firebase.doc(db, 'artifacts', "darnote-app", 'users', u.uid, 'settings', 'profile'), (doc) => { if(doc.exists()) setStudentStatus(doc.data().studentStatus || 'none'); }); } else { setUser(null); setIsLoadingLogs(false); } }); return () => unsub(); }, []);
         useEffect(() => { if(isDarkMode) document.documentElement.classList.add('dark'); else document.documentElement.classList.remove('dark'); }, [isDarkMode]);
@@ -436,6 +437,20 @@
             setIsEditMode(true); 
             setExpandedExtras(false);
             if(window.innerWidth < 1024) setMobileView('logs');
+            
+            if (!localStorage.getItem('darNote_hasSeenTour')) {
+                setTourStep(1);
+                setTimeout(() => document.getElementById('def-box')?.scrollIntoView({ behavior: 'smooth', block: 'center' }), 100);
+            }
+        };
+
+        const handleTourNext = () => { 
+            setTourStep(2); 
+            setTimeout(() => document.getElementById('scheme-box')?.scrollIntoView({ behavior: 'smooth', block: 'center' }), 100);
+        };
+        const handleTourEnd = () => { 
+            setTourStep(0); 
+            localStorage.setItem('darNote_hasSeenTour', 'true'); 
         };
 
         const updateLog = (id, updates) => { const timestampedUpdates = { ...updates, lastModified: new Date().toISOString() }; setLogs(prev => prev.map(l => l.id === id ? { ...l, ...timestampedUpdates } : l)); if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current); pendingUpdatesRef.current[id] = { ...(pendingUpdatesRef.current[id] || {}), ...timestampedUpdates }; saveTimeoutRef.current = setTimeout(async () => { const ids = Object.keys(pendingUpdatesRef.current); for (const logId of ids) { const payload = pendingUpdatesRef.current[logId]; delete pendingUpdatesRef.current[logId]; await window.firebase.updateDoc(window.firebase.doc(window.firebase.db, 'artifacts', "darnote-app", 'users', user.uid, 'definition_logs', logId), payload); } }, 3000); };
@@ -846,7 +861,7 @@
                                                 {/* Dual Core: Definition & Application */}
                                                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
                                                     {/* Official Definition Box */}
-                                                    <div className="bg-white dark:bg-surface-dark p-8 rounded-[2rem] shadow-sm border-t-4 border-primary border-light-gray dark:border-border-dark flex flex-col h-full relative overflow-hidden">
+                                                    <div id="def-box" className={`bg-white dark:bg-surface-dark p-8 rounded-[2rem] shadow-sm border-t-4 border-primary border-light-gray dark:border-border-dark flex flex-col h-full transition-all duration-500 ${tourStep === 1 ? 'relative z-[160] ring-4 ring-primary/50 shadow-[0_0_40px_rgba(26,115,232,0.4)] scale-[1.02]' : 'relative overflow-hidden'}`}>
                                                         <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-primary to-primary-light"></div>
                                                         <div className="flex justify-between items-center mb-6">
                                                             <h3 className="font-bold text-base text-dark dark:text-light uppercase tracking-widest flex items-center gap-3"><Icons.Book className="w-5 h-5 text-primary"/> Official Definition</h3>
@@ -856,16 +871,42 @@
                                                         <div className="mt-auto">
                                                             <MultiImageUploader images={activeLog.questionImages} onUpdate={(d, a) => handleImageUpdate(d, a, 'question')} label="Source Media" isUploading={uploadingQ} onImageClick={() => setCompareMode(true)} />
                                                         </div>
+                                                        {tourStep === 1 && (
+                                                            <div className="mt-6 bg-[#f0f4f9] dark:bg-onyx text-dark dark:text-light p-6 rounded-2xl shadow-ds-hover border border-primary/30 animate-[scaleIn_0.3s_ease-out]">
+                                                                <div className="flex items-center gap-3 mb-3">
+                                                                    <div className="w-8 h-8 rounded-full bg-primary/20 flex items-center justify-center text-primary font-bold text-lg">1</div>
+                                                                    <h4 className="font-bold text-lg tracking-tight">The Definition</h4>
+                                                                </div>
+                                                                <p className="text-sm text-gray dark:text-zinc-400 mb-5 leading-relaxed font-medium">Dump your textbook definition here. If you're too lazy to type, upload an image and let AI do the reading.</p>
+                                                                <div className="flex justify-end gap-3">
+                                                                    <button onClick={handleTourEnd} className="px-4 py-2 text-[10px] font-bold text-gray hover:bg-light-gray dark:hover:bg-white/5 rounded-full transition-colors uppercase tracking-widest">Skip this, I'm a genius</button>
+                                                                    <button onClick={handleTourNext} className="px-6 py-2 text-sm font-bold bg-primary text-white rounded-full hover:bg-primary-dark transition-colors shadow-[0_4px_12px_rgba(26,115,232,0.3)]">Next Step</button>
+                                                                </div>
+                                                            </div>
+                                                        )}
                                                     </div>
 
                                                     {/* Application Scheme Box */}
-                                                    <div className="bg-white dark:bg-surface-dark p-8 rounded-[2rem] shadow-sm border-t-4 border-success border-light-gray dark:border-border-dark flex flex-col h-full relative overflow-hidden">
+                                                    <div id="scheme-box" className={`bg-white dark:bg-surface-dark p-8 rounded-[2rem] shadow-sm border-t-4 border-success border-light-gray dark:border-border-dark flex flex-col h-full transition-all duration-500 ${tourStep === 2 ? 'relative z-[160] ring-4 ring-success/50 shadow-[0_0_40px_rgba(30,142,62,0.4)] scale-[1.02]' : 'relative overflow-hidden'}`}>
                                                         <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-success to-success/70"></div>
                                                         <h3 className="font-bold text-base text-dark dark:text-light uppercase tracking-widest mb-6 flex items-center gap-3"><Icons.Target className="w-5 h-5 text-success"/> Application Scheme</h3>
                                                         <textarea value={activeLog.schemeText || ""} onChange={(e) => updateLog(activeLog.id, { schemeText: e.target.value })} className="w-full p-5 text-base bg-[#f8fafc] dark:bg-dark border border-transparent rounded-2xl text-dark dark:text-light focus:outline-none focus:border-success/50 transition-colors font-sans mb-6 shadow-inner min-h-[140px] resize-y font-medium" placeholder="Document application schemas, working examples, and criteria..." />
                                                         <div className="mt-auto">
                                                             <MultiImageUploader images={activeLog.schemeImages} onUpdate={(d, a) => handleImageUpdate(d, a, 'scheme')} label="Application Media" isUploading={uploadingS} onImageClick={() => setCompareMode(true)} />
                                                         </div>
+                                                        {tourStep === 2 && (
+                                                            <div className="mt-6 bg-[#f0fdf4] dark:bg-[#12311e] text-dark dark:text-light p-6 rounded-2xl shadow-ds-hover border border-success/30 animate-[scaleIn_0.3s_ease-out]">
+                                                                <div className="flex items-center gap-3 mb-3">
+                                                                    <div className="w-8 h-8 rounded-full bg-success/20 flex items-center justify-center text-success font-bold text-lg">2</div>
+                                                                    <h4 className="font-bold text-lg tracking-tight">The Scheme</h4>
+                                                                </div>
+                                                                <p className="text-sm text-success dark:text-success/80 mb-5 leading-relaxed font-medium">Optional: Paste the teacher's unhinged marking scheme here. Or skip this if you like living dangerously.</p>
+                                                                <div className="flex justify-end gap-3">
+                                                                    <button onClick={handleTourEnd} className="px-4 py-2 text-[10px] font-bold text-success/70 hover:bg-success/10 rounded-full transition-colors uppercase tracking-widest">Skip</button>
+                                                                    <button onClick={handleTourEnd} className="px-6 py-2 text-sm font-bold bg-success text-white rounded-full hover:bg-success/80 transition-colors shadow-[0_4px_12px_rgba(30,142,62,0.3)]">Done!</button>
+                                                                </div>
+                                                            </div>
+                                                        )}
                                                     </div>
                                                 </div>
 
@@ -930,6 +971,12 @@
                         )}
                     </main>
                 </div>
+
+                <AnimatePresence>
+                    {tourStep > 0 && (
+                        <motion.div initial={{opacity: 0}} animate={{opacity: 1}} exit={{opacity: 0}} className="fixed inset-0 z-[150] bg-dark/80 backdrop-blur-sm pointer-events-auto" onClick={handleTourEnd} />
+                    )}
+                </AnimatePresence>
 
                 <AnimatePresence>
                     {undoToast && (
