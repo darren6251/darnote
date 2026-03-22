@@ -448,6 +448,18 @@
             }
         };
 
+        const replayTour = () => {
+            setShowHelpMenu(false);
+            localStorage.removeItem('darNote_hasSeenTour');
+            if (!activeLogId) {
+                createLog();
+            } else {
+                setIsEditMode(true);
+                setTourStep(1);
+                setTimeout(() => document.getElementById('def-box')?.scrollIntoView({ behavior: 'smooth', block: 'center' }), 100);
+            }
+        };
+
         const handleTourNext = () => { 
             setTourStep(2); 
             setTimeout(() => document.getElementById('scheme-box')?.scrollIntoView({ behavior: 'smooth', block: 'center' }), 100);
@@ -641,7 +653,12 @@
                             {showHelpMenu && <div className="fixed inset-0 z-40" onClick={() => setShowHelpMenu(false)}></div>}
                             {showHelpMenu && (
                                 <div className="absolute right-0 top-full mt-2 w-64 bg-white dark:bg-surface-dark border border-light-gray dark:border-white/10 rounded-[2rem] shadow-ds-hover z-50 py-3 overflow-hidden">
-                                    <div className="px-5 py-2 text-[10px] font-bold text-gray uppercase tracking-widest bg-light-gray/30 dark:bg-black/20 border-b border-light-gray/50 dark:border-white/5 mb-2">Support Contact</div>
+                                    <div className="px-5 py-2 text-[10px] font-bold text-gray uppercase tracking-widest bg-light-gray/30 dark:bg-black/20 border-b border-light-gray/50 dark:border-white/5 mb-2">App Guides</div>
+                                    <button onClick={replayTour} className="w-full text-left px-5 py-3 text-base hover:bg-primary/5 text-dark dark:text-light flex items-center gap-4 transition-colors">
+                                        <div className="w-10 h-10 rounded-full bg-accent/10 flex items-center justify-center"><Icons.Target className="w-5 h-5 text-accent"/></div>
+                                        <div><div className="font-bold text-sm">Replay Tutorial</div><div className="text-[11px] text-gray font-medium">For slippery fingers</div></div>
+                                    </button>
+                                    <div className="px-5 py-2 text-[10px] font-bold text-gray uppercase tracking-widest bg-light-gray/30 dark:bg-black/20 border-y border-light-gray/50 dark:border-white/5 my-2">Support Contact</div>
                                     <a href="mailto:darrenng@3-shot.com" onClick={() => setShowHelpMenu(false)} className="w-full text-left px-5 py-3 text-base hover:bg-primary/5 text-dark dark:text-light flex items-center gap-4 transition-colors">
                                         <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center"><Icons.Terminal className="w-5 h-5 text-primary"/></div> 
                                         <div><div className="font-bold text-sm">Email Admin</div><div className="text-[11px] text-gray font-medium">darrenng@3-shot.com</div></div>
