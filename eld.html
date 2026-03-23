@@ -1002,10 +1002,10 @@
 
                 <AnimatePresence>
                     {tourStep > 0 && (
-                        <motion.div initial={{opacity: 0}} animate={{opacity: 1}} exit={{opacity: 0}} className="fixed inset-0 z-[150] bg-dark/80 backdrop-blur-sm pointer-events-auto flex flex-col items-center justify-end pb-24" onClick={handleTourEnd}>
-                            <div className="bg-white/10 backdrop-blur-md px-6 py-3 rounded-full text-white font-bold tracking-widest uppercase text-xs border border-white/20 shadow-2xl animate-pulse pointer-events-none mb-10">
-                                Tap anywhere to exit tour
-                            </div>
+                        <motion.div initial={{opacity: 0}} animate={{opacity: 1}} exit={{opacity: 0}} className="fixed inset-0 z-[150] bg-dark/80 backdrop-blur-sm pointer-events-auto flex flex-col items-center justify-end pb-24">
+                            <button onClick={() => { if (tourStep > 1) { setTourStep(tourStep - 1); setTimeout(() => document.getElementById('def-box')?.scrollIntoView({ behavior: 'smooth', block: 'center' }), 100); } else { handleTourEnd(); } }} className="bg-white/10 backdrop-blur-md px-6 py-3 rounded-full text-white font-bold tracking-widest uppercase text-xs border border-white/20 shadow-2xl hover:bg-white/20 transition-all pointer-events-auto mb-10 flex items-center gap-2 cursor-pointer">
+                                <Icons.ChevronLeft className="w-4 h-4"/> Tap to back
+                            </button>
                         </motion.div>
                     )}
                 </AnimatePresence>
