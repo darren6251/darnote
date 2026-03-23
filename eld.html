@@ -253,11 +253,11 @@
 
         return (
             <div className="space-y-4">
-                <div className="flex justify-between items-center px-1">
-                    <label className="text-sm font-bold text-dark dark:text-light flex items-center gap-2">{label} <span className="text-[11px] font-semibold text-gray bg-light-gray/80 dark:bg-dark px-2.5 py-1 rounded-full">{imageList.length} files</span></label>
-                    <div className="flex gap-2">
-                        <button onClick={handlePasteClick} className="text-xs font-semibold flex items-center gap-1.5 text-primary bg-primary/10 hover:bg-primary/20 px-4 py-2 rounded-full transition-colors"><Icons.Clip className="w-4 h-4"/> Paste Link</button>
-                        <button onClick={() => fileInputRef.current.click()} className="text-xs font-semibold flex items-center gap-1.5 text-white bg-primary hover:bg-primary-dark px-4 py-2 rounded-full transition-colors shadow-sm"><Icons.Plus className="w-4 h-4"/> Upload File</button>
+                <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center px-1 gap-3">
+                    <label className="text-sm font-bold text-dark dark:text-light flex items-center gap-2 w-full sm:w-auto">{label} <span className="text-[11px] font-semibold text-gray bg-light-gray/80 dark:bg-dark px-2.5 py-1 rounded-full">{imageList.length} files</span></label>
+                    <div className="flex flex-wrap gap-2 w-full sm:w-auto">
+                        <button onClick={handlePasteClick} className="flex-1 sm:flex-none text-xs font-semibold flex items-center justify-center gap-1.5 text-primary bg-primary/10 hover:bg-primary/20 px-4 py-2 rounded-full transition-colors"><Icons.Clip className="w-4 h-4"/> Paste Link</button>
+                        <button onClick={() => fileInputRef.current.click()} className="flex-1 sm:flex-none text-xs font-semibold flex items-center justify-center gap-1.5 text-white bg-primary hover:bg-primary-dark px-4 py-2 rounded-full transition-colors shadow-sm"><Icons.Plus className="w-4 h-4"/> Upload File</button>
                     </div>
                     <input type="file" multiple ref={fileInputRef} style={{display:'none'}} onChange={(e) => handleFiles(e.target.files)} accept="image/*,application/pdf" />
                 </div>
@@ -815,7 +815,7 @@
                                                     </div>
 
                                                     {/* Official Text & Application Scheme Side by Side */}
-                                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mb-10 pt-8 border-t border-light-gray dark:border-white/10">
+                                                    <div className="grid grid-cols-1 xl:grid-cols-2 gap-8 mb-10 pt-8 border-t border-light-gray dark:border-white/10">
                                                         {(activeLog.questionText || activeLog.questionImages?.length > 0) && (
                                                             <div>
                                                                 <h3 className="text-xs font-bold text-gray uppercase tracking-widest mb-4 flex items-center gap-2"><Icons.Book className="w-4 h-4"/> Official Definition</h3>
@@ -868,18 +868,18 @@
                                             <div className="space-y-8 animate-[scaleIn_0.2s_ease-out]">
                                                 
                                                 {/* Meta Info */}
-                                                <div className="bg-white dark:bg-surface-dark p-8 rounded-[2rem] shadow-sm border border-light-gray dark:border-border-dark flex flex-col md:flex-row gap-6">
+                                                <div className="bg-white dark:bg-surface-dark p-8 rounded-[2rem] shadow-sm border border-light-gray dark:border-border-dark flex flex-col xl:flex-row gap-6">
                                                     <div className="flex-1">
                                                         <label className="text-[10px] font-bold text-gray uppercase tracking-widest block mb-2 pl-2">Record Title</label>
                                                         <input value={activeLog.title} onChange={e=>updateLog(activeLog.id, {title:e.target.value})} className="w-full bg-transparent text-2xl font-bold outline-none text-dark dark:text-light placeholder-gray px-2" placeholder="Identify the concept..."/>
                                                     </div>
-                                                    <div className="w-px bg-light-gray dark:bg-white/10 hidden md:block"></div>
-                                                    <div className="flex gap-5">
-                                                        <div className="w-36">
+                                                    <div className="w-px bg-light-gray dark:bg-white/10 hidden xl:block"></div>
+                                                    <div className="flex flex-wrap sm:flex-nowrap gap-3 sm:gap-5 w-full md:w-auto mt-4 xl:mt-0">
+                                                        <div className="flex-1 min-w-[120px] sm:w-36">
                                                             <label className="text-[10px] font-bold text-gray uppercase tracking-widest block mb-2 pl-2">Directory</label>
                                                             <select value={activeLog.subject} onChange={e=>updateLog(activeLog.id, {subject:e.target.value, topic: ''})} className="w-full bg-[#f8fafc] dark:bg-dark text-sm font-bold text-dark dark:text-light outline-none px-4 py-3 rounded-2xl border border-transparent hover:border-light-gray dark:hover:border-white/10 cursor-pointer transition-colors shadow-inner"><option>General</option>{subjects.map(s=><option key={s.id} value={s.name}>{s.name}</option>)}</select>
                                                         </div>
-                                                        <div className="w-36">
+                                                        <div className="flex-1 min-w-[120px] sm:w-36">
                                                             <label className="text-[10px] font-bold text-gray uppercase tracking-widest block mb-2 pl-2">Classification</label>
                                                             <select value={activeLog.questionType} onChange={e=>updateLog(activeLog.id, {questionType:e.target.value})} className="w-full bg-[#f8fafc] dark:bg-dark text-sm font-bold text-dark dark:text-light outline-none px-4 py-3 rounded-2xl border border-transparent hover:border-light-gray dark:hover:border-white/10 cursor-pointer transition-colors shadow-inner"><option>Concept</option><option>Law/Rule</option><option>Formula</option></select>
                                                         </div>
@@ -887,11 +887,11 @@
                                                 </div>
 
                                                 {/* Dual Core: Definition & Application */}
-                                                <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                                                <div className="grid grid-cols-1 2xl:grid-cols-2 gap-8">
                                                     {/* Official Definition Box */}
                                                     <div id="def-box" className={`bg-white dark:bg-surface-dark p-8 rounded-[2rem] shadow-sm border-t-4 border-primary border-light-gray dark:border-border-dark flex flex-col h-full transition-all duration-500 ${tourStep === 1 ? 'relative z-[160] ring-4 ring-primary/50 shadow-[0_0_40px_rgba(26,115,232,0.4)] scale-[1.02]' : 'relative overflow-hidden'}`}>
                                                         <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-primary to-primary-light"></div>
-                                                        <div className="flex justify-between items-center mb-6">
+                                                        <div className="flex flex-wrap justify-between items-center gap-3 mb-6">
                                                             <h3 className="font-bold text-base text-dark dark:text-light uppercase tracking-widest flex items-center gap-3"><Icons.Book className="w-5 h-5 text-primary"/> Official Definition</h3>
                                                             <button onClick={handleAutoTitle} onDragOver={handleOcrDragOver} onDragLeave={handleOcrDragLeave} onDrop={handleOcrDrop} className={`text-[10px] font-bold uppercase tracking-widest px-4 py-2 rounded-full transition-all flex items-center gap-2 border shadow-sm ${isAutoTitleLoading ? 'bg-primary/10 text-primary animate-pulse border-primary/20' : 'bg-[#f8fafc] dark:bg-dark border-light-gray dark:border-white/10 text-gray hover:text-primary hover:border-primary/30'} relative group`} title="Drag & Drop a screenshot here"><div className="absolute inset-0 rounded-full bg-primary/20 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none" style={{display: isOcrDragging ? 'none' : 'block'}}></div>{isAutoTitleLoading ? <div className="w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin"/> : <Icons.Scan className="w-4 h-4"/>} <span>{isOcrDragging ? "Drop!" : "AI Extract"}</span></button>
                                                         </div>
@@ -917,7 +917,9 @@
                                                     {/* Application Scheme Box */}
                                                     <div id="scheme-box" className={`bg-white dark:bg-surface-dark p-8 rounded-[2rem] shadow-sm border-t-4 border-success border-light-gray dark:border-border-dark flex flex-col h-full transition-all duration-500 ${tourStep === 2 ? 'relative z-[160] ring-4 ring-success/50 shadow-[0_0_40px_rgba(30,142,62,0.4)] scale-[1.02]' : 'relative overflow-hidden'}`}>
                                                         <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-success to-success/70"></div>
-                                                        <h3 className="font-bold text-base text-dark dark:text-light uppercase tracking-widest mb-6 flex items-center gap-3"><Icons.Target className="w-5 h-5 text-success"/> Application Scheme</h3>
+                                                        <div className="flex flex-wrap justify-between items-center gap-3 mb-6">
+                                                            <h3 className="font-bold text-base text-dark dark:text-light uppercase tracking-widest flex items-center gap-3"><Icons.Target className="w-5 h-5 text-success"/> Application Scheme</h3>
+                                                        </div>
                                                         <textarea value={activeLog.schemeText || ""} onChange={(e) => updateLog(activeLog.id, { schemeText: e.target.value })} className="w-full p-5 text-base bg-[#f8fafc] dark:bg-dark border border-transparent rounded-2xl text-dark dark:text-light focus:outline-none focus:border-success/50 transition-colors font-sans mb-6 shadow-inner min-h-[140px] resize-y font-medium" placeholder="Document application schemas, working examples, and criteria..." />
                                                         <div className="mt-auto">
                                                             <MultiImageUploader images={activeLog.schemeImages} onUpdate={(d, a) => handleImageUpdate(d, a, 'scheme')} label="Application Media" isUploading={uploadingS} onImageClick={() => setCompareMode(true)} />
@@ -949,8 +951,8 @@
                                                 {/* Metadata Accordion */}
                                                 <div className="bg-white dark:bg-surface-dark rounded-[2rem] shadow-sm border border-light-gray dark:border-border-dark overflow-hidden">
                                                     <button onClick={() => setExpandedExtras(!expandedExtras)} className="w-full px-8 py-6 flex justify-between items-center text-sm font-bold text-gray uppercase tracking-widest hover:bg-[#f8fafc] dark:hover:bg-white/5 transition-colors">
-                                                        <span className="flex items-center gap-3"><Icons.Database className="w-5 h-5"/> Extended Metadata (Keywords, Misconceptions, Media Links)</span>
-                                                        <Icons.ChevronRight className={`w-5 h-5 transition-transform ${expandedExtras ? 'rotate-90' : ''}`}/>
+                                                        <span className="flex items-center gap-3 text-left"><Icons.Database className="w-5 h-5 shrink-0"/> Extended Metadata (Keywords, Misconceptions, Media Links)</span>
+                                                        <Icons.ChevronRight className={`w-5 h-5 transition-transform shrink-0 ${expandedExtras ? 'rotate-90' : ''}`}/>
                                                     </button>
                                                     
                                                     <AnimatePresence>
