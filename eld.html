@@ -593,7 +593,36 @@
         const filteredLogs = logs.filter(l => (l.title || '').toLowerCase().includes(searchQuery.toLowerCase()) || (l.questionText || '').toLowerCase().includes(searchQuery.toLowerCase()));
         const currentSub = activeLog ? subjects.find(s=>s.name===activeLog.subject) : null;
 
-        if (!user) return (<div className="h-screen w-full flex items-center justify-center bg-white dark:bg-onyx flex-col gap-6 relative overflow-hidden"><div className="z-10 flex flex-col items-center"><img src="https://raw.githubusercontent.com/darren6251/darnote/refs/heads/main/darNote%20logo.png" className="w-20 h-20 mb-8 rounded-3xl shadow-ds border border-light-gray dark:border-white/10"/><h1 className="text-4xl font-bold text-dark dark:text-light tracking-tight mb-4">darNote Vault</h1><p className="text-base text-gray max-w-sm text-center mb-12 leading-relaxed">Secure academic definitions repository. Authentication required for system access.</p><button onClick={() => window.firebase.signInWithPopup(window.firebase.auth, new window.firebase.GoogleAuthProvider())} className="bg-primary text-white px-10 py-4 rounded-full font-bold flex gap-4 items-center hover:bg-primary-dark transition-all shadow-[0_8px_20px_0_rgba(26,115,232,0.4)] hover:-translate-y-1 w-72 justify-center text-base"><Icons.Google className="w-5 h-5"/> Sign in with Google</button></div></div>);
+        if (!user) return (
+            <div className="min-h-screen w-full flex flex-col items-center justify-center bg-[#f0f4f9] dark:bg-onyx py-12 px-5 overflow-y-auto">
+                <div className="z-10 flex flex-col items-center max-w-md w-full">
+                    <img src="https://raw.githubusercontent.com/darren6251/darnote/refs/heads/main/darNote%20logo.png" className="w-24 h-24 mb-8 rounded-[2rem] shadow-ds border border-light-gray dark:border-white/10"/>
+                    <h1 className="text-4xl md:text-5xl font-bold text-dark dark:text-light tracking-tight mb-4 text-center">darNote Vault</h1>
+                    <p className="text-base text-gray max-w-sm text-center mb-10 leading-relaxed font-medium">Secure academic definitions repository. Authentication required for system access.</p>
+                    <button onClick={() => window.firebase.signInWithPopup(window.firebase.auth, new window.firebase.GoogleAuthProvider())} className="bg-primary text-white px-10 py-4 rounded-full font-bold flex gap-4 items-center hover:bg-primary-dark transition-all shadow-[0_8px_20px_0_rgba(26,115,232,0.4)] hover:-translate-y-1 w-full justify-center text-lg mb-12">
+                        <Icons.Google className="w-6 h-6"/> Sign in with Google
+                    </button>
+                    
+                    <div className="w-full bg-white dark:bg-surface-dark border border-light-gray dark:border-border-dark rounded-[2rem] p-6 md:p-8 shadow-sm animate-[scaleIn_0.3s_ease-out]">
+                        <div className="flex items-center gap-3 mb-6 justify-center">
+                            <div className="w-8 h-8 rounded-full bg-accent/10 flex items-center justify-center"><Icons.Target className="w-4 h-4 text-accent"/></div>
+                            <h3 className="text-sm font-bold text-dark dark:text-light uppercase tracking-widest">Install as Web App</h3>
+                        </div>
+                        <p className="text-sm text-gray text-center mb-8 font-medium leading-relaxed">For the best full-screen experience, add darNote to your Home Screen.</p>
+                        <div className="flex flex-col gap-6">
+                            <div className="flex flex-col items-center bg-[#f8fafc] dark:bg-dark p-4 rounded-2xl border border-light-gray/50 dark:border-white/5 shadow-inner">
+                                <span className="text-[10px] font-bold text-gray uppercase tracking-widest mb-3 bg-white dark:bg-surface-dark px-4 py-1.5 rounded-full shadow-sm">iOS / Safari</span>
+                                <img src="https://lh3.googleusercontent.com/d/14f_z92-Hs8TMkpu4D8HqqqSuxRzFwnqy" className="w-full max-w-[240px] h-auto rounded-xl shadow-sm border border-light-gray dark:border-white/10" alt="iOS Safari Menu"/>
+                            </div>
+                            <div className="flex flex-col items-center bg-[#f8fafc] dark:bg-dark p-4 rounded-2xl border border-light-gray/50 dark:border-white/5 shadow-inner">
+                                <span className="text-[10px] font-bold text-gray uppercase tracking-widest mb-3 bg-white dark:bg-surface-dark px-4 py-1.5 rounded-full shadow-sm">Android / Chrome</span>
+                                <img src="https://lh3.googleusercontent.com/d/1vNw4_bWDRSRsDJGhpLl059HM-6P0SGX9" className="w-full max-w-[240px] h-auto rounded-xl shadow-sm border border-light-gray dark:border-white/10" alt="Android Chrome Menu"/>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        );
 
         return (
             <div className={`flex flex-col h-screen w-full transition-colors duration-300 ${isDarkMode ? 'dark bg-onyx' : 'bg-white'}`}>
