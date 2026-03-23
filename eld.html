@@ -415,21 +415,6 @@
         useEffect(() => { const unsub = window.firebase.onAuthStateChanged(window.firebase.auth, async (u) => { if (u) { setUser(u); const db = window.firebase.db; window.firebase.getDocs(window.firebase.collection(db, 'artifacts', "darnote-app", 'users', u.uid, 'subjects')).then(snap => { setSubjects(snap.docs.map(d => ({id: d.id, name: d.data().name, topics: d.data().topics || []})).sort((a,b)=>a.name.localeCompare(b.name))); }); window.firebase.onSnapshot(window.firebase.doc(db, 'artifacts', "darnote-app", 'users', u.uid, 'settings', 'profile'), (doc) => { if(doc.exists()) setStudentStatus(doc.data().studentStatus || 'none'); }); } else { setUser(null); setIsLoadingLogs(false); } }); return () => unsub(); }, []);
         useEffect(() => { if(isDarkMode) document.documentElement.classList.add('dark'); else document.documentElement.classList.remove('dark'); }, [isDarkMode]);
         
-        // THE ANTI-SWIPE PARALYSIS SPELL (Locks screen during tour)
-        useEffect(() => {
-            if (tourStep === 0) return;
-            const paralyze = (e) => {
-                if (e.target.tagName === 'TEXTAREA') return; // Allow internal textbox scrolling just in case
-                e.preventDefault(); // Nuke the swipe/scroll
-            };
-            window.addEventListener('wheel', paralyze, { passive: false });
-            window.addEventListener('touchmove', paralyze, { passive: false });
-            return () => {
-                window.removeEventListener('wheel', paralyze);
-                window.removeEventListener('touchmove', paralyze);
-            };
-        }, [tourStep]);
-
         // FIX: The Magic Popstate URL Sync
         useEffect(() => { const url = new URL(window.location); const currentLog = url.searchParams.get('log'); if (activeLogId !== currentLog) { if (activeLogId) url.searchParams.set('log', activeLogId); else url.searchParams.delete('log'); window.history.pushState({}, '', url); } }, [activeLogId]);
         useEffect(() => { const handlePop = () => { const logId = new URLSearchParams(window.location.search).get('log'); setActiveLogId(logId); if (!logId) setTourStep(0); }; window.addEventListener('popstate', handlePop); return () => window.removeEventListener('popstate', handlePop); }, []);
@@ -798,7 +783,7 @@
                                     </div>
                                 </header>
                                 
-                                <div className="flex-1 overflow-y-auto overflow-x-hidden px-5 md:px-10 pb-32 pt-6 md:pt-8 scroll-smooth">
+                                <div id="main-scroll-container" className={`flex-1 overflow-x-hidden px-5 md:px-10 pb-32 pt-6 md:pt-8 scroll-smooth ${tourStep > 0 ? 'overflow-y-hidden' : 'overflow-y-auto'}`}>
                                     <div className="max-w-5xl mx-auto">
                                         
                                         {!isEditMode ? (
