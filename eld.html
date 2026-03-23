@@ -783,7 +783,7 @@
                                     </div>
                                 </header>
                                 
-                                <div id="main-scroll-container" className={`flex-1 overflow-x-hidden px-5 md:px-10 pb-32 pt-6 md:pt-8 scroll-smooth ${tourStep > 0 ? 'overflow-y-hidden' : 'overflow-y-auto'}`}>
+                                <div id="main-scroll-container" className="flex-1 overflow-x-hidden overflow-y-auto px-5 md:px-10 pb-32 pt-6 md:pt-8 scroll-smooth">
                                     <div className="max-w-5xl mx-auto">
                                         
                                         {!isEditMode ? (
@@ -1004,11 +1004,14 @@
 
                 <AnimatePresence>
                     {tourStep > 0 && (
-                        <motion.div initial={{opacity: 0}} animate={{opacity: 1}} exit={{opacity: 0}} className="fixed inset-0 z-[150] bg-dark/80 backdrop-blur-sm pointer-events-auto flex flex-col items-center justify-end pb-24">
-                            <button onClick={() => { if (tourStep > 1) { setTourStep(tourStep - 1); setTimeout(() => document.getElementById('def-box')?.scrollIntoView({ behavior: 'smooth', block: 'center' }), 100); } else { handleTourEnd(); } }} className="bg-white/10 backdrop-blur-md px-6 py-3 rounded-full text-white font-bold tracking-widest uppercase text-xs border border-white/20 shadow-2xl hover:bg-white/20 transition-all pointer-events-auto mb-10 flex items-center gap-2 cursor-pointer">
-                                <Icons.ChevronLeft className="w-4 h-4"/> Tap to back
-                            </button>
-                        </motion.div>
+                        <React.Fragment>
+                            <motion.div initial={{opacity: 0}} animate={{opacity: 1}} exit={{opacity: 0}} className="fixed inset-0 z-[150] bg-dark/80 backdrop-blur-sm pointer-events-auto"></motion.div>
+                            <motion.div initial={{opacity: 0, y: 20}} animate={{opacity: 1, y: 0}} exit={{opacity: 0, y: 20}} className="fixed bottom-10 left-1/2 -translate-x-1/2 z-[170]">
+                                <button onClick={() => { if (tourStep > 1) { setTourStep(tourStep - 1); setTimeout(() => document.getElementById('def-box')?.scrollIntoView({ behavior: 'smooth', block: 'center' }), 100); } else { handleTourEnd(); } }} className="bg-[#1a1a1c] dark:bg-white/10 backdrop-blur-md px-6 py-3 rounded-full text-white font-bold tracking-widest uppercase text-xs border border-white/20 shadow-[0_10px_40px_rgba(0,0,0,0.4)] hover:bg-black dark:hover:bg-white/20 hover:scale-105 active:scale-95 transition-all flex items-center gap-2 cursor-pointer">
+                                    <Icons.ChevronLeft className="w-4 h-4"/> {tourStep > 1 ? 'Previous Step' : 'Exit Guide'}
+                                </button>
+                            </motion.div>
+                        </React.Fragment>
                     )}
                 </AnimatePresence>
 
