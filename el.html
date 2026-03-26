@@ -669,6 +669,36 @@
             } catch(e) { alert("Invalid log data in clipboard. Looking for JSON!"); } 
         };
         const handleContextMenu = (e, logId) => { e.preventDefault(); setContextMenu({ visible: true, x: e.clientX, y: e.clientY, logId }); };
+        
+        const addSubject = async () => {
+            const newSubName = prompt("Enter new subject name:");
+            if (!newSubName || !newSubName.trim()) return;
+            const cleanName = newSubName.trim();
+            
+            if (subjects.some(s => s.name.toLowerCase() === cleanName.toLowerCase())) {
+                alert("This subject already exists!");
+                return;
+            }
+
+            const newSubject = { name: cleanName, topics: [] };
+
+            if (!user) {
+                newSubject.id = 'local_sub_' + Date.now();
+                await putDB('subjects', newSubject);
+                setSubjects(prev => [...prev, newSubject].sort((a,b)=>a.name.localeCompare(b.name)));
+                updateLog(activeLogId, { subject: cleanName, topic: '' });
+                return;
+            }
+
+            try {
+                const docRef = await window.firebase.addDoc(window.firebase.collection(window.firebase.db, 'artifacts', "darnote-app", 'users', user.uid, 'subjects'), newSubject);
+                setSubjects(prev => [...prev, { ...newSubject, id: docRef.id }].sort((a,b)=>a.name.localeCompare(b.name)));
+                updateLog(activeLogId, { subject: cleanName, topic: '' });
+            } catch(e) {
+                alert("Failed to add subject: " + e.message);
+            }
+        };
+
         const addTopicToSubject = async (subjectName) => { 
             const subjectDoc = subjects.find(s => s.name === subjectName); 
             if (!subjectDoc) { alert("Cannot add topic to General."); return; } 
@@ -1055,7 +1085,13 @@
                                             <div className="absolute top-0 left-0 right-0 h-2 bg-primary"></div>
                                             <div>
                                                 <label className="text-sm font-medium text-dark dark:text-light block mb-2">Subject</label>
-                                                <select value={activeLog.subject} onChange={e=>updateLog(activeLog.id, {subject:e.target.value, topic: ''})} className="form-control cursor-pointer"><option>General</option>{subjects.map(s=><option key={s.id} value={s.name}>{s.name}</option>)}</select>
+                                                <div className="flex gap-2">
+                                                    <select value={activeLog.subject} onChange={e=>updateLog(activeLog.id, {subject:e.target.value, topic: ''})} className="form-control flex-1 cursor-pointer">
+                                                        <option value="General">General</option>
+                                                        {subjects.map(s=><option key={s.id} value={s.name}>{s.name}</option>)}
+                                                    </select>
+                                                    <button onClick={addSubject} className="w-12 rounded-xl bg-light-gray/50 dark:bg-dark hover:bg-[#e8eaed] dark:hover:bg-white/10 transition-colors text-gray flex items-center justify-center border border-transparent" title="Add New Subject"><Icons.Plus className="w-4 h-4"/></button>
+                                                </div>
                                             </div>
                                             <div>
                                                 <label className="text-sm font-medium text-dark dark:text-light block mb-2">Topic</label>
