@@ -553,9 +553,9 @@
         if (!visible) return null; return (<div className="fixed z-50 bg-white dark:bg-surface-dark border border-light-gray dark:border-white/10 rounded-2xl shadow-ds-hover py-2 w-48 context-menu" style={{ top: y, left: x }}><button onClick={() => onDuplicate(logId)} className="w-full text-left px-4 py-2.5 text-xs font-semibold hover:bg-[#f8fafc] dark:hover:bg-white/5 flex items-center gap-2.5 text-dark dark:text-light transition-colors"><Icons.Plus className="w-3.5 h-3.5 text-gray"/> Duplicate Record</button><button onClick={() => onCopy(logId)} className="w-full text-left px-4 py-2.5 text-xs font-semibold hover:bg-[#f8fafc] dark:hover:bg-white/5 flex items-center gap-2.5 text-dark dark:text-light transition-colors"><Icons.Copy className="w-3.5 h-3.5 text-gray"/> Extract Payload</button><button onClick={onPaste} className="w-full text-left px-4 py-2.5 text-xs font-semibold hover:bg-[#f8fafc] dark:hover:bg-white/5 flex items-center gap-2.5 text-dark dark:text-light transition-colors"><Icons.Clip className="w-3.5 h-3.5 text-gray"/> Inject Payload</button><div className="h-px bg-light-gray dark:bg-white/10 my-1 mx-3"></div><button onClick={() => onDelete(logId)} className="w-full text-left px-4 py-2.5 text-xs font-bold text-danger hover:bg-danger/5 flex items-center gap-2.5 transition-colors"><Icons.Trash className="w-3.5 h-3.5"/> Delete Record</button></div>);
     };
 
-    const SidebarSubjectItem = ({ subject, currentFilter, onSelect }) => {
+    const SidebarSubjectItem = ({ subject, currentFilter, onSelect, onAddTopic }) => {
         const isSelected = currentFilter.startsWith(`subject:${subject.name}`); const [isOpen, setIsOpen] = useState(false); useEffect(() => { if (isSelected) setIsOpen(true); }, [isSelected]);
-        return (<div className="mb-1"><button onClick={() => setIsOpen(!isOpen)} className={`w-full flex items-center justify-between px-3 py-2.5 rounded-xl text-sm font-semibold transition-colors ${isSelected ? 'text-primary dark:text-primary-light bg-primary/10 dark:bg-primary-light/10' : 'text-gray hover:bg-black/5 dark:hover:bg-white/5 hover:text-dark dark:hover:text-light'}`}><span className="truncate flex items-center gap-2.5"><Icons.Folder className="w-4 h-4 opacity-70"/> {subject.name}</span><Icons.ChevronRight className={`w-3.5 h-3.5 transition-transform duration-200 ${isOpen ? 'rotate-90' : ''}`} /></button><AnimatePresence>{isOpen && (<motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }} className="overflow-hidden"><div className="pl-8 space-y-1 mt-1"><button onClick={() => onSelect(`subject:${subject.name}`)} className={`w-full text-left px-3 py-2 rounded-lg text-xs font-medium transition-colors ${currentFilter === `subject:${subject.name}` ? 'text-primary dark:text-primary-light font-bold' : 'text-gray hover:bg-black/5 dark:hover:bg-white/5 hover:text-dark dark:hover:text-light'}`}>All Topics</button>{subject.topics.map(topic => (<button key={topic} onClick={() => onSelect(`subject:${subject.name}:${topic}`)} className={`w-full text-left px-3 py-2 rounded-lg text-xs font-medium transition-colors truncate ${currentFilter === `subject:${subject.name}:${topic}` ? 'text-primary dark:text-primary-light font-bold' : 'text-gray hover:bg-black/5 dark:hover:bg-white/5 hover:text-dark dark:hover:text-light'}`}>{topic}</button>))}</div></motion.div>)}</AnimatePresence></div>);
+        return (<div className="mb-1"><button onClick={() => setIsOpen(!isOpen)} className={`w-full flex items-center justify-between px-3 py-2.5 rounded-xl text-sm font-semibold transition-colors ${isSelected ? 'text-primary dark:text-primary-light bg-primary/10 dark:bg-primary-light/10' : 'text-gray hover:bg-black/5 dark:hover:bg-white/5 hover:text-dark dark:hover:text-light'}`}><span className="truncate flex items-center gap-2.5"><Icons.Folder className="w-4 h-4 opacity-70"/> {subject.name}</span><Icons.ChevronRight className={`w-3.5 h-3.5 transition-transform duration-200 ${isOpen ? 'rotate-90' : ''}`} /></button><AnimatePresence>{isOpen && (<motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }} className="overflow-hidden"><div className="pl-8 space-y-1 mt-1 pb-1"><button onClick={() => onSelect(`subject:${subject.name}`)} className={`w-full text-left px-3 py-2 rounded-lg text-xs font-medium transition-colors ${currentFilter === `subject:${subject.name}` ? 'text-primary dark:text-primary-light font-bold' : 'text-gray hover:bg-black/5 dark:hover:bg-white/5 hover:text-dark dark:hover:text-light'}`}>All Topics</button>{subject.topics.map(topic => (<button key={topic} onClick={() => onSelect(`subject:${subject.name}:${topic}`)} className={`w-full text-left px-3 py-2 rounded-lg text-xs font-medium transition-colors truncate ${currentFilter === `subject:${subject.name}:${topic}` ? 'text-primary dark:text-primary-light font-bold' : 'text-gray hover:bg-black/5 dark:hover:bg-white/5 hover:text-dark dark:hover:text-light'}`}>{topic}</button>))}<button onClick={(e) => { e.stopPropagation(); onAddTopic(subject.name); }} className="w-full text-left px-3 py-1.5 rounded-lg text-[10px] font-bold text-gray hover:text-primary hover:bg-primary/5 transition-colors flex items-center gap-1.5 mt-1"><Icons.Plus className="w-3 h-3"/> Add Topic</button></div></motion.div>)}</AnimatePresence></div>);
     };
 
     const OnboardingScreen = ({ onComplete, onSignIn }) => {
@@ -903,6 +903,22 @@
 
         const handleContextMenu = (e, logId) => { e.preventDefault(); setContextMenu({ visible: true, x: e.clientX, y: e.clientY, logId }); };
 
+        const addSubject = async () => { 
+            const name = prompt("Enter new directory (subject) name:"); 
+            if (!name || name.trim() === '') return; 
+            const cleanName = name.trim(); 
+            if (subjects.some(s => s.name.toLowerCase() === cleanName.toLowerCase())) { alert("Directory already exists."); return; } 
+            const newSub = { name: cleanName, topics: [] }; 
+            if (!user) { 
+                newSub.id = 'local_sub_' + Date.now(); 
+                await putDB('subjects', newSub); 
+                setSubjects(prev => [...prev, newSub].sort((a,b)=>a.name.localeCompare(b.name))); 
+                return; 
+            } 
+            const docRef = await window.firebase.addDoc(window.firebase.collection(window.firebase.db, 'artifacts', 'darnote-app', 'users', user.uid, 'subjects'), newSub); 
+            setSubjects(prev => [...prev, { id: docRef.id, ...newSub }].sort((a,b)=>a.name.localeCompare(b.name))); 
+        };
+
         const addTopicToSubject = async (subjectName) => { 
             const subjectDoc = subjects.find(s => s.name === subjectName); 
             if (!subjectDoc) { alert("Base directory 'General' does not support sub-topics."); return; } 
@@ -1143,8 +1159,11 @@
                                 <button onClick={()=>{setDeckConfig({ isOpen: true }); setIsMobileMenuOpen(false);}} className="flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-semibold transition-colors w-full text-dark dark:text-light hover:bg-black/5 dark:hover:bg-white/5"><Icons.Brain className="w-4 h-4 text-primary"/> Study Deck</button>
                                 <button onClick={()=>{handleOpenShare(); setIsMobileMenuOpen(false);}} className="flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-semibold transition-colors w-full text-dark dark:text-light hover:bg-black/5 dark:hover:bg-white/5"><Icons.Share2 className="w-4 h-4 text-primary"/> Share / Export</button>
                                 <div className="my-4 border-t border-light-gray dark:border-white/10"></div>
-                                <div className="px-4 text-[10px] font-bold text-gray uppercase tracking-widest mb-2 mt-1">Directories</div>
-                                <div className="space-y-1">{subjects.map(s => (<SidebarSubjectItem key={s.id} subject={s} currentFilter={filter} onSelect={(f) => { setFilter(f); setIsMobileMenuOpen(false); }} />))}</div>
+                                <div className="px-4 flex justify-between items-center mb-2 mt-1">
+                                    <span className="text-[10px] font-bold text-gray uppercase tracking-widest">Directories</span>
+                                    <button onClick={addSubject} className="p-1 hover:bg-black/5 dark:hover:bg-white/5 rounded transition-colors text-gray" title="New Directory"><Icons.Plus className="w-3.5 h-3.5"/></button>
+                                </div>
+                                <div className="space-y-1">{subjects.map(s => (<SidebarSubjectItem key={s.id} subject={s} currentFilter={filter} onSelect={(f) => { setFilter(f); setIsMobileMenuOpen(false); }} onAddTopic={addTopicToSubject} />))}</div>
                             </div>
                         </motion.div>
                     </motion.div>
@@ -1236,8 +1255,11 @@
                             <button onClick={handleOpenShare} className="flex items-center gap-2.5 px-3 py-2.5 rounded-xl text-sm font-semibold transition-colors w-full text-dark dark:text-light hover:bg-black/5 dark:hover:bg-white/5"><Icons.Share2 className="w-4 h-4 text-primary"/> Export Data</button>
                         </nav>
                         <div className="flex-1 overflow-y-auto no-scrollbar px-2 border-t border-light-gray/50 dark:border-white/5 pt-5">
-                            <div className="px-3 text-[10px] font-bold text-gray mb-2 uppercase tracking-widest">Directories</div>
-                            <div className="space-y-0.5">{subjects.map(s => (<SidebarSubjectItem key={s.id} subject={s} currentFilter={filter} onSelect={setFilter} />))}</div>
+                            <div className="px-3 flex justify-between items-center mb-2">
+                                <span className="text-[10px] font-bold text-gray uppercase tracking-widest">Directories</span>
+                                <button onClick={addSubject} className="p-1 hover:bg-black/5 dark:hover:bg-white/5 rounded transition-colors text-gray" title="New Directory"><Icons.Plus className="w-3.5 h-3.5"/></button>
+                            </div>
+                            <div className="space-y-0.5">{subjects.map(s => (<SidebarSubjectItem key={s.id} subject={s} currentFilter={filter} onSelect={setFilter} onAddTopic={addTopicToSubject} />))}</div>
                         </div>
                     </div>
                     
