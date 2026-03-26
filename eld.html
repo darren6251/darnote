@@ -1150,6 +1150,7 @@
                     </motion.div>
                 )}</AnimatePresence>
                 <StudentModal isOpen={showStudentModal} onClose={() => setShowStudentModal(false)} user={user} saveToDrive={saveToDrive} getAccessToken={getAccessToken} callGroq={callGroq} />
+                {deckConfig.isOpen && <StudyDeckModal isOpen={deckConfig.isOpen} onClose={() => setDeckConfig({isOpen: false})} user={user} subjects={subjects} logs={logs} updateLog={updateLog} />}
                 
                 {/* Global Top Header */}
                 <header className="bg-white dark:bg-surface-dark text-dark dark:text-light px-4 md:px-5 flex justify-between items-center z-30 shrink-0 border-b border-light-gray dark:border-border-dark h-[64px] md:h-[72px]">
@@ -1521,7 +1522,6 @@
                             !isLoadingLogs && logs.length === 0 ? <WelcomeGuide onCreateFirst={createLog} /> : <div className="flex-1 flex items-center justify-center text-gray/50 flex-col"><Icons.File className="w-12 h-12 mb-4 opacity-20"/><p className="text-sm font-bold tracking-widest uppercase">Select a record to view details.</p></div>
                         )}
                         <AnimatePresence>{isAiOpen && activeLog && user && (<div className="absolute top-0 right-0 bottom-0 w-full sm:w-[380px] z-40 sm:z-30 shadow-2xl border-l border-light-gray dark:border-white/10"><AIChat activeLog={activeLog} onClose={()=>setIsAiOpen(false)} user={user} messages={chatMessages} setMessages={setChatMessages}/></div>)}</AnimatePresence>
-                        {deckConfig.isOpen && <StudyDeckModal isOpen={deckConfig.isOpen} onClose={() => setDeckConfig({isOpen: false})} user={user} subjects={subjects} logs={logs} updateLog={updateLog} />}
                         
                         {/* BIG FLOATING ACTION BUTTON (Mobile Only) */}
                         {!activeLogId && mobileView === 'logs' && logs.length > 0 && (
