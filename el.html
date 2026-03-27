@@ -365,18 +365,75 @@
         if (!visible) return null; return (<div className="fixed z-50 bg-white dark:bg-surface-dark border border-light-gray dark:border-white/10 rounded-xl shadow-ds-hover py-2 w-48 context-menu" style={{ top: y, left: x }}><button onClick={() => onDuplicate(logId)} className="w-full text-left px-4 py-2 text-sm hover:bg-[#f8fafc] dark:hover:bg-white/5 flex items-center gap-3 text-dark dark:text-light transition-colors"><Icons.Plus className="w-4 h-4 text-gray"/> Duplicate</button><button onClick={() => onCopy(logId)} className="w-full text-left px-4 py-2 text-sm hover:bg-[#f8fafc] dark:hover:bg-white/5 flex items-center gap-3 text-dark dark:text-light transition-colors"><Icons.Copy className="w-4 h-4 text-gray"/> Copy Data</button><button onClick={onPaste} className="w-full text-left px-4 py-2 text-sm hover:bg-[#f8fafc] dark:hover:bg-white/5 flex items-center gap-3 text-dark dark:text-light transition-colors"><Icons.Clip className="w-4 h-4 text-gray"/> Paste Log</button><div className="h-px bg-light-gray dark:bg-white/10 my-1 mx-2"></div><button onClick={() => onDelete(logId)} className="w-full text-left px-4 py-2 text-sm text-danger hover:bg-danger/5 flex items-center gap-3 transition-colors"><Icons.Trash className="w-4 h-4"/> Delete</button></div>);
     };
 
-    const SidebarSubjectItem = ({ subject, currentFilter, onSelect, onDeleteSubject, onDeleteTopic }) => {
-        const isSelected = currentFilter.startsWith(`subject:${subject.name}`); const [isOpen, setIsOpen] = useState(false); useEffect(() => { if (isSelected) setIsOpen(true); }, [isSelected]);
+    const SubjectContextMenu = ({ visible, x, y, type, onAddTopic, onRename, onDelete }) => {
+        if (!visible) return null; 
+        // Ensure menu doesn't flow off the screen bottom/right
+        const style = { top: Math.min(y, window.innerHeight - 160), left: Math.min(x, window.innerWidth - 200) };
+        return (
+            <div className="fixed z-[60] bg-white dark:bg-surface-dark border border-light-gray dark:border-white/10 rounded-xl shadow-ds-hover py-2 w-48 context-menu" style={style}>
+                {type === 'subject' && (
+                    <button onClick={onAddTopic} className="w-full text-left px-4 py-2 text-sm hover:bg-[#f8fafc] dark:hover:bg-white/5 flex items-center gap-3 text-dark dark:text-light transition-colors"><Icons.Plus className="w-4 h-4 text-gray"/> Add Topic</button>
+                )}
+                <button onClick={onRename} className="w-full text-left px-4 py-2 text-sm hover:bg-[#f8fafc] dark:hover:bg-white/5 flex items-center gap-3 text-dark dark:text-light transition-colors"><Icons.File className="w-4 h-4 text-gray"/> Rename</button>
+                <div className="h-px bg-light-gray dark:bg-white/10 my-1 mx-2"></div>
+                <button onClick={onDelete} className="w-full text-left px-4 py-2 text-sm text-danger hover:bg-danger/5 flex items-center gap-3 transition-colors"><Icons.Trash className="w-4 h-4"/> Delete</button>
+            </div>
+        );
+    };
+
+    const SidebarSubjectItem = ({ subject, currentFilter, onSelect, onOpenMenu }) => {
+        const isSelected = currentFilter.startsWith(`subject:${subject.name}`); 
+        const [isOpen, setIsOpen] = useState(false); 
+        useEffect(() => { if (isSelected) setIsOpen(true); }, [isSelected]);
+
+        const timerRef = useRef(null);
+        const isLongPress = useRef(false);
+
+        const handleStart = (e, type, topicName = null) => {
+            isLongPress.current = false;
+            const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+            const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+            timerRef.current = setTimeout(() => { 
+                isLongPress.current = true;
+                onOpenMenu(clientX, clientY, type, subject.id, topicName); 
+            }, 500);
+        };
+        const handleEnd = () => { if (timerRef.current) clearTimeout(timerRef.current); };
+        const handleContextMenu = (e, type, topicName = null) => {
+            e.preventDefault(); e.stopPropagation();
+            if (timerRef.current) clearTimeout(timerRef.current);
+            onOpenMenu(e.clientX, e.clientY, type, subject.id, topicName);
+        };
+
+        const isGeneral = subject.name === 'General';
+
+        const handleSubjectClick = (e) => {
+            if (isLongPress.current) { e.preventDefault(); e.stopPropagation(); return; }
+            setIsOpen(!isOpen);
+        };
+
+        const handleTopicClick = (e, topic) => {
+            if (isLongPress.current) { e.preventDefault(); e.stopPropagation(); return; }
+            onSelect(`subject:${subject.name}:${topic}`);
+        };
+
         return (
             <div className="mb-0.5">
-                <div className="group relative flex items-center">
-                    <button onClick={() => setIsOpen(!isOpen)} className={`w-full flex items-center justify-between px-3 py-2 rounded-r-full text-sm font-medium transition-colors pr-8 ${isSelected ? 'text-primary dark:text-primary-light font-bold' : 'text-gray hover:bg-black/5 dark:hover:bg-white/5 hover:text-dark dark:hover:text-light'}`}>
+                <div 
+                    className="group relative flex items-center select-none"
+                    onContextMenu={isGeneral ? undefined : (e) => handleContextMenu(e, 'subject')}
+                    onTouchStart={isGeneral ? undefined : (e) => handleStart(e, 'subject')}
+                    onTouchEnd={isGeneral ? undefined : handleEnd}
+                    onTouchMove={isGeneral ? undefined : handleEnd}
+                    style={{ WebkitTouchCallout: 'none' }}
+                >
+                    <button onClick={handleSubjectClick} className={`w-full flex items-center justify-between px-3 py-2 rounded-r-full text-sm font-medium transition-colors pr-10 ${isSelected ? 'text-primary dark:text-primary-light font-bold' : 'text-gray hover:bg-black/5 dark:hover:bg-white/5 hover:text-dark dark:hover:text-light'}`}>
                         <span className="truncate flex items-center gap-3"><Icons.Folder className="w-4 h-4 opacity-70"/> {subject.name}</span>
                         <Icons.ChevronRight className={`w-3.5 h-3.5 transition-transform duration-200 ${isOpen ? 'rotate-90' : ''}`} />
                     </button>
-                    {subject.name !== 'General' && (
-                        <button onClick={(e) => { e.stopPropagation(); onDeleteSubject(subject.id); }} className="absolute right-2 opacity-0 group-hover:opacity-100 p-1.5 rounded-full hover:bg-danger/10 hover:text-danger transition-all text-gray" title="Delete Subject">
-                            <Icons.Trash className="w-3.5 h-3.5" />
+                    {!isGeneral && (
+                        <button onClick={(e) => handleContextMenu(e, 'subject')} className="absolute right-2 opacity-0 group-hover:opacity-100 p-1.5 rounded-full hover:bg-black/10 dark:hover:bg-white/10 transition-all text-gray" title="More Options">
+                            <Icons.MoreVertical className="w-4 h-4"/>
                         </button>
                     )}
                 </div>
@@ -386,12 +443,20 @@
                             <div className="pl-9 space-y-0.5 mt-0.5">
                                 <button onClick={() => onSelect(`subject:${subject.name}`)} className={`w-full text-left px-3 py-1.5 rounded-r-full text-xs font-medium transition-colors ${currentFilter === `subject:${subject.name}` ? 'bg-primary/10 text-primary dark:bg-primary-light/15 dark:text-primary-light font-bold' : 'text-gray hover:bg-black/5 dark:hover:bg-white/5 hover:text-dark dark:hover:text-light'}`}>All Topics</button>
                                 {subject.topics.map(topic => (
-                                    <div key={topic} className="group relative flex items-center">
-                                        <button onClick={() => onSelect(`subject:${subject.name}:${topic}`)} className={`w-full text-left px-3 py-1.5 rounded-r-full text-xs font-medium transition-colors pr-8 truncate ${currentFilter === `subject:${subject.name}:${topic}` ? 'bg-primary/10 text-primary dark:bg-primary-light/15 dark:text-primary-light font-bold' : 'text-gray hover:bg-black/5 dark:hover:bg-white/5 hover:text-dark dark:hover:text-light'}`}>
+                                    <div 
+                                        key={topic} 
+                                        className="group relative flex items-center select-none"
+                                        onContextMenu={(e) => handleContextMenu(e, 'topic', topic)}
+                                        onTouchStart={(e) => handleStart(e, 'topic', topic)}
+                                        onTouchEnd={handleEnd}
+                                        onTouchMove={handleEnd}
+                                        style={{ WebkitTouchCallout: 'none' }}
+                                    >
+                                        <button onClick={(e) => handleTopicClick(e, topic)} className={`w-full text-left px-3 py-1.5 rounded-r-full text-xs font-medium transition-colors pr-8 truncate ${currentFilter === `subject:${subject.name}:${topic}` ? 'bg-primary/10 text-primary dark:bg-primary-light/15 dark:text-primary-light font-bold' : 'text-gray hover:bg-black/5 dark:hover:bg-white/5 hover:text-dark dark:hover:text-light'}`}>
                                             {topic}
                                         </button>
-                                        <button onClick={(e) => { e.stopPropagation(); onDeleteTopic(subject.id, topic); }} className="absolute right-2 opacity-0 group-hover:opacity-100 p-1 rounded-full hover:bg-danger/10 hover:text-danger transition-all text-gray" title="Delete Topic">
-                                            <Icons.X className="w-3 h-3" />
+                                        <button onClick={(e) => handleContextMenu(e, 'topic', topic)} className="absolute right-2 opacity-0 group-hover:opacity-100 p-1 rounded-full hover:bg-black/10 dark:hover:bg-white/10 transition-all text-gray" title="More Options">
+                                            <Icons.MoreVertical className="w-3.5 h-3.5"/>
                                         </button>
                                     </div>
                                 ))}
@@ -477,6 +542,7 @@
         const [hasMore, setHasMore] = useState(true); 
         const [showSortMenu, setShowSortMenu] = useState(false); 
         const [contextMenu, setContextMenu] = useState({ visible: false, x: 0, y: 0, logId: null });
+        const [subjCtx, setSubjCtx] = useState({ visible: false, x: 0, y: 0, type: null, subjectId: null, topicName: null });
         const [previewLog, setPreviewLog] = useState(null); 
         const [chatMessages, setChatMessages] = useState([{role: 'ai', text: "How can I assist with this error log?"}]);
         const hoverTimeoutRef = useRef(null); 
@@ -574,7 +640,7 @@
 
         useEffect(() => { if(isDarkMode) document.documentElement.classList.add('dark'); else document.documentElement.classList.remove('dark'); }, [isDarkMode]);
         useEffect(() => { const url = new URL(window.location); if (activeLogId) url.searchParams.set('log', activeLogId); else url.searchParams.delete('log'); window.history.pushState({}, '', url); }, [activeLogId]);
-        useEffect(() => { const handleClick = () => setContextMenu({ ...contextMenu, visible: false }); window.addEventListener('click', handleClick); return () => window.removeEventListener('click', handleClick); }, [contextMenu]);
+        useEffect(() => { const handleClick = () => { setContextMenu(prev => ({ ...prev, visible: false })); setSubjCtx(prev => ({...prev, visible: false})); }; window.addEventListener('click', handleClick); return () => window.removeEventListener('click', handleClick); }, []);
 
         const handleOpenShare = () => {
             const activeLog = logs.find(l => l.id === activeLogId);
@@ -704,6 +770,7 @@
             } catch(e) { alert("Invalid log data in clipboard. Looking for JSON!"); } 
         };
         const handleContextMenu = (e, logId) => { e.preventDefault(); setContextMenu({ visible: true, x: e.clientX, y: e.clientY, logId }); };
+        const handleSubjContextMenu = (x, y, type, subjectId, topicName) => { setSubjCtx({ visible: true, x, y, type, subjectId, topicName }); };
         
         const addSubject = async () => {
             const newSubName = prompt("Enter new subject name:");
@@ -734,20 +801,85 @@
             }
         };
 
-        const addTopicToSubject = async (subjectName) => { 
-            const subjectDoc = subjects.find(s => s.name === subjectName); 
-            if (!subjectDoc) { alert("Cannot add topic to General."); return; } 
-            const newTopic = prompt(`Add topic for ${subjectName}:`); 
-            if (!newTopic) return; 
+        const addTopicToSubject = async (identifier, isId = false) => { 
+            const subjectDoc = isId ? subjects.find(s => s.id === identifier) : subjects.find(s => s.name === identifier); 
+            if (!subjectDoc || subjectDoc.name === 'General') { alert("Cannot add topic to General."); return; } 
+            const newTopic = prompt(`Add topic for ${subjectDoc.name}:`); 
+            if (!newTopic || !newTopic.trim()) return; 
+            const cleanTopic = newTopic.trim();
+            if (subjectDoc.topics.includes(cleanTopic)) { alert("Topic already exists."); return; }
+
             if (!user) {
-                const updatedSub = { ...subjectDoc, topics: [...subjectDoc.topics, newTopic] };
+                const updatedSub = { ...subjectDoc, topics: [...subjectDoc.topics, cleanTopic] };
                 await putDB('subjects', updatedSub);
                 setSubjects(prev => prev.map(s => s.id === subjectDoc.id ? updatedSub : s));
                 return;
             }
-            setSubjects(prev => prev.map(s => s.id === subjectDoc.id ? {...s, topics: [...s.topics, newTopic]} : s)); 
+            setSubjects(prev => prev.map(s => s.id === subjectDoc.id ? {...s, topics: [...s.topics, cleanTopic]} : s)); 
             const docRef = window.firebase.doc(window.firebase.db, 'artifacts', 'darnote-app', 'users', user.uid, 'subjects', subjectDoc.id); 
-            await window.firebase.updateDoc(docRef, { topics: window.firebase.arrayUnion(newTopic) }); 
+            await window.firebase.updateDoc(docRef, { topics: window.firebase.arrayUnion(cleanTopic) }); 
+        };
+
+        const renameSubject = async (subjectId) => {
+            const subject = subjects.find(s => s.id === subjectId);
+            if (!subject || subject.name === 'General') return;
+            const newName = prompt(`Rename subject "${subject.name}" to:`, subject.name);
+            if (!newName || newName.trim() === '' || newName.trim() === subject.name) return;
+            const cleanName = newName.trim();
+            if (subjects.some(s => s.name.toLowerCase() === cleanName.toLowerCase())) { alert("Subject name already exists."); return; }
+
+            const oldName = subject.name;
+            setSubjects(prev => prev.map(s => s.id === subjectId ? { ...s, name: cleanName } : s));
+            setLogs(prev => prev.map(l => l.subject === oldName ? { ...l, subject: cleanName } : l));
+            if (filter.startsWith(`subject:${oldName}`)) setFilter(filter.replace(`subject:${oldName}`, `subject:${cleanName}`));
+            if (activeLogId) { const activeL = logs.find(l => l.id === activeLogId); if (activeL && activeL.subject === oldName) updateLog(activeLogId, {subject: cleanName}); }
+
+            if (!user) {
+                await putDB('subjects', { ...subject, name: cleanName });
+                const localLogs = await getAllDB('logs');
+                for (const l of localLogs) { if (l.subject === oldName) await putDB('logs', { ...l, subject: cleanName }); }
+                return;
+            }
+            try {
+                const batch = window.firebase.writeBatch(window.firebase.db);
+                const subRef = window.firebase.doc(window.firebase.db, 'artifacts', "darnote-app", 'users', user.uid, 'subjects', subjectId);
+                batch.update(subRef, { name: cleanName });
+                const logsQuery = window.firebase.query(window.firebase.collection(window.firebase.db, 'artifacts', "darnote-app", 'users', user.uid, 'error_logs'), window.firebase.where('subject', '==', oldName));
+                const logsSnap = await window.firebase.getDocs(logsQuery);
+                logsSnap.forEach(doc => { batch.update(doc.ref, { subject: cleanName }); });
+                await batch.commit();
+            } catch(e) { alert("Rename failed: " + e.message); }
+        };
+
+        const renameTopic = async (subjectId, oldTopic) => {
+            const subject = subjects.find(s => s.id === subjectId);
+            if (!subject) return;
+            const newTopic = prompt(`Rename topic "${oldTopic}" to:`, oldTopic);
+            if (!newTopic || newTopic.trim() === '' || newTopic.trim() === oldTopic) return;
+            const cleanTopic = newTopic.trim();
+            if (subject.topics.includes(cleanTopic)) { alert("Topic already exists."); return; }
+
+            const updatedTopics = subject.topics.map(t => t === oldTopic ? cleanTopic : t);
+            setSubjects(prev => prev.map(s => s.id === subjectId ? { ...s, topics: updatedTopics } : s));
+            setLogs(prev => prev.map(l => (l.subject === subject.name && l.topic === oldTopic) ? { ...l, topic: cleanTopic } : l));
+            if (filter === `subject:${subject.name}:${oldTopic}`) setFilter(`subject:${subject.name}:${cleanTopic}`);
+            if (activeLogId) { const activeL = logs.find(l => l.id === activeLogId); if (activeL && activeL.subject === subject.name && activeL.topic === oldTopic) updateLog(activeLogId, {topic: cleanTopic}); }
+
+            if (!user) {
+                await putDB('subjects', { ...subject, topics: updatedTopics });
+                const localLogs = await getAllDB('logs');
+                for (const l of localLogs) { if (l.subject === subject.name && l.topic === oldTopic) await putDB('logs', { ...l, topic: cleanTopic }); }
+                return;
+            }
+            try {
+                const batch = window.firebase.writeBatch(window.firebase.db);
+                const subRef = window.firebase.doc(window.firebase.db, 'artifacts', "darnote-app", 'users', user.uid, 'subjects', subjectId);
+                batch.update(subRef, { topics: updatedTopics });
+                const logsQuery = window.firebase.query(window.firebase.collection(window.firebase.db, 'artifacts', "darnote-app", 'users', user.uid, 'error_logs'), window.firebase.where('subject', '==', subject.name), window.firebase.where('topic', '==', oldTopic));
+                const logsSnap = await window.firebase.getDocs(logsQuery);
+                logsSnap.forEach(doc => { batch.update(doc.ref, { topic: cleanTopic }); });
+                await batch.commit();
+            } catch(e) { alert("Rename failed: " + e.message); }
         };
 
         const deleteSubject = async (subjectId) => {
@@ -981,6 +1113,7 @@
         return (
             <div className={`flex flex-col h-screen w-full transition-colors duration-300 ${isDarkMode ? 'dark bg-onyx' : 'bg-white'}`}>
                 <ContextMenu visible={contextMenu.visible} x={contextMenu.x} y={contextMenu.y} logId={contextMenu.logId} onDuplicate={handleDuplicate} onDelete={handleDelete} onCopy={handleCopy} onPaste={handlePaste}/>
+                <SubjectContextMenu visible={subjCtx.visible} x={subjCtx.x} y={subjCtx.y} type={subjCtx.type} onAddTopic={() => { addTopicToSubject(subjCtx.subjectId, true); setSubjCtx(prev => ({...prev, visible:false})); }} onRename={() => { subjCtx.type === 'subject' ? renameSubject(subjCtx.subjectId) : renameTopic(subjCtx.subjectId, subjCtx.topicName); setSubjCtx(prev => ({...prev, visible:false})); }} onDelete={() => { subjCtx.type === 'subject' ? deleteSubject(subjCtx.subjectId) : deleteTopic(subjCtx.subjectId, subjCtx.topicName); setSubjCtx(prev => ({...prev, visible:false})); }} />
                 <AnimatePresence>{previewLog && (<div className="fixed z-[100] top-0 bottom-0 left-[340px] md:left-[600px] pointer-events-none flex flex-col justify-center p-4"><motion.div initial={{ opacity: 0, x: -20, scale: 0.95 }} animate={{ opacity: 1, x: 0, scale: 1 }} exit={{ opacity: 0, scale: 0.95 }} className="bg-white dark:bg-surface-dark border border-light-gray dark:border-white/10 rounded-2xl shadow-ds-hover p-3 max-w-lg max-h-[80vh] overflow-hidden flex flex-col"><div className="text-[10px] font-bold px-2 py-1.5 text-gray uppercase tracking-wider flex justify-between"><span>Quick View</span><span className="text-gray">{previewLog.questionType}</span></div><img src={previewLog.questionImages?.[0] || previewLog.imageUrl} className="rounded-xl object-contain max-h-[60vh] bg-[#f8fafc] dark:bg-dark border border-light-gray dark:border-border-dark" /><div className="mt-3 px-2 pb-1"><div className="font-semibold text-sm truncate text-dark dark:text-light mb-0.5">{previewLog.title}</div><div className="text-xs text-gray truncate">{previewLog.subject} • {previewLog.topic || 'No Topic'}</div></div></motion.div></div>)}</AnimatePresence>
                 <AnimatePresence>{compareMode && activeLog && <CompareLightbox activeLog={activeLog} onClose={() => setCompareMode(false)} />}</AnimatePresence>
                 <AnimatePresence>{isMobileMenuOpen && (
@@ -1022,7 +1155,7 @@
                                 <button onClick={()=>{handleOpenShare(); setIsMobileMenuOpen(false);}} className="flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium transition-colors w-[95%] text-dark dark:text-light hover:bg-black/5 dark:hover:bg-white/5"><Icons.Share2 className="w-5 h-5 text-primary"/> Share & Export</button>
                                 <div className="my-4 border-t border-light-gray dark:border-white/10"></div>
                                 <div className="px-4 text-[11px] font-bold text-gray uppercase tracking-wider mb-2">Subjects</div>
-                                <div className="space-y-0.5">{subjects.map(s => (<SidebarSubjectItem key={s.id} subject={s} currentFilter={filter} onSelect={(f) => { setFilter(f); setIsMobileMenuOpen(false); }} onDeleteSubject={deleteSubject} onDeleteTopic={deleteTopic} />))}</div>
+                                <div className="space-y-0.5">{subjects.map(s => (<SidebarSubjectItem key={s.id} subject={s} currentFilter={filter} onSelect={(f) => { setFilter(f); setIsMobileMenuOpen(false); }} onOpenMenu={handleSubjContextMenu} />))}</div>
                             </div>
                         </motion.div>
                     </motion.div>
@@ -1125,7 +1258,7 @@
                             </nav>
                             <div>
                                 <div className="px-5 text-[11px] font-bold text-gray mb-3 uppercase tracking-wider">Subjects</div>
-                                <div className="space-y-0.5">{subjects.map(s => (<SidebarSubjectItem key={s.id} subject={s} currentFilter={filter} onSelect={setFilter} onDeleteSubject={deleteSubject} onDeleteTopic={deleteTopic} />))}</div>
+                                <div className="space-y-0.5">{subjects.map(s => (<SidebarSubjectItem key={s.id} subject={s} currentFilter={filter} onSelect={setFilter} onOpenMenu={handleSubjContextMenu} />))}</div>
                             </div>
                         </div>
                     </div>
