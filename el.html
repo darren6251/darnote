@@ -494,6 +494,8 @@
         const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
         const [undoToast, setUndoToast] = useState(null);
         const [showHelpMenu, setShowHelpMenu] = useState(false);
+        const [isDesktopLogsOpen, setIsDesktopLogsOpen] = useState(false);
+        const [isMobileLogsOpen, setIsMobileLogsOpen] = useState(false);
 
         useEffect(() => { 
             if (!window.firebase) {
@@ -983,18 +985,32 @@
                 <AnimatePresence>{compareMode && activeLog && <CompareLightbox activeLog={activeLog} onClose={() => setCompareMode(false)} />}</AnimatePresence>
                 <AnimatePresence>{isMobileMenuOpen && (
                     <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 z-50 bg-dark/60 backdrop-blur-sm lg:hidden" onClick={() => setIsMobileMenuOpen(false)}>
-                        <motion.div initial={{ x: '-100%' }} animate={{ x: 0 }} exit={{ x: '-100%' }} transition={{ type: 'spring', damping: 25, stiffness: 200 }} className="absolute top-0 bottom-0 left-0 w-[280px] bg-white dark:bg-surface-dark shadow-2xl flex flex-col" onClick={e => e.stopPropagation()}>
-                            <div className="p-6 border-b border-light-gray dark:border-white/10">
+                        <motion.div initial={{ x: '-100%' }} animate={{ x: 0 }} exit={{ x: '-100%' }} transition={{ type: 'spring', damping: 25, stiffness: 200 }} className="absolute top-0 bottom-0 left-0 w-[280px] bg-white dark:bg-surface-dark shadow-2xl flex flex-col h-full overflow-hidden" onClick={e => e.stopPropagation()}>
+                            <div className="p-6 border-b border-light-gray dark:border-white/10 shrink-0">
                                 <div className="flex items-center gap-3 mb-6">
                                     <img src="https://raw.githubusercontent.com/darren6251/darnote/refs/heads/main/darNote%20logo.png" className="w-8 h-8 rounded-lg shadow-sm"/> 
                                     <span className="font-bold text-lg dark:text-light">darNote</span>
                                 </div>
                                 <button onClick={() => { createLog(); setIsMobileMenuOpen(false); }} className="w-full flex items-center justify-center gap-2 bg-primary text-white py-3 rounded-xl font-medium shadow-md hover:bg-primary-dark transition-all"><Icons.Plus className="w-5 h-5"/> New Log</button>
                             </div>
-                            <div className="flex-1 overflow-y-auto p-4 space-y-1">
-                                <a href="note.html" className="flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium text-gray dark:text-zinc-400 hover:bg-light-gray dark:hover:bg-white/5 transition-colors"><Icons.Book className="w-5 h-5"/> Back to Notes</a>
-                                <a href="eld.html" className="flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium text-gray dark:text-zinc-400 hover:bg-light-gray dark:hover:bg-white/5 transition-colors"><Icons.Book className="w-5 h-5"/> Definition Log</a>
-                                <a href="elmock.html" className="flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium text-gray dark:text-zinc-400 hover:bg-light-gray dark:hover:bg-white/5 transition-colors"><Icons.Book className="w-5 h-5"/> Mock Exam Log</a>
+                            <div className="flex-1 overflow-y-auto p-4 space-y-1 pb-32 min-h-0">
+                                <div>
+                                    <button onClick={() => setIsMobileLogsOpen(!isMobileLogsOpen)} className="w-full flex items-center justify-between px-4 py-3 rounded-xl text-sm font-medium text-gray dark:text-zinc-400 hover:bg-light-gray dark:hover:bg-white/5 transition-colors">
+                                        <span className="flex items-center gap-3"><Icons.Folder className="w-5 h-5"/> Switch Logs</span>
+                                        <Icons.ChevronRight className={`w-4 h-4 transition-transform ${isMobileLogsOpen ? 'rotate-90' : ''}`}/>
+                                    </button>
+                                    <AnimatePresence>
+                                        {isMobileLogsOpen && (
+                                            <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }} className="overflow-hidden">
+                                                <div className="pl-6 space-y-1 mt-1">
+                                                    <a href="note.html" className="flex items-center gap-3 px-4 py-2.5 rounded-xl text-sm font-medium text-gray dark:text-zinc-400 hover:bg-light-gray dark:hover:bg-white/5 transition-colors"><Icons.Book className="w-4 h-4"/> Back to Notes</a>
+                                                    <a href="eld.html" className="flex items-center gap-3 px-4 py-2.5 rounded-xl text-sm font-medium text-gray dark:text-zinc-400 hover:bg-light-gray dark:hover:bg-white/5 transition-colors"><Icons.Book className="w-4 h-4"/> Definition Log</a>
+                                                    <a href="elmock.html" className="flex items-center gap-3 px-4 py-2.5 rounded-xl text-sm font-medium text-gray dark:text-zinc-400 hover:bg-light-gray dark:hover:bg-white/5 transition-colors"><Icons.Book className="w-4 h-4"/> Mock Exam Log</a>
+                                                </div>
+                                            </motion.div>
+                                        )}
+                                    </AnimatePresence>
+                                </div>
                                 <a href="report.html" className="flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium text-gray dark:text-zinc-400 hover:bg-light-gray dark:hover:bg-white/5 transition-colors"><Icons.ChartBar className="w-5 h-5"/> Analytics</a>
                                 <div className="my-4 border-t border-light-gray dark:border-white/10"></div>
                                 <div className="px-4 text-[11px] font-bold text-gray uppercase tracking-wider mb-2">Filters</div>
@@ -1073,33 +1089,49 @@
                     </div>
                 </header>
 
-                <div className="flex-1 flex overflow-hidden">
+                <div className="flex-1 flex overflow-hidden min-h-0">
                     {/* Left Sidebar - Google Drive style nav pills */}
-                    <div className="w-[260px] flex-shrink-0 bg-white dark:bg-surface-dark flex flex-col py-4 z-20 hidden lg:flex transition-colors duration-300">
-                        <div className="px-3 mb-6">
+                    <div className="w-[260px] flex-shrink-0 bg-white dark:bg-surface-dark flex flex-col py-4 z-20 hidden lg:flex transition-colors duration-300 h-full overflow-hidden">
+                        <div className="px-3 mb-4 shrink-0">
                             <button onClick={createLog} className="flex items-center gap-3 bg-white dark:bg-[#2d2e30] border border-light-gray dark:border-white/10 text-dark dark:text-light px-5 py-3.5 rounded-2xl shadow-sm hover:shadow-md hover:bg-[#f8fafc] dark:hover:bg-[#383a3d] transition-all font-medium text-sm w-max"><Icons.Plus className="w-5 h-5 text-primary"/><span className="pr-2">New Log</span></button>
                         </div>
-                        <nav className="space-y-0.5 mb-6">
-                            <a href="note.html" className="flex items-center gap-3 px-4 py-3 rounded-r-full text-sm font-medium transition-colors w-[95%] text-gray hover:bg-black/5 dark:hover:bg-white/5 hover:text-dark dark:hover:text-light"><Icons.Book className="w-5 h-5"/> Back to Notes</a>
-                            <a href="eld.html" className="flex items-center gap-3 px-4 py-3 rounded-r-full text-sm font-medium transition-colors w-[95%] text-gray hover:bg-black/5 dark:hover:bg-white/5 hover:text-dark dark:hover:text-light"><Icons.Book className="w-5 h-5"/> Definition Log</a>
-                            <a href="elmock.html" className="flex items-center gap-3 px-4 py-3 rounded-r-full text-sm font-medium transition-colors w-[95%] text-gray hover:bg-black/5 dark:hover:bg-white/5 hover:text-dark dark:hover:text-light"><Icons.Book className="w-5 h-5"/> Mock Exam Log</a>
-                            <a href="report.html" className="flex items-center gap-3 px-4 py-3 rounded-r-full text-sm font-medium transition-colors w-[95%] text-gray hover:bg-black/5 dark:hover:bg-white/5 hover:text-dark dark:hover:text-light mb-2"><Icons.ChartBar className="w-5 h-5"/> Analytics</a>
-                            {[{id: 'all', icon: 'Dashboard', label: 'All Errors'}, {id: 'active', icon: 'Target', label: 'Needs Review'}, {id: 'mastered', icon: 'Check', label: 'Mastered'}].map(item => {
-                                const Icon = Icons[item.icon];
-                                return (<button key={item.id} onClick={()=>setFilter(item.id)} className={`flex items-center gap-3 px-4 py-3 rounded-r-full text-sm font-medium transition-colors w-[95%] ${filter===item.id ? 'bg-primary/10 text-primary dark:bg-primary-light/15 dark:text-primary-light font-bold' : 'text-gray hover:bg-black/5 dark:hover:bg-white/5 hover:text-dark dark:hover:text-light'}`}><Icon className="w-5 h-5"/> {item.label}</button>);
-                            })}
-                            <div className="h-4"></div>
-                            <button onClick={()=> { if(!user) { alert("Guest Mode: Sign in to use Smart Drill."); return; } setPracticeConfig({ isOpen: true, mode: 'topic' }); }} className="flex items-center gap-3 px-4 py-3 rounded-r-full text-sm font-medium transition-colors w-[95%] text-dark dark:text-light hover:bg-black/5 dark:hover:bg-white/5 mt-2"><Icons.Brain className="w-5 h-5 text-primary"/> Smart Drill</button>
-                            <button onClick={handleOpenShare} className="flex items-center gap-3 px-4 py-3 rounded-r-full text-sm font-medium transition-colors w-[95%] text-dark dark:text-light hover:bg-black/5 dark:hover:bg-white/5"><Icons.Share2 className="w-5 h-5 text-primary"/> Share & Export</button>
-                        </nav>
-                        <div className="flex-1 overflow-y-auto">
-                            <div className="px-5 text-[11px] font-bold text-gray mb-3 uppercase tracking-wider">Subjects</div>
-                            <div className="space-y-0.5">{subjects.map(s => (<SidebarSubjectItem key={s.id} subject={s} currentFilter={filter} onSelect={setFilter} onDeleteSubject={deleteSubject} onDeleteTopic={deleteTopic} />))}</div>
+                        <div className="flex-1 overflow-y-auto pb-32 min-h-0">
+                            <nav className="space-y-0.5 mb-6">
+                                <div>
+                                    <button onClick={() => setIsDesktopLogsOpen(!isDesktopLogsOpen)} className="w-full flex items-center justify-between px-4 py-3 rounded-r-full text-sm font-medium transition-colors w-[95%] text-gray hover:bg-black/5 dark:hover:bg-white/5 hover:text-dark dark:hover:text-light">
+                                        <span className="flex items-center gap-3"><Icons.Folder className="w-5 h-5"/> Switch Logs</span>
+                                        <Icons.ChevronRight className={`w-4 h-4 transition-transform ${isDesktopLogsOpen ? 'rotate-90' : ''}`}/>
+                                    </button>
+                                    <AnimatePresence>
+                                        {isDesktopLogsOpen && (
+                                            <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }} className="overflow-hidden">
+                                                <div className="pl-6 space-y-0.5 mt-0.5">
+                                                    <a href="note.html" className="flex items-center gap-3 px-4 py-2 rounded-r-full text-sm font-medium transition-colors w-[95%] text-gray hover:bg-black/5 dark:hover:bg-white/5 hover:text-dark dark:hover:text-light"><Icons.Book className="w-4 h-4"/> Back to Notes</a>
+                                                    <a href="eld.html" className="flex items-center gap-3 px-4 py-2 rounded-r-full text-sm font-medium transition-colors w-[95%] text-gray hover:bg-black/5 dark:hover:bg-white/5 hover:text-dark dark:hover:text-light"><Icons.Book className="w-4 h-4"/> Definition Log</a>
+                                                    <a href="elmock.html" className="flex items-center gap-3 px-4 py-2 rounded-r-full text-sm font-medium transition-colors w-[95%] text-gray hover:bg-black/5 dark:hover:bg-white/5 hover:text-dark dark:hover:text-light"><Icons.Book className="w-4 h-4"/> Mock Exam Log</a>
+                                                </div>
+                                            </motion.div>
+                                        )}
+                                    </AnimatePresence>
+                                </div>
+                                <a href="report.html" className="flex items-center gap-3 px-4 py-3 rounded-r-full text-sm font-medium transition-colors w-[95%] text-gray hover:bg-black/5 dark:hover:bg-white/5 hover:text-dark dark:hover:text-light mb-2"><Icons.ChartBar className="w-5 h-5"/> Analytics</a>
+                                {[{id: 'all', icon: 'Dashboard', label: 'All Errors'}, {id: 'active', icon: 'Target', label: 'Needs Review'}, {id: 'mastered', icon: 'Check', label: 'Mastered'}].map(item => {
+                                    const Icon = Icons[item.icon];
+                                    return (<button key={item.id} onClick={()=>setFilter(item.id)} className={`flex items-center gap-3 px-4 py-3 rounded-r-full text-sm font-medium transition-colors w-[95%] ${filter===item.id ? 'bg-primary/10 text-primary dark:bg-primary-light/15 dark:text-primary-light font-bold' : 'text-gray hover:bg-black/5 dark:hover:bg-white/5 hover:text-dark dark:hover:text-light'}`}><Icon className="w-5 h-5"/> {item.label}</button>);
+                                })}
+                                <div className="h-4"></div>
+                                <button onClick={()=> { if(!user) { alert("Guest Mode: Sign in to use Smart Drill."); return; } setPracticeConfig({ isOpen: true, mode: 'topic' }); }} className="flex items-center gap-3 px-4 py-3 rounded-r-full text-sm font-medium transition-colors w-[95%] text-dark dark:text-light hover:bg-black/5 dark:hover:bg-white/5 mt-2"><Icons.Brain className="w-5 h-5 text-primary"/> Smart Drill</button>
+                                <button onClick={handleOpenShare} className="flex items-center gap-3 px-4 py-3 rounded-r-full text-sm font-medium transition-colors w-[95%] text-dark dark:text-light hover:bg-black/5 dark:hover:bg-white/5"><Icons.Share2 className="w-5 h-5 text-primary"/> Share & Export</button>
+                            </nav>
+                            <div>
+                                <div className="px-5 text-[11px] font-bold text-gray mb-3 uppercase tracking-wider">Subjects</div>
+                                <div className="space-y-0.5">{subjects.map(s => (<SidebarSubjectItem key={s.id} subject={s} currentFilter={filter} onSelect={setFilter} onDeleteSubject={deleteSubject} onDeleteTopic={deleteTopic} />))}</div>
+                            </div>
                         </div>
                     </div>
                     
                     {/* Log List Column */}
-                    <div className={`flex-shrink-0 bg-[#f8fafc] dark:bg-onyx flex-col z-10 border-r border-light-gray dark:border-border-dark ${activeLogId || (mobileView !== 'logs') ? 'hidden lg:flex w-[340px]' : 'flex w-full lg:w-[340px]'}`}>
+                    <div className={`flex-shrink-0 bg-[#f8fafc] dark:bg-onyx flex-col z-10 border-r border-light-gray dark:border-border-dark h-full overflow-hidden ${activeLogId || (mobileView !== 'logs') ? 'hidden lg:flex w-[340px]' : 'flex w-full lg:w-[340px]'}`}>
                         <div className="p-4 border-b border-light-gray dark:border-border-dark flex gap-2 shrink-0 lg:hidden">
                              {/* Mobile Search - shown only when top header search is hidden */}
                              <div className="w-full bg-white dark:bg-dark flex items-center px-3 py-2 rounded-full border border-light-gray dark:border-white/10">
@@ -1111,7 +1143,7 @@
                             <span className="text-sm font-medium text-gray">Logs ({filteredLogs.length})</span>
                             <div className="relative"><button onClick={()=>setShowSortMenu(!showSortMenu)} className={`p-1.5 rounded-full hover:bg-black/5 dark:hover:bg-white/5 transition-colors ${typeFilter !== 'ALL' ? 'text-primary bg-primary/10' : 'text-gray'}`} title="Filter"><Icons.Sort className="w-5 h-5"/></button>{showSortMenu && (<div className="absolute right-0 top-full mt-2 w-44 bg-white dark:bg-surface-dark border border-light-gray dark:border-white/10 rounded-xl shadow-ds-hover z-50 py-2"><div className="px-4 py-1.5 text-[10px] font-bold text-gray uppercase tracking-wider">Sort</div><button onClick={()=>{setSortBy('date-desc'); setShowSortMenu(false)}} className={`w-full text-left px-4 py-2 text-sm hover:bg-black/5 dark:hover:bg-white/5 ${sortBy==='date-desc'?'text-primary font-semibold':'text-dark dark:text-light'}`}>Newest</button><button onClick={()=>{setSortBy('date-asc'); setShowSortMenu(false)}} className={`w-full text-left px-4 py-2 text-sm hover:bg-black/5 dark:hover:bg-white/5 ${sortBy==='date-asc'?'text-primary font-semibold':'text-dark dark:text-light'}`}>Oldest</button><div className="h-px bg-light-gray dark:bg-white/10 my-2"></div><div className="px-4 py-1.5 text-[10px] font-bold text-gray uppercase tracking-wider">Type</div><button onClick={()=>{setTypeFilter('ALL'); setShowSortMenu(false)}} className={`w-full text-left px-4 py-2 text-sm hover:bg-black/5 dark:hover:bg-white/5 ${typeFilter==='ALL'?'text-primary font-semibold':'text-dark dark:text-light'}`}>All</button><button onClick={()=>{setTypeFilter('MC'); setShowSortMenu(false)}} className={`w-full text-left px-4 py-2 text-sm hover:bg-black/5 dark:hover:bg-white/5 ${typeFilter==='MC'?'text-primary font-semibold':'text-dark dark:text-light'}`}>MC Only</button><button onClick={()=>{setTypeFilter('LQ'); setShowSortMenu(false)}} className={`w-full text-left px-4 py-2 text-sm hover:bg-black/5 dark:hover:bg-white/5 ${typeFilter==='LQ'?'text-primary font-semibold':'text-dark dark:text-light'}`}>LQ Only</button></div>)}</div>
                         </div>
-                        <div className="flex-1 overflow-y-auto p-3 space-y-2 pb-20 lg:pb-3">
+                        <div className="flex-1 overflow-y-auto p-3 space-y-2 pb-32 min-h-0">
                             {!user && <div className="text-[10px] text-gray uppercase tracking-wider text-center py-2">Offline / Guest Mode</div>}
                             {filteredLogs.map(l => (
                                 <motion.div key={l.id} onClick={()=>setActiveLogId(l.id)} onContextMenu={(e) => handleContextMenu(e, l.id)} onMouseEnter={() => handleMouseEnter(l)} onMouseLeave={handleMouseLeave} className={`p-4 rounded-2xl cursor-pointer transition-all border ${activeLogId===l.id ? 'bg-[#e8f0fe] dark:bg-[#1a2332] border-transparent shadow-sm' : 'bg-white dark:bg-surface-dark border-light-gray dark:border-white/5 hover:border-gray/30 hover:shadow-sm'}`}>
