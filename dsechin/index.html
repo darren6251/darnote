@@ -58,6 +58,12 @@
     const MOCK_TEXTS = [
         { id: 't1', title: "勸學 (節錄)", author: "荀子", paragraphs: ["君子曰：學不可以已。"] }
     ];
+    const MOCK_NOTES = {
+        't1': [
+            { term: "已", note: "停止" },
+            { term: "中", note: "合乎" }
+        ]
+    };
 
     // SYSTEM PROMPTS
     const SYS_TUTOR = "你是一位 darNote app 旗下的 DSE 中文科 AI 補習名師。你說話一針見血、幽默、會用流利的廣東話(適當英語更自然）/書面語，會給出極度精準、符合 HKEAA 考評局標準的文言文解釋。";
@@ -142,7 +148,7 @@
         
         const [graveyard, setGraveyard] = useState([]); 
         const [articles, setArticles] = useState(MOCK_TEXTS);
-        const [notesData, setNotesData] = useState({});
+        const [notesData, setNotesData] = useState(MOCK_NOTES);
         const [isNotesPanelOpen, setIsNotesPanelOpen] = useState(false);
 
         // --- URL ROUTING SYNC ---
@@ -649,7 +655,6 @@
                 </div>
             );
         };
-
 
         return (
             <div className={`flex flex-col h-[100dvh] w-full transition-colors duration-300 ${isDarkMode ? 'dark bg-onyx' : 'bg-white'}`}>
