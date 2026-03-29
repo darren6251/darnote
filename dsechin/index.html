@@ -51,8 +51,8 @@
     // DEEPSEEK CONFIG
     const DEEPSEEK_PROXY_URL = "https://deepseek-proxy-166884560507.us-central1.run.app/api/deepseek";
 
-    // ICONS (Added Radar icon)
-    const Icons={HelpCircle:p=><svg {...p} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><path d="M12 17h.01"/></svg>,Youtube:p=><svg {...p} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M22.54 6.42a2.78 2.78 0 0 0-1.94-2C18.88 4 12 4 12 4s-6.88 0-8.6.46a2.78 2.78 0 0 0-1.94 2A29 29 0 0 0 1 11.75a29 29 0 0 0 .46 5.33 2.78 2.78 0 0 0 1.94 2c1.72.46 8.6.46 8.6.46s6.88 0 8.6-.46a2.78 2.78 0 0 0 1.94-2 29 29 0 0 0 .46-5.33 29 29 0 0 0-.46-5.33z"/><polygon points="9.75 15.02 15.5 11.75 9.75 8.48 9.75 15.02"/></svg>,Clock:p=><svg {...p} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>,Plus:p=><svg {...p} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12h14"/><path d="M12 5v14"/></svg>,Trash:p=><svg {...p} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/></svg>,Check:p=><svg {...p} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>,Image:p=><svg {...p} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect width="18" height="18" x="3" y="3" rx="2" ry="2"/><circle cx="9" cy="9" r="2"/><path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21"/></svg>,Bot:p=><svg {...p} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 8V4H8"/><rect width="16" height="12" x="4" y="8" rx="2"/><path d="M2 14h2"/><path d="M20 14h2"/><path d="M15 13v2"/><path d="M9 13v2"/></svg>,X:p=><svg {...p} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M18 6 6 18"/><path d="m6 6 18 18"/></svg>,Logout:p=><svg {...p} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" x2="9" y1="12" y2="12"/></svg>,Google:p=><svg {...p} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 22C6.477 22 2 17.523 2 12S6.477 2 12 2s10 4.477 10 10-4.477 10-10 10z"/><path d="M12 11h9c.1 1.4.1 2.9-.4 4.3-1.1 3-4.1 5.3-7.6 5.6-5 .5-9.4-3.1-9.9-8.1C2.5 7.1 6 2.3 11 2c2.5-.1 4.9.9 6.7 2.6l-2.7 2.8c-1-.7-2.3-1.1-3.6-1-2.9.2-5.1 2.8-4.9 5.7.2 2.6 2.4 4.7 5 4.7 2 0 3.6-1.1 4.3-2.9H12v-3z" fill="currentColor"/></svg>,Sun:p=><svg {...p} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="5"/><path d="M12 1v2"/><path d="M12 21v2"/><path d="M4.22 4.22l1.42 1.42"/><path d="M18.36 18.36l1.42 1.42"/><path d="M1 12h2"/><path d="M21 12h2"/><path d="M4.22 19.78l1.42-1.42"/><path d="M18.36 5.64l1.42-1.42"/></svg>,Moon:p=><svg {...p} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>,File:p=><svg {...p} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" x2="8" y1="13" y2="13"/><line x1="16" x2="8" y1="17" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>,Book:p=><svg {...p} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>,ChevronRight:p=><svg {...p} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m9 18 6-6-6-6"/></svg>,Brain:p=><svg {...p} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M9.5 2A2.5 2.5 0 0 1 12 4.5v15a2.5 2.5 0 0 1-4.96.44 2.5 2.5 0 0 1-2.96-3.08 3 3 0 0 1-.34-5.58 2.5 2.5 0 0 1 1.32-4.24 2.5 2.5 0 0 1 1.98-3A2.5 2.5 0 0 1 9.5 2Z"/><path d="M14.5 2A2.5 2.5 0 0 0 12 4.5v15a2.5 2.5 0 0 0 4.96.44 2.5 2.5 0 0 0 2.96-3.08 3 3 0 0 0 .34-5.58 2.5 2.5 0 0 0-1.32-4.24 2.5 2.5 0 0 0-1.98-3A2.5 2.5 0 0 0 14.5 2Z"/></svg>,Target:p=><svg {...p} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/></svg>,Zap:p=><svg {...p} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>,GraduationCap:p=><svg {...p} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M22 10v6M2 10l10-5 10 5-10 5z"/><path d="M6 12v5c3 3 9 3 12 0v-5"/></svg>,Dashboard:p=><svg {...p} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="7" height="9" rx="1"/><rect x="14" y="3" width="7" height="5" rx="1"/><rect x="14" y="12" width="7" height="9" rx="1"/><rect x="3" y="16" width="7" height="5" rx="1"/></svg>,Search:p=><svg {...p} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>,Folder:p=><svg {...p} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M4 20h16a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-7.93a2 2 0 0 1-1.66-.9l-.82-1.2A2 2 0 0 0 7.93 3H4a2 2 0 0 0-2 2v13c0 1.1.9 2 2 2Z"/></svg>,ChartBar:p=><svg {...p} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 3v18h18"/><path d="M18 17V9"/><path d="M13 17V5"/><path d="M8 17v-3"/></svg>,Menu:p=><svg {...p} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="4" x2="20" y1="12" y2="12"/><line x1="4" x2="20" y1="6" y2="6"/><line x1="4" x2="20" y1="18" y2="18"/></svg>,Share2:p=><svg {...p} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" x2="15.42" y1="13.51" y2="17.49"/><line x1="15.41" x2="8.59" y1="6.51" y2="10.49"/></svg>,Skull:p=><svg {...p} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="9" cy="12" r="1"/><circle cx="15" cy="12" r="1"/><path d="M8 20v2h8v-2"/><path d="m12.5 17-.5-1-.5 1h1z"/><path d="M16 20a2 2 0 0 0 1.56-3.25 8 8 0 1 0-11.12 0A2 2 0 0 0 8 20"/></svg>,Radar:p=><svg {...p} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M19.07 4.93A10 10 0 0 0 6.99 3.34"/><path d="M4 6h.01"/><path d="M2.29 9.62A10 10 0 1 0 21.31 8.35"/><path d="M16.24 7.76A6 6 0 1 0 8.25 16.23"/><path d="M11.99 12.01v.01"/></svg>};
+    // ICONS
+    const Icons={HelpCircle:p=><svg {...p} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><path d="M12 17h.01"/></svg>,Youtube:p=><svg {...p} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M22.54 6.42a2.78 2.78 0 0 0-1.94-2C18.88 4 12 4 12 4s-6.88 0-8.6.46a2.78 2.78 0 0 0-1.94 2A29 29 0 0 0 1 11.75a29 29 0 0 0 .46 5.33 2.78 2.78 0 0 0 1.94 2c1.72.46 8.6.46 8.6.46s6.88 0 8.6-.46a2.78 2.78 0 0 0 1.94-2 29 29 0 0 0 .46-5.33 29 29 0 0 0-.46-5.33z"/><polygon points="9.75 15.02 15.5 11.75 9.75 8.48 9.75 15.02"/></svg>,Clock:p=><svg {...p} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>,Plus:p=><svg {...p} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12h14"/><path d="M12 5v14"/></svg>,Trash:p=><svg {...p} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/></svg>,Check:p=><svg {...p} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>,Image:p=><svg {...p} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect width="18" height="18" x="3" y="3" rx="2" ry="2"/><circle cx="9" cy="9" r="2"/><path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21"/></svg>,Bot:p=><svg {...p} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 8V4H8"/><rect width="16" height="12" x="4" y="8" rx="2"/><path d="M2 14h2"/><path d="M20 14h2"/><path d="M15 13v2"/><path d="M9 13v2"/></svg>,X:p=><svg {...p} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M18 6 6 18"/><path d="m6 6 18 18"/></svg>,Logout:p=><svg {...p} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" x2="9" y1="12" y2="12"/></svg>,Google:p=><svg {...p} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 22C6.477 22 2 17.523 2 12S6.477 2 12 2s10 4.477 10 10-4.477 10-10 10z"/><path d="M12 11h9c.1 1.4.1 2.9-.4 4.3-1.1 3-4.1 5.3-7.6 5.6-5 .5-9.4-3.1-9.9-8.1C2.5 7.1 6 2.3 11 2c2.5-.1 4.9.9 6.7 2.6l-2.7 2.8c-1-.7-2.3-1.1-3.6-1-2.9.2-5.1 2.8-4.9 5.7.2 2.6 2.4 4.7 5 4.7 2 0 3.6-1.1 4.3-2.9H12v-3z" fill="currentColor"/></svg>,Sun:p=><svg {...p} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="5"/><path d="M12 1v2"/><path d="M12 21v2"/><path d="M4.22 4.22l1.42 1.42"/><path d="M18.36 18.36l1.42 1.42"/><path d="M1 12h2"/><path d="M21 12h2"/><path d="M4.22 19.78l1.42-1.42"/><path d="M18.36 5.64l1.42-1.42"/></svg>,Moon:p=><svg {...p} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>,File:p=><svg {...p} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" x2="8" y1="13" y2="13"/><line x1="16" x2="8" y1="17" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>,Book:p=><svg {...p} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>,ChevronRight:p=><svg {...p} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m9 18 6-6-6-6"/></svg>,Brain:p=><svg {...p} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M9.5 2A2.5 2.5 0 0 1 12 4.5v15a2.5 2.5 0 0 1-4.96.44 2.5 2.5 0 0 1-2.96-3.08 3 3 0 0 1-.34-5.58 2.5 2.5 0 0 1 1.32-4.24 2.5 2.5 0 0 1 1.98-3A2.5 2.5 0 0 1 9.5 2Z"/><path d="M14.5 2A2.5 2.5 0 0 0 12 4.5v15a2.5 2.5 0 0 0 4.96.44 2.5 2.5 0 0 0 2.96-3.08 3 3 0 0 0 .34-5.58 2.5 2.5 0 0 0-1.32-4.24 2.5 2.5 0 0 0-1.98-3A2.5 2.5 0 0 0 14.5 2Z"/></svg>,Target:p=><svg {...p} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/></svg>,Zap:p=><svg {...p} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>,GraduationCap:p=><svg {...p} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M22 10v6M2 10l10-5 10 5-10 5z"/><path d="M6 12v5c3 3 9 3 12 0v-5"/></svg>,Dashboard:p=><svg {...p} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="7" height="9" rx="1"/><rect x="14" y="3" width="7" height="5" rx="1"/><rect x="14" y="12" width="7" height="9" rx="1"/><rect x="3" y="16" width="7" height="5" rx="1"/></svg>,Search:p=><svg {...p} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>,Folder:p=><svg {...p} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M4 20h16a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-7.93a2 2 0 0 1-1.66-.9l-.82-1.2A2 2 0 0 0 7.93 3H4a2 2 0 0 0-2 2v13c0 1.1.9 2 2 2Z"/></svg>,ChartBar:p=><svg {...p} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 3v18h18"/><path d="M18 17V9"/><path d="M13 17V5"/><path d="M8 17v-3"/></svg>,Menu:p=><svg {...p} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="4" x2="20" y1="12" y2="12"/><line x1="4" x2="20" y1="6" y2="6"/><line x1="4" x2="20" y1="18" y2="18"/></svg>,Share2:p=><svg {...p} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" x2="15.42" y1="13.51" y2="17.49"/><line x1="15.41" x2="8.59" y1="6.51" y2="10.49"/></svg>,Skull:p=><svg {...p} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="9" cy="12" r="1"/><circle cx="15" cy="12" r="1"/><path d="M8 20v2h8v-2"/><path d="m12.5 17-.5-1-.5 1h1z"/><path d="M16 20a2 2 0 0 0 1.56-3.25 8 8 0 1 0-11.12 0A2 2 0 0 0 8 20"/></svg>,Radar:p=><svg {...p} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M19.07 4.93A10 10 0 0 0 6.99 3.34"/><path d="M4 6h.01"/><path d="M2.29 9.62A10 10 0 1 0 21.31 8.35"/><path d="M16.24 7.76A6 6 0 1 0 8.25 16.23"/><path d="M11.99 12.01v.01"/></svg>,Lock:p=><svg {...p} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect width="18" height="11" x="3" y="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>};
 
     // FALLBACK MOCK DATA (in case JSON fails to load)
     const MOCK_TEXTS = [
@@ -98,26 +98,14 @@
             const today = new Date().toISOString().split('T')[0];
             const ref = window.firebase.doc(window.firebase.db, 'artifacts', "darnote-app", 'users', user.uid, 'ai_usage', today);
             
-            // The anti-F12 student verification check
-            const profileRef = window.firebase.doc(window.firebase.db, 'artifacts', "darnote-app", 'users', user.uid, 'settings', 'profile');
-            const [snap, profileSnap] = await Promise.all([
-                window.firebase.getDoc(ref),
-                window.firebase.getDoc(profileRef)
-            ]);
-            
-            const isStudent = profileSnap.exists() && ['verified', 'temp_verified'].includes(profileSnap.data().studentStatus);
-            const limit = isStudent ? 10 : 5;
-            
+            const snap = await window.firebase.getDoc(ref);
+            const limit = 10;
             let currentVal = snap.exists() ? (snap.data()[type] || 0) : 0;
             
             if (currentVal >= limit) return false; // The bouncer says NO
             
-            const newDocData = { [type]: window.firebase.increment(1) };
-            if (!snap.exists()) {
-                newDocData[type] = 1; 
-            }
-            await window.firebase.setDoc(ref, newDocData, { merge: true });
-            return currentVal + 1; // The bouncer says YES
+            await window.firebase.setDoc(ref, { [type]: window.firebase.increment(1) }, { merge: true });
+            return true; // The bouncer says YES
         } catch (e) {
             console.error("Quota check failed:", e);
             return false;
@@ -130,6 +118,8 @@
         const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
         const [showHelpMenu, setShowHelpMenu] = useState(false);
         const [searchQuery, setSearchQuery] = useState('');
+        const [showAuthModal, setShowAuthModal] = useState(false); // New state for soft gate
+        const [aiUsage, setAiUsage] = useState(0); // Track daily AI usage
         
         // --- ROUTING MEMORY INITIALIZATION ---
         const [activeTab, setActiveTab] = useState(() => new URLSearchParams(window.location.search).get('tab') || 'read'); 
@@ -173,6 +163,21 @@
             const unsub = window.firebase.onAuthStateChanged(window.firebase.auth, (u) => setUser(u));
             return () => unsub();
         }, []);
+
+        // Listen to Daily AI Quota
+        useEffect(() => {
+            if (!user || !window.firebase) return;
+            const today = new Date().toISOString().split('T')[0];
+            const ref = window.firebase.doc(window.firebase.db, 'artifacts', "darnote-app", 'users', user.uid, 'ai_usage', today);
+            const unsub = window.firebase.onSnapshot(ref, (snap) => {
+                if (snap.exists()) {
+                    setAiUsage(snap.data().chinese_ai_count || 0);
+                } else {
+                    setAiUsage(0);
+                }
+            });
+            return () => unsub();
+        }, [user]);
 
         // Fetch Graveyard from darNote-Chinese Database
         useEffect(() => {
@@ -245,11 +250,17 @@
 
         const askAI = async (text) => {
             setPopup(null);
+
+            // Gating Auth for Ask AI
+            if (!user) {
+                setShowAuthModal(true);
+                return;
+            }
             
             // --- QUOTA CHECK INTERCEPTION ---
             const quotaAllowed = await checkAndIncrementQuota(user, 'chinese_ai_count');
             if (quotaAllowed === false) {
-                alert("🛑 Daily AI Limit Reached!\n\nVerified students get 10 free requests, standard mortals get 5. Your brain must do the heavy lifting until tomorrow.");
+                alert("🛑 Daily AI Limit Reached (10/10)!\n\nYour brain must do the heavy lifting until tomorrow. Come back at midnight!");
                 return;
             }
 
@@ -265,19 +276,21 @@
 
         const addToGraveyard = async (text) => {
             setPopup(null);
+
+            // Gating Auth for Graveyard Saving
+            if (!user) {
+                setShowAuthModal(true);
+                return;
+            }
+
             if (graveyard.find(g => g.text === text)) {
                 alert("This word is already rotting in the graveyard.");
                 return;
             }
             try {
-                if (user && window.firebase) {
-                    await window.firebase.addDoc(window.firebase.collection(window.firebase.db, 'artifacts', 'darNote-Chinese', 'users', user.uid, 'graveyard'), {
-                        text, docTitle: activeDoc.title, addedAt: new Date().toISOString()
-                    });
-                } else {
-                    setGraveyard(prev => [{ id: Date.now(), text, docTitle: activeDoc.title, addedAt: new Date().toISOString() }, ...prev]);
-                    alert("已打入冷宮 (Sent to Graveyard) 🪦 (Local only, please login to sync)");
-                }
+                await window.firebase.addDoc(window.firebase.collection(window.firebase.db, 'artifacts', 'darNote-Chinese', 'users', user.uid, 'graveyard'), {
+                    text, docTitle: activeDoc.title, addedAt: new Date().toISOString()
+                });
             } catch(e) {
                 alert("Failed to bury word. Database error.");
             }
@@ -288,13 +301,32 @@
             try {
                 if (user && window.firebase) {
                     await window.firebase.deleteDoc(window.firebase.doc(window.firebase.db, 'artifacts', 'darNote-Chinese', 'users', user.uid, 'graveyard', id));
-                } else {
-                    setGraveyard(prev => prev.filter(g => g.id !== id));
                 }
             } catch(e) {}
         };
 
         // --- COMPONENTS ---
+
+        const renderAuthModal = () => (
+            <AnimatePresence>
+                {showAuthModal && (
+                    <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 z-[200] flex items-center justify-center bg-dark/60 backdrop-blur-sm p-4" onClick={() => setShowAuthModal(false)}>
+                        <motion.div initial={{ scale: 0.95, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.95, opacity: 0 }} className="bg-white dark:bg-surface-dark w-full max-w-md rounded-3xl shadow-2xl p-8 relative flex flex-col items-center text-center border border-light-gray dark:border-white/10" onClick={e => e.stopPropagation()}>
+                            <button onClick={() => setShowAuthModal(false)} className="absolute top-4 right-4 p-2 text-gray hover:bg-light-gray dark:hover:bg-white/10 rounded-full transition-colors"><Icons.X className="w-5 h-5"/></button>
+                            
+                            <img src="https://raw.githubusercontent.com/darren6251/darnote/refs/heads/main/darNote%20logo.png" className="w-16 h-16 mb-6 rounded-2xl shadow-sm"/>
+                            <h2 className="text-2xl font-bold text-dark dark:text-light mb-2">Unlock AI Powers</h2>
+                            <p className="text-gray text-sm mb-8 leading-relaxed">Sign in to ask the AI tutor questions, generate smart mock papers, and build your vocabulary Graveyard to ace your DSE.</p>
+                            
+                            <button onClick={() => { window.firebase?.signInWithPopup(window.firebase.auth, new window.firebase.GoogleAuthProvider()); setShowAuthModal(false); }} className="bg-primary text-white w-full py-3.5 rounded-full font-bold flex gap-3 items-center justify-center hover:bg-primary-dark transition-all shadow-md">
+                                <Icons.Google className="w-5 h-5"/> Continue with Google
+                            </button>
+                            <p className="text-xs text-gray mt-4 opacity-70">Your progress will be securely synced.</p>
+                        </motion.div>
+                    </motion.div>
+                )}
+            </AnimatePresence>
+        );
 
         const renderReadMode = () => (
             <div className="max-w-3xl mx-auto py-10 px-6" onMouseUp={handleTextSelection} onTouchEnd={handleTextSelection}>
@@ -396,10 +428,16 @@
             const [data, setData] = useState(null);
             
             const generateDrill = async () => {
+                // Gating Auth for Generating Drills
+                if (!user) {
+                    setShowAuthModal(true);
+                    return;
+                }
+
                 // --- QUOTA CHECK INTERCEPTION ---
                 const quotaAllowed = await checkAndIncrementQuota(user, 'chinese_ai_count');
                 if (quotaAllowed === false) {
-                    alert("🛑 Daily AI Limit Reached!\n\nVerified students get 10 free drills, standard mortals get 5. Save some processing power for tomorrow!");
+                    alert("🛑 Daily AI Limit Reached (10/10)!\n\nSave some processing power for tomorrow! Try reciting texts instead.");
                     return;
                 }
 
@@ -489,41 +527,68 @@
             );
         };
 
-        const Graveyard = () => (
-            <div className="max-w-4xl mx-auto py-8 px-6">
-                <div className="mb-8 bg-white dark:bg-surface-dark p-6 md:p-8 rounded-3xl shadow-sm border border-light-gray dark:border-border-dark flex items-center gap-4">
-                    <div className="w-12 h-12 rounded-full bg-gray/10 flex items-center justify-center shrink-0"><Icons.Skull className="w-6 h-6 text-gray"/></div>
-                    <div>
-                        <h2 className="text-xl font-bold dark:text-light">The Graveyard</h2>
-                        <p className="text-sm text-gray mt-1">Where difficult vocabulary goes to rest (until you review it).</p>
-                    </div>
-                </div>
-                
-                {graveyard.length === 0 ? (
-                    <div className="text-center py-20 text-gray">
-                        <Icons.Check className="w-16 h-16 mx-auto mb-4 opacity-50"/>
-                        <p>Your graveyard is empty. You are a DSE God.</p>
-                    </div>
-                ) : (
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        {graveyard.map(item => (
-                            <div key={item.id} className="bg-white dark:bg-surface-dark p-6 rounded-3xl shadow-sm border border-light-gray dark:border-border-dark flex justify-between items-start">
-                                <div>
-                                    <div className="font-bold text-lg dark:text-light chinese-text mb-1">{item.text}</div>
-                                    <div className="text-xs text-primary font-medium">{item.docTitle}</div>
-                                </div>
-                                <div className="flex gap-2">
-                                    <button onClick={()=>askAI(item.text)} className="p-3 bg-primary/10 text-primary rounded-full hover:bg-primary/20 transition-colors" title="Ask AI for meaning"><Icons.Brain className="w-5 h-5"/></button>
-                                    <button onClick={()=>deleteFromGraveyard(item.id)} className="p-3 bg-danger/10 text-danger rounded-full hover:bg-danger/20 transition-colors" title="Remove from Graveyard"><Icons.Trash className="w-5 h-5"/></button>
-                                </div>
+        const Graveyard = () => {
+            // Unauthenticated Lock State
+            if (!user) {
+                return (
+                    <div className="max-w-4xl mx-auto py-8 px-6 text-center">
+                        <div className="mb-8 bg-white dark:bg-surface-dark p-6 md:p-8 rounded-3xl shadow-sm border border-light-gray dark:border-border-dark flex items-center gap-4">
+                            <div className="w-12 h-12 rounded-full bg-gray/10 flex items-center justify-center shrink-0"><Icons.Skull className="w-6 h-6 text-gray"/></div>
+                            <div className="text-left">
+                                <h2 className="text-xl font-bold dark:text-light">The Graveyard</h2>
+                                <p className="text-sm text-gray mt-1">Where difficult vocabulary goes to rest (until you review it).</p>
                             </div>
-                        ))}
-                    </div>
-                )}
-            </div>
-        );
+                        </div>
 
-        // --- NEW COMPONENT: THE RADAR DASHBOARD ---
+                        <div className="flex flex-col items-center justify-center py-20 bg-white dark:bg-surface-dark rounded-3xl shadow-sm border border-light-gray dark:border-border-dark">
+                            <div className="w-20 h-20 rounded-full bg-primary/10 flex items-center justify-center mb-6">
+                                <Icons.Lock className="w-8 h-8 text-primary"/>
+                            </div>
+                            <h2 className="text-2xl font-bold dark:text-light mb-3">Graveyard is Locked</h2>
+                            <p className="text-gray mb-8 max-w-sm">Sign in to sync your difficult vocabulary across all your devices and let the AI tutor help you revise them later.</p>
+                            <button onClick={() => setShowAuthModal(true)} className="bg-primary text-white px-8 py-3 rounded-full font-bold shadow-md hover:bg-primary-dark transition-colors flex items-center gap-2">
+                                <Icons.Google className="w-4 h-4"/> Sign In to Unlock
+                            </button>
+                        </div>
+                    </div>
+                );
+            }
+
+            return (
+                <div className="max-w-4xl mx-auto py-8 px-6">
+                    <div className="mb-8 bg-white dark:bg-surface-dark p-6 md:p-8 rounded-3xl shadow-sm border border-light-gray dark:border-border-dark flex items-center gap-4">
+                        <div className="w-12 h-12 rounded-full bg-gray/10 flex items-center justify-center shrink-0"><Icons.Skull className="w-6 h-6 text-gray"/></div>
+                        <div>
+                            <h2 className="text-xl font-bold dark:text-light">The Graveyard</h2>
+                            <p className="text-sm text-gray mt-1">Where difficult vocabulary goes to rest (until you review it).</p>
+                        </div>
+                    </div>
+                    
+                    {graveyard.length === 0 ? (
+                        <div className="text-center py-20 text-gray">
+                            <Icons.Check className="w-16 h-16 mx-auto mb-4 opacity-50"/>
+                            <p>Your graveyard is empty. You are a DSE God.</p>
+                        </div>
+                    ) : (
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            {graveyard.map(item => (
+                                <div key={item.id} className="bg-white dark:bg-surface-dark p-6 rounded-3xl shadow-sm border border-light-gray dark:border-border-dark flex justify-between items-start">
+                                    <div>
+                                        <div className="font-bold text-lg dark:text-light chinese-text mb-1">{item.text}</div>
+                                        <div className="text-xs text-primary font-medium">{item.docTitle}</div>
+                                    </div>
+                                    <div className="flex gap-2">
+                                        <button onClick={()=>askAI(item.text)} className="p-3 bg-primary/10 text-primary rounded-full hover:bg-primary/20 transition-colors" title="Ask AI for meaning"><Icons.Brain className="w-5 h-5"/></button>
+                                        <button onClick={()=>deleteFromGraveyard(item.id)} className="p-3 bg-danger/10 text-danger rounded-full hover:bg-danger/20 transition-colors" title="Remove from Graveyard"><Icons.Trash className="w-5 h-5"/></button>
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+                    )}
+                </div>
+            );
+        };
+
         const PastPaperRadar = () => {
             const [trends, setTrends] = useState([]);
 
@@ -582,8 +647,6 @@
         };
 
 
-        if (!user) return (<div className="h-[100dvh] w-full flex items-center justify-center bg-white dark:bg-onyx flex-col gap-6 relative overflow-hidden"><div className="z-10 flex flex-col items-center"><img src="https://raw.githubusercontent.com/darren6251/darnote/refs/heads/main/darNote%20logo.png" className="w-16 h-16 mb-6 rounded-2xl shadow-sm"/><h1 className="text-4xl font-bold text-dark dark:text-light tracking-tight font-sans mb-3">darNote-Chinese</h1><p className="text-base text-gray max-w-sm text-center mb-10">Sign in to sync your DSE survival progress and Graveyard.</p><button onClick={() => window.firebase?.signInWithPopup(window.firebase.auth, new window.firebase.GoogleAuthProvider())} className="bg-primary text-white px-8 py-3.5 rounded-full font-medium flex gap-3 items-center hover:bg-primary-dark transition-all shadow-md hover:shadow-lg w-64 justify-center text-sm"><Icons.Google className="w-4 h-4"/> Continue with Google</button></div></div>);
-
         return (
             <div className={`flex flex-col h-[100dvh] w-full transition-colors duration-300 ${isDarkMode ? 'dark bg-onyx' : 'bg-white'}`}>
                 
@@ -629,9 +692,23 @@
                         <button onClick={()=>setIsDarkMode(!isDarkMode)} className="p-2 text-gray hover:bg-black/5 dark:hover:bg-white/5 rounded-full transition-colors mx-1" title="Toggle Mode">
                             {isDarkMode ? <Icons.Sun className="w-5 h-5"/> : <Icons.Moon className="w-5 h-5"/>}
                         </button>
+
+                        {/* AUTHENTICATION UI IN HEADER */}
                         <div className="flex items-center gap-3 pl-2">
-                            {user?.photoURL ? <img src={user.photoURL} className="w-8 h-8 rounded-full border border-light-gray dark:border-white/10 cursor-pointer hover:ring-4 ring-black/5 dark:ring-white/5 transition-all"/> : <div className="w-8 h-8 rounded-full bg-primary text-white flex items-center justify-center font-bold text-xs">{user?.displayName?.charAt(0) || 'U'}</div>}
-                            <button onClick={()=>window.firebase?.signOut(window.firebase.auth)} className="p-2 text-gray hover:text-danger hover:bg-danger/5 rounded-full transition-colors ml-1"><Icons.Logout className="w-5 h-5"/></button>
+                            {user ? (
+                                <>
+                                    <div className="hidden md:flex items-center gap-1.5 px-3 py-1.5 bg-primary/10 rounded-full border border-primary/20" title="Daily AI Quota">
+                                        <Icons.Zap className="w-3.5 h-3.5 text-primary"/>
+                                        <span className="text-xs font-bold text-primary">{Math.max(0, 10 - aiUsage)}/10</span>
+                                    </div>
+                                    {user.photoURL ? <img src={user.photoURL} className="w-8 h-8 rounded-full border border-light-gray dark:border-white/10 cursor-pointer hover:ring-4 ring-black/5 dark:ring-white/5 transition-all"/> : <div className="w-8 h-8 rounded-full bg-primary text-white flex items-center justify-center font-bold text-xs">{user.displayName?.charAt(0) || 'U'}</div>}
+                                    <button onClick={()=>window.firebase?.signOut(window.firebase.auth)} className="p-2 text-gray hover:text-danger hover:bg-danger/5 rounded-full transition-colors ml-1" title="Sign Out"><Icons.Logout className="w-5 h-5"/></button>
+                                </>
+                            ) : (
+                                <button onClick={() => setShowAuthModal(true)} className="bg-primary/10 text-primary dark:bg-primary/20 dark:text-primary-light px-4 py-2 rounded-full font-bold text-sm hover:bg-primary hover:text-white transition-all">
+                                    Sign In
+                                </button>
+                            )}
                         </div>
                     </div>
                 </header>
@@ -844,6 +921,9 @@
                         </motion.div>
                     )}
                 </AnimatePresence>
+
+                {/* THE NEW AUTH MODAL POPUP */}
+                {renderAuthModal()}
 
             </div>
         );
