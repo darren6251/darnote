@@ -91,24 +91,36 @@
         }
     };
 
-    // --- FIREBASE AI QUOTA CHECKER ---
+    // --- FIREBASE AI QUOTA CHECKER WITH STUDENT VERIFICATION ---
     const checkAndIncrementQuota = async (user, type) => {
-        if (!user || !window.firebase) return false;
+        if (!user || !window.firebase) return { allowed: false, limit: 5 };
         try {
             const today = new Date().toISOString().split('T')[0];
             const ref = window.firebase.doc(window.firebase.db, 'artifacts', "darnote-app", 'users', user.uid, 'ai_usage', today);
             
-            const snap = await window.firebase.getDoc(ref);
-            const limit = 10;
+            // Re-added the anti-F12 student verification check for accurate limits
+            const profileRef = window.firebase.doc(window.firebase.db, 'artifacts', "darnote-app", 'users', user.uid, 'settings', 'profile');
+            const [snap, profileSnap] = await Promise.all([
+                window.firebase.getDoc(ref),
+                window.firebase.getDoc(profileRef)
+            ]);
+            
+            const isStudent = profileSnap.exists() && ['verified', 'temp_verified'].includes(profileSnap.data().studentStatus);
+            const limit = isStudent ? 10 : 5;
+            
             let currentVal = snap.exists() ? (snap.data()[type] || 0) : 0;
             
-            if (currentVal >= limit) return false; // The bouncer says NO
+            if (currentVal >= limit) return { allowed: false, limit }; // The bouncer says NO
             
-            await window.firebase.setDoc(ref, { [type]: window.firebase.increment(1) }, { merge: true });
-            return true; // The bouncer says YES
+            const newDocData = { [type]: window.firebase.increment(1) };
+            if (!snap.exists()) {
+                newDocData[type] = 1; 
+            }
+            await window.firebase.setDoc(ref, newDocData, { merge: true });
+            return { allowed: true, limit }; // The bouncer says YES
         } catch (e) {
             console.error("Quota check failed:", e);
-            return false;
+            return { allowed: false, limit: 5 };
         }
     };
 
@@ -118,15 +130,17 @@
         const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
         const [showHelpMenu, setShowHelpMenu] = useState(false);
         const [searchQuery, setSearchQuery] = useState('');
-        const [showAuthModal, setShowAuthModal] = useState(false); // New state for soft gate
-        const [aiUsage, setAiUsage] = useState(0); // Track daily AI usage
+        const [showAuthModal, setShowAuthModal] = useState(false);
+        
+        // Quota UI States
+        const [aiUsage, setAiUsage] = useState(0); 
+        const [aiLimit, setAiLimit] = useState(5); 
         
         // --- ROUTING MEMORY INITIALIZATION ---
         const [activeTab, setActiveTab] = useState(() => new URLSearchParams(window.location.search).get('tab') || 'read'); 
         const [selectedDocId, setSelectedDocId] = useState(() => new URLSearchParams(window.location.search).get('doc') || 't1');
         
         const [graveyard, setGraveyard] = useState([]); 
-
         const [articles, setArticles] = useState(MOCK_TEXTS);
         const [notesData, setNotesData] = useState({});
         const [isNotesPanelOpen, setIsNotesPanelOpen] = useState(false);
@@ -134,7 +148,6 @@
         // --- URL ROUTING SYNC ---
         useEffect(() => {
             try {
-                // Wrap in try-catch to prevent sandbox SecurityError with blob URLs in Preview mode
                 if (window.location.protocol !== 'blob:' && window.location.origin !== 'null') {
                     const url = new URL(window.location);
                     url.searchParams.set('tab', activeTab);
@@ -146,7 +159,6 @@
             }
         }, [activeTab, selectedDocId]);
 
-        // Listen for browser back/forward buttons
         useEffect(() => {
             const handlePopState = () => {
                 const params = new URLSearchParams(window.location.search);
@@ -164,22 +176,32 @@
             return () => unsub();
         }, []);
 
-        // Listen to Daily AI Quota
+        // Real-time Quota Listener & Student Verification
         useEffect(() => {
             if (!user || !window.firebase) return;
+            
             const today = new Date().toISOString().split('T')[0];
-            const ref = window.firebase.doc(window.firebase.db, 'artifacts', "darnote-app", 'users', user.uid, 'ai_usage', today);
-            const unsub = window.firebase.onSnapshot(ref, (snap) => {
+            const usageRef = window.firebase.doc(window.firebase.db, 'artifacts', "darnote-app", 'users', user.uid, 'ai_usage', today);
+            
+            const unsubUsage = window.firebase.onSnapshot(usageRef, (snap) => {
                 if (snap.exists()) {
                     setAiUsage(snap.data().chinese_ai_count || 0);
                 } else {
                     setAiUsage(0);
                 }
             });
-            return () => unsub();
+
+            // Fetch profile to set the correct max limit for the UI
+            const profileRef = window.firebase.doc(window.firebase.db, 'artifacts', "darnote-app", 'users', user.uid, 'settings', 'profile');
+            window.firebase.getDoc(profileRef).then(snap => {
+                const isStudent = snap.exists() && ['verified', 'temp_verified'].includes(snap.data().studentStatus);
+                setAiLimit(isStudent ? 10 : 5);
+            });
+
+            return () => unsubUsage();
         }, [user]);
 
-        // Fetch Graveyard from darNote-Chinese Database
+        // Fetch Graveyard
         useEffect(() => {
             if (!user || !window.firebase) return;
             const q = window.firebase.query(window.firebase.collection(window.firebase.db, 'artifacts', 'darNote-Chinese', 'users', user.uid, 'graveyard'), window.firebase.orderBy('addedAt', 'desc'));
@@ -195,23 +217,17 @@
             else document.documentElement.classList.remove('dark');
         }, [isDarkMode]);
 
-        // Fetch Articles and Notes Data dynamically
+        // Fetch Articles and Notes Data
         useEffect(() => {
-            // Load Articles
             fetch('articles.json')
                 .then(res => res.json())
                 .then(data => {
                     if (data && data.length > 0) {
                         setArticles(data);
-                        // Only default if not set by URL memory
-                        if (!new URLSearchParams(window.location.search).get('doc')) {
-                            setSelectedDocId(data[0].id);
-                        }
+                        if (!new URLSearchParams(window.location.search).get('doc')) setSelectedDocId(data[0].id);
                     }
-                })
-                .catch(err => console.warn("Failed to load articles.json", err));
+                }).catch(err => console.warn("Failed to load articles.json", err));
 
-            // Load Notes
             fetch('notes.json')
                 .then(res => res.json())
                 .then(data => setNotesData(data))
@@ -225,18 +241,13 @@
         const [popup, setPopup] = useState(null); 
         const [aiPanel, setAiPanel] = useState({ isOpen: false, loading: false, data: null, queryText: '' });
 
-        // --- HIGHLIGHT LOGIC ---
         const handleTextSelection = () => {
             const selection = window.getSelection();
             const text = selection.toString().trim();
             if (text.length > 0) {
                 const range = selection.getRangeAt(0);
                 const rect = range.getBoundingClientRect();
-                setPopup({ 
-                    x: rect.left + (rect.width / 2), 
-                    y: rect.top - 10, 
-                    text 
-                });
+                setPopup({ x: rect.left + (rect.width / 2), y: rect.top - 10, text });
             } else {
                 setPopup(null);
             }
@@ -251,22 +262,19 @@
         const askAI = async (text) => {
             setPopup(null);
 
-            // Gating Auth for Ask AI
             if (!user) {
                 setShowAuthModal(true);
                 return;
             }
             
-            // --- QUOTA CHECK INTERCEPTION ---
-            const quotaAllowed = await checkAndIncrementQuota(user, 'chinese_ai_count');
-            if (quotaAllowed === false) {
-                alert("🛑 Daily AI Limit Reached (10/10)!\n\nYour brain must do the heavy lifting until tomorrow. Come back at midnight!");
+            const quota = await checkAndIncrementQuota(user, 'chinese_ai_count');
+            if (!quota.allowed) {
+                alert(`🛑 Daily AI Limit Reached (${quota.limit}/${quota.limit})!\n\nYour brain must do the heavy lifting until tomorrow. Come back at midnight!`);
                 return;
             }
 
             setAiPanel({ isOpen: true, loading: true, data: null, queryText: text });
             
-            // Integrate description into AI prompt if available
             const descriptionContext = activeDoc.description ? `。參考主旨：${activeDoc.description}` : '';
             const prompt = `學生表示不懂這句：「${text}」。出自《${activeDoc.title}》${descriptionContext}。請以 HKEAA 考評局標準，結合前後文解釋。`;
             
@@ -277,7 +285,6 @@
         const addToGraveyard = async (text) => {
             setPopup(null);
 
-            // Gating Auth for Graveyard Saving
             if (!user) {
                 setShowAuthModal(true);
                 return;
@@ -428,16 +435,14 @@
             const [data, setData] = useState(null);
             
             const generateDrill = async () => {
-                // Gating Auth for Generating Drills
                 if (!user) {
                     setShowAuthModal(true);
                     return;
                 }
 
-                // --- QUOTA CHECK INTERCEPTION ---
-                const quotaAllowed = await checkAndIncrementQuota(user, 'chinese_ai_count');
-                if (quotaAllowed === false) {
-                    alert("🛑 Daily AI Limit Reached (10/10)!\n\nSave some processing power for tomorrow! Try reciting texts instead.");
+                const quota = await checkAndIncrementQuota(user, 'chinese_ai_count');
+                if (!quota.allowed) {
+                    alert(`🛑 Daily AI Limit Reached (${quota.limit}/${quota.limit})!\n\nSave some processing power for tomorrow! Try reciting texts instead.`);
                     return;
                 }
 
@@ -528,7 +533,6 @@
         };
 
         const Graveyard = () => {
-            // Unauthenticated Lock State
             if (!user) {
                 return (
                     <div className="max-w-4xl mx-auto py-8 px-6 text-center">
@@ -650,7 +654,7 @@
         return (
             <div className={`flex flex-col h-[100dvh] w-full transition-colors duration-300 ${isDarkMode ? 'dark bg-onyx' : 'bg-white'}`}>
                 
-                {/* Global Top Header - darNote el.html Style */}
+                {/* Global Top Header */}
                 <header className="bg-white dark:bg-surface-dark text-dark dark:text-light px-4 py-2 flex justify-between items-center z-30 shrink-0 border-b border-light-gray dark:border-border-dark h-16">
                     <div className="flex items-center gap-3 font-medium text-lg tracking-tight cursor-pointer px-2">
                         <button onClick={() => setIsMobileMenuOpen(true)} className="lg:hidden p-2 -ml-2 rounded-full hover:bg-light-gray dark:hover:bg-white/10 transition-colors"><Icons.Menu className="w-6 h-6 text-gray dark:text-zinc-400"/></button>
@@ -659,7 +663,6 @@
                         <span className="font-semibold lg:hidden">Chinese Tutor</span>
                     </div>
                     
-                    {/* Centered Search */}
                     <div className="hidden lg:flex flex-1 max-w-2xl px-8">
                          <div className="w-full bg-[#f1f3f4] dark:bg-dark flex items-center px-4 py-2.5 rounded-full border border-transparent focus-within:bg-white dark:focus-within:bg-surface-dark focus-within:border-light-gray dark:focus-within:border-white/10 focus-within:shadow-ds transition-all">
                              <Icons.Search className="w-5 h-5 text-gray mr-3"/>
@@ -672,7 +675,6 @@
                             <Icons.GraduationCap className="w-4 h-4"/> DSE 2026
                         </button>
                         
-                        {/* Help Dropdown */}
                         <div className="relative flex items-center">
                             <button onClick={() => setShowHelpMenu(!showHelpMenu)} className="p-2 text-gray hover:bg-black/5 dark:hover:bg-white/5 rounded-full transition-colors mx-1" title="Get Help before your brain melts">
                                 <Icons.HelpCircle className="w-5 h-5"/>
@@ -693,13 +695,13 @@
                             {isDarkMode ? <Icons.Sun className="w-5 h-5"/> : <Icons.Moon className="w-5 h-5"/>}
                         </button>
 
-                        {/* AUTHENTICATION UI IN HEADER */}
+                        {/* AUTHENTICATION UI IN HEADER WITH DYNAMIC QUOTA */}
                         <div className="flex items-center gap-3 pl-2">
                             {user ? (
                                 <>
                                     <div className="hidden md:flex items-center gap-1.5 px-3 py-1.5 bg-primary/10 rounded-full border border-primary/20" title="Daily AI Quota">
                                         <Icons.Zap className="w-3.5 h-3.5 text-primary"/>
-                                        <span className="text-xs font-bold text-primary">{Math.max(0, 10 - aiUsage)}/10</span>
+                                        <span className="text-xs font-bold text-primary">{Math.max(0, aiLimit - aiUsage)}/{aiLimit}</span>
                                     </div>
                                     {user.photoURL ? <img src={user.photoURL} className="w-8 h-8 rounded-full border border-light-gray dark:border-white/10 cursor-pointer hover:ring-4 ring-black/5 dark:ring-white/5 transition-all"/> : <div className="w-8 h-8 rounded-full bg-primary text-white flex items-center justify-center font-bold text-xs">{user.displayName?.charAt(0) || 'U'}</div>}
                                     <button onClick={()=>window.firebase?.signOut(window.firebase.auth)} className="p-2 text-gray hover:text-danger hover:bg-danger/5 rounded-full transition-colors ml-1" title="Sign Out"><Icons.Logout className="w-5 h-5"/></button>
@@ -714,14 +716,14 @@
                 </header>
 
                 <div className="flex-1 flex overflow-hidden">
-                    {/* Left Sidebar - el.html style */}
+                    {/* Left Sidebar */}
                     <div className="w-[260px] flex-shrink-0 bg-white dark:bg-surface-dark flex flex-col py-4 z-20 hidden lg:flex transition-colors duration-300">
                         <nav className="space-y-0.5 mb-6">
                             {[{id: 'read', icon: 'Book', label: 'Reading & Analysis'}, 
                               {id: 'recite', icon: 'Brain', label: 'Torture Chamber'}, 
                               {id: 'drill', icon: 'Target', label: 'Smart Drill Studio'},
                               {id: 'graveyard', icon: 'Skull', label: 'The Graveyard'},
-                              {id: 'trends', icon: 'Radar', label: 'HKEAA Hit List'}].map(item => { // Added Trends here
+                              {id: 'trends', icon: 'Radar', label: 'HKEAA Hit List'}].map(item => {
                                 const Icon = Icons[item.icon];
                                 return (
                                     <button key={item.id} onClick={()=>setActiveTab(item.id)} className={`flex items-center gap-3 px-4 py-3 rounded-r-full text-sm font-medium transition-colors w-[95%] ${activeTab===item.id ? 'bg-primary/10 text-primary dark:bg-primary-light/15 dark:text-primary-light font-bold' : 'text-gray hover:bg-black/5 dark:hover:bg-white/5 hover:text-dark dark:hover:text-light'}`}>
@@ -746,7 +748,6 @@
                     
                     {/* Main Content Area */}
                     <main className="flex-1 flex-col min-w-0 bg-[#f0f4f9] dark:bg-onyx relative transition-colors duration-300 flex w-full overflow-y-auto pb-24 lg:pb-0">
-                        {/* Mobile Search - shown only on small screens */}
                         <div className="p-4 flex gap-2 shrink-0 lg:hidden">
                              <div className="w-full bg-white dark:bg-surface-dark flex items-center px-4 py-2.5 rounded-full border border-light-gray dark:border-white/10 shadow-sm">
                                  <Icons.Search className="w-4 h-4 text-gray mr-2"/>
@@ -754,7 +755,6 @@
                              </div>
                         </div>
 
-                        {/* Mobile Context Banner for specific modes */}
                         {['recite', 'drill', 'graveyard'].includes(activeTab) && (
                             <div className="lg:hidden px-4 pt-2 pb-2 shrink-0">
                                 <div className="bg-primary/10 dark:bg-primary/20 text-primary dark:text-primary-light px-4 py-3 rounded-2xl flex items-center gap-3 shadow-sm border border-primary/20 dark:border-primary/30">
@@ -775,7 +775,7 @@
                     </main>
                 </div>
 
-                {/* Mobile Bottom Navigation - Added Trends */}
+                {/* Mobile Bottom Navigation */}
                 <div className="lg:hidden fixed bottom-0 left-0 right-0 h-16 bg-white dark:bg-surface-dark border-t border-light-gray dark:border-border-dark flex justify-around items-center px-1 z-40 pb-safe shadow-[0_-4px_10px_rgba(0,0,0,0.05)] dark:shadow-[0_-4px_10px_rgba(0,0,0,0.2)]">
                     <button onClick={() => setActiveTab('read')} className={`flex flex-col items-center justify-center w-14 h-full gap-1 transition-colors ${activeTab === 'read' ? 'text-primary' : 'text-gray dark:text-zinc-400 hover:text-dark dark:hover:text-light'}`}>
                         <Icons.Book className="w-5 h-5"/>
@@ -799,7 +799,7 @@
                     </button>
                 </div>
 
-                {/* Mobile Menu Drawer (AnimatePresence style from el.html) */}
+                {/* Mobile Menu Drawer */}
                 <AnimatePresence>
                     {isMobileMenuOpen && (
                         <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 z-50 bg-dark/60 backdrop-blur-sm lg:hidden" onClick={() => setIsMobileMenuOpen(false)}>
@@ -845,7 +845,7 @@
                     </div>
                 )}
 
-                {/* AI Sliding Panel (el.html style sidebar overlay) */}
+                {/* AI Sliding Panel */}
                 <AnimatePresence>
                     {aiPanel.isOpen && (
                         <motion.div initial={{ x: '100%' }} animate={{ x: 0 }} exit={{ x: '100%' }} className="fixed top-0 right-0 bottom-0 w-full sm:w-[450px] bg-[#f8fafc] dark:bg-onyx shadow-2xl z-[100] border-l border-light-gray dark:border-border-dark flex flex-col">
@@ -898,7 +898,7 @@
                     )}
                 </AnimatePresence>
 
-                {/* Notes Sliding Panel */}
+                {/* THE RETURN OF THE NOTES SLIDING PANEL */}
                 <AnimatePresence>
                     {isNotesPanelOpen && (
                         <motion.div initial={{ x: '100%' }} animate={{ x: 0 }} exit={{ x: '100%' }} className="fixed top-0 right-0 bottom-0 w-full sm:w-[400px] bg-[#f8fafc] dark:bg-onyx shadow-2xl z-[100] border-l border-light-gray dark:border-border-dark flex flex-col">
