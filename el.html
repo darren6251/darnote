@@ -563,9 +563,7 @@
         const [isMobileLogsOpen, setIsMobileLogsOpen] = useState(false);
         
         const [expandedSections, setExpandedSections] = useState({ scheme: false, youtube: false, analysis: false });
-        // NEW: Global Dropdown State to manage the new unified UX elements
         const [openDropdown, setOpenDropdown] = useState(null);
-        // NEW: Focus Mode State
         const [isFocusMode, setIsFocusMode] = useState(false);
 
         useEffect(() => { 
@@ -643,7 +641,6 @@
         useEffect(() => { if(isDarkMode) document.documentElement.classList.add('dark'); else document.documentElement.classList.remove('dark'); }, [isDarkMode]);
         useEffect(() => { const url = new URL(window.location); if (activeLogId) url.searchParams.set('log', activeLogId); else url.searchParams.delete('log'); window.history.pushState({}, '', url); }, [activeLogId]);
         
-        // NEW: Unified global click listener to close all popups/menus
         useEffect(() => { 
             const handleClick = () => { 
                 setContextMenu(prev => ({ ...prev, visible: false })); 
@@ -1340,8 +1337,9 @@
                         </div>
                         <div className="flex-1 overflow-y-auto p-3 space-y-2 pb-32 min-h-0">
                             {!user && <div className="text-[10px] text-gray uppercase tracking-wider text-center py-2">Offline / Guest Mode</div>}
+                            <AnimatePresence>
                             {filteredLogs.map(l => (
-                                <motion.div key={l.id} onClick={()=>setActiveLogId(l.id)} onContextMenu={(e) => handleContextMenu(e, l.id)} onMouseEnter={() => handleMouseEnter(l)} onMouseLeave={handleMouseLeave} className={`p-4 rounded-2xl cursor-pointer transition-all border ${activeLogId===l.id ? 'bg-[#e8f0fe] dark:bg-[#1a2332] border-transparent shadow-sm' : 'bg-white dark:bg-surface-dark border-light-gray dark:border-white/5 hover:border-gray/30 hover:shadow-sm'}`}>
+                                <motion.div layout initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.9 }} transition={{ duration: 0.2 }} key={l.id} onClick={()=>setActiveLogId(l.id)} onContextMenu={(e) => handleContextMenu(e, l.id)} onMouseEnter={() => handleMouseEnter(l)} onMouseLeave={handleMouseLeave} className={`p-4 rounded-2xl cursor-pointer transition-colors border ${activeLogId===l.id ? 'bg-[#e8f0fe] dark:bg-[#1a2332] border-transparent shadow-sm' : 'bg-white dark:bg-surface-dark border-light-gray dark:border-white/5 hover:border-gray/30 hover:shadow-sm'}`}>
                                     <div className="flex justify-between items-start mb-2">
                                         <div className={`font-semibold text-sm truncate pr-2 w-full ${activeLogId===l.id ? 'text-[#1967d2] dark:text-[#8ab4f8]' : 'text-dark dark:text-light'}`}>{l.title}</div>
                                         {l.mastered ? <Icons.Check className="w-4 h-4 text-success shrink-0"/> : <div className="w-2 h-2 rounded-full bg-warning mt-1.5 shrink-0"></div>}
@@ -1352,6 +1350,7 @@
                                     </div>
                                 </motion.div>
                             ))}
+                            </AnimatePresence>
                             {hasMore && !isLoadingLogs && (<button onClick={() => fetchLogs(true)} className="w-full py-3 text-sm text-primary font-medium hover:bg-primary/5 rounded-xl transition-colors">Load More</button>)}
                             {isLoadingLogs && <div className="text-center text-gray py-6 text-sm flex items-center justify-center gap-2"><div className="w-4 h-4 border-2 border-gray border-t-transparent rounded-full animate-spin"></div> Fetching...</div>}
                         </div>
@@ -1359,8 +1358,9 @@
 
                     {/* Main Content Area - The Editor */}
                     <main className={`flex-1 flex-col min-w-0 bg-[#f0f4f9] dark:bg-onyx relative transition-colors duration-300 ${(!activeLogId && mobileView === 'logs') ? 'hidden lg:flex' : 'flex w-full'}`}>
+                        <AnimatePresence mode="wait">
                         {activeLog ? (
-                            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="flex flex-col h-full">
+                            <motion.div key={activeLog.id} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} transition={{ duration: 0.2 }} className="flex flex-col h-full w-full">
                                 <header className="h-[72px] flex items-center justify-between px-4 md:px-10 bg-white dark:bg-surface-dark shrink-0 z-10 border-b border-light-gray dark:border-border-dark md:border-none shadow-sm md:shadow-none mb-4 md:mb-0">
                                     <div className="flex-1 flex items-center gap-2 md:gap-4 mr-2 md:mr-4 overflow-hidden">
                                         <button onClick={() => setActiveLogId(null)} className="lg:hidden p-2 rounded-full hover:bg-light-gray dark:hover:bg-white/10 text-gray shrink-0"><Icons.ChevronLeft className="w-5 h-5"/></button>
@@ -1484,81 +1484,96 @@
                                         )}
 
                                         {/* OPTIONAL: Solution Block */}
+                                        <AnimatePresence>
                                         {showScheme && (
-                                            <div className="bg-white dark:bg-surface-dark p-6 md:p-8 rounded-3xl shadow-sm border border-light-gray dark:border-border-dark relative group mt-6">
-                                                {isSchemeEmpty && (
-                                                    <button onClick={() => setExpandedSections(p => ({...p, scheme: false}))} className="absolute top-4 right-4 p-2 bg-light-gray/50 dark:bg-dark rounded-full text-gray hover:text-danger hover:bg-danger/10 transition-all opacity-0 group-hover:opacity-100 z-10" title="Remove Section"><Icons.X className="w-4 h-4"/></button>
-                                                )}
-                                                <MultiImageUploader images={activeLog.schemeImages} onUpdate={(d, a) => handleImageUpdate(d, a, 'scheme')} label={<><Icons.Check className="w-4 h-4 text-gray"/> Solution / Marking Scheme</>} isUploading={uploadingS} onImageClick={() => setCompareMode(true)} user={user} getAccessToken={getAccessToken} />
-                                            </div>
+                                            <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }} className="overflow-hidden">
+                                                <div className="bg-white dark:bg-surface-dark p-6 md:p-8 rounded-3xl shadow-sm border border-light-gray dark:border-border-dark relative group mt-6">
+                                                    {isSchemeEmpty && (
+                                                        <button onClick={() => setExpandedSections(p => ({...p, scheme: false}))} className="absolute top-4 right-4 p-2 bg-light-gray/50 dark:bg-dark rounded-full text-gray hover:text-danger hover:bg-danger/10 transition-all opacity-0 group-hover:opacity-100 z-10" title="Remove Section"><Icons.X className="w-4 h-4"/></button>
+                                                    )}
+                                                    <MultiImageUploader images={activeLog.schemeImages} onUpdate={(d, a) => handleImageUpdate(d, a, 'scheme')} label={<><Icons.Check className="w-4 h-4 text-gray"/> Solution / Marking Scheme</>} isUploading={uploadingS} onImageClick={() => setCompareMode(true)} user={user} getAccessToken={getAccessToken} />
+                                                </div>
+                                            </motion.div>
                                         )}
+                                        </AnimatePresence>
 
                                         {/* OPTIONAL: YouTube Block */}
+                                        <AnimatePresence>
                                         {showYoutube && (
-                                            <div className="bg-white dark:bg-surface-dark p-6 md:p-8 rounded-3xl shadow-sm border border-light-gray dark:border-border-dark space-y-4 relative overflow-hidden group mt-6">
-                                                <div className="absolute left-0 top-0 bottom-0 w-1.5 bg-[#FF0000]"></div>
-                                                {isYoutubeEmpty && (
-                                                    <button onClick={() => setExpandedSections(p => ({...p, youtube: false}))} className="absolute top-4 right-4 p-2 bg-light-gray/50 dark:bg-dark rounded-full text-gray hover:text-danger hover:bg-danger/10 transition-all opacity-0 group-hover:opacity-100 z-10" title="Remove Section"><Icons.X className="w-4 h-4"/></button>
-                                                )}
-                                                <div className="flex gap-4 items-center">
-                                                    <div className="flex-1 pl-2">
-                                                        <label className="text-sm font-bold text-dark dark:text-light block mb-2 flex items-center gap-2">
-                                                            <Icons.Youtube className="w-5 h-5 text-[#FF0000]"/> The "Explain It Like I'm 5" Video Link
-                                                        </label>
-                                                        <input 
-                                                            value={activeLog.youtubeUrl || ''} 
-                                                            onChange={e=>updateLog(activeLog.id, {youtubeUrl:e.target.value})} 
-                                                            className="w-full bg-[#f8fafc] dark:bg-dark border border-transparent hover:border-light-gray dark:hover:border-border-dark focus:bg-white dark:focus:bg-[#1a1a1c] focus:border-[#FF0000]/50 rounded-xl px-4 py-3 text-sm focus:outline-none transition-all shadow-inner" 
-                                                            placeholder="Paste YouTube Link here (e.g., https://youtu.be/...)"
-                                                        />
+                                            <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }} className="overflow-hidden">
+                                                <div className="bg-white dark:bg-surface-dark p-6 md:p-8 rounded-3xl shadow-sm border border-light-gray dark:border-border-dark space-y-4 relative overflow-hidden group mt-6">
+                                                    <div className="absolute left-0 top-0 bottom-0 w-1.5 bg-[#FF0000]"></div>
+                                                    {isYoutubeEmpty && (
+                                                        <button onClick={() => setExpandedSections(p => ({...p, youtube: false}))} className="absolute top-4 right-4 p-2 bg-light-gray/50 dark:bg-dark rounded-full text-gray hover:text-danger hover:bg-danger/10 transition-all opacity-0 group-hover:opacity-100 z-10" title="Remove Section"><Icons.X className="w-4 h-4"/></button>
+                                                    )}
+                                                    <div className="flex gap-4 items-center">
+                                                        <div className="flex-1 pl-2">
+                                                            <label className="text-sm font-bold text-dark dark:text-light block mb-2 flex items-center gap-2">
+                                                                <Icons.Youtube className="w-5 h-5 text-[#FF0000]"/> The "Explain It Like I'm 5" Video Link
+                                                            </label>
+                                                            <input 
+                                                                value={activeLog.youtubeUrl || ''} 
+                                                                onChange={e=>updateLog(activeLog.id, {youtubeUrl:e.target.value})} 
+                                                                className="w-full bg-[#f8fafc] dark:bg-dark border border-transparent hover:border-light-gray dark:hover:border-border-dark focus:bg-white dark:focus:bg-[#1a1a1c] focus:border-[#FF0000]/50 rounded-xl px-4 py-3 text-sm focus:outline-none transition-all shadow-inner" 
+                                                                placeholder="Paste YouTube Link here (e.g., https://youtu.be/...)"
+                                                            />
+                                                        </div>
                                                     </div>
+                                                    {activeLog.youtubeUrl && (
+                                                        <div className="pl-2">
+                                                            <YouTubeEmbed 
+                                                                url={activeLog.youtubeUrl} 
+                                                                initialTime={activeLog.youtubeTimestamp || 0} 
+                                                                onSaveTime={(t) => updateLog(activeLog.id, {youtubeTimestamp: t})} 
+                                                            />
+                                                        </div>
+                                                    )}
                                                 </div>
-                                                {activeLog.youtubeUrl && (
-                                                    <div className="pl-2">
-                                                        <YouTubeEmbed 
-                                                            url={activeLog.youtubeUrl} 
-                                                            initialTime={activeLog.youtubeTimestamp || 0} 
-                                                            onSaveTime={(t) => updateLog(activeLog.id, {youtubeTimestamp: t})} 
-                                                        />
-                                                    </div>
-                                                )}
-                                            </div>
+                                            </motion.div>
                                         )}
+                                        </AnimatePresence>
 
                                         {/* OPTIONAL: Analysis Grid */}
+                                        <AnimatePresence>
                                         {showAnalysis && (
-                                            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 relative group mt-6">
-                                                <div className="lg:col-span-1 space-y-6">
-                                                    <div className="bg-white dark:bg-surface-dark p-6 rounded-3xl shadow-sm border border-light-gray dark:border-border-dark relative overflow-hidden">
-                                                        <div className="absolute left-0 top-0 bottom-0 w-1.5 bg-success"></div>
-                                                        <label className="text-sm font-medium text-dark dark:text-light block mb-3 pl-2">Correct Answer</label>
-                                                        <input value={activeLog.correctAnswer} onChange={e=>updateLog(activeLog.id, {correctAnswer:e.target.value})} className="w-full bg-light-gray/50 dark:bg-dark border border-transparent hover:border-light-gray dark:hover:border-border-dark rounded-xl px-4 py-3 font-mono text-lg font-bold text-success focus:bg-white dark:focus:bg-[#1a1a1c] focus:border-success focus:outline-none transition-all" placeholder="e.g. A, 42"/>
+                                            <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }} className="overflow-hidden">
+                                                <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 relative group mt-6">
+                                                    <div className="lg:col-span-1 space-y-6">
+                                                        <div className="bg-white dark:bg-surface-dark p-6 rounded-3xl shadow-sm border border-light-gray dark:border-border-dark relative overflow-hidden">
+                                                            <div className="absolute left-0 top-0 bottom-0 w-1.5 bg-success"></div>
+                                                            <label className="text-sm font-medium text-dark dark:text-light block mb-3 pl-2">Correct Answer</label>
+                                                            <input value={activeLog.correctAnswer} onChange={e=>updateLog(activeLog.id, {correctAnswer:e.target.value})} className="w-full bg-light-gray/50 dark:bg-dark border border-transparent hover:border-light-gray dark:hover:border-border-dark rounded-xl px-4 py-3 font-mono text-lg font-bold text-success focus:bg-white dark:focus:bg-[#1a1a1c] focus:border-success focus:outline-none transition-all" placeholder="e.g. A, 42"/>
+                                                        </div>
+                                                        <div className="bg-white dark:bg-surface-dark p-6 rounded-3xl shadow-sm border border-light-gray dark:border-border-dark relative overflow-hidden">
+                                                            <div className="absolute left-0 top-0 bottom-0 w-1.5 bg-danger"></div>
+                                                            <label className="text-sm font-medium text-dark dark:text-light block mb-3 pl-2">Marks Deducted</label>
+                                                            <input value={activeLog.marks} onChange={e=>updateLog(activeLog.id, {marks:e.target.value})} className="w-full bg-light-gray/50 dark:bg-dark border border-transparent hover:border-light-gray dark:hover:border-border-dark rounded-xl px-4 py-3 font-mono text-lg font-bold text-danger focus:bg-white dark:focus:bg-[#1a1a1c] focus:border-danger focus:outline-none transition-all" placeholder="-1"/>
+                                                        </div>
                                                     </div>
-                                                    <div className="bg-white dark:bg-surface-dark p-6 rounded-3xl shadow-sm border border-light-gray dark:border-border-dark relative overflow-hidden">
-                                                        <div className="absolute left-0 top-0 bottom-0 w-1.5 bg-danger"></div>
-                                                        <label className="text-sm font-medium text-dark dark:text-light block mb-3 pl-2">Marks Deducted</label>
-                                                        <input value={activeLog.marks} onChange={e=>updateLog(activeLog.id, {marks:e.target.value})} className="w-full bg-light-gray/50 dark:bg-dark border border-transparent hover:border-light-gray dark:hover:border-border-dark rounded-xl px-4 py-3 font-mono text-lg font-bold text-danger focus:bg-white dark:focus:bg-[#1a1a1c] focus:border-danger focus:outline-none transition-all" placeholder="-1"/>
+                                                    <div className="lg:col-span-2 bg-white dark:bg-surface-dark rounded-3xl shadow-sm border border-light-gray dark:border-border-dark flex flex-col min-h-[240px] relative overflow-hidden">
+                                                        <div className="absolute left-0 top-0 bottom-0 w-1.5 bg-primary"></div>
+                                                        {isAnalysisEmpty && (
+                                                            <button onClick={() => setExpandedSections(p => ({...p, analysis: false}))} className="absolute top-4 right-4 p-2 bg-light-gray/50 dark:bg-dark rounded-full text-gray hover:text-danger hover:bg-danger/10 transition-all opacity-0 group-hover:opacity-100 z-10" title="Remove Section"><Icons.X className="w-4 h-4"/></button>
+                                                        )}
+                                                        <div className="px-6 md:px-8 py-4 border-b border-light-gray dark:border-border-dark flex justify-between items-center pl-8 pr-12">
+                                                            <span className="text-sm font-medium text-dark dark:text-light flex items-center gap-2"><Icons.Brain className="w-4 h-4 text-primary"/> Retrospective</span>
+                                                            <Icons.Bot className="w-4 h-4 text-gray opacity-50"/>
+                                                        </div>
+                                                        <textarea className="flex-1 w-full p-6 md:p-8 pl-8 bg-transparent outline-none resize-none text-base leading-relaxed text-dark dark:text-light placeholder-gray/70" placeholder="Analyze the failure point...&#10;1. What was the conceptual gap?&#10;2. How did the trick work?&#10;3. What is the mental model needed for next time?" value={activeLog.explanation} onChange={e=>updateLog(activeLog.id, {explanation:e.target.value})}/>
                                                     </div>
                                                 </div>
-                                                <div className="lg:col-span-2 bg-white dark:bg-surface-dark rounded-3xl shadow-sm border border-light-gray dark:border-border-dark flex flex-col min-h-[240px] relative overflow-hidden">
-                                                    <div className="absolute left-0 top-0 bottom-0 w-1.5 bg-primary"></div>
-                                                    {isAnalysisEmpty && (
-                                                        <button onClick={() => setExpandedSections(p => ({...p, analysis: false}))} className="absolute top-4 right-4 p-2 bg-light-gray/50 dark:bg-dark rounded-full text-gray hover:text-danger hover:bg-danger/10 transition-all opacity-0 group-hover:opacity-100 z-10" title="Remove Section"><Icons.X className="w-4 h-4"/></button>
-                                                    )}
-                                                    <div className="px-6 md:px-8 py-4 border-b border-light-gray dark:border-border-dark flex justify-between items-center pl-8 pr-12">
-                                                        <span className="text-sm font-medium text-dark dark:text-light flex items-center gap-2"><Icons.Brain className="w-4 h-4 text-primary"/> Retrospective</span>
-                                                        <Icons.Bot className="w-4 h-4 text-gray opacity-50"/>
-                                                    </div>
-                                                    <textarea className="flex-1 w-full p-6 md:p-8 pl-8 bg-transparent outline-none resize-none text-base leading-relaxed text-dark dark:text-light placeholder-gray/70" placeholder="Analyze the failure point...&#10;1. What was the conceptual gap?&#10;2. How did the trick work?&#10;3. What is the mental model needed for next time?" value={activeLog.explanation} onChange={e=>updateLog(activeLog.id, {explanation:e.target.value})}/>
-                                                </div>
-                                            </div>
+                                            </motion.div>
                                         )}
+                                        </AnimatePresence>
                                     </div>
                                 </div>
                             </motion.div>
                         ) : (
-                            <Dashboard logs={logs} setPracticeConfig={setPracticeConfig} />
+                            <motion.div key="dashboard" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="h-full w-full">
+                                <Dashboard logs={logs} setPracticeConfig={setPracticeConfig} />
+                            </motion.div>
                         )}
+                        </AnimatePresence>
                         <AnimatePresence>{isAiOpen && activeLog && user && (<div className="absolute top-0 right-0 bottom-0 w-full sm:w-[400px] z-40 sm:z-30 shadow-2xl"><AIChat activeLog={activeLog} onClose={()=>setIsAiOpen(false)} user={user} messages={chatMessages} setMessages={setChatMessages}/></div>)}</AnimatePresence>
                         {practiceConfig.isOpen && <PracticeModal activeLog={activeLog} onClose={() => setPracticeConfig({...practiceConfig, isOpen: false})} user={user} subjects={subjects} initialMode={practiceConfig.mode} />}
                     </main>
