@@ -562,6 +562,9 @@
         const [showHelpMenu, setShowHelpMenu] = useState(false);
         const [isDesktopLogsOpen, setIsDesktopLogsOpen] = useState(false);
         const [isMobileLogsOpen, setIsMobileLogsOpen] = useState(false);
+        
+        // NEW: State for Progressive Disclosure UI
+        const [expandedSections, setExpandedSections] = useState({ scheme: false, youtube: false, analysis: false });
 
         useEffect(() => { 
             if (!window.firebase) {
@@ -1092,6 +1095,20 @@
         const filteredLogs = logs.filter(l => (l.title || '').toLowerCase().includes(searchQuery.toLowerCase()) || (l.questionText || '').toLowerCase().includes(searchQuery.toLowerCase()));
         const currentSub = activeLog ? subjects.find(s=>s.name===activeLog.subject) : null;
 
+        // NEW: Reset expanded sections when switching logs
+        useEffect(() => {
+            if (activeLogId) setExpandedSections({ scheme: false, youtube: false, analysis: false });
+        }, [activeLogId]);
+
+        // NEW: Derived visibility variables (Auto-expand if data exists)
+        const isSchemeEmpty = !(activeLog?.schemeImages?.length > 0) && !activeLog?.markingSchemeUrl;
+        const isYoutubeEmpty = !activeLog?.youtubeUrl;
+        const isAnalysisEmpty = !activeLog?.correctAnswer && !activeLog?.marks && !activeLog?.explanation;
+        
+        const showScheme = expandedSections.scheme || !isSchemeEmpty;
+        const showYoutube = expandedSections.youtube || !isYoutubeEmpty;
+        const showAnalysis = expandedSections.analysis || !isAnalysisEmpty;
+
         if (!authLoaded) return (<div className="min-h-screen w-full flex items-center justify-center bg-white dark:bg-onyx"><div className="w-10 h-10 border-4 border-primary/30 border-t-primary rounded-full animate-spin"></div></div>);
 
         if (showOnboarding && !user) {
@@ -1341,69 +1358,106 @@
                                             </div>
                                         </div>
                                         
-                                        {/* Evidence Block */}
-                                        <div className="bg-white dark:bg-surface-dark p-6 md:p-8 rounded-3xl shadow-sm border border-light-gray dark:border-border-dark space-y-8">
-                                            <div>
-                                                <MultiImageUploader images={activeLog.questionImages} onUpdate={(d, a) => handleImageUpdate(d, a, 'question')} label={<><Icons.Scan className="w-4 h-4 text-gray"/> Original Question</>} isUploading={uploadingQ} onImageClick={() => setCompareMode(true)} user={user} getAccessToken={getAccessToken} />
-                                                <div className="mt-4 pl-1">
-                                                    <button onClick={() => setShowOcrText(!showOcrText)} className="text-xs flex items-center gap-1.5 text-gray hover:text-primary transition-colors font-medium"><Icons.File className="w-3.5 h-3.5"/> {showOcrText ? "Hide Extracted Text" : "View Extracted Text"}</button>
-                                                    {showOcrText && (<textarea value={activeLog.questionText || ""} onChange={(e) => updateLog(activeLog.id, { questionText: e.target.value })} className="mt-3 w-full p-4 text-sm bg-[#f8fafc] dark:bg-dark border border-light-gray dark:border-border-dark rounded-2xl text-dark dark:text-light focus:outline-none focus:border-primary transition-colors font-sans leading-relaxed" rows="4" placeholder="AI text extraction goes here..." />)}
-                                                </div>
+                                        {/* Evidence Block (Now ONLY Question) */}
+                                        <div className="bg-white dark:bg-surface-dark p-6 md:p-8 rounded-3xl shadow-sm border border-light-gray dark:border-border-dark space-y-4">
+                                            <MultiImageUploader images={activeLog.questionImages} onUpdate={(d, a) => handleImageUpdate(d, a, 'question')} label={<><Icons.Scan className="w-4 h-4 text-gray"/> Original Question</>} isUploading={uploadingQ} onImageClick={() => setCompareMode(true)} user={user} getAccessToken={getAccessToken} />
+                                            <div className="pl-1 mt-2">
+                                                <button onClick={() => setShowOcrText(!showOcrText)} className="text-xs flex items-center gap-1.5 text-gray hover:text-primary transition-colors font-medium"><Icons.File className="w-3.5 h-3.5"/> {showOcrText ? "Hide Extracted Text" : "View Extracted Text"}</button>
+                                                {showOcrText && (<textarea value={activeLog.questionText || ""} onChange={(e) => updateLog(activeLog.id, { questionText: e.target.value })} className="mt-3 w-full p-4 text-sm bg-[#f8fafc] dark:bg-dark border border-light-gray dark:border-border-dark rounded-2xl text-dark dark:text-light focus:outline-none focus:border-primary transition-colors font-sans leading-relaxed" rows="4" placeholder="AI text extraction goes here..." />)}
                                             </div>
-                                            <div className="h-px bg-light-gray dark:bg-border-dark"></div>
-                                            <MultiImageUploader images={activeLog.schemeImages} onUpdate={(d, a) => handleImageUpdate(d, a, 'scheme')} label={<><Icons.Check className="w-4 h-4 text-gray"/> Solution / Marking Scheme</>} isUploading={uploadingS} onImageClick={() => setCompareMode(true)} user={user} getAccessToken={getAccessToken} />
                                         </div>
 
-                                        {/* The "Watch Me Suffer in 4K" YouTube Integration Block */}
-                                        <div className="bg-white dark:bg-surface-dark p-6 md:p-8 rounded-3xl shadow-sm border border-light-gray dark:border-border-dark space-y-4 relative overflow-hidden">
-                                            <div className="absolute left-0 top-0 bottom-0 w-1.5 bg-[#FF0000]"></div>
-                                            <div className="flex gap-4 items-center">
-                                                <div className="flex-1 pl-2">
-                                                    <label className="text-sm font-bold text-dark dark:text-light block mb-2 flex items-center gap-2">
-                                                        <Icons.Youtube className="w-5 h-5 text-[#FF0000]"/> The "Explain It Like I'm 5" Video Link
-                                                    </label>
-                                                    <input 
-                                                        value={activeLog.youtubeUrl || ''} 
-                                                        onChange={e=>updateLog(activeLog.id, {youtubeUrl:e.target.value})} 
-                                                        className="w-full bg-[#f8fafc] dark:bg-dark border border-transparent hover:border-light-gray dark:hover:border-border-dark focus:bg-white dark:focus:bg-[#1a1a1c] focus:border-[#FF0000]/50 rounded-xl px-4 py-3 text-sm focus:outline-none transition-all shadow-inner" 
-                                                        placeholder="Paste YouTube Link here (e.g., https://youtu.be/...)"
-                                                    />
-                                                </div>
+                                        {/* PROGRESSIVE DISCLOSURE: Add Features Row */}
+                                        {(!showScheme || !showYoutube || !showAnalysis) && (
+                                            <div className="flex flex-wrap gap-3 py-1">
+                                                {!showScheme && (
+                                                    <button onClick={() => setExpandedSections(prev => ({...prev, scheme: true}))} className="px-4 py-2.5 bg-transparent border border-dashed border-gray/40 dark:border-gray/60 rounded-xl text-sm font-medium text-gray hover:text-primary hover:border-primary/50 transition-all flex items-center gap-2 hover:bg-primary/5">
+                                                        <Icons.Plus className="w-4 h-4"/> Solution Image
+                                                    </button>
+                                                )}
+                                                {!showYoutube && (
+                                                    <button onClick={() => setExpandedSections(prev => ({...prev, youtube: true}))} className="px-4 py-2.5 bg-transparent border border-dashed border-gray/40 dark:border-gray/60 rounded-xl text-sm font-medium text-gray hover:text-[#FF0000] hover:border-[#FF0000]/50 transition-all flex items-center gap-2 hover:bg-[#FF0000]/5">
+                                                        <Icons.Plus className="w-4 h-4"/> Video Link
+                                                    </button>
+                                                )}
+                                                {!showAnalysis && (
+                                                    <button onClick={() => setExpandedSections(prev => ({...prev, analysis: true}))} className="px-4 py-2.5 bg-transparent border border-dashed border-gray/40 dark:border-gray/60 rounded-xl text-sm font-medium text-gray hover:text-accent hover:border-accent/50 transition-all flex items-center gap-2 hover:bg-accent/5">
+                                                        <Icons.Plus className="w-4 h-4"/> Analyst Notes
+                                                    </button>
+                                                )}
                                             </div>
-                                            {activeLog.youtubeUrl && (
-                                                <div className="pl-2">
-                                                    <YouTubeEmbed 
-                                                        url={activeLog.youtubeUrl} 
-                                                        initialTime={activeLog.youtubeTimestamp || 0} 
-                                                        onSaveTime={(t) => updateLog(activeLog.id, {youtubeTimestamp: t})} 
-                                                    />
-                                                </div>
-                                            )}
-                                        </div>
+                                        )}
 
-                                        {/* Analysis Grid */}
-                                        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                                            <div className="lg:col-span-1 space-y-6">
-                                                <div className="bg-white dark:bg-surface-dark p-6 rounded-3xl shadow-sm border border-light-gray dark:border-border-dark relative overflow-hidden">
-                                                    <div className="absolute left-0 top-0 bottom-0 w-1.5 bg-success"></div>
-                                                    <label className="text-sm font-medium text-dark dark:text-light block mb-3 pl-2">Correct Answer</label>
-                                                    <input value={activeLog.correctAnswer} onChange={e=>updateLog(activeLog.id, {correctAnswer:e.target.value})} className="w-full bg-light-gray/50 dark:bg-dark border border-transparent hover:border-light-gray dark:hover:border-border-dark rounded-xl px-4 py-3 font-mono text-lg font-bold text-success focus:bg-white dark:focus:bg-[#1a1a1c] focus:border-success focus:outline-none transition-all" placeholder="e.g. A, 42"/>
+                                        {/* OPTIONAL: Solution Block */}
+                                        {showScheme && (
+                                            <div className="bg-white dark:bg-surface-dark p-6 md:p-8 rounded-3xl shadow-sm border border-light-gray dark:border-border-dark relative group">
+                                                {isSchemeEmpty && (
+                                                    <button onClick={() => setExpandedSections(p => ({...p, scheme: false}))} className="absolute top-4 right-4 p-2 bg-light-gray/50 dark:bg-dark rounded-full text-gray hover:text-danger hover:bg-danger/10 transition-all opacity-0 group-hover:opacity-100 z-10" title="Remove Section"><Icons.X className="w-4 h-4"/></button>
+                                                )}
+                                                <MultiImageUploader images={activeLog.schemeImages} onUpdate={(d, a) => handleImageUpdate(d, a, 'scheme')} label={<><Icons.Check className="w-4 h-4 text-gray"/> Solution / Marking Scheme</>} isUploading={uploadingS} onImageClick={() => setCompareMode(true)} user={user} getAccessToken={getAccessToken} />
+                                            </div>
+                                        )}
+
+                                        {/* OPTIONAL: YouTube Block */}
+                                        {showYoutube && (
+                                            <div className="bg-white dark:bg-surface-dark p-6 md:p-8 rounded-3xl shadow-sm border border-light-gray dark:border-border-dark space-y-4 relative overflow-hidden group">
+                                                <div className="absolute left-0 top-0 bottom-0 w-1.5 bg-[#FF0000]"></div>
+                                                {isYoutubeEmpty && (
+                                                    <button onClick={() => setExpandedSections(p => ({...p, youtube: false}))} className="absolute top-4 right-4 p-2 bg-light-gray/50 dark:bg-dark rounded-full text-gray hover:text-danger hover:bg-danger/10 transition-all opacity-0 group-hover:opacity-100 z-10" title="Remove Section"><Icons.X className="w-4 h-4"/></button>
+                                                )}
+                                                <div className="flex gap-4 items-center">
+                                                    <div className="flex-1 pl-2">
+                                                        <label className="text-sm font-bold text-dark dark:text-light block mb-2 flex items-center gap-2">
+                                                            <Icons.Youtube className="w-5 h-5 text-[#FF0000]"/> The "Explain It Like I'm 5" Video Link
+                                                        </label>
+                                                        <input 
+                                                            value={activeLog.youtubeUrl || ''} 
+                                                            onChange={e=>updateLog(activeLog.id, {youtubeUrl:e.target.value})} 
+                                                            className="w-full bg-[#f8fafc] dark:bg-dark border border-transparent hover:border-light-gray dark:hover:border-border-dark focus:bg-white dark:focus:bg-[#1a1a1c] focus:border-[#FF0000]/50 rounded-xl px-4 py-3 text-sm focus:outline-none transition-all shadow-inner" 
+                                                            placeholder="Paste YouTube Link here (e.g., https://youtu.be/...)"
+                                                        />
+                                                    </div>
                                                 </div>
-                                                <div className="bg-white dark:bg-surface-dark p-6 rounded-3xl shadow-sm border border-light-gray dark:border-border-dark relative overflow-hidden">
-                                                    <div className="absolute left-0 top-0 bottom-0 w-1.5 bg-danger"></div>
-                                                    <label className="text-sm font-medium text-dark dark:text-light block mb-3 pl-2">Marks Deducted</label>
-                                                    <input value={activeLog.marks} onChange={e=>updateLog(activeLog.id, {marks:e.target.value})} className="w-full bg-light-gray/50 dark:bg-dark border border-transparent hover:border-light-gray dark:hover:border-border-dark rounded-xl px-4 py-3 font-mono text-lg font-bold text-danger focus:bg-white dark:focus:bg-[#1a1a1c] focus:border-danger focus:outline-none transition-all" placeholder="-1"/>
+                                                {activeLog.youtubeUrl && (
+                                                    <div className="pl-2">
+                                                        <YouTubeEmbed 
+                                                            url={activeLog.youtubeUrl} 
+                                                            initialTime={activeLog.youtubeTimestamp || 0} 
+                                                            onSaveTime={(t) => updateLog(activeLog.id, {youtubeTimestamp: t})} 
+                                                        />
+                                                    </div>
+                                                )}
+                                            </div>
+                                        )}
+
+                                        {/* OPTIONAL: Analysis Grid */}
+                                        {showAnalysis && (
+                                            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 relative group">
+                                                <div className="lg:col-span-1 space-y-6">
+                                                    <div className="bg-white dark:bg-surface-dark p-6 rounded-3xl shadow-sm border border-light-gray dark:border-border-dark relative overflow-hidden">
+                                                        <div className="absolute left-0 top-0 bottom-0 w-1.5 bg-success"></div>
+                                                        <label className="text-sm font-medium text-dark dark:text-light block mb-3 pl-2">Correct Answer</label>
+                                                        <input value={activeLog.correctAnswer} onChange={e=>updateLog(activeLog.id, {correctAnswer:e.target.value})} className="w-full bg-light-gray/50 dark:bg-dark border border-transparent hover:border-light-gray dark:hover:border-border-dark rounded-xl px-4 py-3 font-mono text-lg font-bold text-success focus:bg-white dark:focus:bg-[#1a1a1c] focus:border-success focus:outline-none transition-all" placeholder="e.g. A, 42"/>
+                                                    </div>
+                                                    <div className="bg-white dark:bg-surface-dark p-6 rounded-3xl shadow-sm border border-light-gray dark:border-border-dark relative overflow-hidden">
+                                                        <div className="absolute left-0 top-0 bottom-0 w-1.5 bg-danger"></div>
+                                                        <label className="text-sm font-medium text-dark dark:text-light block mb-3 pl-2">Marks Deducted</label>
+                                                        <input value={activeLog.marks} onChange={e=>updateLog(activeLog.id, {marks:e.target.value})} className="w-full bg-light-gray/50 dark:bg-dark border border-transparent hover:border-light-gray dark:hover:border-border-dark rounded-xl px-4 py-3 font-mono text-lg font-bold text-danger focus:bg-white dark:focus:bg-[#1a1a1c] focus:border-danger focus:outline-none transition-all" placeholder="-1"/>
+                                                    </div>
+                                                </div>
+                                                <div className="lg:col-span-2 bg-white dark:bg-surface-dark rounded-3xl shadow-sm border border-light-gray dark:border-border-dark flex flex-col min-h-[240px] relative overflow-hidden">
+                                                    <div className="absolute left-0 top-0 bottom-0 w-1.5 bg-primary"></div>
+                                                    {isAnalysisEmpty && (
+                                                        <button onClick={() => setExpandedSections(p => ({...p, analysis: false}))} className="absolute top-4 right-4 p-2 bg-light-gray/50 dark:bg-dark rounded-full text-gray hover:text-danger hover:bg-danger/10 transition-all opacity-0 group-hover:opacity-100 z-10" title="Remove Section"><Icons.X className="w-4 h-4"/></button>
+                                                    )}
+                                                    <div className="px-6 md:px-8 py-4 border-b border-light-gray dark:border-border-dark flex justify-between items-center pl-8 pr-12">
+                                                        <span className="text-sm font-medium text-dark dark:text-light flex items-center gap-2"><Icons.Brain className="w-4 h-4 text-primary"/> Retrospective</span>
+                                                        <Icons.Bot className="w-4 h-4 text-gray opacity-50"/>
+                                                    </div>
+                                                    <textarea className="flex-1 w-full p-6 md:p-8 pl-8 bg-transparent outline-none resize-none text-base leading-relaxed text-dark dark:text-light placeholder-gray/70" placeholder="Analyze the failure point...&#10;1. What was the conceptual gap?&#10;2. How did the trick work?&#10;3. What is the mental model needed for next time?" value={activeLog.explanation} onChange={e=>updateLog(activeLog.id, {explanation:e.target.value})}/>
                                                 </div>
                                             </div>
-                                            <div className="lg:col-span-2 bg-white dark:bg-surface-dark rounded-3xl shadow-sm border border-light-gray dark:border-border-dark flex flex-col min-h-[240px] relative overflow-hidden">
-                                                <div className="absolute left-0 top-0 bottom-0 w-1.5 bg-primary"></div>
-                                                <div className="px-6 md:px-8 py-4 border-b border-light-gray dark:border-border-dark flex justify-between items-center pl-8">
-                                                    <span className="text-sm font-medium text-dark dark:text-light flex items-center gap-2"><Icons.Brain className="w-4 h-4 text-primary"/> Retrospective</span>
-                                                    <Icons.Bot className="w-4 h-4 text-gray opacity-50"/>
-                                                </div>
-                                                <textarea className="flex-1 w-full p-6 md:p-8 pl-8 bg-transparent outline-none resize-none text-base leading-relaxed text-dark dark:text-light placeholder-gray/70" placeholder="Analyze the failure point...&#10;1. What was the conceptual gap?&#10;2. How did the trick work?&#10;3. What is the mental model needed for next time?" value={activeLog.explanation} onChange={e=>updateLog(activeLog.id, {explanation:e.target.value})}/>
-                                            </div>
-                                        </div>
+                                        )}
                                     </div>
                                 </div>
                             </motion.div>
