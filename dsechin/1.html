@@ -1,0 +1,317 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>始得西山宴遊記 - Interactive Text</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        /* Smooth transitions for interactive elements */
+        .sentence {
+            transition: background-color 0.2s ease;
+            border-radius: 4px;
+            padding: 2px 0;
+            cursor: pointer;
+        }
+        /* The highlight color for sentences */
+        .sentence.active {
+            background-color: #fde047; /* Tailwind yellow-300 */
+        }
+        
+        /* The annotated words styling */
+        .word {
+            font-weight: 600;
+            border-bottom: 1px dashed #9ca3af;
+            transition: color 0.2s ease, border-color 0.2s ease;
+            cursor: pointer;
+            position: relative;
+            z-index: 10;
+        }
+        /* Turn green on hover */
+        .word:hover {
+            color: #16a34a; /* Tailwind green-600 */
+            border-color: #16a34a;
+        }
+
+        /* Tooltip styling */
+        #tooltip {
+            pointer-events: none;
+            transition: opacity 0.15s ease, transform 0.15s ease;
+            transform: translateY(10px);
+        }
+        #tooltip.show {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    </style>
+</head>
+<body class="bg-gray-100 text-gray-800 font-sans leading-loose min-h-screen p-4 md:p-8 flex flex-col items-center">
+
+    <!-- Instructions Header -->
+    <div class="w-full max-w-7xl bg-white rounded-xl shadow-sm border border-gray-200 p-6 mb-6">
+        <h1 class="text-3xl font-bold text-gray-900 mb-2">始得西山宴遊記</h1>
+        <p class="text-gray-600 text-sm md:text-base">
+            <strong class="text-blue-600">Instructions:</strong> 
+            <br>• Hover over any sentence to see its translation highlighted.
+            <br>• Hover over <span class="font-bold border-b border-dashed border-gray-400">underlined words</span> to turn them <span class="text-green-600 font-bold">green</span>. 
+            <br>• <strong>Click and hold</strong> on an underlined word to see its specific meaning.
+        </p>
+    </div>
+
+    <!-- Main Content Container -->
+    <div class="w-full max-w-7xl bg-white rounded-xl shadow-lg overflow-hidden flex flex-col md:flex-row border border-gray-200">
+        
+        <!-- Left Column: Original Text -->
+        <div class="w-full md:w-1/2 p-6 md:p-10 border-b md:border-b-0 md:border-r border-gray-200 relative">
+            <h2 class="text-2xl font-bold mb-6 text-gray-900 flex items-center gap-2">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-blue-500" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>
+                原文 (Original)
+            </h2>
+            <div id="original-container" class="text-lg md:text-xl text-justify tracking-wide space-y-6">
+                <!-- Content injected via JS -->
+            </div>
+        </div>
+
+        <!-- Right Column: Translation -->
+        <div class="w-full md:w-1/2 p-6 md:p-10 bg-gray-50 relative">
+            <h2 class="text-2xl font-bold mb-6 text-gray-900 flex items-center gap-2">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-green-500" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 5h12M9 3v2m1.048 9.5A18.022 18.022 0 016.412 9m6.088 9h7M11 21l5-10 5 10M12.751 5C11.783 10.77 8.07 15.61 3 18.129" /></svg>
+                語譯 (Translation)
+            </h2>
+            <div id="translation-container" class="text-lg md:text-xl text-justify tracking-wide space-y-6 text-gray-700">
+                <!-- Content injected via JS -->
+            </div>
+        </div>
+    </div>
+
+    <!-- Floating Tooltip for Word Meanings -->
+    <div id="tooltip" class="fixed opacity-0 bg-gray-900 text-white text-base rounded-lg py-3 px-4 z-50 shadow-2xl max-w-sm w-max border border-gray-700 font-medium">
+        <!-- Content injected via JS -->
+    </div>
+
+    <script>
+        // Data structure mapping sentences and word annotations
+        const textData = [
+            [ // Paragraph 1
+                {
+                    id: 1,
+                    orig: '自余為<span class="word" data-meaning="柳宗元貶官永州，以此稱謂自己。">僇人</span>，居是州，<span class="word" data-meaning="恒:常。惴慄：恐懼。">恒惴慄</span>。',
+                    trans: '自從我成為罪人，住在此州，經常憂懼不安。'
+                },
+                {
+                    id: 2,
+                    orig: '其<span class="word" data-meaning="空閒時。">隙</span>也，則<span class="word" data-meaning="徐行。">施施</span>而行，<span class="word" data-meaning="不經意。">漫漫</span>而遊。',
+                    trans: '空閒的時候，就（外出）緩步行走，漫無目的地（到處）遊覽。'
+                },
+                {
+                    id: 3,
+                    orig: '日與其<span class="word" data-meaning="同伴。">徒</span>上高山，入深林，<span class="word" data-meaning="窮:盡。迴:迂迴、曲折。">窮迴溪</span>，<span class="word" data-meaning="幽:偏遠。泉:泉水。">幽泉</span>怪石，無遠不到。',
+                    trans: '每天與同伴們攀登高山，走入深林，窮盡迂迴的溪水、幽深隱僻的泉水和怪異的山石，無論多遠都去遊歷。'
+                },
+                {
+                    id: 4,
+                    orig: '到則<span class="word" data-meaning="撥開草叢。">披草</span>而坐，傾壺而醉。',
+                    trans: '到了就撥開野草坐下來，傾盡壺中酒喝個醉。'
+                },
+                {
+                    id: 5,
+                    orig: '醉則更<span class="word" data-meaning="互相以為枕頭。">相枕</span>以臥，臥而夢。',
+                    trans: '醉了就互相依靠著睡覺，睡著就做夢。'
+                },
+                {
+                    id: 6,
+                    orig: '意有所<span class="word" data-meaning="至。">極</span>，夢亦同<span class="word" data-meaning="向、往。">趣</span>。',
+                    trans: '心意有所至之處，夢亦有相同的興味。'
+                },
+                {
+                    id: 7,
+                    orig: '<span class="word" data-meaning="醒。">覺</span>而起，起而歸。',
+                    trans: '醒了就起來，起來了就回家。'
+                },
+                {
+                    id: 8,
+                    orig: '以為凡是州之山有異態者，皆我有也，而未始知<span class="word" data-meaning="位於永州城西方。">西山</span>之怪特。',
+                    trans: '（我）認為所有這個州中的山水有奇異形態的，都為我所享有了，卻未曾知道西山（風景）的奇異獨特。'
+                }
+            ],
+            [ // Paragraph 2
+                {
+                    id: 9,
+                    orig: '今年九月二十八日，因坐<span class="word" data-meaning="華寺西之亭，由柳宗元建成。">法華西亭</span>，望西山，始指<span class="word" data-meaning="與眾不同之處。">異之</span>。',
+                    trans: '今年九月二十八日，（我）因為坐在法華寺的西亭，遙望西山，才指點著覺得它奇異。'
+                },
+                {
+                    id: 10,
+                    orig: '遂命僕過<span class="word" data-meaning="《元和郡縣志》：「永州零陵縣，湘水經州西十餘里。」">湘江</span>，<span class="word" data-meaning="緣:沿。染溪，又名冉溪。">緣染溪</span>，<span class="word" data-meaning="砍伐雜草叢生之木。">斫榛莽</span>。',
+                    trans: '於是命令僕人（隨同）渡過湘江，沿著染溪行進，砍伐叢雜的草木，'
+                },
+                {
+                    id: 11,
+                    orig: '焚<span class="word" data-meaning="草葉茂盛。">茅茷</span>，<span class="word" data-meaning="盡。">窮</span>山之高而止。',
+                    trans: '焚燒茂盛的茅草，一直爬到山的最高處才止步。'
+                },
+                {
+                    id: 12,
+                    orig: '攀援而登，<span class="word" data-meaning="箕踞，隨意張開雙腳而坐之坐姿。遨:游、觀賞。">箕踞而遨</span>，則凡數州之<span class="word" data-meaning="土地。">土壤</span>，皆在<span class="word" data-meaning="坐席。">衽席</span>之下。',
+                    trans: '攀援著登上山頂，隨意張開雙腳坐下觀賞，附近幾個州的土地，都（呈現）在坐席之下。'
+                },
+                {
+                    id: 13,
+                    orig: '其高下之勢，<span class="word" data-meaning="在山頂俯瞰景色，平原大地如山坳般深廣。">岈然窪然</span>，若<span class="word" data-meaning="俯視群山景色，如蟻穴般。">垤</span>若穴，<span class="word" data-meaning="看似近在咫尺，其實相隔千里之遙。">尺寸千里</span>，<span class="word" data-meaning="形容山勢緊迫，層層疊上。">攢蹙累積</span>，莫得<span class="word" data-meaning="隱藏。">遯隱</span>。',
+                    trans: '它們高高低低的地勢，深谷大空、山谷深凹的樣子，有的像蟻封，有的像洞穴。近若尺寸之距，（實際）卻遠隔千里，（景物全都）緊迫族聚在一起，沒有絲毫能夠隱藏。'
+                },
+                {
+                    id: 14,
+                    orig: '<span class="word" data-meaning="縈:繞。繚:纏也。青:山。白:水。青山白水綢繆纏繞。">縈青繚白</span>，外與天<span class="word" data-meaning="相連。">際</span>，四望如一。',
+                    trans: '（四周的）青山白水縈繞，盡頭處與天邊交接，四周望去渾然為一。'
+                },
+                {
+                    id: 15,
+                    orig: '然後知是山之特出，不與<span class="word" data-meaning="小丘">培塿</span>為類。',
+                    trans: '然後才知道西山的卓異不群，和小土丘不為同類。'
+                },
+                {
+                    id: 16,
+                    orig: '悠悠乎與<span class="word" data-meaning="顥，通昊。《漢書．律曆志上》：「昊天，言天氣廣大也。」">顥氣</span>俱，而莫得其涯；<span class="word" data-meaning="廣大無盡的風貌。">洋洋</span>乎<span class="word" data-meaning="與天地合而為一。">與造物者遊</span>，而不知其所窮。',
+                    trans: '廣遠無盡的，彷彿和天地大氣合一，不知道何處是它的邊際；飄忽不定的，似乎與大自然同游，不知道哪裏是它的盡期。'
+                },
+                {
+                    id: 17,
+                    orig: '<span class="word" data-meaning="取。">引</span>觴滿酌，<span class="word" data-meaning="酒醉倒下。">頹然</span>就醉，不知日之入。',
+                    trans: '拿起酒杯斟滿酒，乏力欲倒般酣醉了，不知道太陽下山了。'
+                },
+                {
+                    id: 18,
+                    orig: '<span class="word" data-meaning="暮色深沈。">蒼然暮色</span>，自遠而至，至無所見，而猶不欲歸。',
+                    trans: '蒼茫的暮色由遠而近，直到什麼都看不見時，卻仍然不想回家。'
+                },
+                {
+                    id: 19,
+                    orig: '<span class="word" data-meaning="凝:凝聚。心凝:心神凝聚。釋:釋放。">心凝形釋</span>，與<span class="word" data-meaning="萬化:萬物。冥合:暗合。">萬化冥合</span>。',
+                    trans: '（我）心神凝結且形體解脫，與天地萬物暗合為一。'
+                },
+                {
+                    id: 20,
+                    orig: '然後知吾<span class="word" data-meaning="從前。">嚮</span>之<span class="word" data-meaning="未曾。">未始</span>遊，遊於是乎始，故為之文以<span class="word" data-meaning="記。">志</span>。',
+                    trans: '自此以後才知道我過去未曾（真正地）游覽，（真正的）游覽從游西山開始，所以寫文章來記載這件事。'
+                },
+                {
+                    id: 21,
+                    orig: '是歲<span class="word" data-meaning="元和:唐憲宗年號。即公元809年。">元和四年</span>也。',
+                    trans: '這年是元和四年。'
+                }
+            ]
+        ];
+
+        // Initialize DOM Elements
+        const origContainer = document.getElementById('original-container');
+        const transContainer = document.getElementById('translation-container');
+        const tooltip = document.getElementById('tooltip');
+
+        // Build the HTML structure dynamically
+        textData.forEach((paragraphData) => {
+            // Create paragraph wrappers
+            const pOrig = document.createElement('p');
+            const pTrans = document.createElement('p');
+
+            paragraphData.forEach(sentence => {
+                // Build Left (Original) Span
+                const spanOrig = document.createElement('span');
+                spanOrig.className = 'sentence';
+                spanOrig.setAttribute('data-id', sentence.id);
+                spanOrig.innerHTML = sentence.orig;
+                pOrig.appendChild(spanOrig);
+
+                // Build Right (Translation) Span
+                const spanTrans = document.createElement('span');
+                spanTrans.className = 'sentence';
+                spanTrans.setAttribute('data-id', sentence.id);
+                spanTrans.innerHTML = sentence.trans;
+                pTrans.appendChild(spanTrans);
+            });
+
+            origContainer.appendChild(pOrig);
+            transContainer.appendChild(pTrans);
+        });
+
+        // -----------------------------------------
+        // Feature 1: Sentence Highlighting Sync
+        // -----------------------------------------
+        const allSentences = document.querySelectorAll('.sentence');
+
+        allSentences.forEach(sentence => {
+            sentence.addEventListener('mouseenter', function() {
+                const id = this.getAttribute('data-id');
+                // Highlight corresponding sentences on both sides
+                document.querySelectorAll(`.sentence[data-id="${id}"]`).forEach(el => {
+                    el.classList.add('active');
+                });
+            });
+
+            sentence.addEventListener('mouseleave', function() {
+                const id = this.getAttribute('data-id');
+                // Remove highlight
+                document.querySelectorAll(`.sentence[data-id="${id}"]`).forEach(el => {
+                    el.classList.remove('active');
+                });
+            });
+        });
+
+        // -----------------------------------------
+        // Feature 2: Word Hover Green & Click/Hold Meaning
+        // -----------------------------------------
+        const annotatedWords = document.querySelectorAll('.word');
+        let tooltipTimeout;
+
+        function showTooltip(e, text) {
+            tooltip.innerHTML = text;
+            tooltip.classList.add('show');
+            
+            // Calculate Position
+            const offset = 15;
+            let x = e.clientX || (e.touches && e.touches[0].clientX);
+            let y = e.clientY || (e.touches && e.touches[0].clientY);
+
+            // Prevent tooltip from overflowing the right side of the screen
+            if (x + tooltip.offsetWidth > window.innerWidth) {
+                x = window.innerWidth - tooltip.offsetWidth - offset;
+            }
+            
+            tooltip.style.left = `${x}px`;
+            tooltip.style.top = `${y + offset}px`;
+        }
+
+        function hideTooltip() {
+            tooltip.classList.remove('show');
+        }
+
+        annotatedWords.forEach(word => {
+            const meaning = word.getAttribute('data-meaning');
+
+            // Mouse events for desktop
+            word.addEventListener('mousedown', (e) => {
+                // Prevent sentence highlight flashing when clicking a word
+                e.stopPropagation(); 
+                showTooltip(e, meaning);
+            });
+            word.addEventListener('mouseup', hideTooltip);
+            word.addEventListener('mouseleave', hideTooltip);
+            
+            // Touch events for mobile
+            word.addEventListener('touchstart', (e) => {
+                e.stopPropagation();
+                // Prevent default text selection while holding
+                e.preventDefault(); 
+                showTooltip(e, meaning);
+            }, {passive: false});
+            word.addEventListener('touchend', hideTooltip);
+            word.addEventListener('touchcancel', hideTooltip);
+        });
+
+        // Extra fallback: if mouse up anywhere on the document, hide tooltip
+        document.addEventListener('mouseup', hideTooltip);
+        document.addEventListener('touchend', hideTooltip);
+
+    </script>
+</body>
+</html>
