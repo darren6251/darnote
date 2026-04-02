@@ -29,6 +29,8 @@
     .markdown-content table { border-collapse: collapse; width: 100%; margin: 12px 0; font-size: 0.85rem; border-radius: 8px; overflow: hidden; } .markdown-content th { @apply bg-light-gray dark:bg-dark text-left font-semibold; padding: 8px 12px; } .markdown-content td { @apply border-b border-light-gray dark:border-border-dark; padding: 8px 12px; } .markdown-content ul, .markdown-content ol { padding-left: 24px; margin: 8px 0; list-style: disc; } .markdown-content pre { @apply bg-light-gray/50 dark:bg-dark border border-light-gray dark:border-border-dark rounded-xl p-4 my-2 overflow-x-auto text-sm; }
     .context-menu { animation: scaleIn 0.15s cubic-bezier(0.2, 0, 0, 1); transform-origin: top left; } @keyframes scaleIn { from { opacity: 0; transform: scale(0.95); } to { opacity: 1; transform: scale(1); } }
     .glass-panel { @apply bg-white/80 dark:bg-surface-dark/80 backdrop-blur-md border border-white/20 dark:border-white/5; }
+    .preserve-3d { transform-style: preserve-3d; }
+    .backface-hidden { backface-visibility: hidden; -webkit-backface-visibility: hidden; }
 </style>
 </head>
 <body>
@@ -290,13 +292,47 @@
         return (<div className="flex flex-col h-full bg-[#f8fafc] dark:bg-onyx border-l border-light-gray dark:border-white/5 shadow-2xl"><div className="px-5 py-4 border-b border-light-gray dark:border-white/5 bg-white dark:bg-surface-dark flex flex-col gap-4"><div className="flex justify-between items-center"><span className="font-bold text-base flex items-center gap-2 text-dark dark:text-light"><div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center"><Icons.Bot className="w-4 h-4 text-primary"/></div> Workspace AI</span><button onClick={onClose} className="p-2 rounded-full hover:bg-light-gray dark:hover:bg-white/10 transition-colors"><Icons.X className="w-5 h-5 text-gray"/></button></div><div className="flex bg-light-gray/50 dark:bg-dark p-1 rounded-xl">{[{id:'gemini', name:'Gemini 1.5'}, {id:'groq', name:'ChatGPT'}].map(m=><button key={m.id} onClick={()=>setModel(m.id)} className={`flex-1 py-1.5 rounded-lg text-xs font-medium transition-all ${model===m.id ? `bg-white dark:bg-surface-dark shadow-sm text-primary dark:text-primary-light font-bold` : 'text-gray hover:text-dark dark:hover:text-light'}`}>{m.name} <span className={`${quota>=(m.id==='groq'?limits.chat_groq:limits.chat_gemini)?'text-danger':'text-gray'} ml-1`}>({quota}/{m.id==='groq'?limits.chat_groq:limits.chat_gemini})</span></button>)}</div></div><div className="flex-1 overflow-y-auto p-5 space-y-6 markdown-content">{messages.map((m, i) => <div key={i} className={`flex ${m.role==='user'?'justify-end':'justify-start'}`}><div className={`max-w-[85%] p-4 text-sm shadow-sm ${m.role==='user'?'bg-primary text-white rounded-2xl rounded-tr-sm':'bg-white dark:bg-surface-dark text-dark dark:text-light border border-light-gray dark:border-white/5 rounded-2xl rounded-tl-sm'}`} dangerouslySetInnerHTML={{ __html: marked.parse(m.text, {breaks: true, gfm: true}) }} /></div>)}{loading && <div className="flex gap-1 pl-4"><div className="w-2 h-2 bg-primary/50 rounded-full animate-bounce"></div><div className="w-2 h-2 bg-primary/50 rounded-full animate-bounce" style={{animationDelay:'0.1s'}}></div><div className="w-2 h-2 bg-primary/50 rounded-full animate-bounce" style={{animationDelay:'0.2s'}}></div></div>} <div ref={messagesEndRef}/></div><div className="p-4 bg-white dark:bg-surface-dark border-t border-light-gray dark:border-white/5"><div className="flex gap-2 bg-[#f8fafc] dark:bg-dark border border-light-gray dark:border-white/5 rounded-full p-1 shadow-inner"><input value={input} onChange={e=>setInput(e.target.value)} onKeyDown={e=>e.key==='Enter'&&handleSend()} className="flex-1 bg-transparent px-4 py-2 text-sm focus:outline-none dark:text-light placeholder-gray" placeholder={`Message ${model === 'gemini' ? 'Gemini' : 'ChatGPT'}...`}/><button onClick={handleSend} disabled={loading || !input.trim()} className="bg-primary text-white rounded-full w-10 h-10 flex items-center justify-center hover:bg-primary-dark disabled:opacity-50 transition-colors shadow-sm shrink-0"><Icons.Bot className="w-4 h-4"/></button></div></div></div>);
     };
 
-    const PracticeModal = ({ activeLog, onClose, user, subjects = [], initialMode = 'topic' }) => {
-        const [loading, setLoading] = useState(false); const [practiceMode, setPracticeMode] = useState(initialMode); const [questions, setQuestions] = useState([]); const [lqData, setLqData] = useState(null); const [userAnswers, setUserAnswers] = useState({}); const [marked, setMarked] = useState(false); const [lqFeedback, setLqFeedback] = useState(null); const [quota, setQuota] = useState(0); const [limit, setLimit] = useState(10); const [selectedSubject, setSelectedSubject] = useState(activeLog?.subject || (subjects.length > 0 ? subjects[0].name : '')); const [selectedTopic, setSelectedTopic] = useState(activeLog?.topic || ''); const [selectedType, setSelectedType] = useState('MC'); const [customInstructions, setCustomInstructions] = useState("");
+    // --- REBUILT SMART DRILL HUB COMPONENT ---
+    const PracticeModal = ({ activeLog, onClose, user, subjects = [], initialMode = 'topic', updateLog }) => {
+        const [drillType, setDrillType] = useState(initialMode === 'single' ? 'ai' : null);
         
-        useEffect(() => { const f = async () => { if (!user) return; const l = await getLimits(); setLimit(l.practice); const today = new Date().toISOString().split('T')[0]; const ref = window.firebase.doc(window.firebase.db, 'artifacts', "darnote-app", 'users', user.uid, 'ai_usage', today); const snap = await window.firebase.getDoc(ref); setQuota(snap.exists() ? (snap.data().practice_count || 0) : 0); }; f(); if (initialMode === 'single' && activeLog) generatePractice('single'); }, []);
+        // AI State
+        const [loading, setLoading] = useState(false); 
+        const [practiceMode, setPracticeMode] = useState(initialMode); 
+        const [questions, setQuestions] = useState([]); 
+        const [lqData, setLqData] = useState(null); 
+        const [userAnswers, setUserAnswers] = useState({}); 
+        const [marked, setMarked] = useState(false); 
+        const [lqFeedback, setLqFeedback] = useState(null); 
+        const [quota, setQuota] = useState(0); 
+        const [limit, setLimit] = useState(10); 
+        const [selectedSubject, setSelectedSubject] = useState(activeLog?.subject || (subjects.length > 0 ? subjects[0].name : '')); 
+        const [selectedTopic, setSelectedTopic] = useState(activeLog?.topic || ''); 
+        const [selectedType, setSelectedType] = useState('MC'); 
+        const [customInstructions, setCustomInstructions] = useState("");
+
+        // Flashcard State
+        const [fcPhase, setFcPhase] = useState('setup'); // setup, playing, summary
+        const [fcDeck, setFcDeck] = useState([]);
+        const [fcIndex, setFcIndex] = useState(0);
+        const [fcFlipped, setFcFlipped] = useState(false);
+        const [fcStats, setFcStats] = useState({ mastered: 0, reviewed: 0 });
+        const [fcType, setFcType] = useState('ALL');
+        
+        useEffect(() => { 
+            const f = async () => { 
+                if (!user) return; 
+                const l = await getLimits(); setLimit(l.practice); 
+                const today = new Date().toISOString().split('T')[0]; 
+                const ref = window.firebase.doc(window.firebase.db, 'artifacts', "darnote-app", 'users', user.uid, 'ai_usage', today); 
+                const snap = await window.firebase.getDoc(ref); 
+                setQuota(snap.exists() ? (snap.data().practice_count || 0) : 0); 
+            }; 
+            f(); 
+            if (initialMode === 'single' && activeLog) generatePractice('single'); 
+        }, []);
 
         const generatePractice = async (mode = 'single') => { 
-            console.log("Step 1: Starting Generation...");
             if (mode === 'topic' && !selectedSubject) { alert("Select a subject!"); return; } 
             setLoading(true); setPracticeMode(mode); setMarked(false); setUserAnswers({}); setQuestions([]); setLqData(null); 
             
@@ -313,21 +349,16 @@
                     if (activeLog.questionImages?.length > 0) { const raw = activeLog.questionImages[0]; if(!raw.includes('drive.google')) { const b64 = await fetchB64(raw); if(b64) imgCtx.push(b64); } } else if (activeLog.imageUrl && !activeLog.imageUrl.includes('drive.google')) { const b64 = await fetchB64(activeLog.imageUrl); if(b64) imgCtx.push(b64); } 
                     if (activeLog.schemeImages?.length > 0) { const raw = activeLog.schemeImages[0]; if(!raw.includes('drive.google')) { const b64 = await fetchB64(raw); if(b64) imgCtx.push(b64); } } else if (activeLog.markingSchemeUrl && !activeLog.markingSchemeUrl.includes('drive.google')) { const b64 = await fetchB64(activeLog.markingSchemeUrl); if(b64) imgCtx.push(b64); } 
                 } else { 
-                    console.log("Step 2: Fetching from DB...");
                     const db = window.firebase.db; 
-                    // Fetch 50 logs to get a good pool
                     let constraints = [ window.firebase.where('subject', '==', selectedSubject), window.firebase.limit(50) ]; 
                     if (selectedTopic) constraints.push(window.firebase.where('topic', '==', selectedTopic)); 
-                    
                     const q = window.firebase.query(window.firebase.collection(db, 'artifacts', "darnote-app", 'users', user.uid, 'error_logs'), ...constraints); 
                     const snap = await window.firebase.getDocs(q); 
                     let logs = snap.docs.map(d => d.data()); 
-                    console.log(`Step 3: Fetched ${logs.length} logs.`);
 
-                    // --- SHUFFLE LOGIC ---
                     if (logs.length > 0) {
-                        logs.sort(() => 0.5 - Math.random()); // Randomize
-                        logs = logs.slice(0, 7); // Pick top 7 (Lowered from 15 to prevent crashing)
+                        logs.sort(() => 0.5 - Math.random());
+                        logs = logs.slice(0, 7); 
                     }
                     
                     if (logs.length === 0) contextData = `Subject: ${selectedSubject}. Topic: ${selectedTopic || "General"}. (Generate hard practice questions).`; 
@@ -337,14 +368,11 @@
                     } 
                 } 
 
-                console.log("Step 4: Calling AI...");
                 if (customInstructions.trim()) contextData += `\n\nUSER CONSTRAINT: ${customInstructions}`; 
                 const qType = mode === 'single' ? (activeLog?.questionType || 'MC') : selectedType; 
                 const prompt = `Context: ${contextData}\n${qType === 'MC' ? `Generate 5 MCQs (ABCD). Return JSON array: [{"q": "...", "options": ["A. ..."], "answer": "A", "explanation": "..."}]. Plain text only.` : `Generate 1 long Q with 3 sub-parts. Return JSON: {"context": "...", "parts": [{"id": "a", "text": "...", "marks": 2}]}. Plain text.`}`; 
                 
                 let res = await callAI(prompt, "JSON Generator", imgCtx, GEMINI_PROXY_URL); 
-                console.log("Step 5: AI Responded.");
-
                 const json = JSON.parse(res.replace(/```json|```/g, '')); 
                 if (qType === 'MC') setQuestions(json); else setLqData(json); 
 
@@ -358,7 +386,302 @@
 
         const handleLqMark = async () => { setLoading(true); const prompt = `Mark this. Context: ${lqData.context}\nParts: ${JSON.stringify(lqData.parts)}\nAnswers: ${JSON.stringify(userAnswers)}\nReturn JSON: {"totalScore": 5, "maxScore": 10, "generalFeedback": "...", "partFeedback": {"a": {"score": 1, "comment": "..."}, "b": {"score": 4, "comment": "..."}}}.`; const res = await callAI(prompt, "Examiner JSON Only", [], GEMINI_PROXY_URL); try { setLqFeedback(JSON.parse(res.replace(/```json|```/g, ''))); setMarked(true); } catch(e) { alert("Marking failed."); } setLoading(false); };
         
-        return (<div className="fixed inset-0 z-[100] bg-dark/40 backdrop-blur-sm flex items-center justify-center p-4"><div className="bg-[#f8fafc] dark:bg-onyx w-full max-w-3xl rounded-[28px] shadow-2xl flex flex-col max-h-[90vh] overflow-hidden border border-white/50 dark:border-white/5"><div className="px-6 py-5 border-b border-light-gray dark:border-white/5 bg-white dark:bg-surface-dark flex flex-col gap-4"><div className="flex justify-between items-center"><h3 className="font-bold flex items-center gap-2 text-xl dark:text-light"><div className="w-8 h-8 rounded-full bg-accent/10 flex items-center justify-center"><Icons.Target className="w-4 h-4 text-accent"/></div> {practiceMode === 'single' ? "Focus Drill" : "Practice Console"}</h3><button onClick={onClose} className="p-2 rounded-full hover:bg-light-gray dark:hover:bg-white/10 transition-colors"><Icons.X className="w-5 h-5 text-gray"/></button></div><div className="flex flex-wrap gap-4 items-center justify-between"><div className="flex bg-light-gray/50 dark:bg-dark p-1 rounded-xl">{activeLog && (<button onClick={() => generatePractice('single')} disabled={loading} className={`px-4 py-1.5 text-xs font-bold rounded-lg transition-all ${practiceMode==='single' ? 'bg-white dark:bg-surface-dark shadow-sm text-dark dark:text-light' : 'text-gray hover:text-dark dark:hover:text-light'}`}>Focus Drill</button>)}<button onClick={() => setPracticeMode('topic')} disabled={loading} className={`px-4 py-1.5 text-xs font-bold rounded-lg transition-all ${practiceMode==='topic' ? 'bg-white dark:bg-surface-dark shadow-sm text-dark dark:text-light' : 'text-gray hover:text-dark dark:hover:text-light'}`}>Topic Test</button></div>{(practiceMode === 'topic') && (<div className="flex gap-2 flex-1 justify-end flex-wrap"><select value={selectedSubject} onChange={e=>setSelectedSubject(e.target.value)} className="bg-light-gray/30 dark:bg-dark border border-transparent hover:border-light-gray dark:hover:border-white/10 rounded-xl px-3 py-2 text-xs font-medium outline-none cursor-pointer"><option value="">Select Subject</option>{subjects.map(s=><option key={s.id} value={s.name}>{s.name}</option>)}</select><select value={selectedTopic} onChange={e=>setSelectedTopic(e.target.value)} className="bg-light-gray/30 dark:bg-dark border border-transparent hover:border-light-gray dark:hover:border-white/10 rounded-xl px-3 py-2 text-xs font-medium outline-none cursor-pointer"><option value="">All Topics</option>{subjects.find(s=>s.name===selectedSubject)?.topics.map(t=><option key={t} value={t}>{t}</option>)}</select><select value={selectedType} onChange={e=>setSelectedType(e.target.value)} className="bg-light-gray/30 dark:bg-dark border border-transparent hover:border-light-gray dark:hover:border-white/10 rounded-xl px-3 py-2 text-xs font-bold text-primary outline-none cursor-pointer"><option value="MC">MC</option><option value="LQ">LQ</option></select></div>)}</div>{practiceMode === 'topic' && !loading && !questions.length && !lqData && (<div className="w-full"><textarea value={customInstructions} onChange={(e) => setCustomInstructions(e.target.value)} placeholder="Add specific instructions for the AI (e.g., 'Make it hard', 'Focus on calculus')..." className="w-full bg-light-gray/30 dark:bg-dark border border-transparent focus:border-primary/50 focus:bg-white dark:focus:bg-[#1a1a1c] rounded-xl p-3 text-sm outline-none dark:text-light transition-all resize-none h-16"/><div className="flex justify-end mt-3"><button onClick={() => generatePractice('topic')} className="bg-primary text-white px-6 py-2 rounded-full text-sm font-medium hover:bg-primary-dark shadow-md transition-all inline-flex items-center gap-2"><Icons.Bot className="w-4 h-4"/> Generate Questions</button></div></div>)}</div><div className="flex-1 overflow-y-auto p-6 md:p-8 space-y-8">{loading ? (<div className="flex flex-col items-center justify-center py-20 space-y-4"><div className="w-10 h-10 border-4 border-primary/30 border-t-primary rounded-full animate-spin"></div><p className="text-gray font-medium text-sm">Synthesizing test parameters...</p></div>) : questions.length > 0 ? (<div className="space-y-8 max-w-3xl mx-auto">{questions.map((q, idx) => (<div key={idx} className="bg-white dark:bg-surface-dark p-6 md:p-8 rounded-2xl shadow-sm border border-light-gray dark:border-border-dark"><div className="font-semibold text-lg text-dark dark:text-light mb-6 flex gap-3"><span className="text-primary">{idx+1}.</span> <div>{q.q}</div></div><div className="grid grid-cols-1 sm:grid-cols-2 gap-3">{q.options.map((opt) => { const letter = opt.charAt(0); const isSelected = userAnswers[idx] === letter; const isCorrect = q.answer === letter; let bg = "bg-[#f8fafc] dark:bg-dark border-transparent hover:border-gray/30 hover:bg-light-gray/50 dark:hover:bg-white/5"; if (marked) { if (isCorrect) bg = "bg-[#f0fdf4] dark:bg-[#12311e] border-success text-success font-semibold shadow-sm"; else if (isSelected) bg = "bg-[#fef2f2] dark:bg-[#3f1616] border-danger text-danger shadow-sm"; } else if (isSelected) { bg = "bg-primary/10 border-primary text-primary font-semibold shadow-sm"; } return (<button key={opt} onClick={() => !marked && setUserAnswers({...userAnswers, [idx]: letter})} className={`text-left p-4 rounded-xl border text-sm transition-all ${!isSelected && !marked && 'text-gray dark:text-zinc-300'} ${bg}`}>{opt}</button>); })}</div>{marked && (<div className="text-sm p-4 rounded-xl bg-[#f8fafc] dark:bg-dark border border-light-gray dark:border-border-dark mt-6 text-dark dark:text-light"><span className="font-bold text-primary flex items-center gap-1.5 mb-2"><Icons.Brain className="w-4 h-4"/> AI Explanation</span> {q.explanation}</div>)}</div>))}</div>) : lqData ? (<div className="space-y-8 max-w-4xl mx-auto"><div className="p-6 md:p-8 bg-white dark:bg-surface-dark rounded-2xl shadow-sm border border-light-gray dark:border-border-dark text-dark dark:text-light text-base leading-relaxed"><span className="font-bold text-primary uppercase tracking-wider text-xs block mb-2">Context</span>{lqData.context}</div>{lqData.parts.map((part) => (<div key={part.id} className="bg-white dark:bg-surface-dark p-6 md:p-8 rounded-2xl shadow-sm border border-light-gray dark:border-border-dark space-y-4"><div className="flex justify-between items-start text-base"><span className="font-semibold text-dark dark:text-light flex gap-2"><span className="text-primary">({part.id})</span> <span>{part.text}</span></span><span className="text-sm text-gray font-bold bg-light-gray/50 dark:bg-dark px-2 py-1 rounded-md shrink-0">[{part.marks} marks]</span></div><textarea value={userAnswers[part.id] || ''} onChange={e => setUserAnswers({...userAnswers, [part.id]: e.target.value})} disabled={marked} className="w-full bg-[#f8fafc] dark:bg-dark border border-light-gray dark:border-border-dark rounded-xl p-4 text-sm focus:outline-none focus:border-primary dark:focus:border-primary transition-all shadow-inner" rows="4" placeholder="Draft your response..."/>{marked && lqFeedback?.partFeedback[part.id] && (<div className={`text-sm p-4 rounded-xl flex justify-between items-start gap-4 ${lqFeedback.partFeedback[part.id].score === part.marks ? 'bg-[#f0fdf4] dark:bg-[#12311e] text-success border border-success/20' : 'bg-[#fef2f2] dark:bg-[#3f1616] text-danger border border-danger/20'}`}><span className="mt-1">{lqFeedback.partFeedback[part.id].comment}</span><span className="font-bold text-2xl shrink-0 bg-white/50 dark:bg-black/20 px-3 py-1 rounded-lg">{lqFeedback.partFeedback[part.id].score}/{part.marks}</span></div>)}</div>))} {marked && (<div className="p-8 rounded-2xl bg-white dark:bg-surface-dark border-t-4 border-primary shadow-ds text-center"><div className="text-sm font-bold text-gray uppercase tracking-wider mb-2">Final Evaluation</div><div className="text-5xl font-bold text-dark dark:text-light mb-4">{lqFeedback.totalScore} <span className="text-2xl text-gray">/ {lqFeedback.maxScore}</span></div><div className="text-base text-gray max-w-2xl mx-auto">{lqFeedback.generalFeedback}</div></div>)}</div>) : (!loading && <div className="flex flex-col items-center justify-center text-gray h-40"><div className="w-16 h-16 bg-light-gray/50 dark:bg-dark rounded-full flex items-center justify-center mb-4"><Icons.Terminal className="w-8 h-8 opacity-50"/></div><p className="text-sm font-medium">Ready to compile assessment.</p></div>)}</div><div className="px-6 py-4 bg-white dark:bg-surface-dark border-t border-light-gray dark:border-white/5 flex justify-between items-center shrink-0"><div className={`text-xs px-3 py-1.5 font-semibold rounded-full flex items-center gap-1.5 ${quota >= limit ? 'bg-danger/10 text-danger' : 'bg-light-gray/50 dark:bg-dark text-gray'}`}><Icons.Zap className="w-3.5 h-3.5"/> Limit: {quota}/{limit}</div>{!marked && (questions.length > 0 || lqData) ? <button onClick={() => questions.length > 0 ? setMarked(true) : handleLqMark()} className="px-8 py-2.5 bg-primary text-white font-medium rounded-full hover:bg-primary-dark shadow-md transition-all">Submit Assignment</button> : <button onClick={onClose} className="px-8 py-2.5 bg-light-gray/50 dark:bg-white/5 text-dark dark:text-light font-medium rounded-full hover:bg-light-gray dark:hover:bg-white/10 transition-all">Close</button>}</div></div></div>);
+        // --- NEW: FLASHCARD LOGIC ---
+        const startFlashcards = async () => {
+            if (!selectedSubject) { alert("Select a subject to review!"); return; }
+            setLoading(true);
+            try {
+                let pool = [];
+                if (!user) {
+                    pool = await getAllDB('logs');
+                    pool = pool.filter(l => !l.mastered);
+                    if (selectedSubject) pool = pool.filter(l => l.subject === selectedSubject);
+                    if (selectedTopic) pool = pool.filter(l => l.topic === selectedTopic);
+                    if (fcType !== 'ALL') pool = pool.filter(l => l.questionType === fcType);
+                } else {
+                    const constraints = [window.firebase.where('mastered', '==', false)];
+                    if (selectedSubject) constraints.push(window.firebase.where('subject', '==', selectedSubject));
+                    if (selectedTopic) constraints.push(window.firebase.where('topic', '==', selectedTopic));
+                    if (fcType !== 'ALL') constraints.push(window.firebase.where('questionType', '==', fcType));
+                    constraints.push(window.firebase.limit(50));
+                    const q = window.firebase.query(window.firebase.collection(window.firebase.db, 'artifacts', "darnote-app", 'users', user.uid, 'error_logs'), ...constraints);
+                    const snap = await window.firebase.getDocs(q);
+                    pool = snap.docs.map(d => ({id: d.id, ...d.data()}));
+                }
+
+                if (pool.length === 0) {
+                    alert("You have 0 active errors for this topic. You're a genius!");
+                    setLoading(false);
+                    return;
+                }
+
+                pool.sort(() => 0.5 - Math.random());
+                setFcDeck(pool.slice(0, 15)); // Review up to 15 cards
+                setFcPhase('playing');
+                setFcIndex(0);
+                setFcFlipped(false);
+                setFcStats({ mastered: 0, reviewed: 0 });
+            } catch(e) {
+                alert("Failed to load flashcards: " + e.message);
+            }
+            setLoading(false);
+        };
+
+        const handleFcNext = (markMastered) => {
+            const currentCard = fcDeck[fcIndex];
+            if (markMastered) {
+                if (updateLog) updateLog(currentCard.id, { mastered: true });
+                setFcStats(prev => ({ ...prev, mastered: prev.mastered + 1 }));
+            }
+            setFcStats(prev => ({ ...prev, reviewed: prev.reviewed + 1 }));
+
+            if (fcIndex + 1 < fcDeck.length) {
+                setFcFlipped(false);
+                setTimeout(() => setFcIndex(i => i + 1), 150); // slight delay to allow the flip back animation
+            } else {
+                setFcPhase('summary');
+            }
+        };
+
+        const currentFc = fcDeck[fcIndex];
+
+        return (
+            <div className="fixed inset-0 z-[100] bg-dark/40 backdrop-blur-sm flex items-center justify-center p-4">
+                <div className="bg-[#f8fafc] dark:bg-onyx w-full max-w-3xl rounded-[28px] shadow-2xl flex flex-col max-h-[90vh] overflow-hidden border border-white/50 dark:border-white/5">
+                    
+                    {/* Header */}
+                    <div className="px-6 py-5 border-b border-light-gray dark:border-white/5 bg-white dark:bg-surface-dark flex flex-col gap-4">
+                        <div className="flex justify-between items-center">
+                            <h3 className="font-bold flex items-center gap-3 text-xl dark:text-light">
+                                {drillType && initialMode !== 'single' && (
+                                    <button onClick={() => {setDrillType(null); setFcPhase('setup');}} className="p-1.5 -ml-2 rounded-full hover:bg-light-gray dark:hover:bg-white/10 text-gray transition-colors"><Icons.ChevronLeft className="w-5 h-5"/></button>
+                                )}
+                                {!drillType && <><div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center"><Icons.Brain className="w-4 h-4 text-primary"/></div> Smart Drill Hub</>}
+                                {drillType === 'ai' && <><div className="w-8 h-8 rounded-full bg-accent/10 flex items-center justify-center"><Icons.Bot className="w-4 h-4 text-accent"/></div> AI Practice Test</>}
+                                {drillType === 'flashcard' && <><div className="w-8 h-8 rounded-full bg-warning/10 flex items-center justify-center"><Icons.Copy className="w-4 h-4 text-warning"/></div> Flashcard Review</>}
+                            </h3>
+                            <button onClick={onClose} className="p-2 rounded-full hover:bg-light-gray dark:hover:bg-white/10 transition-colors"><Icons.X className="w-5 h-5 text-gray"/></button>
+                        </div>
+
+                        {/* AI Header Controls */}
+                        {drillType === 'ai' && (
+                            <div className="flex flex-wrap gap-4 items-center justify-between">
+                                <div className="flex bg-light-gray/50 dark:bg-dark p-1 rounded-xl">
+                                    {activeLog && (<button onClick={() => generatePractice('single')} disabled={loading} className={`px-4 py-1.5 text-xs font-bold rounded-lg transition-all ${practiceMode==='single' ? 'bg-white dark:bg-surface-dark shadow-sm text-dark dark:text-light' : 'text-gray hover:text-dark dark:hover:text-light'}`}>Focus Drill</button>)}
+                                    <button onClick={() => setPracticeMode('topic')} disabled={loading} className={`px-4 py-1.5 text-xs font-bold rounded-lg transition-all ${practiceMode==='topic' ? 'bg-white dark:bg-surface-dark shadow-sm text-dark dark:text-light' : 'text-gray hover:text-dark dark:hover:text-light'}`}>Topic Test</button>
+                                </div>
+                                {practiceMode === 'topic' && (
+                                    <div className="flex gap-2 flex-1 justify-end flex-wrap">
+                                        <select value={selectedSubject} onChange={e=>setSelectedSubject(e.target.value)} className="bg-light-gray/30 dark:bg-dark border border-transparent hover:border-light-gray dark:hover:border-white/10 rounded-xl px-3 py-2 text-xs font-medium outline-none cursor-pointer">
+                                            <option value="">Select Subject</option>
+                                            {subjects.map(s=><option key={s.id} value={s.name}>{s.name}</option>)}
+                                        </select>
+                                        <select value={selectedTopic} onChange={e=>setSelectedTopic(e.target.value)} className="bg-light-gray/30 dark:bg-dark border border-transparent hover:border-light-gray dark:hover:border-white/10 rounded-xl px-3 py-2 text-xs font-medium outline-none cursor-pointer">
+                                            <option value="">All Topics</option>
+                                            {subjects.find(s=>s.name===selectedSubject)?.topics.map(t=><option key={t} value={t}>{t}</option>)}
+                                        </select>
+                                        <select value={selectedType} onChange={e=>setSelectedType(e.target.value)} className="bg-light-gray/30 dark:bg-dark border border-transparent hover:border-light-gray dark:hover:border-white/10 rounded-xl px-3 py-2 text-xs font-bold text-primary outline-none cursor-pointer">
+                                            <option value="MC">MC</option><option value="LQ">LQ</option>
+                                        </select>
+                                    </div>
+                                )}
+                            </div>
+                        )}
+                        {drillType === 'ai' && practiceMode === 'topic' && !loading && !questions.length && !lqData && (
+                            <div className="w-full">
+                                <textarea value={customInstructions} onChange={(e) => setCustomInstructions(e.target.value)} placeholder="Add specific instructions for the AI (e.g., 'Make it hard', 'Focus on calculus')..." className="w-full bg-light-gray/30 dark:bg-dark border border-transparent focus:border-primary/50 focus:bg-white dark:focus:bg-[#1a1a1c] rounded-xl p-3 text-sm outline-none dark:text-light transition-all resize-none h-16"/>
+                                <div className="flex justify-end mt-3">
+                                    <button onClick={() => generatePractice('topic')} className="bg-primary text-white px-6 py-2 rounded-full text-sm font-medium hover:bg-primary-dark shadow-md transition-all inline-flex items-center gap-2"><Icons.Bot className="w-4 h-4"/> Generate Questions</button>
+                                </div>
+                            </div>
+                        )}
+                    </div>
+
+                    <div className="flex-1 overflow-y-auto p-6 md:p-8 bg-[#f8fafc] dark:bg-onyx relative">
+                        {loading && (
+                            <div className="absolute inset-0 flex flex-col items-center justify-center bg-[#f8fafc]/80 dark:bg-onyx/80 z-10 backdrop-blur-sm">
+                                <div className="w-10 h-10 border-4 border-primary/30 border-t-primary rounded-full animate-spin mb-4"></div>
+                                <p className="text-gray font-medium text-sm">Preparing session...</p>
+                            </div>
+                        )}
+
+                        {/* --- HUB SELECTION VIEW --- */}
+                        {!drillType && (
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 h-full content-center max-w-2xl mx-auto py-10">
+                                <button onClick={() => setDrillType('ai')} className="bg-white dark:bg-surface-dark border-2 border-transparent hover:border-primary/50 rounded-3xl p-8 flex flex-col items-center text-center shadow-sm hover:shadow-xl transition-all group active:scale-95">
+                                    <div className="w-20 h-20 bg-primary/10 rounded-full flex items-center justify-center mb-6 group-hover:scale-110 transition-transform"><Icons.Bot className="w-10 h-10 text-primary"/></div>
+                                    <h4 className="text-xl font-bold text-dark dark:text-light mb-2">AI Practice Test</h4>
+                                    <p className="text-sm text-gray">Generate brand new questions based on your weak spots to test your conceptual understanding.</p>
+                                    <div className="mt-6 text-xs font-bold text-primary bg-primary/10 px-3 py-1.5 rounded-full uppercase tracking-wider">Costs API Credits</div>
+                                </button>
+                                <button onClick={() => setDrillType('flashcard')} className="bg-white dark:bg-surface-dark border-2 border-transparent hover:border-warning/50 rounded-3xl p-8 flex flex-col items-center text-center shadow-sm hover:shadow-xl transition-all group active:scale-95">
+                                    <div className="w-20 h-20 bg-warning/10 rounded-full flex items-center justify-center mb-6 group-hover:scale-110 transition-transform"><Icons.Copy className="w-10 h-10 text-warning"/></div>
+                                    <h4 className="text-xl font-bold text-dark dark:text-light mb-2">Active Recall Deck</h4>
+                                    <p className="text-sm text-gray">Re-solve your actual logged mistakes using digital flashcards. The ultimate way to master past errors.</p>
+                                    <div className="mt-6 text-xs font-bold text-warning bg-warning/10 px-3 py-1.5 rounded-full uppercase tracking-wider">Free to Use</div>
+                                </button>
+                            </div>
+                        )}
+
+                        {/* --- AI DRILL VIEW --- */}
+                        {drillType === 'ai' && (
+                            <div className="space-y-8">
+                                {questions.length > 0 ? (
+                                    <div className="space-y-8 max-w-3xl mx-auto">
+                                        {questions.map((q, idx) => (
+                                            <div key={idx} className="bg-white dark:bg-surface-dark p-6 md:p-8 rounded-2xl shadow-sm border border-light-gray dark:border-border-dark">
+                                                <div className="font-semibold text-lg text-dark dark:text-light mb-6 flex gap-3"><span className="text-primary">{idx+1}.</span> <div>{q.q}</div></div>
+                                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                                                    {q.options.map((opt) => { 
+                                                        const letter = opt.charAt(0); const isSelected = userAnswers[idx] === letter; const isCorrect = q.answer === letter; 
+                                                        let bg = "bg-[#f8fafc] dark:bg-dark border-transparent hover:border-gray/30 hover:bg-light-gray/50 dark:hover:bg-white/5"; 
+                                                        if (marked) { if (isCorrect) bg = "bg-[#f0fdf4] dark:bg-[#12311e] border-success text-success font-semibold shadow-sm"; else if (isSelected) bg = "bg-[#fef2f2] dark:bg-[#3f1616] border-danger text-danger shadow-sm"; } 
+                                                        else if (isSelected) { bg = "bg-primary/10 border-primary text-primary font-semibold shadow-sm"; } 
+                                                        return (<button key={opt} onClick={() => !marked && setUserAnswers({...userAnswers, [idx]: letter})} className={`text-left p-4 rounded-xl border text-sm transition-all ${!isSelected && !marked && 'text-gray dark:text-zinc-300'} ${bg}`}>{opt}</button>); 
+                                                    })}
+                                                </div>
+                                                {marked && (<div className="text-sm p-4 rounded-xl bg-[#f8fafc] dark:bg-dark border border-light-gray dark:border-border-dark mt-6 text-dark dark:text-light"><span className="font-bold text-primary flex items-center gap-1.5 mb-2"><Icons.Brain className="w-4 h-4"/> AI Explanation</span> {q.explanation}</div>)}
+                                            </div>
+                                        ))}
+                                    </div>
+                                ) : lqData ? (
+                                    <div className="space-y-8 max-w-4xl mx-auto">
+                                        <div className="p-6 md:p-8 bg-white dark:bg-surface-dark rounded-2xl shadow-sm border border-light-gray dark:border-border-dark text-dark dark:text-light text-base leading-relaxed"><span className="font-bold text-primary uppercase tracking-wider text-xs block mb-2">Context</span>{lqData.context}</div>
+                                        {lqData.parts.map((part) => (
+                                            <div key={part.id} className="bg-white dark:bg-surface-dark p-6 md:p-8 rounded-2xl shadow-sm border border-light-gray dark:border-border-dark space-y-4">
+                                                <div className="flex justify-between items-start text-base"><span className="font-semibold text-dark dark:text-light flex gap-2"><span className="text-primary">({part.id})</span> <span>{part.text}</span></span><span className="text-sm text-gray font-bold bg-light-gray/50 dark:bg-dark px-2 py-1 rounded-md shrink-0">[{part.marks} marks]</span></div>
+                                                <textarea value={userAnswers[part.id] || ''} onChange={e => setUserAnswers({...userAnswers, [part.id]: e.target.value})} disabled={marked} className="w-full bg-[#f8fafc] dark:bg-dark border border-light-gray dark:border-border-dark rounded-xl p-4 text-sm focus:outline-none focus:border-primary dark:focus:border-primary transition-all shadow-inner" rows="4" placeholder="Draft your response..."/>
+                                                {marked && lqFeedback?.partFeedback[part.id] && (<div className={`text-sm p-4 rounded-xl flex justify-between items-start gap-4 ${lqFeedback.partFeedback[part.id].score === part.marks ? 'bg-[#f0fdf4] dark:bg-[#12311e] text-success border border-success/20' : 'bg-[#fef2f2] dark:bg-[#3f1616] text-danger border border-danger/20'}`}><span className="mt-1">{lqFeedback.partFeedback[part.id].comment}</span><span className="font-bold text-2xl shrink-0 bg-white/50 dark:bg-black/20 px-3 py-1 rounded-lg">{lqFeedback.partFeedback[part.id].score}/{part.marks}</span></div>)}
+                                            </div>
+                                        ))} 
+                                        {marked && (<div className="p-8 rounded-2xl bg-white dark:bg-surface-dark border-t-4 border-primary shadow-ds text-center"><div className="text-sm font-bold text-gray uppercase tracking-wider mb-2">Final Evaluation</div><div className="text-5xl font-bold text-dark dark:text-light mb-4">{lqFeedback.totalScore} <span className="text-2xl text-gray">/ {lqFeedback.maxScore}</span></div><div className="text-base text-gray max-w-2xl mx-auto">{lqFeedback.generalFeedback}</div></div>)}
+                                    </div>
+                                ) : (!loading && practiceMode !== 'topic' && <div className="flex flex-col items-center justify-center text-gray h-40"><div className="w-16 h-16 bg-light-gray/50 dark:bg-dark rounded-full flex items-center justify-center mb-4"><Icons.Terminal className="w-8 h-8 opacity-50"/></div><p className="text-sm font-medium">Ready to compile assessment.</p></div>)}
+                            </div>
+                        )}
+
+                        {/* --- FLASHCARD VIEW --- */}
+                        {drillType === 'flashcard' && (
+                            <div className="h-full flex flex-col items-center justify-center w-full max-w-2xl mx-auto">
+                                
+                                {fcPhase === 'setup' && (
+                                    <div className="w-full bg-white dark:bg-surface-dark p-8 rounded-3xl shadow-sm border border-light-gray dark:border-border-dark">
+                                        <div className="text-center mb-8">
+                                            <div className="w-16 h-16 bg-warning/10 rounded-full flex items-center justify-center mx-auto mb-4"><Icons.Copy className="w-8 h-8 text-warning"/></div>
+                                            <h3 className="text-2xl font-bold text-dark dark:text-light">Deck Settings</h3>
+                                            <p className="text-sm text-gray mt-2">We'll gather your active, unmastered errors so you can crush them.</p>
+                                        </div>
+                                        <div className="space-y-5">
+                                            <div>
+                                                <label className="text-sm font-semibold text-dark dark:text-light block mb-2">Subject</label>
+                                                <select value={selectedSubject} onChange={e=>setSelectedSubject(e.target.value)} className="form-control cursor-pointer">
+                                                    <option value="">-- Choose Subject --</option>
+                                                    {subjects.map(s=><option key={s.id} value={s.name}>{s.name}</option>)}
+                                                </select>
+                                            </div>
+                                            {selectedSubject && (
+                                                <div>
+                                                    <label className="text-sm font-semibold text-dark dark:text-light block mb-2">Topic (Optional)</label>
+                                                    <select value={selectedTopic} onChange={e=>setSelectedTopic(e.target.value)} className="form-control cursor-pointer">
+                                                        <option value="">All Topics</option>
+                                                        {subjects.find(s=>s.name===selectedSubject)?.topics.map(t=><option key={t} value={t}>{t}</option>)}
+                                                    </select>
+                                                </div>
+                                            )}
+                                            <button onClick={startFlashcards} className="w-full bg-dark dark:bg-light text-white dark:text-dark py-4 rounded-xl font-bold mt-4 hover:opacity-90 transition-opacity text-lg shadow-md">Start Review</button>
+                                        </div>
+                                    </div>
+                                )}
+
+                                {fcPhase === 'playing' && currentFc && (
+                                    <div className="relative w-full h-[65vh] preserve-3d">
+                                        <motion.div className="w-full h-full relative preserve-3d" animate={{ rotateY: fcFlipped ? 180 : 0 }} transition={{ duration: 0.5, type: 'spring', bounce: 0.4 }}>
+                                            
+                                            {/* Front of Card (The Question) */}
+                                            <div className="absolute inset-0 backface-hidden bg-white dark:bg-surface-dark rounded-3xl shadow-lg border border-light-gray dark:border-border-dark flex flex-col p-6 md:p-8">
+                                                <div className="text-[10px] text-gray font-bold uppercase mb-4 tracking-wider flex justify-between shrink-0">
+                                                    <span>Card {fcIndex + 1} of {fcDeck.length}</span>
+                                                    <span className="text-primary bg-primary/10 px-2 py-0.5 rounded-full">{currentFc.subject}</span>
+                                                </div>
+                                                <div className="flex-1 overflow-y-auto mb-4 flex flex-col items-center justify-center relative">
+                                                    {(!currentFc.questionImages || currentFc.questionImages.length === 0) && !currentFc.questionText && (
+                                                        <div className="text-gray italic">No question content saved.</div>
+                                                    )}
+                                                    {currentFc.questionImages?.length > 0 && (
+                                                        <img src={currentFc.questionImages[0]} className="max-w-full max-h-[40vh] object-contain rounded-xl shadow-sm border border-light-gray dark:border-border-dark mb-4 bg-[#f8fafc] dark:bg-dark" />
+                                                    )}
+                                                    {currentFc.questionText && (
+                                                        <div className="text-lg md:text-xl font-medium text-dark dark:text-light text-center whitespace-pre-wrap leading-relaxed max-w-xl">{currentFc.questionText}</div>
+                                                    )}
+                                                </div>
+                                                <div className="shrink-0 pt-4">
+                                                    <button onClick={() => setFcFlipped(true)} className="w-full py-4 bg-primary/10 text-primary font-bold rounded-2xl hover:bg-primary hover:text-white transition-colors text-lg flex items-center justify-center gap-2">Flip to Reveal <Icons.Refresh className="w-5 h-5"/></button>
+                                                </div>
+                                            </div>
+
+                                            {/* Back of Card (The Answer) */}
+                                            <div className="absolute inset-0 backface-hidden bg-[#f0f4f9] dark:bg-[#151516] rounded-3xl shadow-lg border border-light-gray dark:border-border-dark flex flex-col p-6 md:p-8" style={{ transform: 'rotateY(180deg)' }}>
+                                                <div className="text-[10px] text-gray font-bold uppercase mb-4 tracking-wider shrink-0 text-center">The Truth</div>
+                                                <div className="flex-1 overflow-y-auto space-y-6">
+                                                    {(currentFc.schemeImages?.length > 0) && (
+                                                        <div>
+                                                            <div className="text-xs font-bold text-gray mb-2">Solution Image</div>
+                                                            <img src={currentFc.schemeImages[0]} className="w-full object-contain rounded-xl shadow-sm border border-light-gray dark:border-border-dark bg-white dark:bg-dark max-h-[30vh]" />
+                                                        </div>
+                                                    )}
+                                                    {currentFc.correctAnswer && (
+                                                        <div className="bg-success/10 border border-success/20 p-4 rounded-2xl text-center">
+                                                            <div className="text-xs font-bold text-success uppercase mb-1">Correct Answer</div>
+                                                            <div className="text-3xl font-mono font-bold text-success">{currentFc.correctAnswer}</div>
+                                                        </div>
+                                                    )}
+                                                    {currentFc.explanation && (
+                                                        <div className="bg-white dark:bg-surface-dark border border-light-gray dark:border-border-dark p-5 rounded-2xl">
+                                                            <div className="text-xs font-bold text-accent uppercase mb-2 flex items-center gap-2"><Icons.Brain className="w-4 h-4"/> Your Notes</div>
+                                                            <div className="text-base text-dark dark:text-light leading-relaxed whitespace-pre-wrap">{currentFc.explanation}</div>
+                                                        </div>
+                                                    )}
+                                                    {!currentFc.schemeImages?.length && !currentFc.correctAnswer && !currentFc.explanation && (
+                                                        <div className="flex h-full items-center justify-center text-gray italic">No solution data saved for this card.</div>
+                                                    )}
+                                                </div>
+                                                <div className="shrink-0 pt-6 grid grid-cols-2 gap-4">
+                                                    <button onClick={() => handleFcNext(false)} className="py-4 rounded-2xl font-bold bg-white dark:bg-surface-dark border border-danger/20 text-danger hover:bg-danger hover:text-white shadow-sm transition-colors flex flex-col items-center gap-1"><Icons.X className="w-6 h-6"/><span className="text-xs uppercase">Still Failed</span></button>
+                                                    <button onClick={() => handleFcNext(true)} className="py-4 rounded-2xl font-bold bg-success text-white hover:bg-success/80 shadow-md transition-colors flex flex-col items-center gap-1"><Icons.Check className="w-6 h-6"/><span className="text-xs uppercase">Nailed It!</span></button>
+                                                </div>
+                                            </div>
+
+                                        </motion.div>
+                                    </div>
+                                )}
+
+                                {fcPhase === 'summary' && (
+                                    <motion.div initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} className="bg-white dark:bg-surface-dark p-10 rounded-3xl shadow-xl text-center border border-light-gray dark:border-border-dark w-full">
+                                        <div className="text-7xl mb-6">🎉</div>
+                                        <h2 className="text-3xl font-bold text-dark dark:text-light mb-2 tracking-tight">Session Complete!</h2>
+                                        <p className="text-gray text-lg mb-8">You reviewed <b className="text-dark dark:text-light">{fcStats.reviewed}</b> concepts and fully mastered <b className="text-success">{fcStats.mastered}</b> of them.</p>
+                                        <div className="flex gap-4 justify-center">
+                                            <button onClick={() => { setFcPhase('setup'); setDrillType(null); }} className="px-6 py-3 rounded-xl font-bold text-gray bg-light-gray/50 dark:bg-dark hover:bg-black/5 dark:hover:bg-white/5 transition-colors">Back to Hub</button>
+                                            <button onClick={startFlashcards} className="px-6 py-3 rounded-xl font-bold text-white bg-primary hover:bg-primary-dark transition-colors shadow-md">Review Again</button>
+                                        </div>
+                                    </motion.div>
+                                )}
+                            </div>
+                        )}
+                    </div>
+
+                    <div className="px-6 py-4 bg-white dark:bg-surface-dark border-t border-light-gray dark:border-white/5 flex justify-between items-center shrink-0">
+                        <div className={`text-xs px-3 py-1.5 font-semibold rounded-full flex items-center gap-1.5 ${quota >= limit ? 'bg-danger/10 text-danger' : 'bg-light-gray/50 dark:bg-dark text-gray'}`}><Icons.Zap className="w-3.5 h-3.5"/> Limit: {quota}/{limit}</div>
+                        <div className="flex gap-3">
+                            {drillType === 'ai' && !marked && (questions.length > 0 || lqData) && (
+                                <button onClick={() => questions.length > 0 ? setMarked(true) : handleLqMark()} className="px-8 py-2.5 bg-primary text-white font-medium rounded-full hover:bg-primary-dark shadow-md transition-all">Submit Assignment</button>
+                            )}
+                            <button onClick={onClose} className="px-8 py-2.5 bg-light-gray/50 dark:bg-white/5 text-dark dark:text-light font-medium rounded-full hover:bg-light-gray dark:hover:bg-white/10 transition-all">Close</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        );
     };
     
     const ContextMenu = ({ visible, x, y, logId, onDuplicate, onDelete, onCopy, onPaste }) => {
@@ -1298,7 +1621,7 @@
                                     return (<button key={item.id} onClick={()=>setFilter(item.id)} className={`flex items-center gap-3 px-4 py-3 rounded-r-full text-sm font-medium transition-colors w-[95%] ${filter===item.id ? 'bg-primary/10 text-primary dark:bg-primary-light/15 dark:text-primary-light font-bold' : 'text-gray hover:bg-black/5 dark:hover:bg-white/5 hover:text-dark dark:hover:text-light'}`}><Icon className="w-5 h-5"/> {item.label}</button>);
                                 })}
                                 <div className="h-4"></div>
-                                <button onClick={()=> { if(!user) { alert("Guest Mode: Sign in to use Smart Drill."); return; } setPracticeConfig({ isOpen: true, mode: 'topic' }); }} className="flex items-center gap-3 px-4 py-3 rounded-r-full text-sm font-medium transition-colors w-[95%] text-dark dark:text-light hover:bg-black/5 dark:hover:bg-white/5 mt-2"><Icons.Brain className="w-5 h-5 text-primary"/> Smart Drill</button>
+                                <button onClick={()=> { setPracticeConfig({ isOpen: true, mode: 'topic' }); }} className="flex items-center gap-3 px-4 py-3 rounded-r-full text-sm font-medium transition-colors w-[95%] text-dark dark:text-light hover:bg-black/5 dark:hover:bg-white/5 mt-2"><Icons.Brain className="w-5 h-5 text-primary"/> Smart Drill Hub</button>
                                 <button onClick={handleOpenShare} className="flex items-center gap-3 px-4 py-3 rounded-r-full text-sm font-medium transition-colors w-[95%] text-dark dark:text-light hover:bg-black/5 dark:hover:bg-white/5"><Icons.Share2 className="w-5 h-5 text-primary"/> Share & Export</button>
                             </nav>
                             <div>
@@ -1575,7 +1898,7 @@
                         )}
                         </AnimatePresence>
                         <AnimatePresence>{isAiOpen && activeLog && user && (<div className="absolute top-0 right-0 bottom-0 w-full sm:w-[400px] z-40 sm:z-30 shadow-2xl"><AIChat activeLog={activeLog} onClose={()=>setIsAiOpen(false)} user={user} messages={chatMessages} setMessages={setChatMessages}/></div>)}</AnimatePresence>
-                        {practiceConfig.isOpen && <PracticeModal activeLog={activeLog} onClose={() => setPracticeConfig({...practiceConfig, isOpen: false})} user={user} subjects={subjects} initialMode={practiceConfig.mode} />}
+                        {practiceConfig.isOpen && <PracticeModal activeLog={activeLog} onClose={() => setPracticeConfig({...practiceConfig, isOpen: false})} user={user} subjects={subjects} initialMode={practiceConfig.mode} updateLog={updateLog} />}
                     </main>
                 </div>
                 
@@ -1592,7 +1915,7 @@
                         <Icons.File className="w-5 h-5"/>
                         <span className="text-[10px] font-medium">Logs</span>
                     </button>
-                    <button onClick={() => { if(!user) { alert("Guest Mode: Sign in to use Smart Drill."); return; } setPracticeConfig({ isOpen: true, mode: 'topic' }); }} className="flex flex-col items-center justify-center w-16 h-full gap-1 text-gray dark:text-zinc-400 hover:text-primary transition-colors">
+                    <button onClick={() => { setPracticeConfig({ isOpen: true, mode: 'topic' }); }} className="flex flex-col items-center justify-center w-16 h-full gap-1 text-gray dark:text-zinc-400 hover:text-primary transition-colors">
                         <Icons.Brain className="w-5 h-5"/>
                         <span className="text-[10px] font-medium">Drill</span>
                     </button>
