@@ -12,9 +12,7 @@
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/framer-motion@10.16.4/dist/framer-motion.js"></script>
-    
-    <!-- Lucide Icons -->
-    <script src="https://unpkg.com/lucide@latest"></script>
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
 
     <script>
         tailwind.config = {
@@ -25,512 +23,510 @@
                         onyx: '#09090b',
                         surface: '#18181b',
                         border: '#27272a',
-                        brand: '#4f46e5',
+                        brand: '#4f46e5'
                     },
-                    fontFamily: { sans: ['Inter', '-apple-system', 'sans-serif'] }
+                    fontFamily: { sans: ['Inter', 'sans-serif'] }
                 }
             }
         }
     </script>
     <style>
-        body { background-color: #09090b; color: #fafafa; -webkit-font-smoothing: antialiased; overflow: hidden; }
-        .no-scrollbar::-webkit-scrollbar { display: none; }
-        .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
-        .thread-line { width: 2px; background-color: #27272a; flex-grow: 1; border-radius: 99px; margin-top: 8px; margin-bottom: 4px; }
+        body { @apply bg-onyx text-zinc-100; font-family: 'Inter', sans-serif; overflow: hidden; overscroll-behavior-y: none; }
+        ::-webkit-scrollbar { width: 4px; }
+        ::-webkit-scrollbar-thumb { @apply bg-zinc-700; border-radius: 4px; }
+        .thread-line { width: 2px; background-color: #27272a; flex-grow: 1; margin-top: 8px; margin-bottom: 4px; border-radius: 2px; }
+        .hide-scrollbar::-webkit-scrollbar { display: none; }
+        .hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+        
+        /* Apple Fitness Rings Animation */
+        @keyframes fillRing { from { stroke-dasharray: 0 100; } to { stroke-dasharray: var(--target) 100; } }
+        .progress-ring { stroke-linecap: round; transform: rotate(-90deg); transform-origin: 50% 50%; transition: stroke-dasharray 1s ease-out; }
     </style>
 
-    <!-- Platform Firebase Integration -->
+    <!-- Firebase SDKs -->
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-app.js";
-        import { getAuth, signInWithCustomToken, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-auth.js";
-        import { getFirestore, collection, doc, getDoc, getDocs, setDoc, addDoc, updateDoc, deleteDoc, onSnapshot, writeBatch, serverTimestamp } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-firestore.js";
+        import { getAuth, signInWithPopup, GoogleAuthProvider, signOut, onAuthStateChanged, signInAnonymously } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-auth.js";
+        import { getFirestore, collection, doc, setDoc, getDoc, getDocs, updateDoc, deleteDoc, addDoc, serverTimestamp, writeBatch } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-firestore.js";
         
-        try {
-            const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : { apiKey: "demo", projectId: "demo" };
-            const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
-            
-            const app = initializeApp(firebaseConfig);
-            const auth = getAuth(app);
-            const db = getFirestore(app);
-            
-            window.firebaseEnv = { app, auth, db, appId, signInWithCustomToken, signInAnonymously, onAuthStateChanged, collection, doc, getDoc, getDocs, setDoc, addDoc, updateDoc, deleteDoc, onSnapshot, writeBatch, serverTimestamp };
-            window.dispatchEvent(new Event('firebaseLoaded'));
-        } catch (e) {
-            console.error("Firebase init failed:", e);
-        }
+        const firebaseConfig = { apiKey: "AIzaSyAvPEac-03kE4oazvaq8K3T2gxLPsnZO20", authDomain: "darnote625.firebaseapp.com", projectId: "darnote625", storageBucket: "darnote625.firebasestorage.app", messagingSenderId: "16458322562", appId: "1:16458322562:web:8894d71f3e6c326eba1a9b" };
+        const app = initializeApp(firebaseConfig);
+        window.firebase = { app, auth: getAuth(app), db: getFirestore(app), signInWithPopup, GoogleAuthProvider, signOut, onAuthStateChanged, signInAnonymously, collection, doc, setDoc, getDoc, getDocs, updateDoc, deleteDoc, addDoc, serverTimestamp, writeBatch };
+        window.dispatchEvent(new Event('firebaseLoaded'));
     </script>
 </head>
 <body>
     <div id="root"></div>
-
     <script type="text/babel">
+        const { useState, useEffect, useRef, useMemo } = React;
+        const { motion, AnimatePresence } = window.Motion;
+        const APP_ID = "darnote-app";
         const GEMINI_PROXY_URL = "https://gemini-proxy-513372702506.us-central1.run.app/proxy";
-        const { useState, useEffect, useRef } = React;
-        const { motion, AnimatePresence, LayoutGroup } = window.Motion;
 
-        // --- AI Helper ---
-        const callAI = async (prompt) => {
-            try {
-                const response = await fetch(GEMINI_PROXY_URL, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] }) });
-                const data = await response.json(); return data.candidates?.[0]?.content?.parts?.[0]?.text || "";
-            } catch (error) { return ""; }
+        // Inline SVGs for reliability
+        const Icons = {
+            Home: p => <svg {...p} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>,
+            Search: p => <svg {...p} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>,
+            Plus: p => <svg {...p} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M5 12h14"/><path d="M12 5v14"/></svg>,
+            Heart: p => <svg {...p} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7Z"/></svg>,
+            MessageCircle: p => <svg {...p} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="m3 21 1.9-5.7a8.5 8.5 0 1 1 3.8 3.8z"/></svg>,
+            Repeat: p => <svg {...p} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="m17 2 4 4-4 4"/><path d="M3 11v-1a4 4 0 0 1 4-4h14"/><path d="m7 22-4-4 4-4"/><path d="M21 13v1a4 4 0 0 1-4 4H3"/></svg>,
+            Bot: p => <svg {...p} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M12 8V4H8"/><rect width="16" height="12" x="4" y="8" rx="2"/><path d="M2 14h2"/><path d="M20 14h2"/><path d="M15 13v2"/><path d="M9 13v2"/></svg>,
+            Activity: p => <svg {...p} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>,
+            Timer: p => <svg {...p} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>,
+            CheckSquare: p => <svg {...p} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="9 11 12 14 22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>,
+            ChevronDown: p => <svg {...p} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="m6 9 6 6 6-6"/></svg>,
+            User: p => <svg {...p} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>,
+            Trash: p => <svg {...p} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/></svg>
         };
 
-        // --- Apple Fitness Style Activity Rings (Insight Drops) ---
-        const ActivityRings = ({ size = 100, rings = [], strokeWidth = 10 }) => {
-            const center = size / 2;
+        // --- COMPONENTS ---
+
+        // 1. Apple Fitness Style Rings Component
+        const InsightRings = ({ stats }) => {
+            const r1 = 40, r2 = 30, r3 = 20;
+            const c1 = 2 * Math.PI * r1, c2 = 2 * Math.PI * r2, c3 = 2 * Math.PI * r3;
+            
+            // Generate percentages based on dummy stats or real stats
+            const p1 = Math.min(100, (stats?.mastered / (stats?.total || 1)) * 100 || 65); // Red: Mastery
+            const p2 = Math.min(100, (stats?.studyHours / 10) * 100 || 80); // Green: Study Time
+            const p3 = Math.min(100, (stats?.consistency / 7) * 100 || 40); // Blue: Consistency
+            
             return (
-                <div className="relative flex items-center justify-center" style={{ width: size, height: size }}>
-                    <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`} className="drop-shadow-xl z-10 relative">
-                        {rings.map((ring, i) => {
-                            const radius = center - (strokeWidth * 1.2 * i) - (strokeWidth / 2);
-                            const circumference = 2 * Math.PI * radius;
-                            const strokeDashoffset = circumference - (ring.progress * circumference);
-                            return (
-                                <g key={i} transform={`rotate(-90 ${center} ${center})`}>
-                                    <circle cx={center} cy={center} r={radius} fill="none" stroke={ring.color} strokeWidth={strokeWidth} opacity="0.2" />
-                                    <motion.circle initial={{ strokeDashoffset: circumference }} animate={{ strokeDashoffset }} transition={{ duration: 1.5, type: "spring", bounce: 0.2, delay: 0.2 }} cx={center} cy={center} r={radius} fill="none" stroke={ring.color} strokeWidth={strokeWidth} strokeDasharray={circumference} strokeLinecap="round"/>
-                                </g>
-                            )
-                        })}
-                    </svg>
-                    <div className="absolute inset-0 blur-2xl opacity-20 z-0 rounded-full" style={{ background: rings[0]?.color }}></div>
+                <div className="flex items-center gap-6 bg-surface border border-white/5 rounded-2xl p-5 mb-2">
+                    <div className="relative w-24 h-24 shrink-0">
+                        <svg className="w-full h-full" viewBox="0 0 100 100">
+                            {/* Background Rings */}
+                            <circle cx="50" cy="50" r={r1} fill="transparent" stroke="#3f1616" strokeWidth="8"/>
+                            <circle cx="50" cy="50" r={r2} fill="transparent" stroke="#12311e" strokeWidth="8"/>
+                            <circle cx="50" cy="50" r={r3} fill="transparent" stroke="#1e293b" strokeWidth="8"/>
+                            {/* Foreground Rings */}
+                            <circle cx="50" cy="50" r={r1} fill="transparent" stroke="#ef4444" strokeWidth="8" strokeDasharray={`${(p1/100)*c1} ${c1}`} strokeLinecap="round" transform="rotate(-90 50 50)" className="transition-all duration-1000"/>
+                            <circle cx="50" cy="50" r={r2} fill="transparent" stroke="#22c55e" strokeWidth="8" strokeDasharray={`${(p2/100)*c2} ${c2}`} strokeLinecap="round" transform="rotate(-90 50 50)" className="transition-all duration-1000 delay-100"/>
+                            <circle cx="50" cy="50" r={r3} fill="transparent" stroke="#3b82f6" strokeWidth="8" strokeDasharray={`${(p3/100)*c3} ${c3}`} strokeLinecap="round" transform="rotate(-90 50 50)" className="transition-all duration-1000 delay-200"/>
+                        </svg>
+                    </div>
+                    <div>
+                        <h4 className="font-bold text-white mb-2">Weekly Insight Drop</h4>
+                        <div className="space-y-1 text-xs font-medium">
+                            <div className="flex items-center gap-2"><div className="w-2 h-2 rounded-full bg-red-500"></div> <span className="text-zinc-400">Mastery:</span> <span className="text-white">{Math.round(p1)}%</span></div>
+                            <div className="flex items-center gap-2"><div className="w-2 h-2 rounded-full bg-green-500"></div> <span className="text-zinc-400">Study Goal:</span> <span className="text-white">{Math.round(p2)}%</span></div>
+                            <div className="flex items-center gap-2"><div className="w-2 h-2 rounded-full bg-blue-500"></div> <span className="text-zinc-400">Consistency:</span> <span className="text-white">{Math.round(p3)}%</span></div>
+                        </div>
+                    </div>
                 </div>
             );
         };
 
-        // --- Reddit Sidebar Widgets ---
-        const FocusTimerWidget = () => {
+        // 2. Thread Post Wrapper
+        const ThreadPost = ({ post, onMarkMastered }) => {
+            const isLore = post.type === 'lore';
+            const isInsight = post.type === 'insight';
+            
+            let AvatarIcon = Icons.User;
+            let avatarBg = "bg-zinc-800";
+            let authorName = post.author || "Student";
+            
+            if (isLore) { AvatarIcon = Icons.Bot; avatarBg = "bg-brand/20 text-brand"; authorName = "System Lore"; }
+            if (isInsight) { AvatarIcon = Icons.Activity; avatarBg = "bg-emerald-500/20 text-emerald-500"; authorName = "darNote Analytics"; }
+
+            return (
+                <div className="flex px-4 pt-4 hover:bg-white/[0.02] transition-colors group border-b border-border/50">
+                    <div className="flex flex-col items-center mr-3 shrink-0">
+                        <div className={`w-10 h-10 rounded-full flex items-center justify-center shadow-md ${avatarBg}`}>
+                            {post.avatarUrl ? <img src={post.avatarUrl} className="w-full h-full rounded-full object-cover"/> : <AvatarIcon className="w-5 h-5"/>}
+                        </div>
+                        {/* Connecting Line */}
+                        <div className="thread-line"></div>
+                    </div>
+                    
+                    <div className="flex-1 pb-4">
+                        <div className="flex justify-between items-start mb-1">
+                            <span className="font-bold text-sm text-zinc-100">{authorName} <span className="font-normal text-zinc-500 text-xs ml-1">{post.timeAgo || '2h'}</span></span>
+                            <button className="text-zinc-500 hover:text-zinc-300"><Icons.Search className="w-4 h-4"/></button>
+                        </div>
+
+                        {/* Content Area */}
+                        {isInsight ? (
+                            <InsightRings stats={post.stats} />
+                        ) : (
+                            <div className="text-sm text-zinc-300 leading-relaxed mb-3">
+                                {post.title && <div className="font-bold text-white mb-1">{post.title}</div>}
+                                <div className="markdown-body" dangerouslySetInnerHTML={{ __html: marked.parse(post.content || '') }}></div>
+                                {post.image && <img src={post.image} className="mt-3 rounded-xl border border-white/10 max-h-64 object-cover w-full"/>}
+                            </div>
+                        )}
+
+                        {/* Social Interaction Row */}
+                        <div className="flex items-center gap-6 text-zinc-500 mt-2">
+                            <button onClick={() => !isLore && onMarkMastered && onMarkMastered(post.id)} className={`flex items-center gap-2 group/btn ${post.mastered ? 'text-red-500' : 'hover:text-red-500'} transition-colors`}>
+                                <div className={`p-1.5 rounded-full ${post.mastered ? 'bg-red-500/10' : 'group-hover/btn:bg-red-500/10'} transition-colors`}>
+                                    <Icons.Heart className={`w-4 h-4 ${post.mastered ? 'fill-current' : ''}`}/>
+                                </div>
+                                <span className="text-xs">{post.likes || 0}</span>
+                            </button>
+                            <button className="flex items-center gap-2 group/btn hover:text-brand transition-colors">
+                                <div className="p-1.5 rounded-full group-hover/btn:bg-brand/10 transition-colors"><Icons.MessageCircle className="w-4 h-4"/></div>
+                                <span className="text-xs text-zinc-500">{isLore ? 'Discuss' : 'Drill'}</span>
+                            </button>
+                            <button className="flex items-center gap-2 group/btn hover:text-green-500 transition-colors ml-auto">
+                                <div className="p-1.5 rounded-full group-hover/btn:bg-green-500/10 transition-colors"><Icons.Repeat className="w-4 h-4"/></div>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            );
+        };
+
+        // 3. Sidebar Accordion Wrapper
+        const SidebarAccordion = ({ title, icon: Icon, defaultOpen = false, children }) => {
+            const [isOpen, setIsOpen] = useState(defaultOpen);
+            return (
+                <div className="border border-white/5 rounded-2xl bg-surface overflow-hidden mb-4 shadow-sm">
+                    <button onClick={() => setIsOpen(!isOpen)} className="w-full flex items-center justify-between p-4 bg-white/[0.02] hover:bg-white/[0.04] transition-colors">
+                        <div className="flex items-center gap-3 font-bold text-sm text-zinc-200"><Icon className="w-4 h-4 text-brand"/> {title}</div>
+                        <Icons.ChevronDown className={`w-4 h-4 text-zinc-500 transition-transform ${isOpen ? 'rotate-180' : ''}`}/>
+                    </button>
+                    <AnimatePresence>
+                        {isOpen && (
+                            <motion.div initial={{ height: 0 }} animate={{ height: 'auto' }} exit={{ height: 0 }} className="overflow-hidden">
+                                <div className="p-4 border-t border-white/5">{children}</div>
+                            </motion.div>
+                        )}
+                    </AnimatePresence>
+                </div>
+            );
+        };
+
+        // 4. Focus Timer Widget
+        const FocusTimer = () => {
             const [time, setTime] = useState(25 * 60);
             const [isActive, setIsActive] = useState(false);
+            
             useEffect(() => {
                 let interval = null;
                 if (isActive && time > 0) interval = setInterval(() => setTime(t => t - 1), 1000);
-                else clearInterval(interval);
+                else if (time === 0) setIsActive(false);
                 return () => clearInterval(interval);
             }, [isActive, time]);
+
             const mins = Math.floor(time / 60).toString().padStart(2, '0');
             const secs = (time % 60).toString().padStart(2, '0');
+
             return (
-                <div className="bg-surface border border-border rounded-2xl p-4 mb-4 shadow-sm">
-                    <h3 className="text-xs font-bold text-zinc-400 uppercase tracking-wider mb-3 flex items-center gap-2"><i data-lucide="timer" className="w-3.5 h-3.5"></i> Focus Block</h3>
-                    <div className="flex flex-col items-center">
-                        <div className="text-4xl font-mono tracking-tighter text-white mb-3 font-bold">{mins}:{secs}</div>
-                        <div className="flex gap-2 w-full">
-                            <button onClick={() => setIsActive(!isActive)} className={`flex-1 py-2 rounded-xl font-bold text-sm transition-colors ${isActive ? 'bg-zinc-800 text-white' : 'bg-brand text-white'}`}>
-                                {isActive ? 'Pause' : 'Start'}
-                            </button>
-                            <button onClick={() => { setIsActive(false); setTime(25 * 60); }} className="px-3 bg-zinc-800 hover:bg-zinc-700 text-zinc-300 rounded-xl transition-colors"><i data-lucide="rotate-ccw" className="w-4 h-4"></i></button>
-                        </div>
+                <div className="flex flex-col items-center">
+                    <div className="text-4xl font-bold font-mono text-white mb-4 tracking-wider">{mins}:{secs}</div>
+                    <div className="flex gap-2 w-full">
+                        <button onClick={() => setIsActive(!isActive)} className={`flex-1 py-2 rounded-xl font-bold text-sm transition-colors ${isActive ? 'bg-zinc-800 text-white hover:bg-zinc-700' : 'bg-brand text-white hover:bg-brand/90'}`}>{isActive ? 'Pause' : 'Start Focus'}</button>
+                        <button onClick={() => { setIsActive(false); setTime(25 * 60); }} className="px-4 py-2 rounded-xl bg-zinc-800 text-zinc-400 hover:text-white transition-colors"><Icons.Repeat className="w-4 h-4"/></button>
                     </div>
                 </div>
             );
         };
 
-        const TasksWidget = ({ user, fb }) => {
-            const [tasks, setTasks] = useState([]);
-            const [newTask, setNewTask] = useState("");
+        // 5. Todo List Widget
+        const TodoList = ({ user }) => {
+            const [todos, setTodos] = useState([]);
+            const [input, setInput] = useState('');
 
             useEffect(() => {
-                if (!user || !fb || !fb.db) return;
-                const tasksRef = fb.collection(fb.db, 'artifacts', fb.appId, 'users', user.uid, 'dashboard_todos');
-                const unsub = fb.onSnapshot(tasksRef, (snap) => {
-                    let fetchedTasks = snap.docs.map(d => ({ id: d.id, ...d.data() }));
-                    fetchedTasks.sort((a, b) => (b.createdAt?.toMillis() || 0) - (a.createdAt?.toMillis() || 0));
-                    setTasks(fetchedTasks);
-                });
+                if (!user || user.isAnonymous) return;
+                let unsub = () => {};
+                try {
+                    const q = window.firebase.collection(window.firebase.db, 'artifacts', APP_ID, 'users', user.uid, 'dashboard_todos');
+                    unsub = window.firebase.onSnapshot(q, (snap) => {
+                        setTodos(snap.docs.map(d => ({ id: d.id, ...d.data() })).sort((a,b) => b.createdAt - a.createdAt));
+                    });
+                } catch(e) {}
                 return () => unsub();
-            }, [user, fb]);
+            }, [user]);
 
-            const addTask = async (e) => {
-                if (e.key === 'Enter' && newTask.trim() && user) {
-                    try {
-                        await fb.addDoc(fb.collection(fb.db, 'artifacts', fb.appId, 'users', user.uid, 'dashboard_todos'), { text: newTask.trim(), completed: false, createdAt: fb.serverTimestamp() });
-                        setNewTask("");
-                    } catch(err) {}
-                }
+            const addTodo = async () => {
+                if (!input.trim() || !user || user.isAnonymous) return;
+                try {
+                    await window.firebase.addDoc(window.firebase.collection(window.firebase.db, 'artifacts', APP_ID, 'users', user.uid, 'dashboard_todos'), { text: input, completed: false, createdAt: Date.now() });
+                    setInput('');
+                } catch(e) {}
             };
-            const toggleTask = async (task) => await fb.updateDoc(fb.doc(fb.db, 'artifacts', fb.appId, 'users', user.uid, 'dashboard_todos', task.id), { completed: !task.completed });
+
+            const toggle = async (id, current) => {
+                if (!user || user.isAnonymous) return;
+                await window.firebase.updateDoc(window.firebase.doc(window.firebase.db, 'artifacts', APP_ID, 'users', user.uid, 'dashboard_todos', id), { completed: !current });
+            };
+            const deleteTodo = async (id) => {
+                if (!user || user.isAnonymous) return;
+                await window.firebase.deleteDoc(window.firebase.doc(window.firebase.db, 'artifacts', APP_ID, 'users', user.uid, 'dashboard_todos', id));
+            }
+
+            if (!user || user.isAnonymous) return <div className="text-xs text-zinc-500 text-center">Sign in to save tasks.</div>;
 
             return (
-                <div className="bg-surface border border-border rounded-2xl p-4 shadow-sm flex flex-col flex-1 min-h-[250px]">
-                    <h3 className="text-xs font-bold text-zinc-400 uppercase tracking-wider mb-3 flex items-center gap-2"><i data-lucide="check-square" className="w-3.5 h-3.5"></i> Action Items</h3>
-                    <input type="text" placeholder={user ? "Add a task..." : "Log in to save tasks"} disabled={!user} value={newTask} onChange={e => setNewTask(e.target.value)} onKeyDown={addTask} className="w-full bg-onyx border border-border rounded-xl px-3 py-2 text-sm text-white placeholder-zinc-500 outline-none focus:border-brand transition-colors mb-2 disabled:opacity-50" />
-                    <div className="flex-1 overflow-y-auto no-scrollbar">
-                        <LayoutGroup>
-                            <AnimatePresence>
-                                {tasks.map(t => (
-                                    <motion.div layout key={t.id} initial={{ opacity: 0, y: -5 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, scale: 0.95 }} className="flex items-center gap-3 p-2 hover:bg-white/5 rounded-lg transition-colors cursor-pointer" onClick={() => toggleTask(t)}>
-                                        <div className={`w-4 h-4 rounded border flex items-center justify-center shrink-0 transition-colors ${t.completed ? 'bg-brand border-brand' : 'border-zinc-500'}`}>
-                                            {t.completed && <i data-lucide="check" className="w-3 h-3 text-white"></i>}
-                                        </div>
-                                        <span className={`text-sm truncate transition-all ${t.completed ? 'text-zinc-500 line-through' : 'text-zinc-200'}`}>{t.text}</span>
-                                    </motion.div>
-                                ))}
-                            </AnimatePresence>
-                        </LayoutGroup>
+                <div>
+                    <div className="flex gap-2 mb-3">
+                        <input value={input} onChange={e=>setInput(e.target.value)} onKeyDown={e=>e.key==='Enter'&&addTodo()} placeholder="Quick task..." className="flex-1 bg-zinc-900 border border-white/10 rounded-lg px-3 py-1.5 text-sm text-white focus:outline-none focus:border-brand"/>
+                        <button onClick={addTodo} className="bg-zinc-800 text-white px-3 rounded-lg hover:bg-zinc-700"><Icons.Plus className="w-4 h-4"/></button>
+                    </div>
+                    <div className="space-y-2 max-h-48 overflow-y-auto hide-scrollbar">
+                        {todos.map(t => (
+                            <div key={t.id} className="flex items-start gap-2 group">
+                                <button onClick={() => toggle(t.id, t.completed)} className={`mt-0.5 w-4 h-4 rounded border flex items-center justify-center shrink-0 transition-colors ${t.completed ? 'bg-brand border-brand' : 'border-zinc-500'}`}>
+                                    {t.completed && <Icons.CheckSquare className="w-3 h-3 text-white"/>}
+                                </button>
+                                <span className={`text-sm flex-1 ${t.completed ? 'text-zinc-600 line-through' : 'text-zinc-300'}`}>{t.text}</span>
+                                <button onClick={() => deleteTodo(t.id)} className="opacity-0 group-hover:opacity-100 text-red-500 hover:text-red-400"><Icons.Trash className="w-3 h-3"/></button>
+                            </div>
+                        ))}
                     </div>
                 </div>
             );
         };
 
-        // --- Threads Feed Post Component ---
-        const ThreadPost = ({ post, isLast }) => (
-            <motion.div initial={{ opacity: 0, y: 15 }} animate={{ opacity: 1, y: 0 }} className="flex gap-3 pt-4 px-4 hover:bg-white/[0.02] transition-colors group cursor-pointer">
-                {/* Left Column: Avatar & Line */}
-                <div className="flex flex-col items-center shrink-0 w-10">
-                    <img src={post.avatar} className="w-10 h-10 rounded-full border border-border object-cover bg-surface shrink-0" />
-                    {!isLast && <div className="thread-line"></div>}
-                </div>
-                
-                {/* Right Column: Content */}
-                <div className="flex-1 pb-4 border-b border-white/5 group-hover:border-transparent transition-colors">
-                    <div className="flex items-center justify-between mb-1">
-                        <div className="flex items-center gap-1.5">
-                            <span className={`font-semibold text-[15px] ${post.type === 'trivia' ? 'text-brand' : 'text-white'}`}>{post.author}</span>
-                            {post.type === 'stat' && <i data-lucide="badge-check" className="w-4 h-4 text-blue-500 fill-blue-500/20"></i>}
-                        </div>
-                        <div className="flex items-center gap-2">
-                            <span className="text-zinc-500 text-[13px]">{post.time}</span>
-                            <button className="text-zinc-500 hover:text-white p-1"><i data-lucide="more-horizontal" className="w-4 h-4"></i></button>
-                        </div>
-                    </div>
-
-                    {/* Content Logic based on Type */}
-                    {post.type === 'log' && (
-                        <div className="flex flex-col gap-2">
-                            {post.badge && <span className="text-[11px] font-bold text-zinc-400 w-fit px-2 py-0.5 rounded-md bg-white/5 border border-white/10 uppercase tracking-wide">{post.badge}</span>}
-                            <p className="text-[15px] leading-relaxed text-zinc-200 whitespace-pre-wrap">{post.content}</p>
-                            {post.formula && <div className="mt-1 p-3 rounded-xl bg-green-500/10 border border-green-500/20 font-mono text-[13px] text-green-400 overflow-x-auto no-scrollbar">{post.formula}</div>}
-                        </div>
-                    )}
-
-                    {post.type === 'trivia' && (
-                        <p className="text-[15px] leading-relaxed text-zinc-200">
-                            {post.content}
-                        </p>
-                    )}
-
-                    {post.type === 'stat' && (
-                        <div className="mt-1 flex flex-col gap-3">
-                            <p className="text-[15px] text-zinc-300">{post.content}</p>
-                            <div className="p-4 rounded-2xl bg-surface border border-border flex items-center gap-6 overflow-hidden">
-                                <ActivityRings size={80} rings={post.rings} strokeWidth={8} />
-                                <div className="flex flex-col gap-2.5 flex-1">
-                                    {post.rings.map((r, i) => (
-                                        <div key={i} className="flex items-center justify-between">
-                                            <div className="flex items-center gap-2">
-                                                <div className="w-2.5 h-2.5 rounded-full" style={{backgroundColor: r.color, boxShadow: `0 0 8px ${r.color}80`}}></div>
-                                                <span className="text-[13px] font-semibold text-zinc-300">{r.label}</span>
-                                            </div>
-                                            <span className="text-[13px] font-bold text-white">{Math.round(r.progress * 100)}%</span>
-                                        </div>
-                                    ))}
-                                </div>
-                            </div>
-                        </div>
-                    )}
-
-                    {/* Interaction Bar */}
-                    <div className="flex items-center gap-5 mt-3 text-zinc-500">
-                        <button className="flex items-center gap-1.5 hover:text-green-500 transition-colors group/btn">
-                            <div className="p-1.5 rounded-full group-hover/btn:bg-green-500/10"><i data-lucide="heart" className="w-[18px] h-[18px]"></i></div>
-                            {post.type === 'log' && <span className="text-[13px]">Master</span>}
-                        </button>
-                        <button className="flex items-center gap-1.5 hover:text-brand transition-colors group/btn">
-                            <div className="p-1.5 rounded-full group-hover/btn:bg-brand/10"><i data-lucide="message-circle" className="w-[18px] h-[18px]"></i></div>
-                            {post.type === 'log' && <span className="text-[13px]">Drill</span>}
-                        </button>
-                        <button className="flex items-center gap-1.5 hover:text-white transition-colors group/btn ml-auto">
-                            <div className="p-1.5 rounded-full group-hover/btn:bg-white/10"><i data-lucide="share" className="w-[18px] h-[18px]"></i></div>
-                        </button>
-                    </div>
-                </div>
-            </motion.div>
-        );
-
-        // --- Onboarding Modal ---
-        const OnboardingModal = ({ onComplete, onCancel }) => {
+        // 6. Onboarding Modal
+        const OnboardingModal = ({ user, onComplete }) => {
             const [role, setRole] = useState('');
-            const [curriculum, setCurriculum] = useState('');
-            const roles = ['High School', 'University', 'Professional'];
-            const curriculums = { 'High School': ['HKDSE', 'IB', 'A-Level', 'AP', 'General'], 'University': ['Engineering', 'Medicine', 'Business', 'Computer Science', 'General'], 'Professional': ['Certification', 'Languages', 'General'] };
+            const [curr, setCurr] = useState('');
+            const [saving, setSaving] = useState(false);
+
+            const handleSave = async () => {
+                if (!role) return alert("Please select a role.");
+                setSaving(true);
+                try {
+                    await window.firebase.setDoc(window.firebase.doc(window.firebase.db, 'artifacts', APP_ID, 'users', user.uid, 'settings', 'profile'), { role, curriculum: curr || 'General' }, { merge: true });
+                    onComplete({ role, curriculum: curr || 'General' });
+                } catch(e) { alert("Failed to save profile."); }
+                setSaving(false);
+            };
 
             return (
-                <div className="fixed inset-0 z-[200] flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm">
-                    <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} className="bg-surface border border-border w-full max-w-md rounded-3xl shadow-2xl p-8 relative">
-                        <button onClick={onCancel} className="absolute top-4 right-4 text-zinc-500 hover:text-white"><i data-lucide="x" className="w-5 h-5"></i></button>
-                        <div className="flex justify-center mb-6"><div className="w-14 h-14 bg-brand/10 rounded-full flex items-center justify-center"><i data-lucide="sliders" className="w-7 h-7 text-brand"></i></div></div>
-                        <h2 className="text-2xl font-bold text-center text-white mb-2">Tune Your Feed</h2>
-                        <p className="text-sm text-zinc-400 text-center mb-6">Select your curriculum to get personalized lore and error drops.</p>
+                <div className="fixed inset-0 z-[100] bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
+                    <div className="bg-surface w-full max-w-md rounded-3xl border border-white/10 p-8 shadow-2xl">
+                        <div className="w-16 h-16 bg-brand/10 rounded-full flex items-center justify-center mb-6 mx-auto"><Icons.User className="w-8 h-8 text-brand"/></div>
+                        <h2 className="text-2xl font-bold text-white text-center mb-2">Welcome to your Hub</h2>
+                        <p className="text-sm text-zinc-400 text-center mb-8">Personalize your feed with the right curriculum drops.</p>
                         
-                        <div className="space-y-4 mb-6">
+                        <div className="space-y-4">
                             <div>
-                                <label className="text-xs font-bold text-zinc-500 uppercase tracking-widest mb-2 block">1. Stage</label>
-                                <div className="grid grid-cols-1 gap-2">
-                                    {roles.map(r => (
-                                        <button key={r} onClick={() => {setRole(r); setCurriculum('');}} className={`py-3 px-4 text-sm font-medium rounded-xl border transition-all text-left flex justify-between ${role === r ? 'bg-brand/10 border-brand text-brand' : 'bg-onyx border-border text-zinc-300 hover:bg-white/5'}`}>
-                                            {r} {role === r && <i data-lucide="check" className="w-4 h-4"></i>}
-                                        </button>
+                                <label className="block text-xs font-bold text-zinc-500 uppercase tracking-wider mb-2">Education Level (Required)</label>
+                                <div className="grid grid-cols-2 gap-2">
+                                    {['High School', 'University', 'Professional'].map(r => (
+                                        <button key={r} onClick={() => setRole(r)} className={`p-3 rounded-xl border text-sm font-bold transition-all ${role === r ? 'bg-brand/20 border-brand text-brand' : 'bg-zinc-900 border-white/5 text-zinc-400 hover:bg-zinc-800'}`}>{r}</button>
                                     ))}
                                 </div>
                             </div>
-                            <AnimatePresence>
-                                {role && (
-                                    <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} className="overflow-hidden">
-                                        <label className="text-xs font-bold text-zinc-500 uppercase tracking-widest mb-2 block pt-2">2. Curriculum</label>
-                                        <select value={curriculum} onChange={(e) => setCurriculum(e.target.value)} className="w-full bg-onyx border border-border rounded-xl p-3 text-sm text-white outline-none focus:border-brand transition-colors cursor-pointer">
-                                            <option value="" disabled>Choose your path...</option>
-                                            {curriculums[role].map(c => <option key={c} value={c}>{c}</option>)}
-                                        </select>
-                                    </motion.div>
-                                )}
-                            </AnimatePresence>
+                            <div>
+                                <label className="block text-xs font-bold text-zinc-500 uppercase tracking-wider mb-2">Curriculum (Optional)</label>
+                                <input value={curr} onChange={e=>setCurr(e.target.value)} placeholder="e.g. IB, HKDSE, A-Levels, Pre-Med..." className="w-full bg-zinc-900 border border-white/10 rounded-xl p-3 text-white focus:border-brand focus:outline-none"/>
+                            </div>
+                            <button onClick={handleSave} disabled={saving || !role} className="w-full bg-white text-black font-bold py-3 rounded-xl hover:bg-zinc-200 transition-colors mt-4 disabled:opacity-50">
+                                {saving ? 'Saving...' : 'Curate My Feed'}
+                            </button>
                         </div>
-                        <button onClick={() => { if(role && curriculum) onComplete(role, curriculum); }} className="w-full bg-white text-black font-bold py-3.5 rounded-xl hover:bg-gray-200 transition-colors">Save & Update Feed</button>
-                    </motion.div>
+                    </div>
                 </div>
             );
         };
 
-        // --- Main App ---
+        // --- MAIN APP ---
         const App = () => {
-            const [fb, setFb] = useState(null);
             const [user, setUser] = useState(null);
             const [profile, setProfile] = useState(null);
-            const [feed, setFeed] = useState([]);
-            const [isLoading, setIsLoading] = useState(true);
+            const [authLoading, setAuthLoading] = useState(true);
             const [showOnboarding, setShowOnboarding] = useState(false);
+            const [feed, setFeed] = useState([]);
+            const [feedLoading, setFeedLoading] = useState(true);
 
+            // 1. Auth Setup
             useEffect(() => {
-                const handleLoad = () => { if (window.firebaseEnv) { setFb(window.firebaseEnv); initializeAuth(window.firebaseEnv); } };
-                if (window.firebaseEnv) handleLoad(); else window.addEventListener('firebaseLoaded', handleLoad);
-                return () => window.removeEventListener('firebaseLoaded', handleLoad);
+                const initAuth = async () => {
+                    window.firebase.onAuthStateChanged(window.firebase.auth, async (u) => {
+                        if (u) {
+                            setUser(u);
+                            if (!u.isAnonymous) {
+                                // Fetch profile
+                                const pRef = window.firebase.doc(window.firebase.db, 'artifacts', APP_ID, 'users', u.uid, 'settings', 'profile');
+                                const snap = await window.firebase.getDoc(pRef);
+                                if (snap.exists() && snap.data().role) {
+                                    setProfile(snap.data());
+                                } else {
+                                    setShowOnboarding(true);
+                                }
+                            }
+                        } else {
+                            // Guest mode -> Anon login
+                            await window.firebase.signInAnonymously(window.firebase.auth);
+                        }
+                        setAuthLoading(false);
+                    });
+                };
+                initAuth();
             }, []);
 
-            const initializeAuth = async (env) => {
-                try {
-                    if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
-                        await env.signInWithCustomToken(env.auth, __initial_auth_token);
-                    } else {
-                        await env.signInAnonymously(env.auth);
-                    }
-                } catch(e) {}
+            // 2. The Mixer / Reservoir Logic
+            useEffect(() => {
+                if (authLoading) return;
+                if (!user || (user && !user.isAnonymous && !profile && showOnboarding)) return;
 
-                env.onAuthStateChanged(env.auth, async (u) => {
-                    if (u) {
-                        setUser(u);
-                        await fetchProfile(u, env);
-                    } else {
-                        // User not logged in, fetch global preview
-                        loadPreviewFeed(env);
-                    }
-                });
-            };
-
-            const fetchProfile = async (u, env) => {
-                try {
-                    const docRef = env.doc(env.db, 'artifacts', env.appId, 'users', u.uid, 'settings', 'profile');
-                    const snap = await env.getDoc(docRef);
-                    if (snap.exists() && snap.data().role && snap.data().curriculum) {
-                        setProfile(snap.data());
-                        loadPersonalizedFeed(u.uid, snap.data().role, snap.data().curriculum, env);
-                    } else {
-                        // Existing user but no profile yet -> Show Preview Feed + Banner
-                        loadPreviewFeed(env);
-                    }
-                } catch(e) { loadPreviewFeed(env); }
-            };
-
-            const handleOnboardingComplete = async (role, curriculum) => {
-                setShowOnboarding(false); setIsLoading(true);
-                const profData = { role, curriculum, onboardedAt: new Date().toISOString() };
-                try {
-                    await fb.setDoc(fb.doc(fb.db, 'artifacts', fb.appId, 'users', user.uid, 'settings', 'profile'), profData, { merge: true });
-                    setProfile(profData);
-                    loadPersonalizedFeed(user.uid, role, curriculum, fb);
-                } catch(e) {}
-            };
-
-            // --- Global Preview logic ---
-            const loadPreviewFeed = async (env) => {
-                setIsLoading(true);
-                try {
-                    // Fetch global feed or generate default if empty
-                    const poolRef = env.collection(env.db, 'artifacts', env.appId, 'public', 'data', `global_preview_pool`);
-                    const snap = await env.getDocs(poolRef);
-                    let items = snap.docs.map(d => ({ id: d.id, ...d.data() }));
-                    
-                    if (items.length < 5) {
-                        // Seed global
-                        const prompt = `Generate 5 random, highly interesting academic facts or study tips. Make them engaging. Format as JSON array: [{"content": "..."}]`;
-                        const res = await callAI(prompt);
-                        try {
-                            const clean = JSON.parse(res.substring(res.indexOf('['), res.lastIndexOf(']') + 1));
-                            const batch = env.writeBatch(env.db);
-                            clean.forEach(c => {
-                                const ref = env.doc(poolRef);
-                                const docData = { type: 'trivia', author: 'Global Lore', avatar: `https://api.dicebear.com/9.x/shapes/svg?seed=${Math.random()}&backgroundColor=27272a`, time: 'Recently', content: c.content, createdAt: new Date().toISOString() };
-                                batch.set(ref, docData);
-                                items.push({ id: ref.id, ...docData });
-                            });
-                            await batch.commit();
-                        } catch(e) {}
-                    }
-                    
-                    items.sort((a,b) => new Date(b.createdAt) - new Date(a.createdAt));
-                    
-                    // Insert a fake insight to demonstrate
-                    const demoInsight = {
-                        id: 'demo-insight', type: 'stat', author: 'Insight Deck Preview', avatar: 'https://api.dicebear.com/9.x/bottts/svg?seed=preview', time: 'Today',
-                        content: 'This is a preview of the Insight Deck. Log in and sync your error logs to see your actual retention rings.',
-                        rings: [{ label: 'Mastery', progress: 0.7, color: '#32D74B' }, { label: 'Consistency', progress: 0.5, color: '#0A84FF' }, { label: 'Focus', progress: 0.8, color: '#FF9F0A' }]
-                    };
-                    
-                    items.splice(2, 0, demoInsight); // Insert at pos 2
-                    setFeed(items.slice(0, 15));
-                } catch(e) {}
-                setIsLoading(false);
-                setTimeout(() => lucide.createIcons(), 100);
-            };
-
-            // --- Personalized Logic ---
-            const loadPersonalizedFeed = async (uid, role, curriculum, env) => {
-                setIsLoading(true);
-                try {
-                    const logsRef = env.collection(env.db, 'artifacts', env.appId, 'users', uid, 'error_logs');
-                    const logsSnap = await env.getDocs(logsRef);
-                    let personalLogs = logsSnap.docs.map(d => ({ id: d.id, ...d.data() }));
-                    personalLogs.sort((a,b) => new Date(b.createdAt) - new Date(a.createdAt));
-                    
-                    const formattedLogs = personalLogs.map(data => ({
-                        id: data.id, type: 'log', author: 'Your Error Log', avatar: `https://api.dicebear.com/9.x/avataaars/svg?seed=${uid}&backgroundColor=18181b`,
-                        time: new Date(data.createdAt).toLocaleDateString(), badge: `${data.subject} • ${data.topic || 'Review'}`,
-                        content: data.explanation || data.questionText || "Logged a mistake here.",
-                        formula: data.correctAnswer ? `Correct: ${data.correctAnswer}` : null
-                    }));
-
-                    // Fetch Curriculum Specific Lore
-                    const poolId = `${role}_${curriculum}`.replace(/\s+/g, '').toLowerCase();
-                    const poolRef = env.collection(env.db, 'artifacts', env.appId, 'public', 'data', `curriculum_pools_${poolId}`);
-                    const snap = await env.getDocs(poolRef);
-                    let loreItems = snap.docs.map(d => ({ id: d.id, ...d.data() }));
-                    
-                    if (loreItems.length < 3) {
-                        const prompt = `Generate 3 short, engaging study facts for ${curriculum}. JSON format: [{"content": "..."}]`;
-                        const res = await callAI(prompt);
-                        try {
-                            const clean = JSON.parse(res.substring(res.indexOf('['), res.lastIndexOf(']') + 1));
-                            const batch = env.writeBatch(env.db);
-                            clean.forEach(c => {
-                                const ref = env.doc(poolRef);
-                                const docData = { type: 'trivia', author: `${curriculum} Lore`, avatar: `https://api.dicebear.com/9.x/shapes/svg?seed=${curriculum}&backgroundColor=4f46e5`, time: 'New', content: c.content, createdAt: new Date().toISOString() };
-                                batch.set(ref, docData);
-                                loreItems.push({ id: ref.id, ...docData });
-                            });
-                            await batch.commit();
-                        } catch(e) {}
-                    }
-                    loreItems.sort((a,b) => new Date(b.createdAt) - new Date(a.createdAt));
-
-                    // Generate Real Insight Drop
-                    const totalLogs = personalLogs.length;
-                    const insightDrop = {
-                        id: 'stat-insight-real', type: 'stat', author: 'System Insight', avatar: 'https://api.dicebear.com/9.x/bottts/svg?seed=mac&backgroundColor=27272a', time: 'Today',
-                        content: totalLogs > 0 ? `You have logged ${totalLogs} total errors. Your algorithm suggests reviewing ${formattedLogs[0]?.badge || 'recent material'}.` : "Start logging errors to see your retention metrics.",
-                        rings: [{ label: 'Mastery', progress: totalLogs > 10 ? 0.6 : 0.2, color: '#32D74B' }, { label: 'Consistency', progress: 0.85, color: '#0A84FF' }, { label: 'Focus', progress: 0.40, color: '#FF9F0A' }]
-                    };
-
-                    // Mixer
+                const buildFeed = async () => {
+                    setFeedLoading(true);
                     let mixedFeed = [];
-                    if(formattedLogs.length > 0) mixedFeed.push(formattedLogs[0]);
-                    mixedFeed.push(insightDrop);
-                    if(loreItems.length > 0) mixedFeed.push(loreItems[0]);
-                    if(formattedLogs.length > 1) mixedFeed.push(formattedLogs[1]);
-                    if(loreItems.length > 1) mixedFeed.push(loreItems[1]);
-                    mixedFeed.push(...formattedLogs.slice(2, 6));
+                    const role = profile?.role || 'High School';
+                    const curr = profile?.curriculum || 'General';
+                    const colName = `posts_${role.replace(/\s+/g, '_')}_${curr.replace(/\s+/g, '_')}`;
 
-                    if (mixedFeed.length === 1) {
-                         mixedFeed.push({ id: 'welcome', type: 'trivia', author: 'System', avatar: 'https://api.dicebear.com/9.x/shapes/svg?seed=hello', time: 'Now', content: `Welcome to the ${curriculum} hub. Tap 'New Entry' to start.`});
-                    }
-                    setFeed(mixedFeed);
-                } catch(e) {}
-                setIsLoading(false);
-                setTimeout(() => lucide.createIcons(), 100);
+                    try {
+                        // A. Fetch Error Logs (if logged in)
+                        let errorLogs = [];
+                        if (user && !user.isAnonymous) {
+                            const errRef = window.firebase.collection(window.firebase.db, 'artifacts', APP_ID, 'users', user.uid, 'error_logs');
+                            const errSnap = await window.firebase.getDocs(errRef); // Get all, sort in JS to avoid index requirement
+                            errorLogs = errSnap.docs.map(d => ({ 
+                                id: d.id, type: 'error', ...d.data(), 
+                                content: d.data().explanation || d.data().questionText || "Missed concept.",
+                                timeAgo: 'Recent'
+                            })).filter(l => !l.mastered).slice(0, 10); // Take top 10 unmastered
+                        }
+
+                        // B. Fetch Public Drops (The Reservoir)
+                        const pubRef = window.firebase.collection(window.firebase.db, 'artifacts', APP_ID, 'public', 'data', colName);
+                        const pubSnap = await window.firebase.getDocs(pubRef);
+                        let publicDrops = pubSnap.docs.map(d => ({ id: d.id, ...d.data(), timeAgo: 'Lore' }));
+
+                        // THE LOW WATERMARK TRIGGER
+                        if (publicDrops.length < 15) {
+                            // Trigger AI in background (don't block UI)
+                            generateAndRefillReservoir(pubRef, role, curr);
+                            // Provide some fallback lore instantly if completely empty
+                            if (publicDrops.length === 0) {
+                                publicDrops = [
+                                    { id: 'g1', type: 'lore', content: `**Pro Tip:** Active recall is 3x more effective than re-reading. Test yourself constantly.`, likes: 42, timeAgo: 'Just now' },
+                                    { id: 'g2', type: 'lore', content: `Did you know? The forgetting curve shows we lose 50% of new info within an hour unless reviewed.`, likes: 89, timeAgo: '1h' }
+                                ];
+                            }
+                        }
+
+                        // C. Generate 1 Insight Drop
+                        const insightDrop = { id: 'ins1', type: 'insight', stats: { mastered: 12, total: 20, studyHours: 8, consistency: 5 }, timeAgo: 'Weekly' };
+
+                        // D. Mix them randomly but evenly
+                        // 2 Public Drops, 1 Error Log, 1 Insight Drop, then repeat
+                        mixedFeed.push(insightDrop);
+                        let errIdx = 0, pubIdx = 0;
+                        while (errIdx < errorLogs.length || pubIdx < publicDrops.length) {
+                            if (pubIdx < publicDrops.length) mixedFeed.push(publicDrops[pubIdx++]);
+                            if (pubIdx < publicDrops.length) mixedFeed.push(publicDrops[pubIdx++]);
+                            if (errIdx < errorLogs.length) mixedFeed.push(errorLogs[errIdx++]);
+                        }
+
+                        setFeed(mixedFeed);
+                    } catch(e) { console.error("Feed error:", e); }
+                    setFeedLoading(false);
+                };
+
+                buildFeed();
+            }, [user, profile, authLoading, showOnboarding]);
+
+            const generateAndRefillReservoir = async (colRef, role, curriculum) => {
+                try {
+                    const prompt = `Generate a JSON array of 5 highly engaging, short academic trivia, study hacks, or motivational facts for a ${role} student studying ${curriculum}.
+                    Format strictly as: [{"type": "lore", "title": "...", "content": "markdown text", "likes": random_number_under_100}]`;
+                    
+                    const res = await fetch(GEMINI_PROXY_URL, {
+                        method: 'POST', headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] })
+                    });
+                    const data = await res.json();
+                    let text = data.candidates?.[0]?.content?.parts?.[0]?.text;
+                    if (!text) return;
+                    
+                    const jsonStr = text.substring(text.indexOf('['), text.lastIndexOf(']') + 1);
+                    const newPosts = JSON.parse(jsonStr);
+                    
+                    const batch = window.firebase.writeBatch(window.firebase.db);
+                    newPosts.forEach(post => {
+                        const newDocRef = window.firebase.doc(colRef);
+                        batch.set(newDocRef, { ...post, createdAt: Date.now() });
+                    });
+                    await batch.commit();
+                } catch(e) { console.warn("Background AI generation failed:", e); }
             };
 
-            if (isLoading) return <div className="h-screen w-full flex items-center justify-center bg-onyx"><div className="w-8 h-8 border-4 border-zinc-800 border-t-brand rounded-full animate-spin"></div></div>;
+            const markMastered = async (logId) => {
+                if (!user || user.isAnonymous) return;
+                try {
+                    await window.firebase.updateDoc(window.firebase.doc(window.firebase.db, 'artifacts', APP_ID, 'users', user.uid, 'error_logs', logId), { mastered: true });
+                    setFeed(prev => prev.filter(p => p.id !== logId));
+                } catch(e) {}
+            };
+
+            if (authLoading) return <div className="h-screen flex items-center justify-center"><div className="w-8 h-8 border-4 border-brand border-t-transparent rounded-full animate-spin"></div></div>;
 
             return (
-                <div className="flex w-full h-screen bg-onyx overflow-hidden text-zinc-100 font-sans relative">
+                <div className="flex h-screen w-full bg-onyx">
+                    {showOnboarding && <OnboardingModal user={user} onComplete={(p) => { setProfile(p); setShowOnboarding(false); }} />}
                     
-                    {showOnboarding && <OnboardingModal onComplete={handleOnboardingComplete} onCancel={() => setShowOnboarding(false)} />}
+                    {/* LEFT COLUMN: THE THREADS FEED (65%) */}
+                    <main className="flex-1 flex flex-col h-full border-r border-border max-w-4xl mx-auto lg:mx-0 lg:w-[65%] shrink-0">
+                        {/* Feed Header */}
+                        <header className="h-16 px-6 flex items-center justify-between border-b border-border/50 shrink-0 bg-onyx/80 backdrop-blur-md z-10 sticky top-0">
+                            <div className="flex items-center gap-3">
+                                <img src="https://raw.githubusercontent.com/darren6251/darnote/refs/heads/main/darNote%20logo.png" className="w-8 h-8 rounded-lg"/>
+                                <span className="font-bold text-lg text-white">Curriculum Feed</span>
+                            </div>
+                            <div className="flex items-center gap-4">
+                                {user && !user.isAnonymous && <button className="text-xs font-bold text-brand bg-brand/10 px-3 py-1.5 rounded-full">{profile?.curriculum || 'General'}</button>}
+                                <button onClick={()=>window.firebase.signOut(window.firebase.auth)} className="text-zinc-500 hover:text-white transition-colors"><Icons.User className="w-5 h-5"/></button>
+                            </div>
+                        </header>
 
-                    {/* TOP BANNER FOR UNAUTH / UN-ONBOARDED */}
-                    {!profile && (
-                        <div className="absolute top-0 left-0 w-full bg-brand text-white text-xs font-bold py-2 text-center z-50 flex items-center justify-center gap-2 shadow-lg">
-                            <i data-lucide="globe" className="w-4 h-4"></i> You are viewing the Global Preview Feed.
-                            <button onClick={() => setShowOnboarding(true)} className="bg-white text-brand px-3 py-1 rounded-full hover:bg-zinc-100 transition-colors ml-2 shadow-sm">Personalize Feed</button>
-                        </div>
-                    )}
-
-                    <div className="flex w-full max-w-6xl mx-auto h-full pt-10">
-                        
-                        {/* LEFT: THREADS FEED (~65%) */}
-                        <div className="flex-1 md:flex-[0.65] flex flex-col border-r border-border h-full relative">
-                            {/* Sticky Header */}
-                            <div className="sticky top-0 z-40 bg-onyx/80 backdrop-blur-xl border-b border-border p-4 flex justify-between items-center">
-                                <div className="font-bold text-lg tracking-tighter flex items-center gap-2 select-none">
-                                    <img src="https://raw.githubusercontent.com/darren6251/darnote/refs/heads/main/darNote%20logo.png" className="w-6 h-6 rounded" />
-                                    darNote <span className="text-[10px] uppercase text-brand font-bold bg-brand/10 px-2 py-0.5 rounded-full mt-0.5">{profile?.curriculum || 'Global'}</span>
+                        {/* Scrolling Timeline */}
+                        <div className="flex-1 overflow-y-auto hide-scrollbar pb-24 md:pb-0 relative">
+                            {feedLoading ? (
+                                <div className="flex flex-col items-center justify-center h-48 text-zinc-500 space-y-4">
+                                    <div className="w-6 h-6 border-2 border-zinc-500 border-t-transparent rounded-full animate-spin"></div>
+                                    <div className="text-xs font-bold uppercase tracking-widest">Compiling Curriculum...</div>
                                 </div>
-                                <button className="md:hidden text-zinc-400 hover:text-white"><i data-lucide="settings" className="w-5 h-5"></i></button>
-                            </div>
+                            ) : (
+                                <div className="pb-8">
+                                    {feed.map((post, idx) => (
+                                        <motion.div key={post.id + idx} initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: Math.min(idx * 0.05, 0.5) }}>
+                                            <ThreadPost post={post} onMarkMastered={markMastered} />
+                                        </motion.div>
+                                    ))}
+                                    <div className="p-8 text-center text-zinc-500 text-xs font-bold uppercase tracking-widest flex items-center justify-center gap-2">
+                                        <div className="w-2 h-2 bg-zinc-700 rounded-full animate-bounce"></div> End of Feed
+                                    </div>
+                                </div>
+                            )}
+                        </div>
+                    </main>
 
-                            {/* Feed Container */}
-                            <div className="flex-1 overflow-y-auto no-scrollbar pb-24">
-                                {feed.map((post, i) => (
-                                    <ThreadPost key={post.id || i} post={post} isLast={i === feed.length - 1} />
-                                ))}
-                            </div>
+                    {/* RIGHT COLUMN: REDDIT SIDEBAR (35% - Hidden on Mobile) */}
+                    <aside className="hidden lg:flex w-[35%] flex-col h-full bg-surface p-6 overflow-y-auto hide-scrollbar">
+                        <div className="mb-6">
+                            <h3 className="font-bold text-lg text-white mb-1">Productivity Hub</h3>
+                            <p className="text-xs text-zinc-400">Tools to survive the doom scroll.</p>
                         </div>
 
-                        {/* RIGHT: REDDIT SIDEBAR (~35%) */}
-                        <div className="hidden md:flex md:flex-[0.35] flex-col p-6 overflow-y-auto no-scrollbar h-full">
-                            
-                            {/* Navigation Block */}
-                            <div className="bg-surface border border-border rounded-2xl p-2 shadow-sm mb-4">
-                                <a href="el.html" className="flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-white/5 transition-colors group cursor-pointer text-zinc-300 hover:text-white font-medium">
-                                    <div className="text-red-400 bg-red-400/10 p-1.5 rounded-lg group-hover:bg-red-400/20"><i data-lucide="target" className="w-4 h-4"></i></div>
-                                    <span className="text-sm">Error Log</span>
-                                </a>
-                                <a href="note.html" className="flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-white/5 transition-colors group cursor-pointer text-zinc-300 hover:text-white font-medium">
-                                    <div className="text-blue-400 bg-blue-400/10 p-1.5 rounded-lg group-hover:bg-blue-400/20"><i data-lucide="book-open" className="w-4 h-4"></i></div>
-                                    <span className="text-sm">Notes Vault</span>
-                                </a>
-                                <a href="report.html" className="flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-white/5 transition-colors group cursor-pointer text-zinc-300 hover:text-white font-medium">
-                                    <div className="text-green-400 bg-green-400/10 p-1.5 rounded-lg group-hover:bg-green-400/20"><i data-lucide="pie-chart" className="w-4 h-4"></i></div>
-                                    <span className="text-sm">Insight Deck</span>
-                                </a>
-                            </div>
+                        <SidebarAccordion title="Focus Session" icon={Icons.Timer} defaultOpen={true}>
+                            <FocusTimer />
+                        </SidebarAccordion>
 
-                            {/* Widgets */}
-                            <FocusTimerWidget />
-                            <TasksWidget user={user} fb={fb} />
-                            
-                            {/* Action Button */}
-                            <button onClick={()=>window.location.href='el.html'} className="w-full mt-4 bg-white text-black font-bold py-3.5 rounded-xl hover:bg-gray-200 transition-colors shadow-lg flex items-center justify-center gap-2 shrink-0">
-                                <i data-lucide="plus" className="w-5 h-5"></i> New Entry
+                        <SidebarAccordion title="Action Items" icon={Icons.CheckSquare}>
+                            <TodoList user={user} />
+                        </SidebarAccordion>
+
+                        <div className="mt-auto pt-6">
+                            <button onClick={()=>window.location.href='el.html'} className="w-full bg-white text-black font-bold py-3.5 rounded-xl hover:bg-zinc-200 transition-colors shadow-lg flex items-center justify-center gap-2">
+                                <Icons.Plus className="w-5 h-5"/> Force Log Error
                             </button>
                         </div>
-                        
-                        {/* MOBILE BOTTOM NAV */}
-                        <div className="flex md:hidden fixed bottom-0 left-0 w-full bg-onyx/90 backdrop-blur-xl border-t border-border p-2 justify-around items-center pb-safe z-50">
-                            <button className="p-3"><i data-lucide="home" className="w-6 h-6 text-brand"></i></button>
-                            <button onClick={()=>window.location.href='el.html'} className="bg-white text-black p-3.5 rounded-xl shadow-[0_4px_20px_rgba(255,255,255,0.2)] -mt-6"><i data-lucide="plus" className="w-6 h-6"></i></button>
-                            <button onClick={()=>window.location.href='report.html'} className="p-3 text-zinc-500"><i data-lucide="pie-chart" className="w-6 h-6"></i></button>
-                        </div>
+                    </aside>
 
+                    {/* MOBILE BOTTOM NAV */}
+                    <div className="flex lg:hidden fixed bottom-0 left-0 w-full bg-onyx/90 backdrop-blur-xl border-t border-border p-2 justify-around items-center pb-safe z-50">
+                        <button className="p-3 text-brand"><Icons.Home className="w-6 h-6"/></button>
+                        <button onClick={()=>window.location.href='el.html'} className="bg-white text-black p-3.5 rounded-xl shadow-[0_4px_20px_rgba(255,255,255,0.2)] -mt-6"><Icons.Plus className="w-6 h-6"/></button>
+                        <button onClick={()=>window.location.href='report.html'} className="p-3 text-zinc-500"><Icons.Activity className="w-6 h-6"/></button>
                     </div>
                 </div>
             );
