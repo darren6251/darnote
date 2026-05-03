@@ -22,49 +22,30 @@
             theme: {
                 extend: {
                     colors: { 
-                        appleBlack: '#000000',
-                        appleGray: '#1C1C1E',
-                        appleGrayHover: '#2C2C2E',
-                        brand: '#0A84FF', // Apple iOS Blue
+                        onyx: '#09090b',
+                        surface: '#18181b',
+                        border: '#27272a',
+                        brand: '#4f46e5',
                     },
-                    fontFamily: { sans: ['-apple-system', 'BlinkMacSystemFont', 'San Francisco', 'Inter', 'sans-serif'] },
-                    screens: {
-                        'portrait': {'raw': '(orientation: portrait)'},
-                        'landscape': {'raw': '(orientation: landscape)'},
-                    }
+                    fontFamily: { sans: ['Inter', '-apple-system', 'sans-serif'] }
                 }
             }
         }
     </script>
     <style>
-        body { 
-            background-color: #000000; 
-            color: #F5F5F7; 
-            -webkit-font-smoothing: antialiased; 
-            -moz-osx-font-smoothing: grayscale;
-            overflow: hidden; 
-            overscroll-behavior: none;
-        }
+        body { background-color: #09090b; color: #fafafa; -webkit-font-smoothing: antialiased; overflow: hidden; }
         .no-scrollbar::-webkit-scrollbar { display: none; }
         .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
-        .glass-panel {
-            background: rgba(28, 28, 30, 0.6);
-            backdrop-filter: blur(24px);
-            -webkit-backdrop-filter: blur(24px);
-            border: 1px solid rgba(255, 255, 255, 0.08);
-        }
-        .feed-container { overflow-y: auto; height: 100vh; padding-bottom: env(safe-area-inset-bottom); }
-        .sidebar-container { overflow-y: auto; height: 100vh; padding-bottom: 2rem; }
+        .thread-line { width: 2px; background-color: #27272a; flex-grow: 1; border-radius: 99px; margin-top: 8px; margin-bottom: 4px; }
     </style>
 
     <!-- Platform Firebase Integration -->
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-app.js";
-        import { getAuth, signInWithCustomToken, signInAnonymously, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-auth.js";
+        import { getAuth, signInWithCustomToken, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-auth.js";
         import { getFirestore, collection, doc, getDoc, getDocs, setDoc, addDoc, updateDoc, deleteDoc, onSnapshot, writeBatch, serverTimestamp } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-firestore.js";
         
         try {
-            // Use Platform Config
             const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : { apiKey: "demo", projectId: "demo" };
             const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
             
@@ -72,7 +53,7 @@
             const auth = getAuth(app);
             const db = getFirestore(app);
             
-            window.firebaseEnv = { app, auth, db, appId, signInWithCustomToken, signInAnonymously, onAuthStateChanged, signOut, collection, doc, getDoc, getDocs, setDoc, addDoc, updateDoc, deleteDoc, onSnapshot, writeBatch, serverTimestamp };
+            window.firebaseEnv = { app, auth, db, appId, signInWithCustomToken, signInAnonymously, onAuthStateChanged, collection, doc, getDoc, getDocs, setDoc, addDoc, updateDoc, deleteDoc, onSnapshot, writeBatch, serverTimestamp };
             window.dispatchEvent(new Event('firebaseLoaded'));
         } catch (e) {
             console.error("Firebase init failed:", e);
@@ -90,68 +71,35 @@
         // --- AI Helper ---
         const callAI = async (prompt) => {
             try {
-                const response = await fetch(GEMINI_PROXY_URL, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] })
-                });
-                const data = await response.json();
-                return data.candidates?.[0]?.content?.parts?.[0]?.text || "";
+                const response = await fetch(GEMINI_PROXY_URL, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] }) });
+                const data = await response.json(); return data.candidates?.[0]?.content?.parts?.[0]?.text || "";
             } catch (error) { return ""; }
         };
 
-        // --- UI Components ---
+        // --- Apple Fitness Style Activity Rings (Insight Drops) ---
         const ActivityRings = ({ size = 100, rings = [], strokeWidth = 10 }) => {
             const center = size / 2;
             return (
-                <div className="relative" style={{ width: size, height: size }}>
-                    <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`} className="drop-shadow-2xl absolute inset-0 z-10">
+                <div className="relative flex items-center justify-center" style={{ width: size, height: size }}>
+                    <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`} className="drop-shadow-xl z-10 relative">
                         {rings.map((ring, i) => {
-                            const radius = center - (strokeWidth * 1.3 * i) - (strokeWidth / 2);
+                            const radius = center - (strokeWidth * 1.2 * i) - (strokeWidth / 2);
                             const circumference = 2 * Math.PI * radius;
                             const strokeDashoffset = circumference - (ring.progress * circumference);
                             return (
                                 <g key={i} transform={`rotate(-90 ${center} ${center})`}>
-                                    <circle cx={center} cy={center} r={radius} fill="none" stroke={ring.color} strokeWidth={strokeWidth} opacity="0.15" />
-                                    <motion.circle initial={{ strokeDashoffset: circumference }} animate={{ strokeDashoffset }} transition={{ duration: 1.5, type: "spring", bounce: 0.2 }} cx={center} cy={center} r={radius} fill="none" stroke={ring.color} strokeWidth={strokeWidth} strokeDasharray={circumference} strokeLinecap="round"/>
+                                    <circle cx={center} cy={center} r={radius} fill="none" stroke={ring.color} strokeWidth={strokeWidth} opacity="0.2" />
+                                    <motion.circle initial={{ strokeDashoffset: circumference }} animate={{ strokeDashoffset }} transition={{ duration: 1.5, type: "spring", bounce: 0.2, delay: 0.2 }} cx={center} cy={center} r={radius} fill="none" stroke={ring.color} strokeWidth={strokeWidth} strokeDasharray={circumference} strokeLinecap="round"/>
                                 </g>
                             )
                         })}
                     </svg>
-                    {/* Apple-style subtle glow */}
-                    <div className="absolute inset-0 blur-xl opacity-30 z-0 rounded-full" style={{ background: rings[0]?.color }}></div>
+                    <div className="absolute inset-0 blur-2xl opacity-20 z-0 rounded-full" style={{ background: rings[0]?.color }}></div>
                 </div>
             );
         };
 
-        // --- Sidebar Components (Tasks & Timer) ---
-        const NavItem = ({ icon, label, href = "#" }) => (
-            <motion.a whileHover={{ scale: 0.98 }} whileTap={{ scale: 0.95 }} href={href} className="flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-white/10 transition-colors group cursor-pointer text-zinc-400 hover:text-white font-medium">
-                <div className="text-brand/80 group-hover:text-brand transition-colors"><i data-lucide={icon} className="w-[18px] h-[18px]"></i></div>
-                <span className="text-[14px] tracking-tight">{label}</span>
-            </motion.a>
-        );
-
-        const CollapsibleNavGroup = ({ title, defaultOpen = true, children }) => {
-            const [isOpen, setIsOpen] = useState(defaultOpen);
-            useEffect(() => { if(isOpen) setTimeout(() => lucide.createIcons(), 50); }, [isOpen]);
-            return (
-                <div className="glass-panel rounded-2xl mb-4 overflow-hidden shrink-0">
-                    <button onClick={() => setIsOpen(!isOpen)} className="flex items-center justify-between w-full px-4 py-3 hover:bg-white/5 transition-colors group">
-                        <span className="text-[12px] font-semibold tracking-wide text-zinc-400 uppercase">{title}</span>
-                        <motion.i animate={{ rotate: isOpen ? 180 : 0 }} transition={{ type: "spring", stiffness: 300, damping: 20 }} data-lucide="chevron-down" className="w-4 h-4 text-zinc-500"></motion.i>
-                    </button>
-                    <AnimatePresence initial={false}>
-                        {isOpen && (
-                            <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }} transition={{ type: "spring", bounce: 0, duration: 0.4 }} className="overflow-hidden">
-                                <div className="flex flex-col p-2 pt-0">{children}</div>
-                            </motion.div>
-                        )}
-                    </AnimatePresence>
-                </div>
-            );
-        };
-
+        // --- Reddit Sidebar Widgets ---
         const FocusTimerWidget = () => {
             const [time, setTime] = useState(25 * 60);
             const [isActive, setIsActive] = useState(false);
@@ -164,13 +112,16 @@
             const mins = Math.floor(time / 60).toString().padStart(2, '0');
             const secs = (time % 60).toString().padStart(2, '0');
             return (
-                <div className="p-3 flex flex-col items-center">
-                    <motion.div key={time} initial={{ scale: 0.95, opacity: 0.8 }} animate={{ scale: 1, opacity: 1 }} className="text-[40px] font-medium font-mono tracking-tighter text-white mb-4 drop-shadow-md">{mins}:{secs}</motion.div>
-                    <div className="flex gap-2 w-full">
-                        <motion.button whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.95 }} onClick={() => setIsActive(!isActive)} className={`flex-1 py-2.5 rounded-xl font-semibold text-sm transition-colors ${isActive ? 'bg-appleGrayHover text-white border border-white/10' : 'bg-brand text-white shadow-lg shadow-brand/20'}`}>
-                            {isActive ? 'Pause' : 'Start Focus'}
-                        </motion.button>
-                        <motion.button whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }} onClick={() => { setIsActive(false); setTime(25 * 60); }} className="px-3 bg-red-500/10 hover:bg-red-500/20 text-red-400 rounded-xl transition-colors border border-red-500/10"><i data-lucide="rotate-ccw" className="w-[18px] h-[18px]"></i></motion.button>
+                <div className="bg-surface border border-border rounded-2xl p-4 mb-4 shadow-sm">
+                    <h3 className="text-xs font-bold text-zinc-400 uppercase tracking-wider mb-3 flex items-center gap-2"><i data-lucide="timer" className="w-3.5 h-3.5"></i> Focus Block</h3>
+                    <div className="flex flex-col items-center">
+                        <div className="text-4xl font-mono tracking-tighter text-white mb-3 font-bold">{mins}:{secs}</div>
+                        <div className="flex gap-2 w-full">
+                            <button onClick={() => setIsActive(!isActive)} className={`flex-1 py-2 rounded-xl font-bold text-sm transition-colors ${isActive ? 'bg-zinc-800 text-white' : 'bg-brand text-white'}`}>
+                                {isActive ? 'Pause' : 'Start'}
+                            </button>
+                            <button onClick={() => { setIsActive(false); setTime(25 * 60); }} className="px-3 bg-zinc-800 hover:bg-zinc-700 text-zinc-300 rounded-xl transition-colors"><i data-lucide="rotate-ccw" className="w-4 h-4"></i></button>
+                        </div>
                     </div>
                 </div>
             );
@@ -181,95 +132,162 @@
             const [newTask, setNewTask] = useState("");
 
             useEffect(() => {
-                if (!user || !fb) return;
+                if (!user || !fb || !fb.db) return;
                 const tasksRef = fb.collection(fb.db, 'artifacts', fb.appId, 'users', user.uid, 'dashboard_todos');
                 const unsub = fb.onSnapshot(tasksRef, (snap) => {
-                    // Sort in memory to avoid index requirements (Rule 2)
                     let fetchedTasks = snap.docs.map(d => ({ id: d.id, ...d.data() }));
                     fetchedTasks.sort((a, b) => (b.createdAt?.toMillis() || 0) - (a.createdAt?.toMillis() || 0));
                     setTasks(fetchedTasks);
-                }, (error) => console.error("Tasks error:", error));
+                });
                 return () => unsub();
             }, [user, fb]);
 
             const addTask = async (e) => {
-                if (e.key === 'Enter' && newTask.trim()) {
+                if (e.key === 'Enter' && newTask.trim() && user) {
                     try {
                         await fb.addDoc(fb.collection(fb.db, 'artifacts', fb.appId, 'users', user.uid, 'dashboard_todos'), { text: newTask.trim(), completed: false, createdAt: fb.serverTimestamp() });
                         setNewTask("");
-                    } catch(err) { console.error(err); }
+                    } catch(err) {}
                 }
             };
-
-            const toggleTask = async (task) => {
-                await fb.updateDoc(fb.doc(fb.db, 'artifacts', fb.appId, 'users', user.uid, 'dashboard_todos', task.id), { completed: !task.completed });
-            };
-            const deleteTask = async (id) => {
-                await fb.deleteDoc(fb.doc(fb.db, 'artifacts', fb.appId, 'users', user.uid, 'dashboard_todos', id));
-            };
+            const toggleTask = async (task) => await fb.updateDoc(fb.doc(fb.db, 'artifacts', fb.appId, 'users', user.uid, 'dashboard_todos', task.id), { completed: !task.completed });
 
             return (
-                <div className="flex flex-col gap-1 p-1">
-                    <input type="text" placeholder="Add a task..." value={newTask} onChange={e => setNewTask(e.target.value)} onKeyDown={addTask} className="w-full bg-black/50 border border-white/10 rounded-xl px-3 py-2.5 text-sm text-white placeholder-zinc-500 outline-none focus:border-brand/50 transition-colors mb-2" />
-                    <LayoutGroup>
-                        <AnimatePresence>
-                            {tasks.map(t => (
-                                <motion.div layout key={t.id} initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, height: 0 }} className="group flex items-center justify-between px-2 py-1.5 hover:bg-white/5 rounded-lg transition-colors">
-                                    <div className="flex items-center gap-3 overflow-hidden cursor-pointer flex-1" onClick={() => toggleTask(t)}>
-                                        <div className={`w-4 h-4 rounded-full border flex items-center justify-center shrink-0 transition-colors ${t.completed ? 'bg-brand border-brand' : 'border-zinc-500'}`}>
+                <div className="bg-surface border border-border rounded-2xl p-4 shadow-sm flex flex-col flex-1 min-h-[250px]">
+                    <h3 className="text-xs font-bold text-zinc-400 uppercase tracking-wider mb-3 flex items-center gap-2"><i data-lucide="check-square" className="w-3.5 h-3.5"></i> Action Items</h3>
+                    <input type="text" placeholder={user ? "Add a task..." : "Log in to save tasks"} disabled={!user} value={newTask} onChange={e => setNewTask(e.target.value)} onKeyDown={addTask} className="w-full bg-onyx border border-border rounded-xl px-3 py-2 text-sm text-white placeholder-zinc-500 outline-none focus:border-brand transition-colors mb-2 disabled:opacity-50" />
+                    <div className="flex-1 overflow-y-auto no-scrollbar">
+                        <LayoutGroup>
+                            <AnimatePresence>
+                                {tasks.map(t => (
+                                    <motion.div layout key={t.id} initial={{ opacity: 0, y: -5 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, scale: 0.95 }} className="flex items-center gap-3 p-2 hover:bg-white/5 rounded-lg transition-colors cursor-pointer" onClick={() => toggleTask(t)}>
+                                        <div className={`w-4 h-4 rounded border flex items-center justify-center shrink-0 transition-colors ${t.completed ? 'bg-brand border-brand' : 'border-zinc-500'}`}>
                                             {t.completed && <i data-lucide="check" className="w-3 h-3 text-white"></i>}
                                         </div>
-                                        <span className={`text-[13px] truncate transition-all ${t.completed ? 'text-zinc-500 line-through' : 'text-zinc-200'}`}>{t.text}</span>
-                                    </div>
-                                    <button onClick={() => deleteTask(t.id)} className="opacity-0 group-hover:opacity-100 text-zinc-500 hover:text-red-400 p-1 rounded-md transition-all"><i data-lucide="x" className="w-3 h-3"></i></button>
-                                </motion.div>
-                            ))}
-                        </AnimatePresence>
-                    </LayoutGroup>
+                                        <span className={`text-sm truncate transition-all ${t.completed ? 'text-zinc-500 line-through' : 'text-zinc-200'}`}>{t.text}</span>
+                                    </motion.div>
+                                ))}
+                            </AnimatePresence>
+                        </LayoutGroup>
+                    </div>
                 </div>
             );
         };
 
+        // --- Threads Feed Post Component ---
+        const ThreadPost = ({ post, isLast }) => (
+            <motion.div initial={{ opacity: 0, y: 15 }} animate={{ opacity: 1, y: 0 }} className="flex gap-3 pt-4 px-4 hover:bg-white/[0.02] transition-colors group cursor-pointer">
+                {/* Left Column: Avatar & Line */}
+                <div className="flex flex-col items-center shrink-0 w-10">
+                    <img src={post.avatar} className="w-10 h-10 rounded-full border border-border object-cover bg-surface shrink-0" />
+                    {!isLast && <div className="thread-line"></div>}
+                </div>
+                
+                {/* Right Column: Content */}
+                <div className="flex-1 pb-4 border-b border-white/5 group-hover:border-transparent transition-colors">
+                    <div className="flex items-center justify-between mb-1">
+                        <div className="flex items-center gap-1.5">
+                            <span className={`font-semibold text-[15px] ${post.type === 'trivia' ? 'text-brand' : 'text-white'}`}>{post.author}</span>
+                            {post.type === 'stat' && <i data-lucide="badge-check" className="w-4 h-4 text-blue-500 fill-blue-500/20"></i>}
+                        </div>
+                        <div className="flex items-center gap-2">
+                            <span className="text-zinc-500 text-[13px]">{post.time}</span>
+                            <button className="text-zinc-500 hover:text-white p-1"><i data-lucide="more-horizontal" className="w-4 h-4"></i></button>
+                        </div>
+                    </div>
+
+                    {/* Content Logic based on Type */}
+                    {post.type === 'log' && (
+                        <div className="flex flex-col gap-2">
+                            {post.badge && <span className="text-[11px] font-bold text-zinc-400 w-fit px-2 py-0.5 rounded-md bg-white/5 border border-white/10 uppercase tracking-wide">{post.badge}</span>}
+                            <p className="text-[15px] leading-relaxed text-zinc-200 whitespace-pre-wrap">{post.content}</p>
+                            {post.formula && <div className="mt-1 p-3 rounded-xl bg-green-500/10 border border-green-500/20 font-mono text-[13px] text-green-400 overflow-x-auto no-scrollbar">{post.formula}</div>}
+                        </div>
+                    )}
+
+                    {post.type === 'trivia' && (
+                        <p className="text-[15px] leading-relaxed text-zinc-200">
+                            {post.content}
+                        </p>
+                    )}
+
+                    {post.type === 'stat' && (
+                        <div className="mt-1 flex flex-col gap-3">
+                            <p className="text-[15px] text-zinc-300">{post.content}</p>
+                            <div className="p-4 rounded-2xl bg-surface border border-border flex items-center gap-6 overflow-hidden">
+                                <ActivityRings size={80} rings={post.rings} strokeWidth={8} />
+                                <div className="flex flex-col gap-2.5 flex-1">
+                                    {post.rings.map((r, i) => (
+                                        <div key={i} className="flex items-center justify-between">
+                                            <div className="flex items-center gap-2">
+                                                <div className="w-2.5 h-2.5 rounded-full" style={{backgroundColor: r.color, boxShadow: `0 0 8px ${r.color}80`}}></div>
+                                                <span className="text-[13px] font-semibold text-zinc-300">{r.label}</span>
+                                            </div>
+                                            <span className="text-[13px] font-bold text-white">{Math.round(r.progress * 100)}%</span>
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+                        </div>
+                    )}
+
+                    {/* Interaction Bar */}
+                    <div className="flex items-center gap-5 mt-3 text-zinc-500">
+                        <button className="flex items-center gap-1.5 hover:text-green-500 transition-colors group/btn">
+                            <div className="p-1.5 rounded-full group-hover/btn:bg-green-500/10"><i data-lucide="heart" className="w-[18px] h-[18px]"></i></div>
+                            {post.type === 'log' && <span className="text-[13px]">Master</span>}
+                        </button>
+                        <button className="flex items-center gap-1.5 hover:text-brand transition-colors group/btn">
+                            <div className="p-1.5 rounded-full group-hover/btn:bg-brand/10"><i data-lucide="message-circle" className="w-[18px] h-[18px]"></i></div>
+                            {post.type === 'log' && <span className="text-[13px]">Drill</span>}
+                        </button>
+                        <button className="flex items-center gap-1.5 hover:text-white transition-colors group/btn ml-auto">
+                            <div className="p-1.5 rounded-full group-hover/btn:bg-white/10"><i data-lucide="share" className="w-[18px] h-[18px]"></i></div>
+                        </button>
+                    </div>
+                </div>
+            </motion.div>
+        );
+
         // --- Onboarding Modal ---
-        const OnboardingModal = ({ onComplete }) => {
+        const OnboardingModal = ({ onComplete, onCancel }) => {
             const [role, setRole] = useState('');
             const [curriculum, setCurriculum] = useState('');
             const roles = ['High School', 'University', 'Professional'];
             const curriculums = { 'High School': ['HKDSE', 'IB', 'A-Level', 'AP', 'General'], 'University': ['Engineering', 'Medicine', 'Business', 'Computer Science', 'General'], 'Professional': ['Certification', 'Languages', 'General'] };
 
             return (
-                <div className="fixed inset-0 z-[200] flex items-center justify-center p-4 bg-black/60 backdrop-blur-md">
-                    <motion.div initial={{ opacity: 0, scale: 0.9, y: 20 }} animate={{ opacity: 1, scale: 1, y: 0 }} transition={{ type: "spring", damping: 25, stiffness: 300 }} className="glass-panel w-full max-w-md rounded-[24px] shadow-2xl p-8">
-                        <div className="flex justify-center mb-6"><div className="w-16 h-16 bg-brand/10 rounded-full flex items-center justify-center ring-1 ring-brand/30"><i data-lucide="graduation-cap" className="w-8 h-8 text-brand"></i></div></div>
-                        <h2 className="text-2xl font-semibold text-center text-white mb-2 tracking-tight">Set Up Your Feed</h2>
-                        <p className="text-sm text-zinc-400 text-center mb-8">Personalize your hub to receive the most relevant lore and study drops.</p>
+                <div className="fixed inset-0 z-[200] flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm">
+                    <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} className="bg-surface border border-border w-full max-w-md rounded-3xl shadow-2xl p-8 relative">
+                        <button onClick={onCancel} className="absolute top-4 right-4 text-zinc-500 hover:text-white"><i data-lucide="x" className="w-5 h-5"></i></button>
+                        <div className="flex justify-center mb-6"><div className="w-14 h-14 bg-brand/10 rounded-full flex items-center justify-center"><i data-lucide="sliders" className="w-7 h-7 text-brand"></i></div></div>
+                        <h2 className="text-2xl font-bold text-center text-white mb-2">Tune Your Feed</h2>
+                        <p className="text-sm text-zinc-400 text-center mb-6">Select your curriculum to get personalized lore and error drops.</p>
                         
-                        <div className="space-y-6 mb-8">
+                        <div className="space-y-4 mb-6">
                             <div>
-                                <label className="text-xs font-semibold text-zinc-500 uppercase tracking-widest mb-3 block">1. Academic Stage</label>
+                                <label className="text-xs font-bold text-zinc-500 uppercase tracking-widest mb-2 block">1. Stage</label>
                                 <div className="grid grid-cols-1 gap-2">
                                     {roles.map(r => (
-                                        <button key={r} onClick={() => {setRole(r); setCurriculum('');}} className={`py-3 px-4 text-sm font-medium rounded-xl border transition-all text-left flex justify-between items-center ${role === r ? 'bg-brand/10 border-brand text-brand' : 'bg-black/50 border-white/5 text-zinc-300 hover:bg-white/10'}`}>
-                                            {r} {role === r && <i data-lucide="check-circle-2" className="w-4 h-4"></i>}
+                                        <button key={r} onClick={() => {setRole(r); setCurriculum('');}} className={`py-3 px-4 text-sm font-medium rounded-xl border transition-all text-left flex justify-between ${role === r ? 'bg-brand/10 border-brand text-brand' : 'bg-onyx border-border text-zinc-300 hover:bg-white/5'}`}>
+                                            {r} {role === r && <i data-lucide="check" className="w-4 h-4"></i>}
                                         </button>
                                     ))}
                                 </div>
                             </div>
-                            
                             <AnimatePresence>
                                 {role && (
                                     <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} className="overflow-hidden">
-                                        <label className="text-xs font-semibold text-zinc-500 uppercase tracking-widest mb-3 block pt-2">2. Curriculum</label>
-                                        <select value={curriculum} onChange={(e) => setCurriculum(e.target.value)} className="w-full bg-black/50 border border-white/10 rounded-xl p-3.5 text-sm text-white outline-none focus:border-brand transition-colors appearance-none cursor-pointer">
+                                        <label className="text-xs font-bold text-zinc-500 uppercase tracking-widest mb-2 block pt-2">2. Curriculum</label>
+                                        <select value={curriculum} onChange={(e) => setCurriculum(e.target.value)} className="w-full bg-onyx border border-border rounded-xl p-3 text-sm text-white outline-none focus:border-brand transition-colors cursor-pointer">
                                             <option value="" disabled>Choose your path...</option>
-                                            {curriculums[role].map(c => <option key={c} value={c} className="bg-appleGray">{c}</option>)}
+                                            {curriculums[role].map(c => <option key={c} value={c}>{c}</option>)}
                                         </select>
                                     </motion.div>
                                 )}
                             </AnimatePresence>
                         </div>
-                        
-                        <motion.button whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }} onClick={() => { if(!role) return alert("Select a role"); onComplete(role, curriculum || 'General'); }} className="w-full bg-white text-black font-semibold py-3.5 rounded-xl shadow-lg hover:bg-gray-200 transition-colors">Enter Feed</motion.button>
+                        <button onClick={() => { if(role && curriculum) onComplete(role, curriculum); }} className="w-full bg-white text-black font-bold py-3.5 rounded-xl hover:bg-gray-200 transition-colors">Save & Update Feed</button>
                     </motion.div>
                 </div>
             );
@@ -283,40 +301,29 @@
             const [feed, setFeed] = useState([]);
             const [isLoading, setIsLoading] = useState(true);
             const [showOnboarding, setShowOnboarding] = useState(false);
-            
-            // Admin State
-            const [logoClicks, setLogoClicks] = useState(0);
-            const [showAdminPanel, setShowAdminPanel] = useState(false);
-            const [newDropContent, setNewDropContent] = useState("");
 
             useEffect(() => {
-                const handleLoad = () => {
-                    if (window.firebaseEnv) {
-                        setFb(window.firebaseEnv);
-                        initializeAuth(window.firebaseEnv);
-                    }
-                };
-                if (window.firebaseEnv) handleLoad();
-                else window.addEventListener('firebaseLoaded', handleLoad);
+                const handleLoad = () => { if (window.firebaseEnv) { setFb(window.firebaseEnv); initializeAuth(window.firebaseEnv); } };
+                if (window.firebaseEnv) handleLoad(); else window.addEventListener('firebaseLoaded', handleLoad);
                 return () => window.removeEventListener('firebaseLoaded', handleLoad);
             }, []);
 
             const initializeAuth = async (env) => {
                 try {
-                    // Mandatory Auth Rule 3 Implementation
                     if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
                         await env.signInWithCustomToken(env.auth, __initial_auth_token);
                     } else {
                         await env.signInAnonymously(env.auth);
                     }
-                } catch(e) { console.error("Auth init error:", e); }
+                } catch(e) {}
 
                 env.onAuthStateChanged(env.auth, async (u) => {
                     if (u) {
                         setUser(u);
                         await fetchProfile(u, env);
                     } else {
-                        setIsLoading(false);
+                        // User not logged in, fetch global preview
+                        loadPreviewFeed(env);
                     }
                 });
             };
@@ -325,280 +332,203 @@
                 try {
                     const docRef = env.doc(env.db, 'artifacts', env.appId, 'users', u.uid, 'settings', 'profile');
                     const snap = await env.getDoc(docRef);
-                    if (snap.exists() && snap.data().role) {
+                    if (snap.exists() && snap.data().role && snap.data().curriculum) {
                         setProfile(snap.data());
-                        loadFeedData(u.uid, snap.data().role, snap.data().curriculum, env);
+                        loadPersonalizedFeed(u.uid, snap.data().role, snap.data().curriculum, env);
                     } else {
-                        setShowOnboarding(true);
-                        setIsLoading(false);
+                        // Existing user but no profile yet -> Show Preview Feed + Banner
+                        loadPreviewFeed(env);
                     }
-                } catch(e) { console.error("Profile error", e); setIsLoading(false); }
+                } catch(e) { loadPreviewFeed(env); }
             };
 
             const handleOnboardingComplete = async (role, curriculum) => {
-                setShowOnboarding(false);
-                setIsLoading(true);
+                setShowOnboarding(false); setIsLoading(true);
                 const profData = { role, curriculum, onboardedAt: new Date().toISOString() };
                 try {
                     await fb.setDoc(fb.doc(fb.db, 'artifacts', fb.appId, 'users', user.uid, 'settings', 'profile'), profData, { merge: true });
                     setProfile(profData);
-                    loadFeedData(user.uid, role, curriculum, fb);
-                } catch(e) { console.error(e); }
+                    loadPersonalizedFeed(user.uid, role, curriculum, fb);
+                } catch(e) {}
             };
 
-            // THE RESERVOIR
-            const manageReservoir = async (role, curriculum, env) => {
-                const poolId = `${role}_${curriculum}`.replace(/\s+/g, '').toLowerCase();
-                const poolRef = env.collection(env.db, 'artifacts', env.appId, 'public', 'data', `curriculum_pools_${poolId}`);
-                
+            // --- Global Preview logic ---
+            const loadPreviewFeed = async (env) => {
+                setIsLoading(true);
                 try {
+                    // Fetch global feed or generate default if empty
+                    const poolRef = env.collection(env.db, 'artifacts', env.appId, 'public', 'data', `global_preview_pool`);
                     const snap = await env.getDocs(poolRef);
-                    let loreItems = snap.docs.map(d => ({ id: d.id, ...d.data() }));
-                    // Sort in JS (Rule 2)
-                    loreItems.sort((a,b) => new Date(b.createdAt) - new Date(a.createdAt));
-                    loreItems = loreItems.slice(0, 15); // Top 15
-
-                    if (loreItems.length < 5) { // Refill
-                        const prompt = `You are the 'System Lore' generator for an educational app. The user is a ${role} studying ${curriculum}. Generate 3 highly engaging, short, slightly unhinged but factually accurate educational trivia posts. Use modern internet slang (e.g., 'cooked', 'W rizz') but keep it actually educational. Return ONLY a JSON array of objects: [{ "content": "..." }, { "content": "..." }]`;
-                        
-                        const aiRes = await callAI(prompt);
+                    let items = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+                    
+                    if (items.length < 5) {
+                        // Seed global
+                        const prompt = `Generate 5 random, highly interesting academic facts or study tips. Make them engaging. Format as JSON array: [{"content": "..."}]`;
+                        const res = await callAI(prompt);
                         try {
-                            const cleanJson = aiRes.substring(aiRes.indexOf('['), aiRes.lastIndexOf(']') + 1);
-                            const newLore = JSON.parse(cleanJson);
-                            
+                            const clean = JSON.parse(res.substring(res.indexOf('['), res.lastIndexOf(']') + 1));
                             const batch = env.writeBatch(env.db);
-                            newLore.forEach(lore => {
-                                const docRef = env.doc(poolRef);
-                                const newDoc = { type: 'trivia', author: 'System Lore', avatar: 'https://api.dicebear.com/9.x/shapes/svg?seed=apple&backgroundColor=0a84ff', time: 'Just now', content: lore.content, createdAt: new Date().toISOString() };
-                                batch.set(docRef, newDoc);
-                                loreItems.unshift({ id: docRef.id, ...newDoc });
+                            clean.forEach(c => {
+                                const ref = env.doc(poolRef);
+                                const docData = { type: 'trivia', author: 'Global Lore', avatar: `https://api.dicebear.com/9.x/shapes/svg?seed=${Math.random()}&backgroundColor=27272a`, time: 'Recently', content: c.content, createdAt: new Date().toISOString() };
+                                batch.set(ref, docData);
+                                items.push({ id: ref.id, ...docData });
                             });
                             await batch.commit();
                         } catch(e) {}
                     }
-                    return loreItems;
-                } catch(e) { return []; }
+                    
+                    items.sort((a,b) => new Date(b.createdAt) - new Date(a.createdAt));
+                    
+                    // Insert a fake insight to demonstrate
+                    const demoInsight = {
+                        id: 'demo-insight', type: 'stat', author: 'Insight Deck Preview', avatar: 'https://api.dicebear.com/9.x/bottts/svg?seed=preview', time: 'Today',
+                        content: 'This is a preview of the Insight Deck. Log in and sync your error logs to see your actual retention rings.',
+                        rings: [{ label: 'Mastery', progress: 0.7, color: '#32D74B' }, { label: 'Consistency', progress: 0.5, color: '#0A84FF' }, { label: 'Focus', progress: 0.8, color: '#FF9F0A' }]
+                    };
+                    
+                    items.splice(2, 0, demoInsight); // Insert at pos 2
+                    setFeed(items.slice(0, 15));
+                } catch(e) {}
+                setIsLoading(false);
+                setTimeout(() => lucide.createIcons(), 100);
             };
 
-            const loadFeedData = async (uid, role, curriculum, env) => {
+            // --- Personalized Logic ---
+            const loadPersonalizedFeed = async (uid, role, curriculum, env) => {
                 setIsLoading(true);
                 try {
                     const logsRef = env.collection(env.db, 'artifacts', env.appId, 'users', uid, 'error_logs');
                     const logsSnap = await env.getDocs(logsRef);
                     let personalLogs = logsSnap.docs.map(d => ({ id: d.id, ...d.data() }));
-                    // Sort in JS (Rule 2)
                     personalLogs.sort((a,b) => new Date(b.createdAt) - new Date(a.createdAt));
-                    personalLogs = personalLogs.slice(0, 5).map(data => ({
-                        id: data.id, type: 'log', author: 'You', avatar: 'https://api.dicebear.com/9.x/avataaars/svg?seed=' + uid + '&backgroundColor=1c1c1e',
-                        time: new Date(data.createdAt).toLocaleDateString(), badge: `${data.subject} • ${data.topic || 'General'}`,
-                        content: data.explanation || (data.questionText ? `Failed: ${data.questionText.substring(0,80)}...` : "Logged an error here."),
+                    
+                    const formattedLogs = personalLogs.map(data => ({
+                        id: data.id, type: 'log', author: 'Your Error Log', avatar: `https://api.dicebear.com/9.x/avataaars/svg?seed=${uid}&backgroundColor=18181b`,
+                        time: new Date(data.createdAt).toLocaleDateString(), badge: `${data.subject} • ${data.topic || 'Review'}`,
+                        content: data.explanation || data.questionText || "Logged a mistake here.",
                         formula: data.correctAnswer ? `Correct: ${data.correctAnswer}` : null
                     }));
 
-                    const systemLore = await manageReservoir(role, curriculum, env);
+                    // Fetch Curriculum Specific Lore
+                    const poolId = `${role}_${curriculum}`.replace(/\s+/g, '').toLowerCase();
+                    const poolRef = env.collection(env.db, 'artifacts', env.appId, 'public', 'data', `curriculum_pools_${poolId}`);
+                    const snap = await env.getDocs(poolRef);
+                    let loreItems = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+                    
+                    if (loreItems.length < 3) {
+                        const prompt = `Generate 3 short, engaging study facts for ${curriculum}. JSON format: [{"content": "..."}]`;
+                        const res = await callAI(prompt);
+                        try {
+                            const clean = JSON.parse(res.substring(res.indexOf('['), res.lastIndexOf(']') + 1));
+                            const batch = env.writeBatch(env.db);
+                            clean.forEach(c => {
+                                const ref = env.doc(poolRef);
+                                const docData = { type: 'trivia', author: `${curriculum} Lore`, avatar: `https://api.dicebear.com/9.x/shapes/svg?seed=${curriculum}&backgroundColor=4f46e5`, time: 'New', content: c.content, createdAt: new Date().toISOString() };
+                                batch.set(ref, docData);
+                                loreItems.push({ id: ref.id, ...docData });
+                            });
+                            await batch.commit();
+                        } catch(e) {}
+                    }
+                    loreItems.sort((a,b) => new Date(b.createdAt) - new Date(a.createdAt));
 
+                    // Generate Real Insight Drop
+                    const totalLogs = personalLogs.length;
                     const insightDrop = {
-                        id: 'stat-insight-1', type: 'stat', author: 'Insight Algorithm', avatar: 'https://api.dicebear.com/9.x/bottts/svg?seed=mac&backgroundColor=303030', time: 'Today',
-                        content: `You've recorded ${personalLogs.length} recent errors in ${curriculum}. Your retention algorithm is adapting. Keep pushing.`,
-                        rings: [{ label: 'Mastery', progress: 0.65, color: '#32D74B' }, { label: 'Consistency', progress: 0.85, color: '#0A84FF' }, { label: 'Focus', progress: 0.40, color: '#FF9F0A' }]
+                        id: 'stat-insight-real', type: 'stat', author: 'System Insight', avatar: 'https://api.dicebear.com/9.x/bottts/svg?seed=mac&backgroundColor=27272a', time: 'Today',
+                        content: totalLogs > 0 ? `You have logged ${totalLogs} total errors. Your algorithm suggests reviewing ${formattedLogs[0]?.badge || 'recent material'}.` : "Start logging errors to see your retention metrics.",
+                        rings: [{ label: 'Mastery', progress: totalLogs > 10 ? 0.6 : 0.2, color: '#32D74B' }, { label: 'Consistency', progress: 0.85, color: '#0A84FF' }, { label: 'Focus', progress: 0.40, color: '#FF9F0A' }]
                     };
 
+                    // Mixer
                     let mixedFeed = [];
-                    if(personalLogs.length > 0) mixedFeed.push(personalLogs[0]);
+                    if(formattedLogs.length > 0) mixedFeed.push(formattedLogs[0]);
                     mixedFeed.push(insightDrop);
-                    if(systemLore.length > 0) mixedFeed.push(systemLore[0]);
-                    if(personalLogs.length > 1) mixedFeed.push(personalLogs[1]);
-                    if(systemLore.length > 1) mixedFeed.push(systemLore[1]);
-                    if(personalLogs.length > 2) mixedFeed.push(...personalLogs.slice(2));
-                    
-                    if (mixedFeed.length === 1) {
-                         mixedFeed.push({ id: 'welcome', type: 'trivia', author: 'System', avatar: 'https://api.dicebear.com/9.x/shapes/svg?seed=hello', time: 'Now', content: `Welcome to the ${curriculum} hub. Tap 'Snap Error' to log your first mistake.`});
-                    }
+                    if(loreItems.length > 0) mixedFeed.push(loreItems[0]);
+                    if(formattedLogs.length > 1) mixedFeed.push(formattedLogs[1]);
+                    if(loreItems.length > 1) mixedFeed.push(loreItems[1]);
+                    mixedFeed.push(...formattedLogs.slice(2, 6));
 
+                    if (mixedFeed.length === 1) {
+                         mixedFeed.push({ id: 'welcome', type: 'trivia', author: 'System', avatar: 'https://api.dicebear.com/9.x/shapes/svg?seed=hello', time: 'Now', content: `Welcome to the ${curriculum} hub. Tap 'New Entry' to start.`});
+                    }
                     setFeed(mixedFeed);
                 } catch(e) {}
                 setIsLoading(false);
                 setTimeout(() => lucide.createIcons(), 100);
             };
 
-            const handleLogoClick = () => {
-                const newClicks = logoClicks + 1;
-                setLogoClicks(newClicks);
-                if (newClicks >= 5) { setShowAdminPanel(true); setLogoClicks(0); }
-                setTimeout(() => setLogoClicks(0), 2000); 
-            };
-
-            const handleInjectDrop = async () => {
-                if(!newDropContent.trim() || !profile || !fb) return;
-                const poolId = `${profile.role}_${profile.curriculum}`.replace(/\s+/g, '').toLowerCase();
-                const docRef = fb.doc(fb.collection(fb.db, 'artifacts', fb.appId, 'public', 'data', `curriculum_pools_${poolId}`));
-                const newPost = { type: 'trivia', author: 'Admin Drop', avatar: 'https://api.dicebear.com/9.x/shapes/svg?seed=admin&backgroundColor=ff3b30', time: 'Just now', content: newDropContent, createdAt: new Date().toISOString() };
-                try {
-                    await fb.setDoc(docRef, newPost);
-                    setFeed([{id: docRef.id, ...newPost}, ...feed]); 
-                    setNewDropContent(""); setShowAdminPanel(false);
-                    setTimeout(() => lucide.createIcons(), 50);
-                } catch(e) {}
-            };
-
-            const InteractionRow = ({ type }) => (
-                <div className="flex items-center gap-6 mt-4 text-zinc-500">
-                    <motion.button whileTap={{ scale: 0.8 }} className="flex items-center gap-2 hover:text-[#32D74B] transition-colors group">
-                        <div className="p-1.5 rounded-full group-hover:bg-[#32D74B]/10 transition-colors"><i data-lucide="heart" className="w-[18px] h-[18px] group-active:fill-current"></i></div>
-                        {type === 'log' && <span className="text-xs font-semibold">Master</span>}
-                    </motion.button>
-                    <motion.button whileTap={{ scale: 0.8 }} className="flex items-center gap-2 hover:text-brand transition-colors group">
-                        <div className="p-1.5 rounded-full group-hover:bg-brand/10 transition-colors"><i data-lucide="message-circle" className="w-[18px] h-[18px] group-active:fill-current"></i></div>
-                        {type === 'log' && <span className="text-xs font-semibold">Drill</span>}
-                    </motion.button>
-                    <motion.button whileTap={{ scale: 0.8 }} className="flex items-center gap-2 hover:text-[#BF5AF2] transition-colors group ml-auto">
-                        <div className="p-1.5 rounded-full group-hover:bg-[#BF5AF2]/10 transition-colors"><i data-lucide="send" className="w-[18px] h-[18px]"></i></div>
-                    </motion.button>
-                </div>
-            );
-
-            if (isLoading) return <div className="h-screen w-full flex items-center justify-center bg-appleBlack"><div className="w-8 h-8 border-[3px] border-zinc-800 border-t-white rounded-full animate-spin"></div></div>;
+            if (isLoading) return <div className="h-screen w-full flex items-center justify-center bg-onyx"><div className="w-8 h-8 border-4 border-zinc-800 border-t-brand rounded-full animate-spin"></div></div>;
 
             return (
-                <div className="flex justify-center min-h-screen bg-appleBlack w-full overflow-hidden relative font-sans text-[#F5F5F7]">
+                <div className="flex w-full h-screen bg-onyx overflow-hidden text-zinc-100 font-sans relative">
                     
-                    {showOnboarding && <OnboardingModal onComplete={handleOnboardingComplete} />}
+                    {showOnboarding && <OnboardingModal onComplete={handleOnboardingComplete} onCancel={() => setShowOnboarding(false)} />}
 
-                    {/* ADMIN COMPOSER */}
-                    <AnimatePresence>
-                        {showAdminPanel && (
-                            <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/60 backdrop-blur-xl">
-                                <motion.div initial={{ opacity: 0, scale: 0.95, y: 20 }} animate={{ opacity: 1, scale: 1, y: 0 }} exit={{ opacity: 0, scale: 0.95, y: 20 }} className="glass-panel w-full sm:max-w-[500px] rounded-[24px] shadow-2xl flex flex-col overflow-hidden">
-                                    <div className="flex justify-between items-center p-4 border-b border-white/10">
-                                        <button onClick={() => setShowAdminPanel(false)} className="text-brand font-medium">Cancel</button>
-                                        <span className="font-semibold text-white tracking-tight">New Global Drop</span>
-                                        <button onClick={handleInjectDrop} disabled={!newDropContent.trim()} className={`font-medium ${newDropContent.trim() ? 'text-brand' : 'text-zinc-600'}`}>Post</button>
-                                    </div>
-                                    <div className="flex p-5 gap-4 flex-1">
-                                        <img src="https://api.dicebear.com/9.x/shapes/svg?seed=admin&backgroundColor=ff3b30" className="w-10 h-10 rounded-full border border-white/10 shadow-sm" />
-                                        <textarea className="w-full bg-transparent border-none text-[16px] leading-relaxed text-white resize-none outline-none placeholder-zinc-500 min-h-[120px]" placeholder="Share syllabus lore, a meme, or a tip..." value={newDropContent} onChange={(e) => setNewDropContent(e.target.value)} autoFocus></textarea>
-                                    </div>
-                                </motion.div>
-                            </div>
-                        )}
-                    </AnimatePresence>
+                    {/* TOP BANNER FOR UNAUTH / UN-ONBOARDED */}
+                    {!profile && (
+                        <div className="absolute top-0 left-0 w-full bg-brand text-white text-xs font-bold py-2 text-center z-50 flex items-center justify-center gap-2 shadow-lg">
+                            <i data-lucide="globe" className="w-4 h-4"></i> You are viewing the Global Preview Feed.
+                            <button onClick={() => setShowOnboarding(true)} className="bg-white text-brand px-3 py-1 rounded-full hover:bg-zinc-100 transition-colors ml-2 shadow-sm">Personalize Feed</button>
+                        </div>
+                    )}
 
-                    <div className="flex w-full max-w-[1000px] justify-between lg:justify-center gap-0 landscape:gap-8 lg:gap-12 px-0 landscape:px-4 xl:px-0 relative h-screen">
+                    <div className="flex w-full max-w-6xl mx-auto h-full pt-10">
                         
-                        {/* LEFT THREADS FEED */}
-                        <div className="w-full landscape:max-w-[600px] flex-1 landscape:border-x border-white/10 bg-appleBlack feed-container no-scrollbar relative shrink-0">
-                            
-                            {/* Glass Navbar */}
-                            <div className="sticky top-0 z-50 glass-panel border-t-0 border-x-0 border-b border-white/10 p-3.5 flex justify-between md:justify-center items-center">
-                                <div onClick={handleLogoClick} className="font-bold text-lg tracking-tighter flex items-center gap-2 cursor-pointer select-none ml-2 md:ml-0">
-                                    <img src="https://raw.githubusercontent.com/darren6251/darnote/refs/heads/main/darNote%20logo.png" className="w-6 h-6 rounded drop-shadow-md pointer-events-none" />
-                                    darNote <span className="text-[10px] uppercase text-brand font-bold bg-brand/15 px-2 py-0.5 rounded-full mt-0.5">{profile?.curriculum}</span>
+                        {/* LEFT: THREADS FEED (~65%) */}
+                        <div className="flex-1 md:flex-[0.65] flex flex-col border-r border-border h-full relative">
+                            {/* Sticky Header */}
+                            <div className="sticky top-0 z-40 bg-onyx/80 backdrop-blur-xl border-b border-border p-4 flex justify-between items-center">
+                                <div className="font-bold text-lg tracking-tighter flex items-center gap-2 select-none">
+                                    <img src="https://raw.githubusercontent.com/darren6251/darnote/refs/heads/main/darNote%20logo.png" className="w-6 h-6 rounded" />
+                                    darNote <span className="text-[10px] uppercase text-brand font-bold bg-brand/10 px-2 py-0.5 rounded-full mt-0.5">{profile?.curriculum || 'Global'}</span>
                                 </div>
-                                <button className="landscape:hidden md:hidden text-white bg-white/10 p-2 rounded-full hover:bg-white/20 transition-colors mr-2">
-                                    <i data-lucide="settings" className="w-4 h-4"></i>
-                                </button>
+                                <button className="md:hidden text-zinc-400 hover:text-white"><i data-lucide="settings" className="w-5 h-5"></i></button>
                             </div>
 
-                            <div className="pt-2 pb-24 landscape:pb-8">
-                                <AnimatePresence>
-                                    {feed.map((post, index) => (
-                                        <motion.div layout initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ type: "spring", stiffness: 300, damping: 30, delay: index === 0 ? 0 : index * 0.05 }} key={post.id} className="px-5 py-4 border-b border-white/5 hover:bg-white/[0.02] transition-colors flex gap-4">
-                                            {/* Avatar Column */}
-                                            <div className="flex flex-col items-center shrink-0">
-                                                <div className="relative group">
-                                                    <img src={post.avatar} className="w-10 h-10 rounded-full border border-white/10 object-cover shadow-sm group-hover:scale-105 transition-transform" />
-                                                    {post.type === 'stat' && <div className="absolute -bottom-1 -right-1 bg-appleBlack rounded-full p-0.5"><i data-lucide="sparkles" className="w-3.5 h-3.5 text-brand"></i></div>}
-                                                </div>
-                                                {index !== feed.length - 1 && <div className="w-[1.5px] h-full bg-white/10 rounded-full my-2.5"></div>}
-                                            </div>
-
-                                            {/* Content Column */}
-                                            <div className="flex-1 pb-1 min-w-0">
-                                                <div className="flex justify-between items-center mb-1.5">
-                                                    <span className={`font-semibold text-[15px] tracking-tight ${post.type === 'trivia' ? 'text-brand' : 'text-white'} truncate`}>{post.author}</span>
-                                                    <div className="flex items-center gap-3 shrink-0">
-                                                        <span className="text-zinc-500 text-[13px]">{post.time}</span>
-                                                        <i data-lucide="more-horizontal" className="w-4 h-4 text-zinc-600 hover:text-white transition-colors cursor-pointer"></i>
-                                                    </div>
-                                                </div>
-                                                
-                                                {post.type === 'log' && (
-                                                    <div className="flex flex-col gap-2 mt-1">
-                                                        <span className="text-[11px] font-bold text-zinc-400 w-fit px-2.5 py-0.5 rounded-md bg-white/5 border border-white/10 truncate max-w-full tracking-wide">
-                                                            {post.badge}
-                                                        </span>
-                                                        <p className="text-[15px] leading-relaxed text-zinc-200 font-normal break-words">{post.content}</p>
-                                                        {post.formula && (
-                                                            <div className="mt-2 p-3 rounded-xl border border-white/5 bg-[#1C1C1E]/50 font-mono text-[13px] text-[#32D74B] overflow-x-auto no-scrollbar shadow-inner">
-                                                                {post.formula}
-                                                            </div>
-                                                        )}
-                                                    </div>
-                                                )}
-
-                                                {post.type === 'stat' && (
-                                                    <div className="mt-1 flex flex-col gap-4">
-                                                        <p className="text-[15px] leading-relaxed text-zinc-200 font-normal">{post.content}</p>
-                                                        <div className="p-4 rounded-2xl border border-white/5 bg-[#1C1C1E] flex flex-row items-center gap-6 overflow-hidden shadow-lg shadow-black/50">
-                                                            <ActivityRings size={80} rings={post.rings} strokeWidth={8} />
-                                                            <div className="flex flex-col gap-3 flex-1">
-                                                                {post.rings.map((r, i) => (
-                                                                    <div key={i} className="flex items-center justify-between">
-                                                                        <div className="flex items-center gap-2.5">
-                                                                            <div className="w-2.5 h-2.5 rounded-full shadow-[0_0_8px_rgba(0,0,0,0.5)]" style={{backgroundColor: r.color, boxShadow: `0 0 10px ${r.color}80`}}></div>
-                                                                            <span className="text-[13px] font-semibold tracking-tight text-zinc-300">{r.label}</span>
-                                                                        </div>
-                                                                        <span className="text-[13px] font-bold tracking-tight text-white">{Math.round(r.progress * 100)}%</span>
-                                                                    </div>
-                                                                ))}
-                                                            </div>
-                                                        </div>
-                                                    </div>
-                                                )}
-
-                                                {post.type === 'trivia' && (
-                                                    <div className="mt-2">
-                                                        <p className="text-[15px] leading-relaxed text-zinc-200 font-normal bg-brand/10 p-4 rounded-2xl border border-brand/20">
-                                                            <i data-lucide="flame" className="w-4 h-4 text-brand inline-block mr-2 mb-0.5 drop-shadow-md"></i>
-                                                            {post.content}
-                                                        </p>
-                                                    </div>
-                                                )}
-
-                                                <InteractionRow type={post.type} />
-                                            </div>
-                                        </motion.div>
-                                    ))}
-                                </AnimatePresence>
+                            {/* Feed Container */}
+                            <div className="flex-1 overflow-y-auto no-scrollbar pb-24">
+                                {feed.map((post, i) => (
+                                    <ThreadPost key={post.id || i} post={post} isLast={i === feed.length - 1} />
+                                ))}
                             </div>
                         </div>
 
-                        {/* RIGHT REDDIT SIDEBAR (Hidden on mobile) */}
-                        <div className="hidden portrait:hidden landscape:flex flex-col w-[280px] lg:w-[300px] sidebar-container no-scrollbar pt-8 shrink-0">
+                        {/* RIGHT: REDDIT SIDEBAR (~35%) */}
+                        <div className="hidden md:flex md:flex-[0.35] flex-col p-6 overflow-y-auto no-scrollbar h-full">
                             
-                            <CollapsibleNavGroup title="Spaces" defaultOpen={true}>
-                                <NavItem icon="home" label="Home Feed" href="home.html" />
-                                <NavItem icon="target" label="Error Log" href="el.html" />
-                                <NavItem icon="book-open" label="Notes Vault" href="note.html" />
-                                <NavItem icon="pie-chart" label="Insight Deck" href="report.html" />
-                            </CollapsibleNavGroup>
-                            
-                            <CollapsibleNavGroup title="Widgets" defaultOpen={true}>
-                                <FocusTimerWidget />
-                                <div className="h-px w-full bg-white/10 my-2"></div>
-                                <TasksWidget user={user} fb={fb} />
-                            </CollapsibleNavGroup>
-                            
-                            <motion.button whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }} onClick={()=>window.location.href='el.html'} className="w-full mt-4 bg-white text-black font-semibold py-3.5 rounded-2xl hover:bg-gray-200 transition-colors shadow-[0_0_20px_rgba(255,255,255,0.1)] flex items-center justify-center gap-2 group shrink-0">
-                                <i data-lucide="plus" className="w-5 h-5 group-hover:rotate-90 transition-transform"></i> Snap Error
-                            </motion.button>
-                        </div>
+                            {/* Navigation Block */}
+                            <div className="bg-surface border border-border rounded-2xl p-2 shadow-sm mb-4">
+                                <a href="el.html" className="flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-white/5 transition-colors group cursor-pointer text-zinc-300 hover:text-white font-medium">
+                                    <div className="text-red-400 bg-red-400/10 p-1.5 rounded-lg group-hover:bg-red-400/20"><i data-lucide="target" className="w-4 h-4"></i></div>
+                                    <span className="text-sm">Error Log</span>
+                                </a>
+                                <a href="note.html" className="flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-white/5 transition-colors group cursor-pointer text-zinc-300 hover:text-white font-medium">
+                                    <div className="text-blue-400 bg-blue-400/10 p-1.5 rounded-lg group-hover:bg-blue-400/20"><i data-lucide="book-open" className="w-4 h-4"></i></div>
+                                    <span className="text-sm">Notes Vault</span>
+                                </a>
+                                <a href="report.html" className="flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-white/5 transition-colors group cursor-pointer text-zinc-300 hover:text-white font-medium">
+                                    <div className="text-green-400 bg-green-400/10 p-1.5 rounded-lg group-hover:bg-green-400/20"><i data-lucide="pie-chart" className="w-4 h-4"></i></div>
+                                    <span className="text-sm">Insight Deck</span>
+                                </a>
+                            </div>
 
+                            {/* Widgets */}
+                            <FocusTimerWidget />
+                            <TasksWidget user={user} fb={fb} />
+                            
+                            {/* Action Button */}
+                            <button onClick={()=>window.location.href='el.html'} className="w-full mt-4 bg-white text-black font-bold py-3.5 rounded-xl hover:bg-gray-200 transition-colors shadow-lg flex items-center justify-center gap-2 shrink-0">
+                                <i data-lucide="plus" className="w-5 h-5"></i> New Entry
+                            </button>
+                        </div>
+                        
                         {/* MOBILE BOTTOM NAV */}
-                        <div className="flex portrait:flex landscape:hidden fixed bottom-0 left-0 w-full glass-panel border-t border-white/10 p-2 justify-around items-center pb-safe z-50">
-                            <motion.button whileTap={{ scale: 0.8 }} onClick={()=>window.location.href='home.html'} className="p-3"><i data-lucide="home" className="w-[26px] h-[26px] text-white fill-white/20"></i></motion.button>
-                            <motion.button whileTap={{ scale: 0.8 }} onClick={()=>window.location.href='el.html'} className="bg-white text-black p-3.5 rounded-2xl shadow-[0_4px_20px_rgba(255,255,255,0.2)] -mt-6 border border-white/20"><i data-lucide="plus" className="w-6 h-6 stroke-[2.5px]"></i></motion.button>
-                            <motion.button whileTap={{ scale: 0.8 }} onClick={()=>window.location.href='report.html'} className="p-3 text-zinc-500 hover:text-white transition-colors"><i data-lucide="pie-chart" className="w-[26px] h-[26px]"></i></motion.button>
+                        <div className="flex md:hidden fixed bottom-0 left-0 w-full bg-onyx/90 backdrop-blur-xl border-t border-border p-2 justify-around items-center pb-safe z-50">
+                            <button className="p-3"><i data-lucide="home" className="w-6 h-6 text-brand"></i></button>
+                            <button onClick={()=>window.location.href='el.html'} className="bg-white text-black p-3.5 rounded-xl shadow-[0_4px_20px_rgba(255,255,255,0.2)] -mt-6"><i data-lucide="plus" className="w-6 h-6"></i></button>
+                            <button onClick={()=>window.location.href='report.html'} className="p-3 text-zinc-500"><i data-lucide="pie-chart" className="w-6 h-6"></i></button>
                         </div>
 
                     </div>
