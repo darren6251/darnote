@@ -37,36 +37,45 @@
         .thread-line { width: 2px; background-color: #27272a; flex-grow: 1; margin-top: 8px; margin-bottom: 4px; border-radius: 2px; }
         .hide-scrollbar::-webkit-scrollbar { display: none; }
         .hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
-        
-        /* Apple Fitness Rings Animation */
-        @keyframes fillRing { from { stroke-dasharray: 0 100; } to { stroke-dasharray: var(--target) 100; } }
-        .progress-ring { stroke-linecap: round; transform: rotate(-90deg); transform-origin: 50% 50%; transition: stroke-dasharray 1s ease-out; }
     </style>
 
-    <!-- Firebase SDKs -->
+    <!-- Platform Firebase Integration -->
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-app.js";
-        import { getAuth, signInWithPopup, GoogleAuthProvider, signOut, onAuthStateChanged, signInAnonymously } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-auth.js";
-        import { getFirestore, collection, doc, setDoc, getDoc, getDocs, updateDoc, deleteDoc, addDoc, serverTimestamp, writeBatch } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-firestore.js";
+        import { getAuth, signInWithCustomToken, signInAnonymously, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-auth.js";
+        import { getFirestore, collection, doc, setDoc, getDoc, getDocs, updateDoc, deleteDoc, addDoc, serverTimestamp, writeBatch, onSnapshot } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-firestore.js";
         
-        const firebaseConfig = { apiKey: "AIzaSyAvPEac-03kE4oazvaq8K3T2gxLPsnZO20", authDomain: "darnote625.firebaseapp.com", projectId: "darnote625", storageBucket: "darnote625.firebasestorage.app", messagingSenderId: "16458322562", appId: "1:16458322562:web:8894d71f3e6c326eba1a9b" };
-        const app = initializeApp(firebaseConfig);
-        window.firebase = { app, auth: getAuth(app), db: getFirestore(app), signInWithPopup, GoogleAuthProvider, signOut, onAuthStateChanged, signInAnonymously, collection, doc, setDoc, getDoc, getDocs, updateDoc, deleteDoc, addDoc, serverTimestamp, writeBatch };
-        window.dispatchEvent(new Event('firebaseLoaded'));
+        try {
+            const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : { apiKey: "demo", projectId: "demo" };
+            const appId = typeof __app_id !== 'undefined' ? __app_id : 'darnote-app';
+            
+            const app = initializeApp(firebaseConfig);
+            const auth = getAuth(app);
+            const db = getFirestore(app);
+            
+            window.firebaseEnv = { app, auth, db, appId, signInWithCustomToken, signInAnonymously, onAuthStateChanged, signOut, collection, doc, setDoc, getDoc, getDocs, updateDoc, deleteDoc, addDoc, serverTimestamp, writeBatch, onSnapshot };
+            window.dispatchEvent(new Event('firebaseLoaded'));
+        } catch (e) { console.error("Firebase init failed:", e); }
     </script>
 </head>
 <body>
     <div id="root"></div>
     <script type="text/babel">
-        const { useState, useEffect, useRef, useMemo } = React;
+        const { useState, useEffect, useRef } = React;
         const { motion, AnimatePresence } = window.Motion;
-        const APP_ID = "darnote-app";
         const GEMINI_PROXY_URL = "https://gemini-proxy-513372702506.us-central1.run.app/proxy";
 
-        // Inline SVGs for reliability
+        // Education Mapping
+        const EDUCATION_LEVELS = ["High School", "University", "Professional / Other"];
+        const SYLLABUS_MAP = {
+            "High School": ["HKDSE", "IB (International Baccalaureate)", "A-Level (ALE)", "AP (Advanced Placement)", "IGCSE", "General High School"],
+            "University": ["Pre-Med", "Engineering", "Computer Science", "Business & Finance", "Law", "General University"],
+            "Professional / Other": ["Language Learning", "IT Certifications", "Accounting (CPA/ACCA)", "General Studies"]
+        };
+
+        // Icons
         const Icons = {
             Home: p => <svg {...p} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>,
-            Search: p => <svg {...p} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>,
             Plus: p => <svg {...p} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M5 12h14"/><path d="M12 5v14"/></svg>,
             Heart: p => <svg {...p} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7Z"/></svg>,
             MessageCircle: p => <svg {...p} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="m3 21 1.9-5.7a8.5 8.5 0 1 1 3.8 3.8z"/></svg>,
@@ -77,30 +86,28 @@
             CheckSquare: p => <svg {...p} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="9 11 12 14 22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>,
             ChevronDown: p => <svg {...p} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="m6 9 6 6 6-6"/></svg>,
             User: p => <svg {...p} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>,
-            Trash: p => <svg {...p} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/></svg>
+            FileText: p => <svg {...p} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><line x1="10" y1="9" x2="8" y2="9"/></svg>,
+            Bug: p => <svg {...p} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="m8 2 1.88 1.88"/><path d="M14.12 3.88 16 2"/><path d="M9 7.13v-1a3.003 3.003 0 1 1 6 0v1"/><path d="M12 20c-3.3 0-6-2.7-6-6v-3a4 4 0 0 1 4-4h4a4 4 0 0 1 4 4v3c0 3.3-2.7 6-6 6"/><path d="M12 20v-9"/><path d="M6.53 9C4.6 8.8 3 7.1 3 5"/><path d="M17.47 9c1.93-.2 3.53-1.9 3.53-3.9"/><path d="M6.53 15H3"/><path d="M21 15h-3.53"/><path d="M6.53 21C4.6 21.2 3 22.9 3 25"/><path d="M17.47 21c1.93.2 3.53 1.9 3.53 3.9"/></svg>,
+            Compass: p => <svg {...p} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="10"/><polygon points="16.24 7.76 14.12 14.12 7.76 16.24 9.88 9.88 16.24 7.76"/></svg>
         };
 
         // --- COMPONENTS ---
 
-        // 1. Apple Fitness Style Rings Component
+        // 1. Apple Fitness Rings
         const InsightRings = ({ stats }) => {
+            const p1 = Math.min(100, (stats?.mastered / (stats?.total || 1)) * 100 || 65);
+            const p2 = Math.min(100, (stats?.studyHours / 10) * 100 || 80);
+            const p3 = Math.min(100, (stats?.consistency / 7) * 100 || 40);
             const r1 = 40, r2 = 30, r3 = 20;
             const c1 = 2 * Math.PI * r1, c2 = 2 * Math.PI * r2, c3 = 2 * Math.PI * r3;
-            
-            // Generate percentages based on dummy stats or real stats
-            const p1 = Math.min(100, (stats?.mastered / (stats?.total || 1)) * 100 || 65); // Red: Mastery
-            const p2 = Math.min(100, (stats?.studyHours / 10) * 100 || 80); // Green: Study Time
-            const p3 = Math.min(100, (stats?.consistency / 7) * 100 || 40); // Blue: Consistency
             
             return (
                 <div className="flex items-center gap-6 bg-surface border border-white/5 rounded-2xl p-5 mb-2">
                     <div className="relative w-24 h-24 shrink-0">
                         <svg className="w-full h-full" viewBox="0 0 100 100">
-                            {/* Background Rings */}
                             <circle cx="50" cy="50" r={r1} fill="transparent" stroke="#3f1616" strokeWidth="8"/>
                             <circle cx="50" cy="50" r={r2} fill="transparent" stroke="#12311e" strokeWidth="8"/>
                             <circle cx="50" cy="50" r={r3} fill="transparent" stroke="#1e293b" strokeWidth="8"/>
-                            {/* Foreground Rings */}
                             <circle cx="50" cy="50" r={r1} fill="transparent" stroke="#ef4444" strokeWidth="8" strokeDasharray={`${(p1/100)*c1} ${c1}`} strokeLinecap="round" transform="rotate(-90 50 50)" className="transition-all duration-1000"/>
                             <circle cx="50" cy="50" r={r2} fill="transparent" stroke="#22c55e" strokeWidth="8" strokeDasharray={`${(p2/100)*c2} ${c2}`} strokeLinecap="round" transform="rotate(-90 50 50)" className="transition-all duration-1000 delay-100"/>
                             <circle cx="50" cy="50" r={r3} fill="transparent" stroke="#3b82f6" strokeWidth="8" strokeDasharray={`${(p3/100)*c3} ${c3}`} strokeLinecap="round" transform="rotate(-90 50 50)" className="transition-all duration-1000 delay-200"/>
@@ -122,6 +129,7 @@
         const ThreadPost = ({ post, onMarkMastered }) => {
             const isLore = post.type === 'lore';
             const isInsight = post.type === 'insight';
+            const isError = post.type === 'error';
             
             let AvatarIcon = Icons.User;
             let avatarBg = "bg-zinc-800";
@@ -136,14 +144,13 @@
                         <div className={`w-10 h-10 rounded-full flex items-center justify-center shadow-md ${avatarBg}`}>
                             {post.avatarUrl ? <img src={post.avatarUrl} className="w-full h-full rounded-full object-cover"/> : <AvatarIcon className="w-5 h-5"/>}
                         </div>
-                        {/* Connecting Line */}
                         <div className="thread-line"></div>
                     </div>
                     
                     <div className="flex-1 pb-4">
                         <div className="flex justify-between items-start mb-1">
-                            <span className="font-bold text-sm text-zinc-100">{authorName} <span className="font-normal text-zinc-500 text-xs ml-1">{post.timeAgo || '2h'}</span></span>
-                            <button className="text-zinc-500 hover:text-zinc-300"><Icons.Search className="w-4 h-4"/></button>
+                            <span className="font-bold text-sm text-zinc-100">{authorName} <span className="font-normal text-zinc-500 text-xs ml-1">{post.timeAgo || 'Recently'}</span></span>
+                            {isError && <span className="text-[10px] uppercase font-bold text-red-400 bg-red-400/10 px-2 py-0.5 rounded border border-red-400/20">Active Error</span>}
                         </div>
 
                         {/* Content Area */}
@@ -151,19 +158,27 @@
                             <InsightRings stats={post.stats} />
                         ) : (
                             <div className="text-sm text-zinc-300 leading-relaxed mb-3">
-                                {post.title && <div className="font-bold text-white mb-1">{post.title}</div>}
-                                <div className="markdown-body" dangerouslySetInnerHTML={{ __html: marked.parse(post.content || '') }}></div>
-                                {post.image && <img src={post.image} className="mt-3 rounded-xl border border-white/10 max-h-64 object-cover w-full"/>}
+                                {isError ? (
+                                    <div className="space-y-2 bg-white/5 border border-white/10 rounded-xl p-3 mt-1">
+                                        <div className="font-bold text-white text-[13px] uppercase tracking-wider text-zinc-500">{post.subject} • {post.topic}</div>
+                                        <div><span className="font-bold text-red-400">Mistake: </span>{post.questionText || "No question text provided."}</div>
+                                        {post.correctAnswer && <div><span className="font-bold text-emerald-400">Correction: </span>{post.correctAnswer}</div>}
+                                        {post.explanation && <div className="text-zinc-400 italic">"{post.explanation}"</div>}
+                                    </div>
+                                ) : (
+                                    <>
+                                        {post.title && <div className="font-bold text-white mb-1">{post.title}</div>}
+                                        <div className="markdown-body" dangerouslySetInnerHTML={{ __html: marked.parse(post.content || '') }}></div>
+                                    </>
+                                )}
                             </div>
                         )}
 
                         {/* Social Interaction Row */}
                         <div className="flex items-center gap-6 text-zinc-500 mt-2">
-                            <button onClick={() => !isLore && onMarkMastered && onMarkMastered(post.id)} className={`flex items-center gap-2 group/btn ${post.mastered ? 'text-red-500' : 'hover:text-red-500'} transition-colors`}>
-                                <div className={`p-1.5 rounded-full ${post.mastered ? 'bg-red-500/10' : 'group-hover/btn:bg-red-500/10'} transition-colors`}>
-                                    <Icons.Heart className={`w-4 h-4 ${post.mastered ? 'fill-current' : ''}`}/>
-                                </div>
-                                <span className="text-xs">{post.likes || 0}</span>
+                            <button onClick={() => isError && onMarkMastered && onMarkMastered(post.id)} className={`flex items-center gap-2 group/btn ${post.mastered ? 'text-red-500' : 'hover:text-red-500'} transition-colors`}>
+                                <div className={`p-1.5 rounded-full ${post.mastered ? 'bg-red-500/10' : 'group-hover/btn:bg-red-500/10'} transition-colors`}><Icons.Heart className={`w-4 h-4 ${post.mastered ? 'fill-current' : ''}`}/></div>
+                                <span className="text-xs">{isError ? (post.mastered ? 'Mastered' : 'Master') : (post.likes || 0)}</span>
                             </button>
                             <button className="flex items-center gap-2 group/btn hover:text-brand transition-colors">
                                 <div className="p-1.5 rounded-full group-hover/btn:bg-brand/10 transition-colors"><Icons.MessageCircle className="w-4 h-4"/></div>
@@ -225,38 +240,27 @@
         };
 
         // 5. Todo List Widget
-        const TodoList = ({ user }) => {
+        const TodoList = ({ fbEnv, user }) => {
             const [todos, setTodos] = useState([]);
             const [input, setInput] = useState('');
 
             useEffect(() => {
-                if (!user || user.isAnonymous) return;
-                let unsub = () => {};
-                try {
-                    const q = window.firebase.collection(window.firebase.db, 'artifacts', APP_ID, 'users', user.uid, 'dashboard_todos');
-                    unsub = window.firebase.onSnapshot(q, (snap) => {
-                        setTodos(snap.docs.map(d => ({ id: d.id, ...d.data() })).sort((a,b) => b.createdAt - a.createdAt));
-                    });
-                } catch(e) {}
+                if (!user || user.isAnonymous || !fbEnv) return;
+                const unsub = fbEnv.onSnapshot(fbEnv.collection(fbEnv.db, 'artifacts', fbEnv.appId, 'users', user.uid, 'dashboard_todos'), (snap) => {
+                    setTodos(snap.docs.map(d => ({ id: d.id, ...d.data() })).sort((a,b) => b.createdAt - a.createdAt));
+                });
                 return () => unsub();
-            }, [user]);
+            }, [user, fbEnv]);
 
             const addTodo = async () => {
                 if (!input.trim() || !user || user.isAnonymous) return;
                 try {
-                    await window.firebase.addDoc(window.firebase.collection(window.firebase.db, 'artifacts', APP_ID, 'users', user.uid, 'dashboard_todos'), { text: input, completed: false, createdAt: Date.now() });
+                    await fbEnv.addDoc(fbEnv.collection(fbEnv.db, 'artifacts', fbEnv.appId, 'users', user.uid, 'dashboard_todos'), { text: input, completed: false, createdAt: Date.now() });
                     setInput('');
                 } catch(e) {}
             };
-
-            const toggle = async (id, current) => {
-                if (!user || user.isAnonymous) return;
-                await window.firebase.updateDoc(window.firebase.doc(window.firebase.db, 'artifacts', APP_ID, 'users', user.uid, 'dashboard_todos', id), { completed: !current });
-            };
-            const deleteTodo = async (id) => {
-                if (!user || user.isAnonymous) return;
-                await window.firebase.deleteDoc(window.firebase.doc(window.firebase.db, 'artifacts', APP_ID, 'users', user.uid, 'dashboard_todos', id));
-            }
+            const toggle = async (id, current) => { if (user) await fbEnv.updateDoc(fbEnv.doc(fbEnv.db, 'artifacts', fbEnv.appId, 'users', user.uid, 'dashboard_todos', id), { completed: !current }); };
+            const deleteTodo = async (id) => { if (user) await fbEnv.deleteDoc(fbEnv.doc(fbEnv.db, 'artifacts', fbEnv.appId, 'users', user.uid, 'dashboard_todos', id)); };
 
             if (!user || user.isAnonymous) return <div className="text-xs text-zinc-500 text-center">Sign in to save tasks.</div>;
 
@@ -281,19 +285,73 @@
             );
         };
 
-        // 6. Onboarding Modal
-        const OnboardingModal = ({ user, onComplete }) => {
-            const [role, setRole] = useState('');
+        // 6. Previews Widget
+        const PreviewsWidget = ({ fbEnv, user }) => {
+            const [notes, setNotes] = useState([]);
+            const [errors, setErrors] = useState([]);
+
+            useEffect(() => {
+                if (!user || user.isAnonymous || !fbEnv) return;
+                const fetchPreviews = async () => {
+                    try {
+                        const nSnap = await fbEnv.getDocs(fbEnv.collection(fbEnv.db, 'artifacts', fbEnv.appId, 'users', user.uid, 'notes'));
+                        const nList = nSnap.docs.map(d => ({ id: d.id, ...d.data() })).sort((a,b) => (b.updatedAt||0) - (a.updatedAt||0)).slice(0, 2);
+                        setNotes(nList);
+
+                        const eSnap = await fbEnv.getDocs(fbEnv.collection(fbEnv.db, 'artifacts', fbEnv.appId, 'users', user.uid, 'error_logs'));
+                        const eList = eSnap.docs.map(d => ({ id: d.id, ...d.data() })).filter(e => !e.mastered).sort((a,b) => new Date(b.createdAt||0) - new Date(a.createdAt||0)).slice(0, 2);
+                        setErrors(eList);
+                    } catch(err) { console.error("Error fetching previews", err); }
+                };
+                fetchPreviews();
+            }, [user, fbEnv]);
+
+            if (!user || user.isAnonymous) return <div className="text-xs text-zinc-500 text-center">Sign in to view your personal content.</div>;
+
+            return (
+                <div className="space-y-4">
+                    <div>
+                        <div className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest mb-2 flex justify-between">Recent Notes <a href="note.html" className="text-brand hover:underline">View All</a></div>
+                        {notes.length === 0 ? <div className="text-xs text-zinc-600">No notes yet.</div> : notes.map(n => (
+                            <a key={n.id} href={`note.html?note=${n.id}`} className="block bg-zinc-900 border border-white/5 rounded-xl p-3 mb-2 hover:border-brand transition-colors">
+                                <div className="flex items-center gap-2 font-bold text-sm text-zinc-200 mb-1"><Icons.FileText className="w-3.5 h-3.5 text-blue-400"/> {n.title || 'Untitled Note'}</div>
+                                <div className="text-xs text-zinc-500 truncate">{n.subject || 'General'}</div>
+                            </a>
+                        ))}
+                    </div>
+                    <div className="border-t border-white/5 pt-2">
+                        <div className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest mb-2 flex justify-between">Active Errors <a href="el.html" className="text-brand hover:underline">View All</a></div>
+                        {errors.length === 0 ? <div className="text-xs text-zinc-600">No active errors!</div> : errors.map(e => (
+                            <a key={e.id} href={`el.html?log=${e.id}`} className="block bg-zinc-900 border border-white/5 rounded-xl p-3 mb-2 hover:border-red-500 transition-colors">
+                                <div className="flex items-center gap-2 font-bold text-sm text-zinc-200 mb-1"><Icons.Bug className="w-3.5 h-3.5 text-red-400"/> {e.questionText?.substring(0, 30) || 'Error Log'}...</div>
+                                <div className="text-xs text-zinc-500 truncate">{e.subject} • {e.topic}</div>
+                            </a>
+                        ))}
+                    </div>
+                </div>
+            );
+        };
+
+        // 7. Onboarding Modal (Multi-Step)
+        const OnboardingModal = ({ fbEnv, user, onComplete }) => {
+            const [level, setLevel] = useState('');
             const [curr, setCurr] = useState('');
             const [saving, setSaving] = useState(false);
+            const [errorMsg, setErrorMsg] = useState('');
 
             const handleSave = async () => {
-                if (!role) return alert("Please select a role.");
+                if (!level || !curr) {
+                    setErrorMsg("Please select both your level and syllabus.");
+                    return;
+                }
                 setSaving(true);
+                setErrorMsg('');
                 try {
-                    await window.firebase.setDoc(window.firebase.doc(window.firebase.db, 'artifacts', APP_ID, 'users', user.uid, 'settings', 'profile'), { role, curriculum: curr || 'General' }, { merge: true });
-                    onComplete({ role, curriculum: curr || 'General' });
-                } catch(e) { alert("Failed to save profile."); }
+                    await fbEnv.setDoc(fbEnv.doc(fbEnv.db, 'artifacts', fbEnv.appId, 'users', user.uid, 'settings', 'profile'), { role: level, curriculum: curr }, { merge: true });
+                    onComplete({ role: level, curriculum: curr });
+                } catch(e) { 
+                    setErrorMsg("Failed to save profile. Please try again.");
+                }
                 setSaving(false);
             };
 
@@ -302,22 +360,32 @@
                     <div className="bg-surface w-full max-w-md rounded-3xl border border-white/10 p-8 shadow-2xl">
                         <div className="w-16 h-16 bg-brand/10 rounded-full flex items-center justify-center mb-6 mx-auto"><Icons.User className="w-8 h-8 text-brand"/></div>
                         <h2 className="text-2xl font-bold text-white text-center mb-2">Welcome to your Hub</h2>
-                        <p className="text-sm text-zinc-400 text-center mb-8">Personalize your feed with the right curriculum drops.</p>
+                        <p className="text-sm text-zinc-400 text-center mb-6">Select your curriculum to join the right public feed.</p>
                         
+                        {errorMsg && <div className="bg-red-500/10 border border-red-500/20 text-red-400 text-xs p-3 rounded-lg mb-4 text-center">{errorMsg}</div>}
+
                         <div className="space-y-4">
                             <div>
-                                <label className="block text-xs font-bold text-zinc-500 uppercase tracking-wider mb-2">Education Level (Required)</label>
-                                <div className="grid grid-cols-2 gap-2">
-                                    {['High School', 'University', 'Professional'].map(r => (
-                                        <button key={r} onClick={() => setRole(r)} className={`p-3 rounded-xl border text-sm font-bold transition-all ${role === r ? 'bg-brand/20 border-brand text-brand' : 'bg-zinc-900 border-white/5 text-zinc-400 hover:bg-zinc-800'}`}>{r}</button>
-                                    ))}
-                                </div>
+                                <label className="block text-xs font-bold text-zinc-500 uppercase tracking-wider mb-2">1. Education Level</label>
+                                <select value={level} onChange={e => { setLevel(e.target.value); setCurr(''); }} className="w-full bg-zinc-900 border border-white/10 rounded-xl p-3 text-white focus:border-brand focus:outline-none appearance-none cursor-pointer">
+                                    <option value="" disabled>Select your level...</option>
+                                    {EDUCATION_LEVELS.map(l => <option key={l} value={l}>{l}</option>)}
+                                </select>
                             </div>
-                            <div>
-                                <label className="block text-xs font-bold text-zinc-500 uppercase tracking-wider mb-2">Curriculum (Optional)</label>
-                                <input value={curr} onChange={e=>setCurr(e.target.value)} placeholder="e.g. IB, HKDSE, A-Levels, Pre-Med..." className="w-full bg-zinc-900 border border-white/10 rounded-xl p-3 text-white focus:border-brand focus:outline-none"/>
-                            </div>
-                            <button onClick={handleSave} disabled={saving || !role} className="w-full bg-white text-black font-bold py-3 rounded-xl hover:bg-zinc-200 transition-colors mt-4 disabled:opacity-50">
+                            
+                            <AnimatePresence>
+                                {level && (
+                                    <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} className="overflow-hidden">
+                                        <label className="block text-xs font-bold text-zinc-500 uppercase tracking-wider mb-2 mt-4">2. Syllabus / Focus</label>
+                                        <select value={curr} onChange={e=>setCurr(e.target.value)} className="w-full bg-zinc-900 border border-white/10 rounded-xl p-3 text-white focus:border-brand focus:outline-none appearance-none cursor-pointer">
+                                            <option value="" disabled>Choose your path...</option>
+                                            {SYLLABUS_MAP[level].map(c => <option key={c} value={c}>{c}</option>)}
+                                        </select>
+                                    </motion.div>
+                                )}
+                            </AnimatePresence>
+
+                            <button onClick={handleSave} disabled={saving || !level || !curr} className="w-full bg-white text-black font-bold py-3 rounded-xl hover:bg-zinc-200 transition-colors mt-6 disabled:opacity-50">
                                 {saving ? 'Saving...' : 'Curate My Feed'}
                             </button>
                         </div>
@@ -328,6 +396,7 @@
 
         // --- MAIN APP ---
         const App = () => {
+            const [fbEnv, setFbEnv] = useState(null);
             const [user, setUser] = useState(null);
             const [profile, setProfile] = useState(null);
             const [authLoading, setAuthLoading] = useState(true);
@@ -335,71 +404,93 @@
             const [feed, setFeed] = useState([]);
             const [feedLoading, setFeedLoading] = useState(true);
 
-            // 1. Auth Setup
+            // 1. Setup Firebase & Auth
             useEffect(() => {
-                const initAuth = async () => {
-                    window.firebase.onAuthStateChanged(window.firebase.auth, async (u) => {
+                const initFb = async () => {
+                    const env = window.firebaseEnv;
+                    if (!env) return;
+                    setFbEnv(env);
+                    try {
+                        if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
+                            await env.signInWithCustomToken(env.auth, __initial_auth_token);
+                        } else {
+                            await env.signInAnonymously(env.auth);
+                        }
+                    } catch(e) { console.error("Auth init failed", e); }
+                    
+                    env.onAuthStateChanged(env.auth, async (u) => {
+                        setUser(u);
                         if (u) {
-                            setUser(u);
                             if (!u.isAnonymous) {
-                                // Fetch profile
-                                const pRef = window.firebase.doc(window.firebase.db, 'artifacts', APP_ID, 'users', u.uid, 'settings', 'profile');
-                                const snap = await window.firebase.getDoc(pRef);
-                                if (snap.exists() && snap.data().role) {
+                                const pRef = env.doc(env.db, 'artifacts', env.appId, 'users', u.uid, 'settings', 'profile');
+                                const snap = await env.getDoc(pRef);
+                                if (snap.exists() && snap.data().curriculum) {
                                     setProfile(snap.data());
+                                    setShowOnboarding(false);
                                 } else {
                                     setShowOnboarding(true);
                                 }
+                            } else {
+                                // Anonymous Guest User
+                                setProfile(null);
+                                setShowOnboarding(false);
                             }
-                        } else {
-                            // Guest mode -> Anon login
-                            await window.firebase.signInAnonymously(window.firebase.auth);
                         }
                         setAuthLoading(false);
                     });
                 };
-                initAuth();
+                
+                if (window.firebaseEnv) initFb();
+                else window.addEventListener('firebaseLoaded', initFb);
+                return () => window.removeEventListener('firebaseLoaded', initFb);
             }, []);
 
             // 2. The Mixer / Reservoir Logic
             useEffect(() => {
-                if (authLoading) return;
-                if (!user || (user && !user.isAnonymous && !profile && showOnboarding)) return;
+                if (authLoading || !fbEnv) return;
+                if (user && !user.isAnonymous && !profile && showOnboarding) return;
 
                 const buildFeed = async () => {
                     setFeedLoading(true);
                     let mixedFeed = [];
-                    const role = profile?.role || 'High School';
-                    const curr = profile?.curriculum || 'General';
-                    const colName = `posts_${role.replace(/\s+/g, '_')}_${curr.replace(/\s+/g, '_')}`;
+                    let fetchCurrName = '';
+                    
+                    if (user && !user.isAnonymous && profile) {
+                        fetchCurrName = profile.curriculum;
+                    } else {
+                        // GUEST LOGIC: Randomly select a popular syllabus to preview
+                        const popular = ["HKDSE", "IB (International Baccalaureate)", "A-Level (ALE)", "General University"];
+                        fetchCurrName = popular[Math.floor(Math.random() * popular.length)];
+                    }
+
+                    const safeCurr = fetchCurrName.replace(/[^a-zA-Z0-9]/g, '_');
+                    const colName = `curriculum_${safeCurr}`;
 
                     try {
                         // A. Fetch Error Logs (if logged in)
                         let errorLogs = [];
                         if (user && !user.isAnonymous) {
-                            const errRef = window.firebase.collection(window.firebase.db, 'artifacts', APP_ID, 'users', user.uid, 'error_logs');
-                            const errSnap = await window.firebase.getDocs(errRef); // Get all, sort in JS to avoid index requirement
+                            const errRef = fbEnv.collection(fbEnv.db, 'artifacts', fbEnv.appId, 'users', user.uid, 'error_logs');
+                            const errSnap = await fbEnv.getDocs(errRef); 
                             errorLogs = errSnap.docs.map(d => ({ 
-                                id: d.id, type: 'error', ...d.data(), 
-                                content: d.data().explanation || d.data().questionText || "Missed concept.",
-                                timeAgo: 'Recent'
-                            })).filter(l => !l.mastered).slice(0, 10); // Take top 10 unmastered
+                                id: d.id, type: 'error', author: 'Your Error Log', ...d.data(), timeAgo: 'Active'
+                            })).filter(l => !l.mastered).slice(0, 10);
                         }
 
                         // B. Fetch Public Drops (The Reservoir)
-                        const pubRef = window.firebase.collection(window.firebase.db, 'artifacts', APP_ID, 'public', 'data', colName);
-                        const pubSnap = await window.firebase.getDocs(pubRef);
+                        const pubRef = fbEnv.collection(fbEnv.db, 'artifacts', fbEnv.appId, 'public', 'data', colName);
+                        const pubSnap = await fbEnv.getDocs(pubRef);
                         let publicDrops = pubSnap.docs.map(d => ({ id: d.id, ...d.data(), timeAgo: 'Lore' }));
 
-                        // THE LOW WATERMARK TRIGGER
+                        // THE LOW WATERMARK TRIGGER & WAIT FOR RESULT
                         if (publicDrops.length < 15) {
-                            // Trigger AI in background (don't block UI)
-                            generateAndRefillReservoir(pubRef, role, curr);
-                            // Provide some fallback lore instantly if completely empty
-                            if (publicDrops.length === 0) {
+                            const generatedDrops = await generateAndRefillReservoir(pubRef, fetchCurrName);
+                            if (generatedDrops.length > 0) {
+                                publicDrops = [...publicDrops, ...generatedDrops];
+                            } else if (publicDrops.length === 0) {
+                                // Ultimate Fallback if generation fails and DB is empty
                                 publicDrops = [
-                                    { id: 'g1', type: 'lore', content: `**Pro Tip:** Active recall is 3x more effective than re-reading. Test yourself constantly.`, likes: 42, timeAgo: 'Just now' },
-                                    { id: 'g2', type: 'lore', content: `Did you know? The forgetting curve shows we lose 50% of new info within an hour unless reviewed.`, likes: 89, timeAgo: '1h' }
+                                    { id: 'g1', type: 'lore', content: `**Welcome to ${fetchCurrName} Feed!** Study hard and remember to log your errors.`, likes: 42, timeAgo: 'System' }
                                 ];
                             }
                         }
@@ -408,7 +499,6 @@
                         const insightDrop = { id: 'ins1', type: 'insight', stats: { mastered: 12, total: 20, studyHours: 8, consistency: 5 }, timeAgo: 'Weekly' };
 
                         // D. Mix them randomly but evenly
-                        // 2 Public Drops, 1 Error Log, 1 Insight Drop, then repeat
                         mixedFeed.push(insightDrop);
                         let errIdx = 0, pubIdx = 0;
                         while (errIdx < errorLogs.length || pubIdx < publicDrops.length) {
@@ -417,18 +507,19 @@
                             if (errIdx < errorLogs.length) mixedFeed.push(errorLogs[errIdx++]);
                         }
 
-                        setFeed(mixedFeed);
+                        // Attach the currently previewed syllabus to state for UI display
+                        setFeed({ posts: mixedFeed, activeSyllabus: fetchCurrName });
                     } catch(e) { console.error("Feed error:", e); }
                     setFeedLoading(false);
                 };
 
                 buildFeed();
-            }, [user, profile, authLoading, showOnboarding]);
+            }, [user, profile, authLoading, showOnboarding, fbEnv]);
 
-            const generateAndRefillReservoir = async (colRef, role, curriculum) => {
+            const generateAndRefillReservoir = async (colRef, curriculum) => {
                 try {
-                    const prompt = `Generate a JSON array of 5 highly engaging, short academic trivia, study hacks, or motivational facts for a ${role} student studying ${curriculum}.
-                    Format strictly as: [{"type": "lore", "title": "...", "content": "markdown text", "likes": random_number_under_100}]`;
+                    const prompt = `Generate a JSON array of 5 highly engaging, short academic trivia, study hacks, or motivational facts for a student studying ${curriculum}.
+                    Format strictly as: [{"type": "lore", "title": "Did you know?", "content": "markdown text", "likes": random_number_under_100}]`;
                     
                     const res = await fetch(GEMINI_PROXY_URL, {
                         method: 'POST', headers: { 'Content-Type': 'application/json' },
@@ -436,25 +527,29 @@
                     });
                     const data = await res.json();
                     let text = data.candidates?.[0]?.content?.parts?.[0]?.text;
-                    if (!text) return;
+                    if (!text) return [];
                     
                     const jsonStr = text.substring(text.indexOf('['), text.lastIndexOf(']') + 1);
                     const newPosts = JSON.parse(jsonStr);
                     
-                    const batch = window.firebase.writeBatch(window.firebase.db);
+                    const batch = window.firebaseEnv.writeBatch(window.firebaseEnv.db);
+                    const savedDrops = [];
                     newPosts.forEach(post => {
-                        const newDocRef = window.firebase.doc(colRef);
-                        batch.set(newDocRef, { ...post, createdAt: Date.now() });
+                        const newDocRef = window.firebaseEnv.doc(colRef);
+                        const postData = { ...post, createdAt: Date.now() };
+                        batch.set(newDocRef, postData);
+                        savedDrops.push({ id: newDocRef.id, ...postData, timeAgo: 'Just now' });
                     });
                     await batch.commit();
-                } catch(e) { console.warn("Background AI generation failed:", e); }
+                    return savedDrops; 
+                } catch(e) { console.warn("Background AI generation failed:", e); return []; }
             };
 
             const markMastered = async (logId) => {
-                if (!user || user.isAnonymous) return;
+                if (!user || user.isAnonymous || !fbEnv) return;
                 try {
-                    await window.firebase.updateDoc(window.firebase.doc(window.firebase.db, 'artifacts', APP_ID, 'users', user.uid, 'error_logs', logId), { mastered: true });
-                    setFeed(prev => prev.filter(p => p.id !== logId));
+                    await fbEnv.updateDoc(fbEnv.doc(fbEnv.db, 'artifacts', fbEnv.appId, 'users', user.uid, 'error_logs', logId), { mastered: true });
+                    setFeed(prev => ({...prev, posts: prev.posts.filter(p => p.id !== logId)}));
                 } catch(e) {}
             };
 
@@ -462,7 +557,7 @@
 
             return (
                 <div className="flex h-screen w-full bg-onyx">
-                    {showOnboarding && <OnboardingModal user={user} onComplete={(p) => { setProfile(p); setShowOnboarding(false); }} />}
+                    {showOnboarding && <OnboardingModal fbEnv={fbEnv} user={user} onComplete={(p) => { setProfile(p); setShowOnboarding(false); }} />}
                     
                     {/* LEFT COLUMN: THE THREADS FEED (65%) */}
                     <main className="flex-1 flex flex-col h-full border-r border-border max-w-4xl mx-auto lg:mx-0 lg:w-[65%] shrink-0">
@@ -473,21 +568,32 @@
                                 <span className="font-bold text-lg text-white">Curriculum Feed</span>
                             </div>
                             <div className="flex items-center gap-4">
-                                {user && !user.isAnonymous && <button className="text-xs font-bold text-brand bg-brand/10 px-3 py-1.5 rounded-full">{profile?.curriculum || 'General'}</button>}
-                                <button onClick={()=>window.firebase.signOut(window.firebase.auth)} className="text-zinc-500 hover:text-white transition-colors"><Icons.User className="w-5 h-5"/></button>
+                                <button className="text-xs font-bold text-brand bg-brand/10 px-3 py-1.5 rounded-full border border-brand/20 truncate max-w-[150px]">
+                                    {feed.activeSyllabus || 'Loading...'}
+                                </button>
                             </div>
                         </header>
+                        
+                        {/* Guest Banner */}
+                        {user && user.isAnonymous && (
+                            <div className="bg-gradient-to-r from-brand/20 to-purple-500/20 border-b border-brand/20 px-6 py-2.5 flex items-center justify-between z-10">
+                                <div className="flex items-center gap-2">
+                                    <Icons.Compass className="w-4 h-4 text-brand"/>
+                                    <span className="text-xs font-medium text-zinc-300">Viewing global preview feed. Sign in to track your personal errors.</span>
+                                </div>
+                            </div>
+                        )}
 
                         {/* Scrolling Timeline */}
                         <div className="flex-1 overflow-y-auto hide-scrollbar pb-24 md:pb-0 relative">
                             {feedLoading ? (
                                 <div className="flex flex-col items-center justify-center h-48 text-zinc-500 space-y-4">
-                                    <div className="w-6 h-6 border-2 border-zinc-500 border-t-transparent rounded-full animate-spin"></div>
-                                    <div className="text-xs font-bold uppercase tracking-widest">Compiling Curriculum...</div>
+                                    <div className="w-6 h-6 border-2 border-brand border-t-transparent rounded-full animate-spin"></div>
+                                    <div className="text-xs font-bold uppercase tracking-widest text-brand">Compiling Reservoir...</div>
                                 </div>
                             ) : (
                                 <div className="pb-8">
-                                    {feed.map((post, idx) => (
+                                    {feed.posts?.map((post, idx) => (
                                         <motion.div key={post.id + idx} initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: Math.min(idx * 0.05, 0.5) }}>
                                             <ThreadPost post={post} onMarkMastered={markMastered} />
                                         </motion.div>
@@ -502,24 +608,25 @@
 
                     {/* RIGHT COLUMN: REDDIT SIDEBAR (35% - Hidden on Mobile) */}
                     <aside className="hidden lg:flex w-[35%] flex-col h-full bg-surface p-6 overflow-y-auto hide-scrollbar">
-                        <div className="mb-6">
-                            <h3 className="font-bold text-lg text-white mb-1">Productivity Hub</h3>
-                            <p className="text-xs text-zinc-400">Tools to survive the doom scroll.</p>
+                        <div className="mb-6 flex justify-between items-center">
+                            <div>
+                                <h3 className="font-bold text-lg text-white mb-1">Productivity Hub</h3>
+                                <p className="text-xs text-zinc-400">Tools to survive the doom scroll.</p>
+                            </div>
+                            {user && !user.isAnonymous && <button onClick={()=>fbEnv.signOut(fbEnv.auth)} className="text-zinc-500 hover:text-white transition-colors" title="Log out"><Icons.User className="w-5 h-5"/></button>}
                         </div>
 
                         <SidebarAccordion title="Focus Session" icon={Icons.Timer} defaultOpen={true}>
                             <FocusTimer />
                         </SidebarAccordion>
 
-                        <SidebarAccordion title="Action Items" icon={Icons.CheckSquare}>
-                            <TodoList user={user} />
+                        <SidebarAccordion title="Your Previews" icon={Icons.Activity} defaultOpen={true}>
+                            <PreviewsWidget fbEnv={fbEnv} user={user} />
                         </SidebarAccordion>
 
-                        <div className="mt-auto pt-6">
-                            <button onClick={()=>window.location.href='el.html'} className="w-full bg-white text-black font-bold py-3.5 rounded-xl hover:bg-zinc-200 transition-colors shadow-lg flex items-center justify-center gap-2">
-                                <Icons.Plus className="w-5 h-5"/> Force Log Error
-                            </button>
-                        </div>
+                        <SidebarAccordion title="Action Items" icon={Icons.CheckSquare}>
+                            <TodoList fbEnv={fbEnv} user={user} />
+                        </SidebarAccordion>
                     </aside>
 
                     {/* MOBILE BOTTOM NAV */}
