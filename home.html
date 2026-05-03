@@ -2,1058 +2,612 @@
 <html lang="en" class="dark">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>darNote - Workspace</title>
-    <!-- Tailwind CSS -->
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>darNote - Feed</title>
+    <link rel="icon" type="image/png" href="https://raw.githubusercontent.com/darren6251/darnote/refs/heads/main/darNote%20logo.png">
+    
+    <!-- React & Tailwind -->
+    <script crossorigin src="https://unpkg.com/react@18/umd/react.development.js"></script>
+    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
     <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/framer-motion@10.16.4/dist/framer-motion.js"></script>
+    
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+
     <script>
         tailwind.config = {
             darkMode: 'class',
             theme: {
                 extend: {
                     colors: { 
-                        background: 'var(--background)',
-                        surface: 'var(--surface)',
-                        border: 'var(--border)',
-                        primary: 'var(--primary)',
-                        'primary-fg': 'var(--primary-fg)',
-                        secondary: 'var(--secondary)',
-                        'secondary-fg': 'var(--secondary-fg)',
-                        'brand': '#4f46e5'
+                        appleBlack: '#000000',
+                        appleGray: '#1C1C1E',
+                        appleGrayHover: '#2C2C2E',
+                        brand: '#0A84FF', // Apple iOS Blue
                     },
-                    fontFamily: { 
-                        sans: ['Inter', 'sans-serif'], 
-                        mono: ['JetBrains Mono', 'monospace'] 
-                    },
-                    backgroundImage: {
-                        'grid-pattern': "radial-gradient(var(--dot-color) 1px, transparent 1px)",
-                    },
-                    animation: {
-                        'fade-in': 'fadeIn 0.5s ease-out forwards',
-                        'pop-in': 'popIn 0.6s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards',
-                        'slide-up': 'slideUp 0.8s cubic-bezier(0.16, 1, 0.3, 1) forwards',
-                        'slide-in-right': 'slideInRight 0.5s ease-out forwards',
-                        'float': 'float 6s ease-in-out infinite',
-                        'pulse-slow': 'pulse 3s cubic-bezier(0.4, 0, 0.6, 1) infinite',
-                        'bounce-in': 'bounceIn 0.8s cubic-bezier(0.36, 0, 0.66, -0.56) forwards',
-                    },
-                    keyframes: {
-                        fadeIn: { '0%': { opacity: '0' }, '100%': { opacity: '1' } },
-                        popIn: { '0%': { opacity: '0', transform: 'scale(0.9) translateY(20px)' }, '100%': { opacity: '1', transform: 'scale(1) translateY(0)' } },
-                        slideUp: { '0%': { transform: 'translateY(40px)', opacity: '0' }, '100%': { transform: 'translateY(0)', opacity: '1' } },
-                        slideInRight: { '0%': { transform: 'translateX(20px)', opacity: '0' }, '100%': { transform: 'translateX(0)', opacity: '1' } },
-                        float: { '0%, 100%': { transform: 'translateY(0)' }, '50%': { transform: 'translateY(-15px)' } },
-                        bounceIn: { '0%': { transform: 'scale(0)' }, '50%': { transform: 'scale(1.1)' }, '100%': { transform: 'scale(1)' } }
+                    fontFamily: { sans: ['-apple-system', 'BlinkMacSystemFont', 'San Francisco', 'Inter', 'sans-serif'] },
+                    screens: {
+                        'portrait': {'raw': '(orientation: portrait)'},
+                        'landscape': {'raw': '(orientation: landscape)'},
                     }
                 }
             }
         }
     </script>
-    <!-- Google Fonts -->
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
-    <!-- Icons -->
-    <script src="https://unpkg.com/lucide@latest"></script>
-
     <style>
-        :root {
-            --background: #ffffff;
-            --surface: #ffffff;
-            --border: #e4e4e7;
-            --primary: #09090b;
-            --primary-fg: #ffffff;
-            --secondary: #f4f4f5;
-            --secondary-fg: #18181b;
-            --dot-color: #e4e4e7;
-            --accent: #2563eb; 
-        }
-
-        .dark {
-            --background: #09090b; /* Zinc 950 */
-            --surface: #09090b;
-            --border: #27272a;     /* Zinc 800 */
-            --primary: #ffffff;
-            --primary-fg: #000000;
-            --secondary: #27272a;
-            --secondary-fg: #ffffff;
-            --dot-color: #27272a;
-        }
-
         body { 
-            background-color: var(--background);
-            background-image: var(--grid-pattern);
-            background-size: 24px 24px;
-            color: var(--primary);
-            font-family: 'Inter', sans-serif;
-            transition: background-color 0.3s, color 0.3s;
+            background-color: #000000; 
+            color: #F5F5F7; 
+            -webkit-font-smoothing: antialiased; 
+            -moz-osx-font-smoothing: grayscale;
+            overflow: hidden; 
+            overscroll-behavior: none;
         }
-
-        /* Brutalist/Clean Card Style */
-        .card { 
-            background-color: var(--surface);
-            border: 1px solid var(--border);
-            border-radius: 12px; 
-            padding: 1.5rem;
-            transition: all 0.2s ease;
+        .no-scrollbar::-webkit-scrollbar { display: none; }
+        .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+        .glass-panel {
+            background: rgba(28, 28, 30, 0.6);
+            backdrop-filter: blur(24px);
+            -webkit-backdrop-filter: blur(24px);
+            border: 1px solid rgba(255, 255, 255, 0.08);
         }
-        
-        .card:hover {
-            border-color: var(--primary);
-            transform: translateY(-2px);
-            box-shadow: 4px 4px 0px 0px var(--border);
-        }
-
-        /* Buttons */
-        .btn-primary { 
-            background-color: var(--primary);
-            color: var(--primary-fg);
-            padding: 0.75rem 1.5rem;
-            border-radius: 8px;
-            font-weight: 600;
-            font-size: 0.875rem;
-            transition: all 0.2s;
-            display: inline-flex;
-            align-items: center;
-            gap: 0.5rem;
-        }
-        .btn-primary:hover { opacity: 0.9; transform: translateY(-1px); }
-        .btn-primary:active { transform: translateY(0); }
-
-        .btn-secondary {
-            background-color: var(--secondary);
-            color: var(--secondary-fg);
-            border: 1px solid transparent;
-            padding: 0.5rem 1rem;
-            border-radius: 8px;
-            font-weight: 500;
-            font-size: 0.875rem;
-            transition: all 0.2s;
-        }
-        .btn-secondary:hover { border-color: var(--primary); }
-
-        .btn-icon {
-            padding: 0.5rem;
-            border-radius: 6px;
-            color: #71717a;
-            transition: all 0.2s;
-        }
-        .btn-icon:hover { background-color: var(--secondary); color: var(--primary); }
-
-        /* Typography & Utilities */
-        .font-heading { letter-spacing: -0.03em; }
-        .custom-scrollbar::-webkit-scrollbar { width: 4px; }
-        .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
-        .custom-scrollbar::-webkit-scrollbar-thumb { background: var(--border); border-radius: 4px; }
-        .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: var(--primary); }
-
-        /* Calendar Adjustments */
-        .cal-day { 
-            height: 2.25rem; width: 2.25rem; 
-            display: flex; align-items: center; justify-content: center; 
-            border-radius: 6px; font-size: 0.75rem; font-weight: 500;
-            cursor: pointer; transition: all 0.2s;
-            color: #71717a;
-        }
-        .dark .cal-day { color: #a1a1aa; }
-        .cal-day:hover { background-color: var(--secondary); color: var(--primary); }
-        .cal-day.today { 
-            background-color: var(--primary); color: var(--primary-fg); font-weight: 700;
-        }
-
-        /* Loader */
-        .loader { width: 32px; height: 32px; border: 3px solid var(--border); border-top-color: var(--primary); border-radius: 50%; animation: spin 1s linear infinite; }
-        @keyframes spin { to { transform: rotate(360deg); } }
-
-        /* Focus Overlay */
-        .focus-ring { animation: ring-pulse 3s infinite; }
-        @keyframes ring-pulse { 0% { box-shadow: 0 0 0 0 rgba(255, 255, 255, 0.2); } 70% { box-shadow: 0 0 0 20px rgba(255, 255, 255, 0); } 100% { box-shadow: 0 0 0 0 rgba(255, 255, 255, 0); } }
-        
-        /* Logo Inversion for Dark Mode */
-        .logo-img { transition: filter 0.3s; }
-        .dark .logo-img { filter: invert(1); }
-
-        /* Carousel Styles - IMPROVED */
-        .carousel-container {
-            position: relative;
-            width: 100%;
-            height: 100%;
-        }
-        .carousel-slide { 
-            position: absolute;
-            inset: 0;
-            opacity: 0;
-            transition: opacity 0.5s ease-in-out;
-            pointer-events: none;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            padding: 1rem;
-        }
-        .carousel-slide.active { 
-            opacity: 1; 
-            pointer-events: auto;
-            z-index: 10;
-        }
-        .carousel-dots span { 
-            width: 8px; height: 8px; 
-            border-radius: 50%; 
-            background-color: var(--border); 
-            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); 
-            cursor: pointer; 
-        }
-        .carousel-dots span.active { 
-            background-color: var(--primary); 
-            width: 24px; 
-            border-radius: 4px; 
-        }
-        
-        /* Animations Stagger */
-        .delay-100 { animation-delay: 100ms; }
-        .delay-200 { animation-delay: 200ms; }
-        .delay-300 { animation-delay: 300ms; }
-        .delay-500 { animation-delay: 500ms; }
-        .delay-700 { animation-delay: 700ms; }
-
-        .opacity-0-init { opacity: 0; }
+        .feed-container { overflow-y: auto; height: 100vh; padding-bottom: env(safe-area-inset-bottom); }
+        .sidebar-container { overflow-y: auto; height: 100vh; padding-bottom: 2rem; }
     </style>
-</head>
-<body class="antialiased min-h-screen flex flex-col overflow-x-hidden">
 
-    <!-- Auth / Loading Screen -->
-    <div id="authWrapper" class="fixed inset-0 z-50 bg-background flex flex-col items-center justify-center transition-opacity duration-500">
-        <div class="loader mb-6"></div>
-        <h2 class="text-xs font-mono uppercase tracking-widest opacity-50">Initializing System</h2>
-        <div id="loginContainer" class="hidden mt-8 text-center animate-fade-in max-w-sm w-full px-6">
-            <img src="https://raw.githubusercontent.com/darren6251/darnote/refs/heads/main/darNote%20logo.png" class="h-16 w-auto mx-auto mb-6 logo-img" alt="darNote">
-            <h1 class="text-2xl font-bold mb-2 tracking-tight">Welcome Back</h1>
-            <p class="text-zinc-500 mb-8 text-sm">Sign in to access your workspace.</p>
-            <button id="googleSignIn" class="w-full bg-secondary hover:bg-zinc-200 dark:hover:bg-zinc-800 text-primary py-3 rounded-lg font-medium flex items-center justify-center gap-3 transition-all border border-border">
-                <svg class="w-5 h-5" viewBox="0 0 24 24"><path fill="currentColor" d="M21.35 11.1h-9.17v2.73h6.51c-.33 3.81-3.5 5.44-6.5 5.44C8.36 19.27 5 16.25 5 12c0-4.1 3.2-7.27 7.2-7.27c3.09 0 4.9 1.97 4.9 1.97L19 4.72S16.56 2 12.1 2C6.42 2 2.03 6.8 2.03 12c0 5.05 4.13 10 10.22 10c5.35 0 9.25-3.67 9.25-9.09c0-1.15-.15-1.81-.15-1.81Z"/></svg>
-                Continue with Google
-            </button>
-        </div>
-    </div>
-
-    <!-- WELCOME / ONBOARDING MODAL (Rebuilt) -->
-    <div id="welcomeModal" class="fixed inset-0 z-[60] flex items-center justify-center p-4 backdrop-blur-xl bg-black/40 hidden transition-all duration-300">
-        <div class="bg-background border border-border rounded-2xl shadow-2xl w-full max-w-5xl h-[85vh] flex flex-col md:flex-row overflow-hidden animate-pop-in relative ring-1 ring-white/10">
-            
-            <!-- Decoration -->
-            <div class="absolute top-0 left-0 w-full h-full overflow-hidden pointer-events-none z-0 opacity-30">
-                <div class="absolute top-[-20%] left-[0%] w-64 h-64 bg-blue-500/30 rounded-full blur-[100px] animate-float"></div>
-                <div class="absolute bottom-[-20%] right-[0%] w-64 h-64 bg-purple-500/30 rounded-full blur-[100px] animate-float" style="animation-delay: 2s;"></div>
-            </div>
-
-            <!-- Left Side: Actions & Welcome -->
-            <div class="w-full md:w-[40%] p-8 flex flex-col justify-center relative z-10 border-b md:border-b-0 md:border-r border-border bg-background/50">
-                <div class="mb-8 opacity-0-init animate-slide-up">
-                    <div class="inline-flex items-center gap-2 mb-4 px-3 py-1 rounded-full bg-primary/5 text-primary text-[10px] font-bold uppercase tracking-widest border border-primary/10 animate-pulse-slow">
-                        <span class="w-2 h-2 rounded-full bg-green-500"></span> Live & Ready
-                    </div>
-                    <h2 class="text-4xl md:text-5xl font-black tracking-tighter mb-4 leading-[0.9]">
-                        Hello,<br>
-                        <span class="bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">Creator.</span>
-                    </h2>
-                    <p class="text-zinc-500 font-medium">What would you like to do first?</p>
-                </div>
-
-                <!-- THE 2 BIG BUTTONS -->
-                <div class="grid gap-4 w-full opacity-0-init animate-slide-up delay-200">
-                    <a href="note.html" class="group relative overflow-hidden bg-primary text-primary-fg p-6 rounded-2xl flex items-center gap-4 hover:scale-[1.02] active:scale-[0.98] transition-all shadow-xl hover:shadow-primary/20">
-                        <div class="bg-white/10 p-3 rounded-xl group-hover:rotate-12 transition-transform">
-                            <i data-lucide="pen-tool" class="w-8 h-8"></i>
-                        </div>
-                        <div class="flex flex-col text-left">
-                            <span class="text-xl font-bold">Write a Note</span>
-                            <span class="text-xs opacity-70">Capture ideas instantly</span>
-                        </div>
-                        <div class="absolute right-4 opacity-0 group-hover:opacity-100 transition-opacity transform translate-x-2 group-hover:translate-x-0">
-                            <i data-lucide="arrow-right" class="w-6 h-6"></i>
-                        </div>
-                    </a>
-
-                    <a href="el.html" class="group relative overflow-hidden bg-white dark:bg-zinc-900 border border-border text-primary p-6 rounded-2xl flex items-center gap-4 hover:scale-[1.02] active:scale-[0.98] transition-all hover:border-red-500/50">
-                        <div class="bg-red-500/10 text-red-500 p-3 rounded-xl group-hover:rotate-[-12deg] transition-transform">
-                            <i data-lucide="bug" class="w-8 h-8"></i>
-                        </div>
-                        <div class="flex flex-col text-left">
-                            <span class="text-xl font-bold">Log an Error</span>
-                            <span class="text-xs text-zinc-500">Track & fix mistakes</span>
-                        </div>
-                    </a>
-                </div>
-
-                <div class="mt-auto pt-8 opacity-0-init animate-slide-up delay-500">
-                    <button onclick="closeWelcome()" class="text-sm font-bold text-zinc-400 hover:text-primary transition-colors flex items-center gap-2">
-                        Skip Introduction <i data-lucide="x" class="w-4 h-4"></i>
-                    </button>
-                </div>
-            </div>
-
-            <!-- Right Side: Carousel -->
-            <div class="w-full md:w-[60%] bg-zinc-50/50 dark:bg-black/20 relative group/carousel opacity-0-init animate-fade-in delay-700">
-                <!-- Navigation -->
-                <div class="absolute top-4 left-0 right-0 z-20 flex justify-between px-6 pointer-events-none">
-                    <div class="bg-background/80 backdrop-blur border border-border px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider shadow-sm pointer-events-auto">
-                        App Tour
-                    </div>
-                    <div class="carousel-dots flex gap-2 pointer-events-auto items-center bg-background/50 backdrop-blur rounded-full px-2 py-1">
-                        <!-- Dots JS Injected -->
-                    </div>
-                </div>
-
-                <!-- Carousel Items -->
-                <div class="carousel-container relative w-full h-full">
-                    
-                    <!-- 1. Dashboard -->
-                    <div class="carousel-slide active">
-                        <div class="relative w-full max-w-md aspect-[16/10] bg-background rounded-lg shadow-2xl border border-border overflow-hidden group-hover/carousel:scale-105 transition-transform duration-700">
-                            <img src="https://lh3.googleusercontent.com/d/1StWyfU-P4-_M6vBF6ixIQiBjhpfgV6Z-" class="w-full h-full object-contain bg-zinc-100 dark:bg-zinc-900" alt="Dashboard">
-                        </div>
-                        <div class="mt-8 text-center max-w-sm">
-                            <h3 class="text-xl font-bold mb-1">Your Command Center</h3>
-                            <p class="text-sm text-zinc-500">Track your stats, recent activity, and daily focus in one beautiful view.</p>
-                        </div>
-                    </div>
-
-                    <!-- 2. Notes -->
-                    <div class="carousel-slide">
-                        <div class="relative w-full max-w-md aspect-[16/10] bg-background rounded-lg shadow-2xl border border-border overflow-hidden group-hover/carousel:scale-105 transition-transform duration-700">
-                            <img src="https://lh3.googleusercontent.com/d/1UYgAE1xLH2FlogJoARa_67Udu2YAGEGS" class="w-full h-full object-contain bg-zinc-100 dark:bg-zinc-900" alt="Notes">
-                        </div>
-                        <div class="mt-8 text-center max-w-sm">
-                            <h3 class="text-xl font-bold mb-1">Powerful Notes</h3>
-                            <p class="text-sm text-zinc-500">Create rich text notes, tag them, and organize your knowledge base.</p>
-                        </div>
-                    </div>
-
-                    <!-- 3. Error Log -->
-                    <div class="carousel-slide">
-                        <div class="relative w-full max-w-md aspect-[16/10] bg-background rounded-lg shadow-2xl border border-border overflow-hidden group-hover/carousel:scale-105 transition-transform duration-700">
-                            <img src="https://lh3.googleusercontent.com/d/1fXQ6mZYy1_a0EGee2Lfg44ijYybLrxXB" class="w-full h-full object-contain bg-zinc-100 dark:bg-zinc-900" alt="Error Log">
-                        </div>
-                        <div class="mt-8 text-center max-w-sm">
-                            <h3 class="text-xl font-bold mb-1">Master Your Mistakes</h3>
-                            <p class="text-sm text-zinc-500">Log errors, analyze why they happened, and track your improvement.</p>
-                        </div>
-                    </div>
-
-                    <!-- 4. Timer -->
-                    <div class="carousel-slide">
-                        <div class="relative w-full max-w-md aspect-[16/10] bg-background rounded-lg shadow-2xl border border-border overflow-hidden group-hover/carousel:scale-105 transition-transform duration-700">
-                            <img src="https://lh3.googleusercontent.com/d/1V8H3qgE5C12GofFaymegsSAQjRqy8egL" class="w-full h-full object-contain bg-zinc-100 dark:bg-zinc-900" alt="Timer">
-                        </div>
-                        <div class="mt-8 text-center max-w-sm">
-                            <h3 class="text-xl font-bold mb-1">Deep Focus Mode</h3>
-                            <p class="text-sm text-zinc-500">Eliminate distractions with the built-in focus timer and fullscreen mode.</p>
-                        </div>
-                    </div>
-
-                    <!-- 5. Mobile Home -->
-                    <div class="carousel-slide">
-                        <div class="relative h-[60%] aspect-[9/19] bg-background rounded-3xl shadow-2xl border border-border overflow-hidden group-hover/carousel:scale-105 transition-transform duration-700 ring-4 ring-zinc-900">
-                            <img src="https://lh3.googleusercontent.com/d/1dhTi8NQH-k2ReZkExfRwEIxedqEpRGB9" class="w-full h-full object-cover" alt="Mobile">
-                        </div>
-                        <div class="mt-6 text-center max-w-sm">
-                            <h3 class="text-xl font-bold mb-1">Fully Mobile Optimized</h3>
-                            <p class="text-sm text-zinc-500">Take your workspace anywhere. Works perfectly on your phone.</p>
-                        </div>
-                    </div>
-
-                    <!-- 6. Mobile Error Log -->
-                    <div class="carousel-slide">
-                        <div class="relative h-[60%] aspect-[9/19] bg-background rounded-3xl shadow-2xl border border-border overflow-hidden group-hover/carousel:scale-105 transition-transform duration-700 ring-4 ring-zinc-900">
-                            <img src="https://lh3.googleusercontent.com/d/1wYSPRZQ2N-JbnW0hmmm9YT99-fDdVVmb" class="w-full h-full object-cover" alt="Mobile Logs">
-                        </div>
-                        <div class="mt-6 text-center max-w-sm">
-                            <h3 class="text-xl font-bold mb-1">Log on the Go</h3>
-                            <p class="text-sm text-zinc-500">Capture mistakes immediately after class or practice sessions.</p>
-                        </div>
-                    </div>
-
-                    <!-- 7. Practice Mode -->
-                    <div class="carousel-slide">
-                        <div class="relative h-[60%] aspect-[9/19] bg-background rounded-3xl shadow-2xl border border-border overflow-hidden group-hover/carousel:scale-105 transition-transform duration-700 ring-4 ring-zinc-900">
-                            <img src="https://lh3.googleusercontent.com/d/10pg2wSAgEmfTTZo3B_6qO2DUo3gPH_de" class="w-full h-full object-cover" alt="Practice">
-                        </div>
-                        <div class="mt-6 text-center max-w-sm">
-                            <h3 class="text-xl font-bold mb-1">Practice Anywhere</h3>
-                            <p class="text-sm text-zinc-500">Review your notes and test your knowledge on mobile.</p>
-                        </div>
-                    </div>
-
-                </div>
-
-                <!-- Arrows -->
-                <button onclick="moveSlide(-1)" class="absolute left-4 top-1/2 -translate-y-1/2 p-3 rounded-full bg-background/80 hover:bg-background border border-border shadow-lg transition-all hover:scale-110 active:scale-90 z-20">
-                    <i data-lucide="chevron-left" class="w-6 h-6"></i>
-                </button>
-                <button onclick="moveSlide(1)" class="absolute right-4 top-1/2 -translate-y-1/2 p-3 rounded-full bg-background/80 hover:bg-background border border-border shadow-lg transition-all hover:scale-110 active:scale-90 z-20">
-                    <i data-lucide="chevron-right" class="w-6 h-6"></i>
-                </button>
-            </div>
-        </div>
-    </div>
-
-
-    <!-- Focus Mode Overlay -->
-    <div id="focusOverlay" class="fixed inset-0 z-[100] bg-zinc-950 flex flex-col items-center justify-center hidden opacity-0 transition-all duration-500">
-        <button id="exitFocusBtn" class="absolute top-8 right-8 text-zinc-500 hover:text-white p-2 rounded-full hover:bg-white/10 transition-all">
-            <i data-lucide="x" class="w-8 h-8"></i>
-        </button>
-        
-        <div class="text-center z-10 relative flex flex-col items-center">
-            <div class="flex items-center gap-3 px-4 py-2 rounded-full border border-white/10 bg-white/5 text-xs font-mono text-zinc-400 mb-16 uppercase tracking-widest">
-                <span class="w-2 h-2 rounded-full bg-red-500 animate-pulse"></span> 
-                Do Not Disturb
-            </div>
-            
-            <div id="focusTimerDisplay" class="font-mono text-[18vw] font-bold text-white leading-none tracking-tighter select-none tabular-nums mix-blend-difference">25:00</div>
-            
-            <div class="flex items-center gap-8 mt-20">
-                 <button id="overlayStartBtn" class="w-24 h-24 bg-white text-black rounded-full flex items-center justify-center hover:scale-105 active:scale-95 transition-all focus-ring">
-                    <i data-lucide="play" class="w-10 h-10 fill-current ml-1"></i>
-                 </button>
-                 
-                 <button id="overlayStopBtn" class="hidden w-24 h-24 bg-transparent border-2 border-white text-white rounded-full flex items-center justify-center hover:bg-white hover:text-black active:scale-95 transition-all">
-                    <i data-lucide="pause" class="w-10 h-10 fill-current"></i>
-                 </button>
-            </div>
-            
-            <div class="mt-16 text-zinc-500 font-mono text-sm opacity-60">STAY FOCUSED</div>
-        </div>
-    </div>
-
-    <!-- Main Application -->
-    <div id="appContent" class="hidden flex-1 flex flex-col animate-fade-in relative z-10">
-        
-        <!-- Header -->
-        <header class="sticky top-0 z-40 bg-background/80 backdrop-blur-md border-b border-border px-6 py-4 flex justify-between items-center">
-            <div class="flex items-center gap-3">
-                <img src="https://raw.githubusercontent.com/darren6251/darnote/refs/heads/main/darNote%20logo.png" class="h-8 w-auto logo-img" alt="darNote">
-                <span class="font-bold text-lg tracking-tight hidden sm:block">darNote</span>
-            </div>
-            
-            <div class="flex items-center gap-4">
-                <button id="themeToggle" class="btn-icon">
-                    <i data-lucide="moon" class="w-5 h-5 hidden dark:block"></i>
-                    <i data-lucide="sun" class="w-5 h-5 block dark:hidden"></i>
-                </button>
-                <div class="h-5 w-px bg-border"></div>
-                <div class="flex items-center gap-3">
-                    <div class="text-right hidden sm:block">
-                        <div id="userName" class="text-sm font-semibold leading-none mb-1">Guest</div>
-                        <div id="userRole" class="text-[10px] text-zinc-500 uppercase font-bold tracking-wider">Student</div>
-                    </div>
-                    <img id="userAvatar" src="" class="w-8 h-8 rounded bg-secondary object-cover border border-border" alt="Profile">
-                    <button id="logoutBtn" class="btn-icon text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20">
-                        <i data-lucide="log-out" class="w-5 h-5"></i>
-                    </button>
-                </div>
-            </div>
-        </header>
-
-        <!-- Dashboard Grid -->
-        <main class="flex-1 p-4 md:p-8 max-w-[1600px] mx-auto w-full">
-            <div class="grid grid-cols-1 md:grid-cols-12 gap-6">
-                
-                <!-- Hero Section (Monochrome/Clean) -->
-                <div class="col-span-1 md:col-span-8 card flex flex-col justify-between min-h-[220px] relative overflow-hidden group">
-                    <div class="absolute inset-0 bg-gradient-to-br from-transparent to-zinc-100 dark:to-zinc-900/50 opacity-50"></div>
-                    <div class="relative z-10">
-                        <div class="inline-flex items-center gap-2 mb-6 px-3 py-1 rounded-full border border-border bg-background/50 backdrop-blur-sm">
-                            <span class="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
-                            <span class="text-[10px] font-bold uppercase tracking-widest text-zinc-500">System Ready</span>
-                        </div>
-                        <h2 class="text-3xl md:text-5xl font-extrabold tracking-tighter leading-[1.1] mb-2">
-                            <span id="greetingTime" class="text-zinc-400">Good day</span>, <br>
-                            <span id="heroName">Student</span>.
-                        </h2>
-                    </div>
-                    <div class="relative z-10 flex flex-wrap gap-3 mt-4">
-                        <a href="note.html" class="btn-primary">
-                            <span>Open Workspace</span>
-                            <i data-lucide="arrow-right" class="w-4 h-4"></i>
-                        </a>
-                        <button onclick="enterFocusMode()" class="btn-secondary flex items-center gap-2">
-                            <i data-lucide="maximize" class="w-4 h-4"></i> Focus
-                        </button>
-                        <button onclick="showWelcome(true)" class="btn-secondary flex items-center gap-2">
-                             <i data-lucide="help-circle" class="w-4 h-4"></i> Tour
-                        </button>
-                    </div>
-                </div>
-
-                <!-- Date & Stats -->
-                <div class="col-span-1 md:col-span-4 flex flex-col gap-6">
-                    <div class="card bg-primary text-primary-fg border-none flex-1 flex flex-col justify-center relative overflow-hidden">
-                        <div class="absolute top-0 right-0 p-4 opacity-20">
-                            <i data-lucide="calendar" class="w-16 h-16"></i>
-                        </div>
-                        <div id="headerDate" class="text-4xl font-mono font-bold tracking-tighter mb-1">--</div>
-                        <div id="headerDay" class="text-sm font-medium uppercase tracking-widest opacity-70">Today</div>
-                    </div>
-                    
-                    <div class="grid grid-cols-2 gap-6 flex-1">
-                        <div class="card flex flex-col items-center justify-center p-4">
-                            <div class="text-2xl font-mono font-bold mb-1" id="totalNotes">0</div>
-                            <span class="text-[10px] uppercase font-bold text-zinc-500 tracking-wider">Notes</span>
-                        </div>
-                        <div class="card flex flex-col items-center justify-center p-4">
-                            <div class="text-2xl font-mono font-bold mb-1" id="totalWords">0</div>
-                            <span class="text-[10px] uppercase font-bold text-zinc-500 tracking-wider">Words</span>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Recent Notes (Optimized Layout) -->
-                <div class="col-span-1 md:col-span-8 card bg-secondary/30 dark:bg-secondary/10">
-                    <div class="flex justify-between items-center mb-6">
-                        <h3 class="font-bold flex items-center gap-2">
-                            <i data-lucide="file-text" class="w-4 h-4 text-zinc-400"></i>
-                            Recent Notes
-                        </h3>
-                        <a href="note.html" class="text-xs font-bold uppercase tracking-wider text-zinc-500 hover:text-primary transition-colors">View All</a>
-                    </div>
-                    <!-- Added gap-4 and grid -->
-                    <div id="recentNotesList" class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                        <div class="col-span-full text-center py-8 text-zinc-400 text-sm">Loading recent notes...</div>
-                    </div>
-                </div>
-
-                <!-- Error Log Widget (New) -->
-                <div class="col-span-1 md:col-span-4 card flex flex-col relative overflow-hidden">
-                    <div class="flex justify-between items-center mb-4 relative z-10">
-                        <h3 class="font-bold flex items-center gap-2">
-                            <i data-lucide="bug" class="w-4 h-4 text-zinc-400"></i>
-                            Errors
-                        </h3>
-                        <a href="el.html" class="text-xs font-bold uppercase tracking-wider text-zinc-500 hover:text-primary transition-colors">Open Log</a>
-                    </div>
-                    <div id="recentErrorsList" class="flex-1 space-y-2 relative z-10">
-                        <div class="text-center text-zinc-500 text-xs py-4">Checking logs...</div>
-                    </div>
-                    <div class="absolute -bottom-6 -right-6 text-zinc-100 dark:text-zinc-800 pointer-events-none">
-                        <i data-lucide="alert-octagon" class="w-32 h-32 opacity-10"></i>
-                    </div>
-                </div>
-
-                <!-- Timer & Tasks Row -->
-                <div class="col-span-1 md:col-span-12 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                    
-                    <!-- Timer Widget -->
-                    <div class="card flex flex-col">
-                        <div class="flex justify-between items-start mb-6">
-                            <h3 class="font-bold flex items-center gap-2">
-                                <i data-lucide="timer" class="w-4 h-4 text-zinc-400"></i>
-                                Focus Timer
-                            </h3>
-                            <button onclick="enterFocusMode()" class="text-xs font-medium text-zinc-400 hover:text-primary transition-colors">Fullscreen</button>
-                        </div>
-                        
-                        <div class="flex-1 flex flex-col items-center justify-center mb-6">
-                            <div id="miniTimerDisplay" class="font-mono text-5xl font-bold tracking-tighter tabular-nums mb-4">25:00</div>
-                            <!-- Timer Presets -->
-                            <div class="flex gap-2 w-full justify-center" id="timerPresets">
-                                <button onclick="setTimerDuration(25)" class="px-3 py-1 text-xs font-bold border border-border rounded hover:bg-primary hover:text-primary-fg transition-colors bg-secondary">25m</button>
-                                <button onclick="setTimerDuration(50)" class="px-3 py-1 text-xs font-bold border border-border rounded hover:bg-primary hover:text-primary-fg transition-colors">50m</button>
-                                <button onclick="setTimerDuration(60)" class="px-3 py-1 text-xs font-bold border border-border rounded hover:bg-primary hover:text-primary-fg transition-colors">1h</button>
-                                <button onclick="askCustomTimer()" class="px-3 py-1 text-xs font-bold border border-border rounded hover:bg-primary hover:text-primary-fg transition-colors" title="Custom">...</button>
-                            </div>
-                        </div>
-
-                        <div class="grid grid-cols-2 gap-3">
-                            <button onclick="startMiniTimer()" id="miniStartBtn" class="btn-primary justify-center w-full">Start</button>
-                            <button onclick="stopMiniTimer()" id="miniStopBtn" class="hidden bg-zinc-900 text-white dark:bg-white dark:text-black py-2.5 rounded-lg font-bold text-sm w-full hover:opacity-90 transition-opacity">Pause</button>
-                            <button onclick="resetMiniTimer()" class="btn-secondary w-full">Reset</button>
-                        </div>
-                    </div>
-
-                    <!-- Quick Todos -->
-                    <div class="card flex flex-col h-[300px]">
-                        <div class="flex justify-between items-center mb-4">
-                            <h3 class="font-bold flex items-center gap-2">
-                                <i data-lucide="check-square" class="w-4 h-4 text-zinc-400"></i>
-                                Quick Tasks
-                            </h3>
-                            <span class="text-[10px] font-bold bg-secondary px-2 py-1 rounded text-zinc-500" id="todoCount">0 Active</span>
-                        </div>
-                        
-                        <div class="flex gap-2 mb-4">
-                            <input type="text" id="newTodoInput" placeholder="What needs doing?" class="flex-1 bg-transparent border-b border-border py-2 text-sm focus:outline-none focus:border-primary transition-colors placeholder:text-zinc-500">
-                            <button id="addTodoBtn" class="text-primary hover:scale-110 transition-transform"><i data-lucide="plus-circle" class="w-5 h-5"></i></button>
-                        </div>
-
-                        <div id="todoList" class="flex-1 overflow-y-auto custom-scrollbar space-y-1 pr-2">
-                            <!-- JS Populated -->
-                            <div class="text-center text-zinc-500 text-xs py-8">No active tasks.</div>
-                        </div>
-                    </div>
-
-                    <!-- Calendar (Compact) -->
-                    <div class="card flex flex-col h-[300px]">
-                        <div class="flex justify-between items-center mb-4">
-                            <h3 id="calMonthYear" class="font-bold text-sm uppercase tracking-wide">...</h3>
-                            <div class="flex gap-1">
-                                <button onclick="changeMonth(-1)" class="p-1 hover:bg-secondary rounded"><i data-lucide="chevron-left" class="w-4 h-4"></i></button>
-                                <button onclick="changeMonth(1)" class="p-1 hover:bg-secondary rounded"><i data-lucide="chevron-right" class="w-4 h-4"></i></button>
-                            </div>
-                        </div>
-                        <div class="grid grid-cols-7 gap-1 text-center mb-2">
-                            <div class="text-[10px] font-bold text-zinc-400">S</div>
-                            <div class="text-[10px] font-bold text-zinc-400">M</div>
-                            <div class="text-[10px] font-bold text-zinc-400">T</div>
-                            <div class="text-[10px] font-bold text-zinc-400">W</div>
-                            <div class="text-[10px] font-bold text-zinc-400">T</div>
-                            <div class="text-[10px] font-bold text-zinc-400">F</div>
-                            <div class="text-[10px] font-bold text-zinc-400">S</div>
-                        </div>
-                        <div id="calendarGrid" class="grid grid-cols-7 gap-1 text-center text-sm flex-1 content-start">
-                            <!-- Populated via JS -->
-                        </div>
-                    </div>
-
-                </div>
-
-            </div>
-        </main>
-
-        <!-- Footer -->
-        <footer class="py-8 text-center text-xs text-zinc-500 border-t border-border mt-auto bg-background/50 backdrop-blur-sm">
-            <p class="mb-2">Problem? Email <a href="mailto:darrenng@3-shot.com" class="text-zinc-400 hover:text-primary transition-colors underline decoration-zinc-700 underline-offset-2">darrenng@3-shot.com</a></p>
-            <p class="opacity-60">© 2026 darNote. Made by Darren Ng. All rights reserved.</p>
-        </footer>
-    </div>
-
-    <!-- Firebase SDKs -->
+    <!-- Platform Firebase Integration -->
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-app.js";
-        import { getAuth, signInWithPopup, GoogleAuthProvider, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-auth.js";
-        import { getFirestore, collection, query, orderBy, limit, onSnapshot, doc, getDoc, addDoc, updateDoc, deleteDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-firestore.js";
-
-        // CONFIG
-        const firebaseConfig = { apiKey: "AIzaSyAvPEac-03kE4oazvaq8K3T2gxLPsnZO20", authDomain: "darnote625.firebaseapp.com", projectId: "darnote625", storageBucket: "darnote625.firebasestorage.app", messagingSenderId: "16458322562", appId: "1:16458322562:web:8894d71f3e6c326eba1a9b", measurementId: "G-NL9JX1NW80" };
-        const app = initializeApp(firebaseConfig);
-        const auth = getAuth(app);
-        const db = getFirestore(app);
-        const appId = "darnote-app";
-
-        // DOM & State
-        const authWrapper = document.getElementById('authWrapper');
-        const loginContainer = document.getElementById('loginContainer');
-        const appContent = document.getElementById('appContent');
-        const loader = document.querySelector('.loader');
+        import { getAuth, signInWithCustomToken, signInAnonymously, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-auth.js";
+        import { getFirestore, collection, doc, getDoc, getDocs, setDoc, addDoc, updateDoc, deleteDoc, onSnapshot, writeBatch, serverTimestamp } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-firestore.js";
         
-        let currentUser = null;
-        let timerInterval = null;
-        let timerDuration = 25 * 60; // Initial default duration in seconds
-        let timerTime = timerDuration;
-        let currentCalendarDate = new Date();
-
-        // --- WELCOME MODAL LOGIC (IMPROVED) ---
-        let currentSlide = 0;
-        const slides = document.querySelectorAll('.carousel-slide');
-        const dotsContainer = document.querySelector('.carousel-dots');
-        const welcomeModal = document.getElementById('welcomeModal');
-        let autoPlayInterval = null;
-
-        // Initialize Carousel
-        slides.forEach((_, i) => {
-            const dot = document.createElement('span');
-            dot.onclick = () => { stopAutoPlay(); goToSlide(i); }
-            if(i === 0) dot.classList.add('active');
-            dotsContainer.appendChild(dot);
-        });
-
-        window.moveSlide = (dir) => {
-            stopAutoPlay();
-            currentSlide = (currentSlide + dir + slides.length) % slides.length;
-            updateCarousel();
+        try {
+            // Use Platform Config
+            const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : { apiKey: "demo", projectId: "demo" };
+            const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
+            
+            const app = initializeApp(firebaseConfig);
+            const auth = getAuth(app);
+            const db = getFirestore(app);
+            
+            window.firebaseEnv = { app, auth, db, appId, signInWithCustomToken, signInAnonymously, onAuthStateChanged, signOut, collection, doc, getDoc, getDocs, setDoc, addDoc, updateDoc, deleteDoc, onSnapshot, writeBatch, serverTimestamp };
+            window.dispatchEvent(new Event('firebaseLoaded'));
+        } catch (e) {
+            console.error("Firebase init failed:", e);
         }
+    </script>
+</head>
+<body>
+    <div id="root"></div>
 
-        window.goToSlide = (idx) => {
-            stopAutoPlay();
-            currentSlide = idx;
-            updateCarousel();
-        }
+    <script type="text/babel">
+        const GEMINI_PROXY_URL = "https://gemini-proxy-513372702506.us-central1.run.app/proxy";
+        const { useState, useEffect, useRef } = React;
+        const { motion, AnimatePresence, LayoutGroup } = window.Motion;
 
-        function updateCarousel() {
-            slides.forEach((s, i) => {
-                s.classList.remove('active');
-                if(i === currentSlide) s.classList.add('active');
-            });
-            Array.from(dotsContainer.children).forEach((d, i) => {
-                d.classList.toggle('active', i === currentSlide);
-            });
-        }
-
-        // AutoPlay Logic
-        function startAutoPlay() {
-            if(autoPlayInterval) clearInterval(autoPlayInterval);
-            autoPlayInterval = setInterval(() => {
-                currentSlide = (currentSlide + 1) % slides.length;
-                updateCarousel();
-            }, 4000); // 4 seconds per slide
-        }
-
-        function stopAutoPlay() {
-            if(autoPlayInterval) {
-                clearInterval(autoPlayInterval);
-                autoPlayInterval = null;
-            }
-        }
-
-        // Pause on hover
-        const carouselContainer = document.querySelector('.group\\/carousel');
-        if(carouselContainer) {
-            carouselContainer.addEventListener('mouseenter', stopAutoPlay);
-            carouselContainer.addEventListener('mouseleave', () => {
-                if(!welcomeModal.classList.contains('hidden')) startAutoPlay();
-            });
-        }
-
-        window.closeWelcome = () => {
-            stopAutoPlay();
-            if(currentUser) {
-                localStorage.setItem(`darnote_welcome_seen_${currentUser.uid}`, 'true');
-            }
-            welcomeModal.classList.add('opacity-0');
-            setTimeout(() => {
-                welcomeModal.classList.add('hidden');
-                // Reset Animations for next time
-                document.querySelectorAll('.animate-slide-up').forEach(el => {
-                    el.style.animation = 'none';
-                    el.offsetHeight; /* trigger reflow */
-                    el.style.animation = null; 
+        // --- AI Helper ---
+        const callAI = async (prompt) => {
+            try {
+                const response = await fetch(GEMINI_PROXY_URL, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] })
                 });
-            }, 300);
-        }
+                const data = await response.json();
+                return data.candidates?.[0]?.content?.parts?.[0]?.text || "";
+            } catch (error) { return ""; }
+        };
 
-        window.showWelcome = (force = false) => {
-            // Check if seen before
-            const seen = currentUser ? localStorage.getItem(`darnote_welcome_seen_${currentUser.uid}`) : false;
-            
-            if(!seen || force) {
-                welcomeModal.classList.remove('hidden');
-                // Small delay to allow transition and reset animations
-                setTimeout(() => {
-                    welcomeModal.classList.remove('opacity-0');
-                    currentSlide = 0;
-                    updateCarousel();
-                    startAutoPlay();
-                }, 10);
-            }
-        }
+        // --- UI Components ---
+        const ActivityRings = ({ size = 100, rings = [], strokeWidth = 10 }) => {
+            const center = size / 2;
+            return (
+                <div className="relative" style={{ width: size, height: size }}>
+                    <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`} className="drop-shadow-2xl absolute inset-0 z-10">
+                        {rings.map((ring, i) => {
+                            const radius = center - (strokeWidth * 1.3 * i) - (strokeWidth / 2);
+                            const circumference = 2 * Math.PI * radius;
+                            const strokeDashoffset = circumference - (ring.progress * circumference);
+                            return (
+                                <g key={i} transform={`rotate(-90 ${center} ${center})`}>
+                                    <circle cx={center} cy={center} r={radius} fill="none" stroke={ring.color} strokeWidth={strokeWidth} opacity="0.15" />
+                                    <motion.circle initial={{ strokeDashoffset: circumference }} animate={{ strokeDashoffset }} transition={{ duration: 1.5, type: "spring", bounce: 0.2 }} cx={center} cy={center} r={radius} fill="none" stroke={ring.color} strokeWidth={strokeWidth} strokeDasharray={circumference} strokeLinecap="round"/>
+                                </g>
+                            )
+                        })}
+                    </svg>
+                    {/* Apple-style subtle glow */}
+                    <div className="absolute inset-0 blur-xl opacity-30 z-0 rounded-full" style={{ background: rings[0]?.color }}></div>
+                </div>
+            );
+        };
 
-        // --- THEME ---
-        const themeToggleBtn = document.getElementById('themeToggle');
-        function initTheme() {
-            const savedTheme = localStorage.getItem('darnote-theme');
-            if (savedTheme === 'light') document.documentElement.classList.remove('dark');
-            else document.documentElement.classList.add('dark');
-        }
-        themeToggleBtn.addEventListener('click', () => {
-            const isDark = document.documentElement.classList.toggle('dark');
-            localStorage.setItem('darnote-theme', isDark ? 'dark' : 'light');
-        });
-        initTheme();
+        // --- Sidebar Components (Tasks & Timer) ---
+        const NavItem = ({ icon, label, href = "#" }) => (
+            <motion.a whileHover={{ scale: 0.98 }} whileTap={{ scale: 0.95 }} href={href} className="flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-white/10 transition-colors group cursor-pointer text-zinc-400 hover:text-white font-medium">
+                <div className="text-brand/80 group-hover:text-brand transition-colors"><i data-lucide={icon} className="w-[18px] h-[18px]"></i></div>
+                <span className="text-[14px] tracking-tight">{label}</span>
+            </motion.a>
+        );
 
-        // --- AUTH ---
-        onAuthStateChanged(auth, async (user) => {
-            if (user) {
-                currentUser = user;
-                authWrapper.classList.add('hidden');
-                setTimeout(() => authWrapper.style.display = 'none', 500);
-                appContent.classList.remove('hidden');
-                
-                document.getElementById('userName').textContent = user.displayName || 'User';
-                document.getElementById('heroName').textContent = (user.displayName || 'Student').split(' ')[0] + '.';
-                document.getElementById('userAvatar').src = user.photoURL || `https://ui-avatars.com/api/?name=${user.displayName}&background=random&color=fff`;
-                
-                // Date & Greeting
-                const now = new Date();
-                document.getElementById('headerDate').textContent = now.getDate();
-                document.getElementById('headerDay').textContent = now.toLocaleDateString('en-US', { weekday: 'long' });
-                updateGreeting();
-                setInterval(updateGreeting, 60000); // Check every minute
-                
-                initDashboard(user.uid);
-                
-                // Show Welcome Modal if needed (1s delay for effect)
-                setTimeout(() => showWelcome(), 1500);
+        const CollapsibleNavGroup = ({ title, defaultOpen = true, children }) => {
+            const [isOpen, setIsOpen] = useState(defaultOpen);
+            useEffect(() => { if(isOpen) setTimeout(() => lucide.createIcons(), 50); }, [isOpen]);
+            return (
+                <div className="glass-panel rounded-2xl mb-4 overflow-hidden shrink-0">
+                    <button onClick={() => setIsOpen(!isOpen)} className="flex items-center justify-between w-full px-4 py-3 hover:bg-white/5 transition-colors group">
+                        <span className="text-[12px] font-semibold tracking-wide text-zinc-400 uppercase">{title}</span>
+                        <motion.i animate={{ rotate: isOpen ? 180 : 0 }} transition={{ type: "spring", stiffness: 300, damping: 20 }} data-lucide="chevron-down" className="w-4 h-4 text-zinc-500"></motion.i>
+                    </button>
+                    <AnimatePresence initial={false}>
+                        {isOpen && (
+                            <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }} transition={{ type: "spring", bounce: 0, duration: 0.4 }} className="overflow-hidden">
+                                <div className="flex flex-col p-2 pt-0">{children}</div>
+                            </motion.div>
+                        )}
+                    </AnimatePresence>
+                </div>
+            );
+        };
 
-            } else {
-                currentUser = null;
-                loader.classList.add('hidden');
-                loginContainer.classList.remove('hidden');
-            }
-        });
+        const FocusTimerWidget = () => {
+            const [time, setTime] = useState(25 * 60);
+            const [isActive, setIsActive] = useState(false);
+            useEffect(() => {
+                let interval = null;
+                if (isActive && time > 0) interval = setInterval(() => setTime(t => t - 1), 1000);
+                else clearInterval(interval);
+                return () => clearInterval(interval);
+            }, [isActive, time]);
+            const mins = Math.floor(time / 60).toString().padStart(2, '0');
+            const secs = (time % 60).toString().padStart(2, '0');
+            return (
+                <div className="p-3 flex flex-col items-center">
+                    <motion.div key={time} initial={{ scale: 0.95, opacity: 0.8 }} animate={{ scale: 1, opacity: 1 }} className="text-[40px] font-medium font-mono tracking-tighter text-white mb-4 drop-shadow-md">{mins}:{secs}</motion.div>
+                    <div className="flex gap-2 w-full">
+                        <motion.button whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.95 }} onClick={() => setIsActive(!isActive)} className={`flex-1 py-2.5 rounded-xl font-semibold text-sm transition-colors ${isActive ? 'bg-appleGrayHover text-white border border-white/10' : 'bg-brand text-white shadow-lg shadow-brand/20'}`}>
+                            {isActive ? 'Pause' : 'Start Focus'}
+                        </motion.button>
+                        <motion.button whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }} onClick={() => { setIsActive(false); setTime(25 * 60); }} className="px-3 bg-red-500/10 hover:bg-red-500/20 text-red-400 rounded-xl transition-colors border border-red-500/10"><i data-lucide="rotate-ccw" className="w-[18px] h-[18px]"></i></motion.button>
+                    </div>
+                </div>
+            );
+        };
 
-        document.getElementById('googleSignIn').addEventListener('click', () => signInWithPopup(auth, new GoogleAuthProvider()).catch(e => alert(e.message)));
-        document.getElementById('logoutBtn').addEventListener('click', () => signOut(auth).then(() => window.location.reload()));
+        const TasksWidget = ({ user, fb }) => {
+            const [tasks, setTasks] = useState([]);
+            const [newTask, setNewTask] = useState("");
 
-        function updateGreeting() {
-            const h = new Date().getHours();
-            let g = "Good evening";
-            if (h >= 5 && h < 12) g = "Good morning";
-            else if (h >= 12 && h < 17) g = "Good afternoon";
-            else if (h >= 17 && h < 22) g = "Good evening";
-            else g = "Good night"; // Late night logic
-            document.getElementById('greetingTime').textContent = g;
-        }
+            useEffect(() => {
+                if (!user || !fb) return;
+                const tasksRef = fb.collection(fb.db, 'artifacts', fb.appId, 'users', user.uid, 'dashboard_todos');
+                const unsub = fb.onSnapshot(tasksRef, (snap) => {
+                    // Sort in memory to avoid index requirements (Rule 2)
+                    let fetchedTasks = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+                    fetchedTasks.sort((a, b) => (b.createdAt?.toMillis() || 0) - (a.createdAt?.toMillis() || 0));
+                    setTasks(fetchedTasks);
+                }, (error) => console.error("Tasks error:", error));
+                return () => unsub();
+            }, [user, fb]);
 
-        // --- DASHBOARD ---
-        function initDashboard(uid) {
-            // Recent Notes (Optimized Limit)
-            const notesRef = collection(db, 'artifacts', appId, 'users', uid, 'notes');
-            const q = query(notesRef, orderBy('updatedAt', 'desc'), limit(4));
-            
-            onSnapshot(q, (snapshot) => {
-                const listEl = document.getElementById('recentNotesList');
-                listEl.innerHTML = '';
-                
-                if (snapshot.empty) {
-                    listEl.innerHTML = `
-                        <div class="col-span-full flex flex-col items-center justify-center py-10 border border-dashed border-border rounded-lg bg-secondary/30">
-                            <p class="text-zinc-500 text-sm mb-2">No notes found.</p>
-                            <a href="note.html" class="text-xs font-bold uppercase border-b border-zinc-500 hover:text-primary hover:border-primary transition-colors">Create First Note</a>
+            const addTask = async (e) => {
+                if (e.key === 'Enter' && newTask.trim()) {
+                    try {
+                        await fb.addDoc(fb.collection(fb.db, 'artifacts', fb.appId, 'users', user.uid, 'dashboard_todos'), { text: newTask.trim(), completed: false, createdAt: fb.serverTimestamp() });
+                        setNewTask("");
+                    } catch(err) { console.error(err); }
+                }
+            };
+
+            const toggleTask = async (task) => {
+                await fb.updateDoc(fb.doc(fb.db, 'artifacts', fb.appId, 'users', user.uid, 'dashboard_todos', task.id), { completed: !task.completed });
+            };
+            const deleteTask = async (id) => {
+                await fb.deleteDoc(fb.doc(fb.db, 'artifacts', fb.appId, 'users', user.uid, 'dashboard_todos', id));
+            };
+
+            return (
+                <div className="flex flex-col gap-1 p-1">
+                    <input type="text" placeholder="Add a task..." value={newTask} onChange={e => setNewTask(e.target.value)} onKeyDown={addTask} className="w-full bg-black/50 border border-white/10 rounded-xl px-3 py-2.5 text-sm text-white placeholder-zinc-500 outline-none focus:border-brand/50 transition-colors mb-2" />
+                    <LayoutGroup>
+                        <AnimatePresence>
+                            {tasks.map(t => (
+                                <motion.div layout key={t.id} initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, height: 0 }} className="group flex items-center justify-between px-2 py-1.5 hover:bg-white/5 rounded-lg transition-colors">
+                                    <div className="flex items-center gap-3 overflow-hidden cursor-pointer flex-1" onClick={() => toggleTask(t)}>
+                                        <div className={`w-4 h-4 rounded-full border flex items-center justify-center shrink-0 transition-colors ${t.completed ? 'bg-brand border-brand' : 'border-zinc-500'}`}>
+                                            {t.completed && <i data-lucide="check" className="w-3 h-3 text-white"></i>}
+                                        </div>
+                                        <span className={`text-[13px] truncate transition-all ${t.completed ? 'text-zinc-500 line-through' : 'text-zinc-200'}`}>{t.text}</span>
+                                    </div>
+                                    <button onClick={() => deleteTask(t.id)} className="opacity-0 group-hover:opacity-100 text-zinc-500 hover:text-red-400 p-1 rounded-md transition-all"><i data-lucide="x" className="w-3 h-3"></i></button>
+                                </motion.div>
+                            ))}
+                        </AnimatePresence>
+                    </LayoutGroup>
+                </div>
+            );
+        };
+
+        // --- Onboarding Modal ---
+        const OnboardingModal = ({ onComplete }) => {
+            const [role, setRole] = useState('');
+            const [curriculum, setCurriculum] = useState('');
+            const roles = ['High School', 'University', 'Professional'];
+            const curriculums = { 'High School': ['HKDSE', 'IB', 'A-Level', 'AP', 'General'], 'University': ['Engineering', 'Medicine', 'Business', 'Computer Science', 'General'], 'Professional': ['Certification', 'Languages', 'General'] };
+
+            return (
+                <div className="fixed inset-0 z-[200] flex items-center justify-center p-4 bg-black/60 backdrop-blur-md">
+                    <motion.div initial={{ opacity: 0, scale: 0.9, y: 20 }} animate={{ opacity: 1, scale: 1, y: 0 }} transition={{ type: "spring", damping: 25, stiffness: 300 }} className="glass-panel w-full max-w-md rounded-[24px] shadow-2xl p-8">
+                        <div className="flex justify-center mb-6"><div className="w-16 h-16 bg-brand/10 rounded-full flex items-center justify-center ring-1 ring-brand/30"><i data-lucide="graduation-cap" className="w-8 h-8 text-brand"></i></div></div>
+                        <h2 className="text-2xl font-semibold text-center text-white mb-2 tracking-tight">Set Up Your Feed</h2>
+                        <p className="text-sm text-zinc-400 text-center mb-8">Personalize your hub to receive the most relevant lore and study drops.</p>
+                        
+                        <div className="space-y-6 mb-8">
+                            <div>
+                                <label className="text-xs font-semibold text-zinc-500 uppercase tracking-widest mb-3 block">1. Academic Stage</label>
+                                <div className="grid grid-cols-1 gap-2">
+                                    {roles.map(r => (
+                                        <button key={r} onClick={() => {setRole(r); setCurriculum('');}} className={`py-3 px-4 text-sm font-medium rounded-xl border transition-all text-left flex justify-between items-center ${role === r ? 'bg-brand/10 border-brand text-brand' : 'bg-black/50 border-white/5 text-zinc-300 hover:bg-white/10'}`}>
+                                            {r} {role === r && <i data-lucide="check-circle-2" className="w-4 h-4"></i>}
+                                        </button>
+                                    ))}
+                                </div>
+                            </div>
+                            
+                            <AnimatePresence>
+                                {role && (
+                                    <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} className="overflow-hidden">
+                                        <label className="text-xs font-semibold text-zinc-500 uppercase tracking-widest mb-3 block pt-2">2. Curriculum</label>
+                                        <select value={curriculum} onChange={(e) => setCurriculum(e.target.value)} className="w-full bg-black/50 border border-white/10 rounded-xl p-3.5 text-sm text-white outline-none focus:border-brand transition-colors appearance-none cursor-pointer">
+                                            <option value="" disabled>Choose your path...</option>
+                                            {curriculums[role].map(c => <option key={c} value={c} className="bg-appleGray">{c}</option>)}
+                                        </select>
+                                    </motion.div>
+                                )}
+                            </AnimatePresence>
                         </div>
-                    `;
-                    document.getElementById('totalNotes').textContent = '0';
-                    document.getElementById('totalWords').textContent = '0';
-                } else {
-                    document.getElementById('totalNotes').textContent = snapshot.size + (snapshot.size === 4 ? '+' : '');
-                    let totalWords = 0;
-                    
-                    snapshot.forEach(doc => {
-                        const note = doc.data();
-                        const id = doc.id;
-                        const textContent = note.content ? note.content.replace(/<[^>]*>/g, ' ') : '';
-                        const wordCount = textContent.trim().split(/\s+/).length || 0;
-                        const readTime = Math.ceil(wordCount / 200); // 200 wpm
                         
-                        totalWords += wordCount;
-                        const date = note.updatedAt ? new Date(note.updatedAt).toLocaleDateString(undefined, {month:'short', day:'numeric'}) : 'N/A';
-                        
-                        const div = document.createElement('a');
-                        div.href = `note.html?note=${id}`;
-                        div.className = "group block p-4 rounded-xl border border-border bg-background hover:border-primary transition-all duration-300 relative overflow-hidden flex flex-col justify-between min-h-[120px]";
-                        
-                        div.innerHTML = `
-                            <div class="absolute inset-0 bg-primary/5 opacity-0 group-hover:opacity-100 transition-opacity"></div>
-                            <div class="relative z-10 w-full">
-                                <div class="flex justify-between items-start mb-2">
-                                    <span class="text-[9px] font-bold uppercase tracking-wider text-zinc-500 border border-border px-1.5 py-0.5 rounded group-hover:border-primary group-hover:text-primary transition-colors truncate max-w-[60px]">${note.subject || 'Gen'}</span>
-                                    <i data-lucide="${note.type === 'mindmap' ? 'network' : 'file-text'}" class="w-3.5 h-3.5 text-zinc-300 group-hover:text-primary transition-colors"></i>
-                                </div>
-                                <h4 class="font-bold text-sm mb-1 truncate group-hover:text-primary transition-colors leading-tight">${note.title || 'Untitled'}</h4>
-                            </div>
-                            <div class="relative z-10 flex justify-between items-end border-t border-border/50 pt-2 mt-1">
-                                <span class="text-[9px] text-zinc-400 font-mono">${date}</span>
-                                <span class="text-[9px] font-bold text-zinc-500">${readTime}m</span>
-                            </div>
-                        `;
-                        listEl.appendChild(div);
-                    });
-                    document.getElementById('totalWords').textContent = totalWords > 1000 ? (totalWords/1000).toFixed(1) + 'k' : totalWords;
-                    lucide.createIcons();
-                }
-            });
+                        <motion.button whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }} onClick={() => { if(!role) return alert("Select a role"); onComplete(role, curriculum || 'General'); }} className="w-full bg-white text-black font-semibold py-3.5 rounded-xl shadow-lg hover:bg-gray-200 transition-colors">Enter Feed</motion.button>
+                    </motion.div>
+                </div>
+            );
+        };
 
-            // Recent Errors (NEW - Optimized)
-            const errorsRef = collection(db, 'artifacts', appId, 'users', uid, 'error_logs');
-            const qErrors = query(errorsRef, orderBy('createdAt', 'desc'), limit(5));
-
-            onSnapshot(qErrors, (snapshot) => {
-                const listEl = document.getElementById('recentErrorsList');
-                listEl.innerHTML = '';
-
-                if (snapshot.empty) {
-                    listEl.innerHTML = '<div class="text-center text-zinc-500 text-xs py-8">No errors logged. Good job!</div>';
-                } else {
-                    snapshot.forEach(doc => {
-                        const err = doc.data();
-                        const el = document.createElement('a');
-                        el.href = `el.html?log=${doc.id}`;
-                        el.className = "block p-2 rounded hover:bg-secondary transition-colors group flex items-center justify-between";
-                        
-                        const statusColor = err.mastered ? 'text-emerald-500' : 'text-red-500';
-                        const statusIcon = err.mastered ? 'check-circle-2' : 'alert-circle';
-                        
-                        el.innerHTML = `
-                            <div class="flex items-center gap-3 overflow-hidden">
-                                <i data-lucide="${statusIcon}" class="w-4 h-4 ${statusColor} flex-shrink-0"></i>
-                                <div class="flex flex-col overflow-hidden">
-                                    <span class="text-xs font-bold truncate text-primary">${err.title || 'Untitled Mistake'}</span>
-                                    <span class="text-[10px] text-zinc-500 truncate">${err.subject}</span>
-                                </div>
-                            </div>
-                            <i data-lucide="chevron-right" class="w-3 h-3 text-zinc-300 group-hover:text-primary transition-colors"></i>
-                        `;
-                        listEl.appendChild(el);
-                    });
-                    lucide.createIcons();
-                }
-            });
-
-            // Todos (Optimized with Limit)
-            const todoRef = collection(db, 'artifacts', appId, 'users', uid, 'dashboard_todos');
-            const qTodo = query(todoRef, orderBy('createdAt', 'desc'), limit(10)); // Added limit
+        // --- Main App ---
+        const App = () => {
+            const [fb, setFb] = useState(null);
+            const [user, setUser] = useState(null);
+            const [profile, setProfile] = useState(null);
+            const [feed, setFeed] = useState([]);
+            const [isLoading, setIsLoading] = useState(true);
+            const [showOnboarding, setShowOnboarding] = useState(false);
             
-            onSnapshot(qTodo, (snapshot) => {
-                const list = document.getElementById('todoList');
-                list.innerHTML = '';
-                let activeCount = 0;
-                
-                snapshot.forEach(doc => {
-                    const task = doc.data();
-                    if(!task.completed) activeCount++;
-                    
-                    const el = document.createElement('div');
-                    el.className = "flex items-center gap-3 group p-2 rounded hover:bg-secondary transition-colors";
-                    el.innerHTML = `
-                        <button onclick="toggleTodo('${doc.id}', ${!task.completed})" class="w-4 h-4 rounded border ${task.completed ? 'bg-zinc-500 border-zinc-500' : 'border-zinc-400 hover:border-primary'} flex items-center justify-center transition-all text-white text-[10px]">
-                            ${task.completed ? '✓' : ''}
-                        </button>
-                        <span class="text-sm truncate flex-1 ${task.completed ? 'line-through text-zinc-400' : 'text-primary'}">${task.text}</span>
-                        <button onclick="deleteTodo('${doc.id}')" class="text-zinc-400 hover:text-red-500 opacity-100 lg:opacity-0 lg:group-hover:opacity-100 transition-opacity"><i data-lucide="trash-2" class="w-3.5 h-3.5"></i></button>
-                    `;
-                    list.appendChild(el);
+            // Admin State
+            const [logoClicks, setLogoClicks] = useState(0);
+            const [showAdminPanel, setShowAdminPanel] = useState(false);
+            const [newDropContent, setNewDropContent] = useState("");
+
+            useEffect(() => {
+                const handleLoad = () => {
+                    if (window.firebaseEnv) {
+                        setFb(window.firebaseEnv);
+                        initializeAuth(window.firebaseEnv);
+                    }
+                };
+                if (window.firebaseEnv) handleLoad();
+                else window.addEventListener('firebaseLoaded', handleLoad);
+                return () => window.removeEventListener('firebaseLoaded', handleLoad);
+            }, []);
+
+            const initializeAuth = async (env) => {
+                try {
+                    // Mandatory Auth Rule 3 Implementation
+                    if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
+                        await env.signInWithCustomToken(env.auth, __initial_auth_token);
+                    } else {
+                        await env.signInAnonymously(env.auth);
+                    }
+                } catch(e) { console.error("Auth init error:", e); }
+
+                env.onAuthStateChanged(env.auth, async (u) => {
+                    if (u) {
+                        setUser(u);
+                        await fetchProfile(u, env);
+                    } else {
+                        setIsLoading(false);
+                    }
                 });
+            };
+
+            const fetchProfile = async (u, env) => {
+                try {
+                    const docRef = env.doc(env.db, 'artifacts', env.appId, 'users', u.uid, 'settings', 'profile');
+                    const snap = await env.getDoc(docRef);
+                    if (snap.exists() && snap.data().role) {
+                        setProfile(snap.data());
+                        loadFeedData(u.uid, snap.data().role, snap.data().curriculum, env);
+                    } else {
+                        setShowOnboarding(true);
+                        setIsLoading(false);
+                    }
+                } catch(e) { console.error("Profile error", e); setIsLoading(false); }
+            };
+
+            const handleOnboardingComplete = async (role, curriculum) => {
+                setShowOnboarding(false);
+                setIsLoading(true);
+                const profData = { role, curriculum, onboardedAt: new Date().toISOString() };
+                try {
+                    await fb.setDoc(fb.doc(fb.db, 'artifacts', fb.appId, 'users', user.uid, 'settings', 'profile'), profData, { merge: true });
+                    setProfile(profData);
+                    loadFeedData(user.uid, role, curriculum, fb);
+                } catch(e) { console.error(e); }
+            };
+
+            // THE RESERVOIR
+            const manageReservoir = async (role, curriculum, env) => {
+                const poolId = `${role}_${curriculum}`.replace(/\s+/g, '').toLowerCase();
+                const poolRef = env.collection(env.db, 'artifacts', env.appId, 'public', 'data', `curriculum_pools_${poolId}`);
                 
-                if(snapshot.empty) list.innerHTML = '<div class="text-center text-zinc-400 text-xs py-8">No active tasks</div>';
-                document.getElementById('todoCount').textContent = `${activeCount} Active`;
-                lucide.createIcons();
-            });
-            
-            renderCalendar();
-        }
+                try {
+                    const snap = await env.getDocs(poolRef);
+                    let loreItems = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+                    // Sort in JS (Rule 2)
+                    loreItems.sort((a,b) => new Date(b.createdAt) - new Date(a.createdAt));
+                    loreItems = loreItems.slice(0, 15); // Top 15
 
-        // --- CALENDAR ---
-        window.changeMonth = (dir) => { currentCalendarDate.setMonth(currentCalendarDate.getMonth() + dir); renderCalendar(); }
-        
-        function renderCalendar() {
-            const year = currentCalendarDate.getFullYear();
-            const month = currentCalendarDate.getMonth();
-            const now = new Date();
-            
-            document.getElementById('calMonthYear').textContent = currentCalendarDate.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
-            
-            const firstDay = new Date(year, month, 1).getDay();
-            const daysInMonth = new Date(year, month + 1, 0).getDate();
-            const grid = document.getElementById('calendarGrid');
-            grid.innerHTML = '';
-            
-            for(let i=0; i<firstDay; i++) { grid.appendChild(document.createElement('div')); }
-            
-            for(let i=1; i<=daysInMonth; i++) {
-                const el = document.createElement('div');
-                el.className = 'cal-day';
-                el.textContent = i;
-                if (year === now.getFullYear() && month === now.getMonth() && i === now.getDate()) {
-                    el.classList.add('today');
-                }
-                grid.appendChild(el);
-            }
-        }
+                    if (loreItems.length < 5) { // Refill
+                        const prompt = `You are the 'System Lore' generator for an educational app. The user is a ${role} studying ${curriculum}. Generate 3 highly engaging, short, slightly unhinged but factually accurate educational trivia posts. Use modern internet slang (e.g., 'cooked', 'W rizz') but keep it actually educational. Return ONLY a JSON array of objects: [{ "content": "..." }, { "content": "..." }]`;
+                        
+                        const aiRes = await callAI(prompt);
+                        try {
+                            const cleanJson = aiRes.substring(aiRes.indexOf('['), aiRes.lastIndexOf(']') + 1);
+                            const newLore = JSON.parse(cleanJson);
+                            
+                            const batch = env.writeBatch(env.db);
+                            newLore.forEach(lore => {
+                                const docRef = env.doc(poolRef);
+                                const newDoc = { type: 'trivia', author: 'System Lore', avatar: 'https://api.dicebear.com/9.x/shapes/svg?seed=apple&backgroundColor=0a84ff', time: 'Just now', content: lore.content, createdAt: new Date().toISOString() };
+                                batch.set(docRef, newDoc);
+                                loreItems.unshift({ id: docRef.id, ...newDoc });
+                            });
+                            await batch.commit();
+                        } catch(e) {}
+                    }
+                    return loreItems;
+                } catch(e) { return []; }
+            };
 
-        // --- TIMER & FOCUS MODE ---
-        function formatTimer(s) { return `${Math.floor(s/60).toString().padStart(2,'0')}:${(s%60).toString().padStart(2,'0')}`; }
-        
-        window.setTimerDuration = (mins) => {
-            stopMiniTimer();
-            timerDuration = mins * 60;
-            timerTime = timerDuration;
-            highlightPreset(mins);
-            updateTimerDisplays();
-        }
-        
-        window.askCustomTimer = () => {
-             const val = prompt("Enter custom duration in minutes:", "90");
-             if(val && !isNaN(val) && val > 0) {
-                 setTimerDuration(parseInt(val));
-                 // Manually handle styling for custom
-                 document.querySelectorAll('#timerPresets button').forEach(b => b.classList.remove('bg-secondary'));
-                 document.querySelector('button[title="Custom"]').classList.add('bg-secondary');
-             }
-        }
+            const loadFeedData = async (uid, role, curriculum, env) => {
+                setIsLoading(true);
+                try {
+                    const logsRef = env.collection(env.db, 'artifacts', env.appId, 'users', uid, 'error_logs');
+                    const logsSnap = await env.getDocs(logsRef);
+                    let personalLogs = logsSnap.docs.map(d => ({ id: d.id, ...d.data() }));
+                    // Sort in JS (Rule 2)
+                    personalLogs.sort((a,b) => new Date(b.createdAt) - new Date(a.createdAt));
+                    personalLogs = personalLogs.slice(0, 5).map(data => ({
+                        id: data.id, type: 'log', author: 'You', avatar: 'https://api.dicebear.com/9.x/avataaars/svg?seed=' + uid + '&backgroundColor=1c1c1e',
+                        time: new Date(data.createdAt).toLocaleDateString(), badge: `${data.subject} • ${data.topic || 'General'}`,
+                        content: data.explanation || (data.questionText ? `Failed: ${data.questionText.substring(0,80)}...` : "Logged an error here."),
+                        formula: data.correctAnswer ? `Correct: ${data.correctAnswer}` : null
+                    }));
 
-        function highlightPreset(mins) {
-            document.querySelectorAll('#timerPresets button').forEach(b => {
-                b.classList.remove('bg-secondary');
-                if(b.textContent.includes(mins) || (mins === 60 && b.textContent === '1h')) {
-                    b.classList.add('bg-secondary');
-                }
-            });
-        }
+                    const systemLore = await manageReservoir(role, curriculum, env);
 
-        window.startMiniTimer = () => {
-            if(timerInterval) return;
-            document.getElementById('miniStartBtn').classList.add('hidden'); document.getElementById('miniStopBtn').classList.remove('hidden');
-            timerInterval = setInterval(() => {
-                if(timerTime > 0) {
-                    timerTime--;
-                    updateTimerDisplays();
-                } else {
-                    stopMiniTimer();
-                    new Audio('https://actions.google.com/sounds/v1/alarms/beep_short.ogg').play();
-                }
-            }, 1000);
-        }
-        
-        window.stopMiniTimer = () => {
-            clearInterval(timerInterval); timerInterval = null;
-            document.getElementById('miniStartBtn').classList.remove('hidden'); document.getElementById('miniStopBtn').classList.add('hidden');
-            updateFocusOverlayBtns();
-        }
+                    const insightDrop = {
+                        id: 'stat-insight-1', type: 'stat', author: 'Insight Algorithm', avatar: 'https://api.dicebear.com/9.x/bottts/svg?seed=mac&backgroundColor=303030', time: 'Today',
+                        content: `You've recorded ${personalLogs.length} recent errors in ${curriculum}. Your retention algorithm is adapting. Keep pushing.`,
+                        rings: [{ label: 'Mastery', progress: 0.65, color: '#32D74B' }, { label: 'Consistency', progress: 0.85, color: '#0A84FF' }, { label: 'Focus', progress: 0.40, color: '#FF9F0A' }]
+                    };
 
-        window.resetMiniTimer = () => {
-            stopMiniTimer(); timerTime = timerDuration; updateTimerDisplays();
-        }
+                    let mixedFeed = [];
+                    if(personalLogs.length > 0) mixedFeed.push(personalLogs[0]);
+                    mixedFeed.push(insightDrop);
+                    if(systemLore.length > 0) mixedFeed.push(systemLore[0]);
+                    if(personalLogs.length > 1) mixedFeed.push(personalLogs[1]);
+                    if(systemLore.length > 1) mixedFeed.push(systemLore[1]);
+                    if(personalLogs.length > 2) mixedFeed.push(...personalLogs.slice(2));
+                    
+                    if (mixedFeed.length === 1) {
+                         mixedFeed.push({ id: 'welcome', type: 'trivia', author: 'System', avatar: 'https://api.dicebear.com/9.x/shapes/svg?seed=hello', time: 'Now', content: `Welcome to the ${curriculum} hub. Tap 'Snap Error' to log your first mistake.`});
+                    }
 
-        function updateTimerDisplays() {
-            const s = formatTimer(timerTime);
-            document.getElementById('miniTimerDisplay').textContent = s;
-            document.getElementById('focusTimerDisplay').textContent = s;
-        }
+                    setFeed(mixedFeed);
+                } catch(e) {}
+                setIsLoading(false);
+                setTimeout(() => lucide.createIcons(), 100);
+            };
 
-        // --- FOCUS OVERLAY ---
-        window.enterFocusMode = () => {
-            document.getElementById('focusOverlay').classList.remove('hidden');
-            setTimeout(() => document.getElementById('focusOverlay').classList.remove('opacity-0'), 10);
-            updateFocusOverlayBtns();
-        }
+            const handleLogoClick = () => {
+                const newClicks = logoClicks + 1;
+                setLogoClicks(newClicks);
+                if (newClicks >= 5) { setShowAdminPanel(true); setLogoClicks(0); }
+                setTimeout(() => setLogoClicks(0), 2000); 
+            };
 
-        document.getElementById('exitFocusBtn').addEventListener('click', () => {
-            document.getElementById('focusOverlay').classList.add('opacity-0');
-            setTimeout(() => document.getElementById('focusOverlay').classList.add('hidden'), 500);
-        });
+            const handleInjectDrop = async () => {
+                if(!newDropContent.trim() || !profile || !fb) return;
+                const poolId = `${profile.role}_${profile.curriculum}`.replace(/\s+/g, '').toLowerCase();
+                const docRef = fb.doc(fb.collection(fb.db, 'artifacts', fb.appId, 'public', 'data', `curriculum_pools_${poolId}`));
+                const newPost = { type: 'trivia', author: 'Admin Drop', avatar: 'https://api.dicebear.com/9.x/shapes/svg?seed=admin&backgroundColor=ff3b30', time: 'Just now', content: newDropContent, createdAt: new Date().toISOString() };
+                try {
+                    await fb.setDoc(docRef, newPost);
+                    setFeed([{id: docRef.id, ...newPost}, ...feed]); 
+                    setNewDropContent(""); setShowAdminPanel(false);
+                    setTimeout(() => lucide.createIcons(), 50);
+                } catch(e) {}
+            };
 
-        function updateFocusOverlayBtns() {
-            if(timerInterval) {
-                document.getElementById('overlayStartBtn').classList.add('hidden');
-                document.getElementById('overlayStopBtn').classList.remove('hidden');
-            } else {
-                document.getElementById('overlayStartBtn').classList.remove('hidden');
-                document.getElementById('overlayStopBtn').classList.add('hidden');
-            }
-        }
-        
-        document.getElementById('overlayStartBtn').addEventListener('click', () => { startMiniTimer(); updateFocusOverlayBtns(); });
-        document.getElementById('overlayStopBtn').addEventListener('click', () => { stopMiniTimer(); updateFocusOverlayBtns(); });
+            const InteractionRow = ({ type }) => (
+                <div className="flex items-center gap-6 mt-4 text-zinc-500">
+                    <motion.button whileTap={{ scale: 0.8 }} className="flex items-center gap-2 hover:text-[#32D74B] transition-colors group">
+                        <div className="p-1.5 rounded-full group-hover:bg-[#32D74B]/10 transition-colors"><i data-lucide="heart" className="w-[18px] h-[18px] group-active:fill-current"></i></div>
+                        {type === 'log' && <span className="text-xs font-semibold">Master</span>}
+                    </motion.button>
+                    <motion.button whileTap={{ scale: 0.8 }} className="flex items-center gap-2 hover:text-brand transition-colors group">
+                        <div className="p-1.5 rounded-full group-hover:bg-brand/10 transition-colors"><i data-lucide="message-circle" className="w-[18px] h-[18px] group-active:fill-current"></i></div>
+                        {type === 'log' && <span className="text-xs font-semibold">Drill</span>}
+                    </motion.button>
+                    <motion.button whileTap={{ scale: 0.8 }} className="flex items-center gap-2 hover:text-[#BF5AF2] transition-colors group ml-auto">
+                        <div className="p-1.5 rounded-full group-hover:bg-[#BF5AF2]/10 transition-colors"><i data-lucide="send" className="w-[18px] h-[18px]"></i></div>
+                    </motion.button>
+                </div>
+            );
 
-        // --- TODO LOGIC ---
-        window.toggleTodo = async (id, status) => { if(!currentUser) return; await updateDoc(doc(db, 'artifacts', appId, 'users', currentUser.uid, 'dashboard_todos', id), { completed: status }); };
-        window.deleteTodo = async (id) => { if(!currentUser) return; await deleteDoc(doc(db, 'artifacts', appId, 'users', currentUser.uid, 'dashboard_todos', id)); };
-        document.getElementById('addTodoBtn').addEventListener('click', addTodo);
-        document.getElementById('newTodoInput').addEventListener('keypress', (e) => { if(e.key === 'Enter') addTodo(); });
-        async function addTodo() {
-            const input = document.getElementById('newTodoInput'); const text = input.value.trim();
-            if(!text || !currentUser) return;
-            try { await addDoc(collection(db, 'artifacts', appId, 'users', currentUser.uid, 'dashboard_todos'), { text, completed: false, createdAt: serverTimestamp() }); input.value = ''; } catch(e) { console.error(e); }
-        }
+            if (isLoading) return <div className="h-screen w-full flex items-center justify-center bg-appleBlack"><div className="w-8 h-8 border-[3px] border-zinc-800 border-t-white rounded-full animate-spin"></div></div>;
 
-        lucide.createIcons();
+            return (
+                <div className="flex justify-center min-h-screen bg-appleBlack w-full overflow-hidden relative font-sans text-[#F5F5F7]">
+                    
+                    {showOnboarding && <OnboardingModal onComplete={handleOnboardingComplete} />}
+
+                    {/* ADMIN COMPOSER */}
+                    <AnimatePresence>
+                        {showAdminPanel && (
+                            <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/60 backdrop-blur-xl">
+                                <motion.div initial={{ opacity: 0, scale: 0.95, y: 20 }} animate={{ opacity: 1, scale: 1, y: 0 }} exit={{ opacity: 0, scale: 0.95, y: 20 }} className="glass-panel w-full sm:max-w-[500px] rounded-[24px] shadow-2xl flex flex-col overflow-hidden">
+                                    <div className="flex justify-between items-center p-4 border-b border-white/10">
+                                        <button onClick={() => setShowAdminPanel(false)} className="text-brand font-medium">Cancel</button>
+                                        <span className="font-semibold text-white tracking-tight">New Global Drop</span>
+                                        <button onClick={handleInjectDrop} disabled={!newDropContent.trim()} className={`font-medium ${newDropContent.trim() ? 'text-brand' : 'text-zinc-600'}`}>Post</button>
+                                    </div>
+                                    <div className="flex p-5 gap-4 flex-1">
+                                        <img src="https://api.dicebear.com/9.x/shapes/svg?seed=admin&backgroundColor=ff3b30" className="w-10 h-10 rounded-full border border-white/10 shadow-sm" />
+                                        <textarea className="w-full bg-transparent border-none text-[16px] leading-relaxed text-white resize-none outline-none placeholder-zinc-500 min-h-[120px]" placeholder="Share syllabus lore, a meme, or a tip..." value={newDropContent} onChange={(e) => setNewDropContent(e.target.value)} autoFocus></textarea>
+                                    </div>
+                                </motion.div>
+                            </div>
+                        )}
+                    </AnimatePresence>
+
+                    <div className="flex w-full max-w-[1000px] justify-between lg:justify-center gap-0 landscape:gap-8 lg:gap-12 px-0 landscape:px-4 xl:px-0 relative h-screen">
+                        
+                        {/* LEFT THREADS FEED */}
+                        <div className="w-full landscape:max-w-[600px] flex-1 landscape:border-x border-white/10 bg-appleBlack feed-container no-scrollbar relative shrink-0">
+                            
+                            {/* Glass Navbar */}
+                            <div className="sticky top-0 z-50 glass-panel border-t-0 border-x-0 border-b border-white/10 p-3.5 flex justify-between md:justify-center items-center">
+                                <div onClick={handleLogoClick} className="font-bold text-lg tracking-tighter flex items-center gap-2 cursor-pointer select-none ml-2 md:ml-0">
+                                    <img src="https://raw.githubusercontent.com/darren6251/darnote/refs/heads/main/darNote%20logo.png" className="w-6 h-6 rounded drop-shadow-md pointer-events-none" />
+                                    darNote <span className="text-[10px] uppercase text-brand font-bold bg-brand/15 px-2 py-0.5 rounded-full mt-0.5">{profile?.curriculum}</span>
+                                </div>
+                                <button className="landscape:hidden md:hidden text-white bg-white/10 p-2 rounded-full hover:bg-white/20 transition-colors mr-2">
+                                    <i data-lucide="settings" className="w-4 h-4"></i>
+                                </button>
+                            </div>
+
+                            <div className="pt-2 pb-24 landscape:pb-8">
+                                <AnimatePresence>
+                                    {feed.map((post, index) => (
+                                        <motion.div layout initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ type: "spring", stiffness: 300, damping: 30, delay: index === 0 ? 0 : index * 0.05 }} key={post.id} className="px-5 py-4 border-b border-white/5 hover:bg-white/[0.02] transition-colors flex gap-4">
+                                            {/* Avatar Column */}
+                                            <div className="flex flex-col items-center shrink-0">
+                                                <div className="relative group">
+                                                    <img src={post.avatar} className="w-10 h-10 rounded-full border border-white/10 object-cover shadow-sm group-hover:scale-105 transition-transform" />
+                                                    {post.type === 'stat' && <div className="absolute -bottom-1 -right-1 bg-appleBlack rounded-full p-0.5"><i data-lucide="sparkles" className="w-3.5 h-3.5 text-brand"></i></div>}
+                                                </div>
+                                                {index !== feed.length - 1 && <div className="w-[1.5px] h-full bg-white/10 rounded-full my-2.5"></div>}
+                                            </div>
+
+                                            {/* Content Column */}
+                                            <div className="flex-1 pb-1 min-w-0">
+                                                <div className="flex justify-between items-center mb-1.5">
+                                                    <span className={`font-semibold text-[15px] tracking-tight ${post.type === 'trivia' ? 'text-brand' : 'text-white'} truncate`}>{post.author}</span>
+                                                    <div className="flex items-center gap-3 shrink-0">
+                                                        <span className="text-zinc-500 text-[13px]">{post.time}</span>
+                                                        <i data-lucide="more-horizontal" className="w-4 h-4 text-zinc-600 hover:text-white transition-colors cursor-pointer"></i>
+                                                    </div>
+                                                </div>
+                                                
+                                                {post.type === 'log' && (
+                                                    <div className="flex flex-col gap-2 mt-1">
+                                                        <span className="text-[11px] font-bold text-zinc-400 w-fit px-2.5 py-0.5 rounded-md bg-white/5 border border-white/10 truncate max-w-full tracking-wide">
+                                                            {post.badge}
+                                                        </span>
+                                                        <p className="text-[15px] leading-relaxed text-zinc-200 font-normal break-words">{post.content}</p>
+                                                        {post.formula && (
+                                                            <div className="mt-2 p-3 rounded-xl border border-white/5 bg-[#1C1C1E]/50 font-mono text-[13px] text-[#32D74B] overflow-x-auto no-scrollbar shadow-inner">
+                                                                {post.formula}
+                                                            </div>
+                                                        )}
+                                                    </div>
+                                                )}
+
+                                                {post.type === 'stat' && (
+                                                    <div className="mt-1 flex flex-col gap-4">
+                                                        <p className="text-[15px] leading-relaxed text-zinc-200 font-normal">{post.content}</p>
+                                                        <div className="p-4 rounded-2xl border border-white/5 bg-[#1C1C1E] flex flex-row items-center gap-6 overflow-hidden shadow-lg shadow-black/50">
+                                                            <ActivityRings size={80} rings={post.rings} strokeWidth={8} />
+                                                            <div className="flex flex-col gap-3 flex-1">
+                                                                {post.rings.map((r, i) => (
+                                                                    <div key={i} className="flex items-center justify-between">
+                                                                        <div className="flex items-center gap-2.5">
+                                                                            <div className="w-2.5 h-2.5 rounded-full shadow-[0_0_8px_rgba(0,0,0,0.5)]" style={{backgroundColor: r.color, boxShadow: `0 0 10px ${r.color}80`}}></div>
+                                                                            <span className="text-[13px] font-semibold tracking-tight text-zinc-300">{r.label}</span>
+                                                                        </div>
+                                                                        <span className="text-[13px] font-bold tracking-tight text-white">{Math.round(r.progress * 100)}%</span>
+                                                                    </div>
+                                                                ))}
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                )}
+
+                                                {post.type === 'trivia' && (
+                                                    <div className="mt-2">
+                                                        <p className="text-[15px] leading-relaxed text-zinc-200 font-normal bg-brand/10 p-4 rounded-2xl border border-brand/20">
+                                                            <i data-lucide="flame" className="w-4 h-4 text-brand inline-block mr-2 mb-0.5 drop-shadow-md"></i>
+                                                            {post.content}
+                                                        </p>
+                                                    </div>
+                                                )}
+
+                                                <InteractionRow type={post.type} />
+                                            </div>
+                                        </motion.div>
+                                    ))}
+                                </AnimatePresence>
+                            </div>
+                        </div>
+
+                        {/* RIGHT REDDIT SIDEBAR (Hidden on mobile) */}
+                        <div className="hidden portrait:hidden landscape:flex flex-col w-[280px] lg:w-[300px] sidebar-container no-scrollbar pt-8 shrink-0">
+                            
+                            <CollapsibleNavGroup title="Spaces" defaultOpen={true}>
+                                <NavItem icon="home" label="Home Feed" href="home.html" />
+                                <NavItem icon="target" label="Error Log" href="el.html" />
+                                <NavItem icon="book-open" label="Notes Vault" href="note.html" />
+                                <NavItem icon="pie-chart" label="Insight Deck" href="report.html" />
+                            </CollapsibleNavGroup>
+                            
+                            <CollapsibleNavGroup title="Widgets" defaultOpen={true}>
+                                <FocusTimerWidget />
+                                <div className="h-px w-full bg-white/10 my-2"></div>
+                                <TasksWidget user={user} fb={fb} />
+                            </CollapsibleNavGroup>
+                            
+                            <motion.button whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }} onClick={()=>window.location.href='el.html'} className="w-full mt-4 bg-white text-black font-semibold py-3.5 rounded-2xl hover:bg-gray-200 transition-colors shadow-[0_0_20px_rgba(255,255,255,0.1)] flex items-center justify-center gap-2 group shrink-0">
+                                <i data-lucide="plus" className="w-5 h-5 group-hover:rotate-90 transition-transform"></i> Snap Error
+                            </motion.button>
+                        </div>
+
+                        {/* MOBILE BOTTOM NAV */}
+                        <div className="flex portrait:flex landscape:hidden fixed bottom-0 left-0 w-full glass-panel border-t border-white/10 p-2 justify-around items-center pb-safe z-50">
+                            <motion.button whileTap={{ scale: 0.8 }} onClick={()=>window.location.href='home.html'} className="p-3"><i data-lucide="home" className="w-[26px] h-[26px] text-white fill-white/20"></i></motion.button>
+                            <motion.button whileTap={{ scale: 0.8 }} onClick={()=>window.location.href='el.html'} className="bg-white text-black p-3.5 rounded-2xl shadow-[0_4px_20px_rgba(255,255,255,0.2)] -mt-6 border border-white/20"><i data-lucide="plus" className="w-6 h-6 stroke-[2.5px]"></i></motion.button>
+                            <motion.button whileTap={{ scale: 0.8 }} onClick={()=>window.location.href='report.html'} className="p-3 text-zinc-500 hover:text-white transition-colors"><i data-lucide="pie-chart" className="w-[26px] h-[26px]"></i></motion.button>
+                        </div>
+
+                    </div>
+                </div>
+            );
+        };
+
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(<App />);
     </script>
 </body>
 </html>
