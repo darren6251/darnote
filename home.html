@@ -2,21 +2,19 @@
 <html lang="en" class="dark">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>darNote - Home</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>darNote - Command Center</title>
     <link rel="icon" type="image/png" href="https://raw.githubusercontent.com/darren6251/darnote/refs/heads/main/darNote%20logo.png">
     
-    <!-- React & DOM -->
+    <!-- React & ReactDOM -->
     <script crossorigin src="https://unpkg.com/react@18/umd/react.development.js"></script>
     <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
-    
-    <!-- Babel & Tailwind -->
+    <!-- Babel for JSX -->
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
-    
-    <!-- Framer Motion & Utils -->
+    <!-- Framer Motion -->
     <script src="https://unpkg.com/framer-motion@10.16.4/dist/framer-motion.js"></script>
-    <script src="https://html2canvas.hertzen.com/dist/html2canvas.min.js"></script>
 
     <script>
         tailwind.config = {
@@ -24,321 +22,568 @@
             theme: {
                 extend: {
                     colors: { 
-                        onyx: '#000000', /* Apple Pure Black */
-                        surface: '#0a0a0a', /* Slightly elevated */
-                        border: '#27272a',
-                        brand: '#007AFF', /* iOS Blue */
-                        'brand-light': '#5AC8FA',
-                        'light-bg': '#F2F2F7', /* iOS Gray bg */
-                        'light-surface': '#ffffff',
-                        'light-border': '#E5E5EA'
+                        appleDark: '#000000',
+                        appleDarkSurface: '#1c1c1e',
+                        appleDarkBorder: '#38383a',
+                        appleLight: '#f2f2f7',
+                        appleLightSurface: '#ffffff',
+                        appleLightBorder: '#e5e5ea',
+                        brand: '#4f46e5',
+                        brandSoft: '#e0e7ff',
+                        brandDarkSoft: '#3730a3'
                     },
-                    fontFamily: { sans: ['-apple-system', 'BlinkMacSystemFont', 'Inter', 'sans-serif'] },
+                    fontFamily: { sans: ['-apple-system', 'BlinkMacSystemFont', 'Inter', 'sans-serif'], mono: ['JetBrains Mono', 'monospace'] },
+                    animation: {
+                        'pulse-slow': 'pulse 3s cubic-bezier(0.4, 0, 0.6, 1) infinite',
+                        'float': 'float 6s ease-in-out infinite',
+                    },
+                    keyframes: {
+                        float: { '0%, 100%': { transform: 'translateY(0)' }, '50%': { transform: 'translateY(-10px)' } }
+                    }
                 }
             }
-        };
+        }
     </script>
-    <style>
-        body { font-family: '-apple-system', 'Inter', sans-serif; overflow-y: hidden; -webkit-font-smoothing: antialiased; }
-        .hide-scrollbar::-webkit-scrollbar { display: none; }
-        .hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
-        
-        .feed-scroll::-webkit-scrollbar { width: 4px; }
-        .feed-scroll::-webkit-scrollbar-track { background: transparent; }
-        .feed-scroll::-webkit-scrollbar-thumb { background: #d4d4d8; border-radius: 4px; }
-        .dark .feed-scroll::-webkit-scrollbar-thumb { background: #3f3f46; }
 
-        .glass-nav { 
-            backdrop-filter: blur(24px); 
-            -webkit-backdrop-filter: blur(24px); 
-            background: rgba(255,255,255,0.7);
-        }
-        .dark .glass-nav {
-            background: rgba(0,0,0,0.6);
-        }
-        .pb-safe { padding-bottom: env(safe-area-inset-bottom); }
+    <!-- Firebase SDKs -->
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-app.js";
+        import { getAuth, signInWithPopup, GoogleAuthProvider, signOut, onAuthStateChanged, signInAnonymously } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-auth.js";
+        import { getFirestore, collection, doc, setDoc, getDoc, getDocs, query, orderBy, limit, where, Timestamp } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-firestore.js";
         
-        /* Subtle image shadows */
-        .img-shadow { box-shadow: 0 4px 24px -6px rgba(0,0,0,0.1); }
-        .dark .img-shadow { box-shadow: 0 4px 24px -6px rgba(0,0,0,0.5); }
+        const firebaseConfig = { apiKey: "AIzaSyAvPEac-03kE4oazvaq8K3T2gxLPsnZO20", authDomain: "darnote625.firebaseapp.com", projectId: "darnote625", storageBucket: "darnote625.firebasestorage.app", messagingSenderId: "16458322562", appId: "1:16458322562:web:8894d71f3e6c326eba1a9b" };
+        const app = initializeApp(firebaseConfig);
+        window.firebase = { app, auth: getAuth(app), db: getFirestore(app), signInWithPopup, signInAnonymously, GoogleAuthProvider, signOut, onAuthStateChanged, collection, doc, setDoc, getDoc, getDocs, query, orderBy, limit, where, Timestamp };
+    </script>
+
+    <style>
+        body { @apply bg-appleLight text-black dark:bg-appleDark dark:text-white; font-family: '-apple-system', 'Inter', sans-serif; overflow-x: hidden; -webkit-font-smoothing: antialiased; }
+        ::-webkit-scrollbar { width: 0px; background: transparent; }
+        .glass-bento { @apply bg-appleLightSurface/80 dark:bg-appleDarkSurface/80 backdrop-blur-xl border border-appleLightBorder dark:border-white/10 shadow-sm transition-all; }
+        .hide-scroll::-webkit-scrollbar { display: none; }
+        .hide-scroll { -ms-overflow-style: none; scrollbar-width: none; }
+        .insomnia-mode { @apply bg-[#020202] text-[#e0e0e0]; }
+        .insomnia-mode .glass-bento { @apply bg-[#0a0a0c]/80 border-white/5; }
     </style>
 </head>
-<body class="bg-light-bg dark:bg-onyx text-zinc-900 dark:text-zinc-100 transition-colors duration-300 selection:bg-brand selection:text-white">
+<body>
     <div id="root"></div>
 
-    <!-- Firebase v11 Modules -->
-    <script type="module">
-        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
-        import { getAuth, signInWithPopup, GoogleAuthProvider, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-        import { getFirestore, collection, doc, setDoc, getDoc, getDocs, updateDoc, deleteDoc, addDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
-
-        const firebaseConfig = { apiKey: "AIzaSyAvPEac-03kE4oazvaq8K3T2gxLPsnZO20", projectId: "darnote625" };
-        const app = initializeApp(firebaseConfig);
-        const auth = getAuth(app);
-        const db = getFirestore(app);
-        const provider = new GoogleAuthProvider();
-        const appId = "darnote-app";
-
-        window.firebaseEnv = { auth, db, provider, signInWithPopup, signOut, onAuthStateChanged, collection, doc, setDoc, getDoc, getDocs, updateDoc, deleteDoc, addDoc, appId };
-        window.dispatchEvent(new Event('firebaseReady'));
-    </script>
-
-    <!-- React App -->
     <script type="text/babel">
-        const { useState, useEffect, useRef, useMemo, useCallback } = React;
-        const { motion, AnimatePresence } = window.Motion;
+        const { useState, useEffect, useRef, useMemo, Component } = React;
+        const { motion, AnimatePresence, Reorder } = window.Motion;
 
         // --- ICONS ---
         const Icons = {
-            Home: (p) => <svg viewBox="0 0 24 24" fill="currentColor" stroke="none" {...p}><path d="M12 3L2 12h3v8h5v-6h4v6h5v-8h3L12 3z"/></svg>,
-            HomeOutline: (p) => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...p}><path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>,
-            Plus: (p) => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...p}><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>,
-            Activity: (p) => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...p}><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>,
-            Timer: (p) => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...p}><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>,
-            Check: (p) => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...p}><polyline points="20 6 9 17 4 12"/></svg>,
-            Trash: (p) => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...p}><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>,
-            Calendar: (p) => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...p}><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>,
-            ChevronDown: (p) => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...p}><polyline points="6 9 12 15 18 9"/></svg>,
-            Heart: (p) => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" {...p}><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>,
-            HeartFilled: (p) => <svg viewBox="0 0 24 24" fill="#FF2D55" stroke="#FF2D55" strokeWidth="1" strokeLinecap="round" strokeLinejoin="round" {...p}><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>,
-            MessageCircle: (p) => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" {...p}><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"/></svg>,
-            Repeat: (p) => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" {...p}><polyline points="17 1 21 5 17 9"/><path d="M3 11V9a4 4 0 0 1 4-4h14"/><polyline points="7 23 3 19 7 15"/><path d="M21 13v2a4 4 0 0 1-4 4H3"/></svg>,
-            Share: (p) => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" {...p}><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>,
-            LogOut: (p) => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...p}><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>,
-            Moon: (p) => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...p}><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>,
-            Sun: (p) => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...p}><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>,
-            MoreHorizontal: (p) => <svg viewBox="0 0 24 24" fill="currentColor" stroke="none" {...p}><circle cx="12" cy="12" r="2"/><circle cx="19" cy="12" r="2"/><circle cx="5" cy="12" r="2"/></svg>,
-            TrendingUp: (p) => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...p}><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/></svg>
+            Sun: p=><svg {...p} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="5"/><path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/></svg>,
+            Moon: p=><svg {...p} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>,
+            Zap: p=><svg {...p} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>,
+            FileText: p=><svg {...p} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>,
+            Bug: p=><svg {...p} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="m8 2 1.88 1.88"/><path d="M14.12 3.88 16 2"/><path d="M9 7.13v-1a3.003 3.003 0 1 1 6 0v1"/><path d="M12 20c-3.3 0-6-2.7-6-6v-3a4 4 0 0 1 4-4h4a4 4 0 0 1 4 4v3c0 3.3-2.7 6-6 6"/><path d="M12 20v-9"/><path d="M6.53 9C4.6 8.8 3 7.1 3 5"/><path d="M6 13H2"/><path d="M3 21c0-2.1 1.7-3.9 3.8-4"/><path d="M20.97 5c0 2.1-1.6 3.8-3.5 4"/><path d="M22 13h-4"/><path d="M17.2 17c2.1.1 3.8 1.9 3.8 4"/></svg>,
+            Timer: p=><svg {...p} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="10" y1="2" x2="14" y2="2"/><line x1="12" y1="14" x2="15" y2="11"/><circle cx="12" cy="14" r="8"/></svg>,
+            Play: p=><svg {...p} viewBox="0 0 24 24" fill="currentColor"><path d="M5 3l14 9-14 9V3z"/></svg>,
+            Pause: p=><svg {...p} viewBox="0 0 24 24" fill="currentColor"><rect x="6" y="4" width="4" height="16"/><rect x="14" y="4" width="4" height="16"/></svg>,
+            RefreshCw: p=><svg {...p} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>,
+            ArrowRight: p=><svg {...p} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>,
+            Inbox: p=><svg {...p} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="22 12 16 12 14 15 10 15 8 12 2 12"/><path d="M5.45 5.11L2 12v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-6l-3.45-6.89A2 2 0 0 0 16.76 4H7.24a2 2 0 0 0-1.79 1.11z"/></svg>,
+            Check: p=><svg {...p} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="20 6 9 17 4 12"/></svg>,
+            Bot: p=><svg {...p} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M12 8V4H8"/><rect width="16" height="12" x="4" y="8" rx="2"/><path d="M2 14h2M20 14h2M15 13v2M9 13v2"/></svg>,
+            Brain: p=><svg {...p} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M9.5 2A2.5 2.5 0 0 1 12 4.5v15a2.5 2.5 0 0 1-4.96.44 2.5 2.5 0 0 1-2.96-3.08 3 3 0 0 1-.34-5.58 2.5 2.5 0 0 1 1.32-4.24 2.5 2.5 0 0 1 1.98-3A2.5 2.5 0 0 1 9.5 2Z"/><path d="M14.5 2A2.5 2.5 0 0 0 12 4.5v15a2.5 2.5 0 0 0 4.96.44 2.5 2.5 0 0 0 2.96-3.08 3 3 0 0 0 .34-5.58 2.5 2.5 0 0 0-1.32-4.24 2.5 2.5 0 0 0-1.98-3A2.5 2.5 0 0 0 14.5 2Z"/></svg>,
+            Target: p=><svg {...p} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/></svg>,
+            MoreVertical: p=><svg {...p} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="1"/><circle cx="12" cy="5" r="1"/><circle cx="12" cy="19" r="1"/></svg>,
+            Trash2: p=><svg {...p} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><line x1="10" y1="11" x2="10" y2="17"/><line x1="14" y1="11" x2="14" y2="17"/></svg>,
+            Coffee: p=><svg {...p} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M18 8h1a4 4 0 0 1 0 8h-1"/><path d="M2 8h16v9a4 4 0 0 1-4 4H6a4 4 0 0 1-4-4V8z"/><line x1="6" y1="1" x2="6" y2="4"/><line x1="10" y1="1" x2="10" y2="4"/><line x1="14" y1="1" x2="14" y2="4"/></svg>,
+            Activity: p=><svg {...p} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>,
+            Google: p=><svg {...p} viewBox="0 0 24 24" fill="currentColor"><path d="M12 22C6.477 22 2 17.523 2 12S6.477 2 12 2s10 4.477 10 10-4.477 10-10 10zM12 11h9c.1 1.4.1 2.9-.4 4.3-1.1 3-4.1 5.3-7.6 5.6-5 .5-9.4-3.1-9.9-8.1C2.5 7.1 6 2.3 11 2c2.5-.1 4.9.9 6.7 2.6l-2.7 2.8c-1-.7-2.3-1.1-3.6-1-2.9.2-5.1 2.8-4.9 5.7.2 2.6 2.4 4.7 5 4.7 2 0 3.6-1.1 4.3-2.9H12v-3z"/></svg>,
+            HelpCircle: p=><svg {...p} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
         };
 
-        // --- SHARED UTILS ---
-        const getInitials = (name) => name ? name.substring(0, 2).toUpperCase() : 'U';
-        const getBotAvatar = (seed) => `https://api.dicebear.com/7.x/bottts/svg?seed=${seed}&backgroundColor=transparent`;
-        const timeAgo = (dateStr) => {
-            if(!dateStr) return '';
-            const seconds = Math.floor((new Date() - new Date(dateStr)) / 1000);
-            let interval = seconds / 31536000;
-            if (interval > 1) return Math.floor(interval) + "y";
-            interval = seconds / 2592000;
-            if (interval > 1) return Math.floor(interval) + "mo";
-            interval = seconds / 86400;
-            if (interval > 1) return Math.floor(interval) + "d";
-            interval = seconds / 3600;
-            if (interval > 1) return Math.floor(interval) + "h";
-            interval = seconds / 60;
-            if (interval > 1) return Math.floor(interval) + "m";
-            return "Just now";
+        // --- RIGOROUS ERROR BOUNDARY ---
+        class ErrorBoundary extends Component {
+            constructor(props) { super(props); this.state = { hasError: false, error: null }; }
+            static getDerivedStateFromError(error) { return { hasError: true, error }; }
+            clearCacheAndReload() {
+                sessionStorage.clear();
+                localStorage.clear();
+                window.location.reload();
+            }
+            render() {
+                if (this.state.hasError) {
+                    return (
+                        <div className="min-h-screen flex items-center justify-center bg-appleLight dark:bg-appleDark p-4">
+                            <div className="glass-bento p-8 rounded-3xl max-w-md w-full text-center space-y-4 shadow-xl">
+                                <div className="w-16 h-16 bg-red-100 dark:bg-red-900/30 rounded-full flex items-center justify-center mx-auto mb-4"><Icons.Bug className="w-8 h-8 text-red-500"/></div>
+                                <h2 className="text-2xl font-bold">System Overload</h2>
+                                <p className="text-sm text-gray-500 dark:text-gray-400">The cognitive buffer overflowed. A deep cache clear is recommended.</p>
+                                <div className="p-4 bg-red-50 dark:bg-black/40 rounded-xl text-left text-xs font-mono text-red-600 dark:text-red-400 overflow-auto h-24">{this.state.error?.toString()}</div>
+                                <button onClick={this.clearCacheAndReload} className="w-full bg-black text-white dark:bg-white dark:text-black py-3 rounded-xl font-bold shadow-md hover:scale-105 transition-transform">Clear Cache & Reboot</button>
+                            </div>
+                        </div>
+                    );
+                }
+                return this.props.children;
+            }
+        }
+
+        // --- CUSTOM HOOKS & UTILS ---
+        const useSessionCache = (key, fetcher, ttlMinutes = 5) => {
+            const [data, setData] = useState(null);
+            const [loading, setLoading] = useState(true);
+
+            useEffect(() => {
+                const loadData = async () => {
+                    const cached = sessionStorage.getItem(key);
+                    if (cached) {
+                        const { val, expiry } = JSON.parse(cached);
+                        if (Date.now() < expiry) { setData(val); setLoading(false); return; }
+                    }
+                    try {
+                        const fetched = await fetcher();
+                        sessionStorage.setItem(key, JSON.stringify({ val: fetched, expiry: Date.now() + (ttlMinutes * 60 * 1000) }));
+                        setData(fetched);
+                    } catch (e) { console.error("Cache fetch error", e); }
+                    setLoading(false);
+                };
+                loadData();
+            }, [key]);
+            return { data, loading };
         };
 
-        const THEME_KEY = 'darnote_theme';
-        const applyTheme = (isDark) => {
-            if(isDark) document.documentElement.classList.add('dark');
-            else document.documentElement.classList.remove('dark');
-            localStorage.setItem(THEME_KEY, isDark ? 'dark' : 'light');
-        };
+        const generateAIPlan = async (promptText, context, isInsomnia) => {
+            const proxyUrl = "https://gemini-proxy-513372702506.us-central1.run.app/proxy";
+            
+            const systemPrompt = `You are an empathetic, highly intelligent AI productivity coach for someone who struggles with procrastination and ADHD-like symptoms.
+            Context regarding user's last 48 hours momentum score (0-100): ${context.momentum}. Energy Level: ${context.energy}.
+            Current Time: ${context.currentTime}.
+            
+            CRITICAL RULES:
+            1. NEVER say "Based on your shadow profile" or "Based on your momentum". Use the context silently to adjust your tone.
+            2. If Momentum is high (>70), be enthusiastic but schedule sufficient breaks so they don't burn out.
+            3. If Momentum is low (<30) or Energy is "Burned Out", be extremely gentle. Validate their fatigue. Schedule tiny 15-minute blocks and long breaks. Focus only on 1 critical thing.
+            4. ${isInsomnia ? "It is past 11 PM. The user cannot sleep. Be soothing. DO NOT schedule heavy cognitive tasks now. Schedule light wind-down tasks for tonight, and push their heavy requests to TOMORROW afternoon, assuming they sleep until noon." : "Schedule tasks from now until 11:00 PM."}
+            5. Output STRICTLY VALID JSON. No markdown wrappers.
 
-        // --- SYSTEM DROPS (MOCK RESERVOIR FOR SOCIAL FEEL) ---
-        const SYSTEM_DROPS = [
-            { id: 'sd1', type: 'public', author: 'Study Memes', curriculum: 'Global', content: 'When you read the same paragraph 5 times and still don\'t know what it says...', imageUrl: 'https://images.unsplash.com/photo-1517842645767-c639042777db?auto=format&fit=crop&w=800&q=80', likes: 1204, createdAt: Date.now() - 10000000 },
-            { id: 'sd2', type: 'public', author: 'darNote Academy', curriculum: 'Productivity', content: 'Active Recall is scientifically proven to be 200% more effective than passive reading. Stop highlighting. Start drilling.', likes: 890, createdAt: Date.now() - 25000000 },
-            { id: 'sd3', type: 'public', author: 'Aesthetic Hub', curriculum: 'Vibes', content: 'Current study setup. ☕️🌧️ Getting ready for finals season.', imageUrl: 'https://images.unsplash.com/photo-1434030216411-0b793f4b4173?auto=format&fit=crop&w=800&q=80', likes: 3402, createdAt: Date.now() - 40000000 },
-            { id: 'sd4', type: 'public', author: 'Math Daily', curriculum: 'STEM', content: 'Did you know? Euler\'s Identity (e^(iπ) + 1 = 0) is considered the most beautiful equation in mathematics because it links 5 fundamental constants.', likes: 450, createdAt: Date.now() - 50000000 },
-            { id: 'sd5', type: 'public', author: 'Late Night Crew', curriculum: 'Global', content: 'The library at 2 AM hits different.', imageUrl: 'https://images.unsplash.com/photo-1522202176988-66273c2fd55f?auto=format&fit=crop&w=800&q=80', likes: 2100, createdAt: Date.now() - 70000000 },
-            { id: 'sd6', type: 'public', author: 'darNote System', curriculum: 'Lore', content: 'Feynman Technique: Explain a concept in simple terms. If you stumble, you\'ve found a gap in your knowledge. Go back to the source material.', likes: 130, createdAt: Date.now() - 85000000 },
-            { id: 'sd7', type: 'public', author: 'Med School Docs', curriculum: 'Medical', content: 'Spaced repetition saved my life during anatomy block. Trust the algorithm.', imageUrl: 'https://images.unsplash.com/photo-1558021212-51b6ecfa0db9?auto=format&fit=crop&w=800&q=80', likes: 980, createdAt: Date.now() - 95000000 },
-            { id: 'sd8', type: 'public', author: 'Code Tips', curriculum: 'Computer Science', content: 'If your code works, don\'t touch it. Just quietly back away and pray.', likes: 4500, createdAt: Date.now() - 110000000 }
-        ];
+            JSON SCHEMA:
+            {
+                "greeting": "Your empathetic, 2-sentence coaching message based on their input and hidden momentum.",
+                "plans": {
+                    "intense": [ { "id": "1", "title": "Task", "type": "heavy|light|break", "durationMins": 45, "actionUrl": "url_or_null" } ],
+                    "balanced": [ ... ],
+                    "gentle": [ ... ]
+                }
+            }
+            
+            If they mention Biology/Math/Error logs, set actionUrl to "el.html?subject=SubjectName". If writing/notes, set to "note.html".
+            `;
+
+            try {
+                const response = await fetch(proxyUrl, {
+                    method: 'POST', headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        contents: [{ parts: [{ text: `${systemPrompt}\n\nUser Input: ${promptText}\nTags: ${context.tags.join(', ')}` }] }]
+                    })
+                });
+                const data = await response.json();
+                let text = data.candidates?.[0]?.content?.parts?.[0]?.text;
+                if(!text) throw new Error("Empty AI response");
+                
+                // Clean markdown if present
+                text = text.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim();
+                return JSON.parse(text);
+            } catch (error) {
+                console.error("AI Gen Error:", error);
+                // Fallback safe JSON
+                return {
+                    greeting: "I couldn't quite connect to the mainframe, but here is a safe, balanced schedule to keep you moving.",
+                    plans: {
+                        intense: [{ id: "f1", title: "Focus Block", type: "heavy", durationMins: 45, actionUrl: null }],
+                        balanced: [{ id: "f2", title: "Gentle Start", type: "light", durationMins: 25, actionUrl: null }],
+                        gentle: [{ id: "f3", title: "Bare Minimum", type: "light", durationMins: 15, actionUrl: null }]
+                    }
+                };
+            }
+        };
 
         // --- COMPONENTS ---
-        
-        const ActivityRing = ({ progress, color, size = 56, strokeWidth = 5, label, sublabel }) => {
-            const radius = (size - strokeWidth) / 2;
-            const circumference = radius * 2 * Math.PI;
-            const offset = circumference - (progress / 100) * circumference;
-            return (
-                <div className="flex flex-col items-center justify-center relative" style={{width: size, height: size}}>
-                    <svg className="transform -rotate-90 drop-shadow-sm" width={size} height={size}>
-                        <circle stroke="currentColor" fill="transparent" strokeWidth={strokeWidth} r={radius} cx={size/2} cy={size/2} className="text-black/5 dark:text-white/10" />
-                        <circle stroke={color} fill="transparent" strokeWidth={strokeWidth} strokeLinecap="round" r={radius} cx={size/2} cy={size/2}
-                            style={{ strokeDasharray: circumference, strokeDashoffset: offset, transition: 'stroke-dashoffset 1.5s cubic-bezier(0.16, 1, 0.3, 1)' }} />
-                    </svg>
-                    <div className="absolute inset-0 flex flex-col items-center justify-center text-center">
-                        <span className="text-[11px] font-bold leading-none">{label}</span>
-                        {sublabel && <span className="text-[8px] text-zinc-500 font-medium uppercase tracking-wider mt-0.5">{sublabel}</span>}
-                    </div>
-                </div>
-            );
-        };
 
-        const InsightRings = ({ userLogs }) => {
-            const total = userLogs.length;
-            const mastered = userLogs.filter(l => l.mastered).length;
-            const masteryRate = total > 0 ? Math.round((mastered / total) * 100) : 0;
+        const OnboardingTutorial = ({ onComplete }) => {
+            const [page, setPage] = useState(0);
             
-            const topics = userLogs.map(l => l.topic).filter(Boolean);
-            const topicCounts = topics.reduce((acc, val) => { acc[val] = (acc[val] || 0) + 1; return acc; }, {});
-            const nemesis = Object.keys(topicCounts).sort((a,b) => topicCounts[b] - topicCounts[a])[0] || 'None';d
-            
-            const subjects = userLogs.map(l => l.subject).filter(Boolean);
-            const subjCounts = subjects.reduce((acc, val) => { acc[val] = (acc[val] || 0) + 1; return acc; }, {});
-            const mainSubj = Object.keys(subjCounts).sort((a,b) => subjCounts[b] - subjCounts[a])[0] || 'N/A';
-            const subjRate = total > 0 ? Math.round(((subjCounts[mainSubj] || 0) / total) * 100) : 0;
+            const slides = [
+                {
+                    icon: <Icons.Target className="w-16 h-16 text-brand drop-shadow-md" />,
+                    title: "Welcome to Command Center",
+                    desc: "Your distraction-free Bento Box. We designed this to work with your brain, not against it."
+                },
+                {
+                    icon: <Icons.Bot className="w-16 h-16 text-indigo-500 drop-shadow-md" />,
+                    title: "AI Autopilot Planner",
+                    desc: "Type what's on your plate. The AI reads your energy and builds a flexible, guilt-free timeline for the day."
+                },
+                {
+                    icon: <Icons.Timer className="w-16 h-16 text-orange-500 drop-shadow-md" />,
+                    title: "The Ghost Timer",
+                    desc: "Paralyzed? Click 'Just 5 Mins'. When it ends, it silently counts up as bonus time to keep your momentum going."
+                },
+                {
+                    icon: <Icons.Inbox className="w-16 h-16 text-green-500 drop-shadow-md" />,
+                    title: "Park It Inbox",
+                    desc: "Random distraction popping up? Dump it in 'Park It'. We'll save it for tomorrow so you stay focused now."
+                },
+                {
+                    icon: <Icons.Moon className="w-16 h-16 text-blue-400 drop-shadow-md" />,
+                    title: "Insomnia Protocol",
+                    desc: "Working past 11 PM? The app shifts to dark mode and prioritizes light tasks to protect your sleep schedule."
+                }
+            ];
 
-            return (
-                <div className="bg-white/50 dark:bg-zinc-900/50 backdrop-blur-md border border-light-border dark:border-white/5 rounded-[20px] p-5 my-3 relative overflow-hidden group img-shadow">
-                    <div className="absolute -top-10 -right-10 p-4 opacity-[0.03] dark:opacity-[0.02] pointer-events-none">
-                        <Icons.TrendingUp className="w-48 h-48" />
-                    </div>
-                    <div className="flex justify-between items-start mb-5 relative z-10">
-                        <div>
-                            <h4 className="font-bold text-zinc-900 dark:text-white flex items-center gap-2">
-                                <span className="text-[13px] tracking-tight">Your Weekly Insight</span>
-                            </h4>
-                            <p className="text-[13px] text-zinc-500 mt-0.5">Computed from {total} logged errors.</p>
-                        </div>
-                        <motion.button whileHover={{scale: 1.1}} whileTap={{scale: 0.9}} className="p-2.5 text-zinc-600 dark:text-zinc-300 bg-black/5 dark:bg-white/10 rounded-full transition-colors" title="Export as Story">
-                            <Icons.Share className="w-4 h-4" />
-                        </motion.button>
-                    </div>
-                    
-                    <div className="flex justify-between items-center relative z-10 px-2">
-                        <ActivityRing progress={masteryRate} color="#34C759" label={`${masteryRate}%`} sublabel="Mastery" />
-                        <ActivityRing progress={subjRate} color="#007AFF" label={`${subjRate}%`} sublabel={mainSubj.substring(0,6)} />
-                        <div className="text-center bg-black/5 dark:bg-white/5 rounded-2xl py-2 px-3">
-                            <div className="text-[9px] text-zinc-500 uppercase tracking-widest mb-1 font-bold">Nemesis</div>
-                            <div className="font-semibold text-xs text-[#FF3B30]">{nemesis.length > 10 ? nemesis.substring(0,10)+'...' : nemesis}</div>
-                        </div>
-                    </div>
-                </div>
-            );
-        };
-
-        const PostActionRow = ({ stats, isMastered, onMastered, onDrill, onShare }) => (
-            <div className="flex items-center gap-5 mt-3 text-zinc-500 dark:text-zinc-400">
-                <motion.button whileTap={{ scale: 0.8 }} onClick={onMastered} className="flex items-center gap-1.5 hover:text-[#FF2D55] transition-colors group">
-                    <div className="p-2 -m-2 rounded-full group-hover:bg-[#FF2D55]/10 transition-colors">
-                        {isMastered ? <Icons.HeartFilled className="w-[22px] h-[22px]" /> : <Icons.Heart className="w-[22px] h-[22px]" />}
-                    </div>
-                    {stats?.likes > 0 && <span className={`text-[13px] font-medium ${isMastered ? 'text-[#FF2D55]' : ''}`}>{stats.likes + (isMastered ? 1 : 0)}</span>}
-                </motion.button>
-                
-                <motion.button whileTap={{ scale: 0.8 }} onClick={onDrill} className="flex items-center gap-1.5 hover:text-brand transition-colors group">
-                    <div className="p-2 -m-2 rounded-full group-hover:bg-brand/10 transition-colors">
-                        <Icons.MessageCircle className="w-[22px] h-[22px]" />
-                    </div>
-                </motion.button>
-
-                <motion.button whileTap={{ scale: 0.8 }} onClick={onShare} className="flex items-center gap-1.5 hover:text-emerald-500 transition-colors group">
-                    <div className="p-2 -m-2 rounded-full group-hover:bg-emerald-500/10 transition-colors">
-                        <Icons.Repeat className="w-[22px] h-[22px]" />
-                    </div>
-                </motion.button>
-
-                <motion.button whileTap={{ scale: 0.8 }} className="flex items-center gap-1.5 hover:text-zinc-800 dark:hover:text-zinc-200 transition-colors group ml-auto">
-                    <div className="p-2 -m-2 rounded-full group-hover:bg-zinc-200 dark:group-hover:bg-white/10 transition-colors">
-                        <Icons.Share className="w-[22px] h-[22px]" />
-                    </div>
-                </motion.button>
-            </div>
-        );
-
-        const FeedPost = ({ post, isLast, onInteraction }) => {
-            const isPersonal = post.type === 'personal';
-            const isInsight = post.type === 'insight';
-            
-            const authorName = isPersonal ? (post.author || 'You') : isInsight ? 'darNote AI' : (post.author || 'System Lore');
-            const avatarSrc = isPersonal ? post.avatar : getBotAvatar(authorName);
-            const badgeColor = isPersonal ? 'text-brand bg-brand/10' : isInsight ? 'text-amber-500 bg-amber-500/10' : 'text-zinc-500 bg-black/5 dark:bg-white/10';
+            const next = () => { if (page < slides.length - 1) setPage(p => p + 1); else onComplete(); };
+            const prev = () => { if (page > 0) setPage(p => p - 1); };
 
             return (
-                <motion.div 
-                    initial={{ opacity: 0, y: 15 }}
-                    whileInView={{ opacity: 1, y: 0 }}
-                    viewport={{ once: true, margin: "-50px" }}
-                    transition={{ duration: 0.4, ease: [0.16, 1, 0.3, 1] }}
-                    className="flex gap-3.5 px-4 py-4 relative group"
-                >
-                    {/* Left Column: Avatar & Thread Line */}
-                    <div className="flex flex-col items-center">
-                        <motion.div whileHover={{ scale: 1.05 }} className="w-10 h-10 rounded-full bg-zinc-200 dark:bg-zinc-800 overflow-hidden flex-shrink-0 z-10 border border-black/5 dark:border-white/10 relative">
-                            {isPersonal && !avatarSrc ? (
-                                <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-brand to-brand-light text-white font-bold text-sm">{getInitials(authorName)}</div>
-                            ) : (
-                                <img src={avatarSrc} className="w-full h-full object-cover" alt="avatar" />
-                            )}
+                <motion.div initial={{opacity:0}} animate={{opacity:1}} exit={{opacity:0}} className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 dark:bg-black/80 backdrop-blur-md p-4">
+                    <motion.div initial={{scale:0.95, y:20}} animate={{scale:1, y:0}} exit={{scale:0.95, opacity:0}} className="glass-bento bg-appleLightSurface dark:bg-appleDarkSurface w-full max-w-md rounded-[2.5rem] overflow-hidden shadow-2xl relative flex flex-col h-[500px]">
+                        
+                        {/* Drag/Swipe Area */}
+                        <motion.div 
+                            drag="x" dragConstraints={{ left: 0, right: 0 }} dragElastic={0.2}
+                            onDragEnd={(e, { offset }) => { if (offset.x < -50) next(); else if (offset.x > 50) prev(); }}
+                            className="flex-1 flex flex-col items-center justify-center p-10 text-center cursor-grab active:cursor-grabbing"
+                            key={page} initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} transition={{ duration: 0.3 }}
+                        >
+                            <div className="w-32 h-32 rounded-full bg-appleLight dark:bg-black/20 flex items-center justify-center mb-8 shadow-inner">
+                                {slides[page].icon}
+                            </div>
+                            <h2 className="text-2xl font-bold tracking-tight mb-4 text-black dark:text-white">{slides[page].title}</h2>
+                            <p className="text-gray-600 dark:text-gray-300 leading-relaxed text-sm">{slides[page].desc}</p>
                         </motion.div>
-                        {!isLast && <div className="w-[2px] h-full bg-light-border dark:bg-[#27272a] mt-2 mb-[-16px] rounded-full"></div>}
-                    </div>
 
-                    {/* Right Column: Content */}
-                    <div className="flex-1 pb-1">
-                        <div className="flex justify-between items-center mb-0.5">
-                            <div className="flex items-center gap-2">
-                                <span className="font-semibold text-[15px] hover:underline cursor-pointer">{authorName}</span>
-                                {post.subject && <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${badgeColor}`}>{post.subject}</span>}
-                                {post.curriculum && !post.subject && <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${badgeColor}`}>{post.curriculum}</span>}
+                        {/* Bottom Controls */}
+                        <div className="p-8 pt-0 flex flex-col items-center gap-6">
+                            {/* Page Indicators */}
+                            <div className="flex gap-2">
+                                {slides.map((_, i) => (
+                                    <div key={i} className={`h-2 rounded-full transition-all duration-300 ${i === page ? 'w-6 bg-brand' : 'w-2 bg-gray-300 dark:bg-white/20'}`} />
+                                ))}
                             </div>
-                            <div className="flex items-center gap-2 text-zinc-500">
-                                <span className="text-[13px]">{timeAgo(post.createdAt)}</span>
-                                <button className="p-1 -mr-1 hover:text-zinc-900 dark:hover:text-white rounded-full"><Icons.MoreHorizontal className="w-5 h-5"/></button>
-                            </div>
+                            
+                            <button onClick={next} className="w-full bg-black text-white dark:bg-white dark:text-black py-4 rounded-2xl font-bold shadow-md hover:scale-[1.02] active:scale-95 transition-transform">
+                                {page === slides.length - 1 ? "Let's Flow" : "Continue"}
+                            </button>
                         </div>
-
-                        {/* Content Body */}
-                        <div className="text-[15px] leading-[1.45] mt-1 text-zinc-800 dark:text-zinc-200 break-words pr-2">
-                            {isInsight ? (
-                                <InsightRings userLogs={post.rawLogs} />
-                            ) : (
-                                <div>
-                                    {post.title && <h4 className="font-bold mb-1">{post.title}</h4>}
-                                    <p className="whitespace-pre-wrap">{post.content}</p>
-                                    
-                                    {post.formula && (
-                                        <div className="mt-3 p-3 bg-zinc-50 dark:bg-[#121212] rounded-xl font-mono text-[13px] border border-light-border dark:border-white/5 text-brand dark:text-brand-light overflow-x-auto">
-                                            {post.formula}
-                                        </div>
-                                    )}
-
-                                    {post.imageUrl && (
-                                        <div className="mt-3 relative rounded-[18px] overflow-hidden border border-black/5 dark:border-white/10 img-shadow">
-                                            <img src={post.imageUrl} className="w-full object-cover max-h-[400px] hover:scale-105 transition-transform duration-700" alt="post attachment" />
-                                        </div>
-                                    )}
-                                </div>
-                            )}
-                        </div>
-
-                        {/* Interaction Row */}
-                        {!isInsight && (
-                            <PostActionRow 
-                                stats={{likes: post.likes || 0}} 
-                                isMastered={post.mastered} 
-                                onMastered={() => onInteraction(post, 'master')} 
-                                onDrill={() => onInteraction(post, 'drill')} 
-                                onShare={() => onInteraction(post, 'share')}
-                            />
-                        )}
-                    </div>
+                    </motion.div>
                 </motion.div>
             );
         };
 
-        // --- SIDEBAR WIDGETS ---
-        const SidebarAccordion = ({ title, icon: Icon, defaultOpen = false, children }) => {
-            const [isOpen, setIsOpen] = useState(defaultOpen);
+        const FocusTimer = () => {
+            const [timeLeft, setTimeLeft] = useState(25 * 60);
+            const [isActive, setIsActive] = useState(false);
+            const [isGhost, setIsGhost] = useState(false); // Counts UP after reaching 0
+            const timerRef = useRef(null);
+
+            useEffect(() => {
+                if (isActive) {
+                    timerRef.current = setInterval(() => {
+                        setTimeLeft(prev => {
+                            if (prev > 0) return prev - 1;
+                            if (!isGhost) {
+                                // Transition to Ghost Mode
+                                new Audio('https://actions.google.com/sounds/v1/alarms/beep_short.ogg').play().catch(()=>{});
+                                setIsGhost(true);
+                                return 1; // start counting up
+                            }
+                            return prev + 1; // counting up
+                        });
+                    }, 1000);
+                } else { clearInterval(timerRef.current); }
+                return () => clearInterval(timerRef.current);
+            }, [isActive, isGhost]);
+
+            const toggle = () => setIsActive(!isActive);
+            const reset = (mins) => { setIsActive(false); setIsGhost(false); setTimeLeft(mins * 60); };
+
+            const mins = Math.floor(timeLeft / 60);
+            const secs = timeLeft % 60;
+            const timeStr = `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+
             return (
-                <div className="mb-4 bg-white/50 dark:bg-[#121212]/50 backdrop-blur-md rounded-2xl border border-light-border dark:border-white/5 overflow-hidden">
-                    <button onClick={() => setIsOpen(!isOpen)} className="w-full flex items-center justify-between p-3.5 hover:bg-black/5 dark:hover:bg-white/5 transition-colors">
-                        <div className="flex items-center gap-2.5 text-[14px] font-semibold text-zinc-900 dark:text-zinc-100">
-                            <Icon className="w-[18px] h-[18px] text-brand" /> {title}
+                <div className="glass-bento p-6 rounded-3xl flex flex-col items-center justify-center relative overflow-hidden group">
+                    {isGhost && <div className="absolute inset-0 bg-brand/5 animate-pulse-slow pointer-events-none"></div>}
+                    <div className="flex w-full justify-between items-center mb-4 relative z-10">
+                        <span className="text-xs font-bold text-gray-500 uppercase tracking-widest flex items-center gap-2"><Icons.Timer className="w-4 h-4"/> {isGhost ? 'Bonus Time' : 'Focus'}</span>
+                        <div className="flex gap-1">
+                            <button onClick={()=>reset(5)} className="px-2 py-1 rounded bg-black/5 dark:bg-white/5 hover:bg-black/10 dark:hover:bg-white/10 text-[10px] font-bold transition-colors">5m</button>
+                            <button onClick={()=>reset(25)} className="px-2 py-1 rounded bg-black/5 dark:bg-white/5 hover:bg-black/10 dark:hover:bg-white/10 text-[10px] font-bold transition-colors">25m</button>
                         </div>
-                        <Icons.ChevronDown className={`w-[18px] h-[18px] text-zinc-500 transition-transform duration-300 ${isOpen ? 'rotate-180' : ''}`} />
-                    </button>
-                    <AnimatePresence>
-                        {isOpen && (
-                            <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }} className="overflow-hidden">
-                                <div className="p-3.5 pt-0 border-t border-black/5 dark:border-white/5">
-                                    {children}
+                    </div>
+                    
+                    <div className={`text-5xl font-mono font-bold tracking-tighter mb-6 transition-colors ${isGhost ? 'text-brand' : ''}`}>{isGhost && '+'}{timeStr}</div>
+                    
+                    <div className="flex gap-4 w-full relative z-10">
+                        <button onClick={toggle} className={`flex-1 py-3 rounded-2xl flex items-center justify-center gap-2 font-bold shadow-sm transition-all active:scale-95 ${isActive ? 'bg-black/5 dark:bg-white/10 text-black dark:text-white' : 'bg-black text-white dark:bg-white dark:text-black'}`}>
+                            {isActive ? <><Icons.Pause className="w-5 h-5"/> Pause</> : <><Icons.Play className="w-5 h-5 ml-1"/> Start</>}
+                        </button>
+                        <button onClick={()=>reset(25)} className="p-3 rounded-2xl bg-black/5 dark:bg-white/5 hover:bg-black/10 dark:hover:bg-white/10 transition-all text-black dark:text-white"><Icons.RefreshCw className="w-5 h-5"/></button>
+                    </div>
+                </div>
+            );
+        };
+
+        const ParkItInbox = ({ user }) => {
+            const [items, setItems] = useState([]);
+            const [input, setInput] = useState('');
+
+            useEffect(() => {
+                if(!user) return;
+                const cached = localStorage.getItem(`darNote_parked_${user.uid}`);
+                if(cached) setItems(JSON.parse(cached));
+            }, [user]);
+
+            const handleAdd = (e) => {
+                if(e.key === 'Enter' && input.trim()) {
+                    const newItems = [{id: Date.now(), text: input.trim()}, ...items];
+                    setItems(newItems);
+                    if(user) localStorage.setItem(`darNote_parked_${user.uid}`, JSON.stringify(newItems));
+                    setInput('');
+                }
+            };
+
+            const remove = (id) => {
+                const newItems = items.filter(i => i.id !== id);
+                setItems(newItems);
+                if(user) localStorage.setItem(`darNote_parked_${user.uid}`, JSON.stringify(newItems));
+            };
+
+            return (
+                <div className="glass-bento p-5 rounded-3xl flex flex-col h-[280px]">
+                    <div className="flex items-center gap-2 mb-4 text-xs font-bold text-gray-500 uppercase tracking-widest"><Icons.Inbox className="w-4 h-4"/> Park It</div>
+                    <input value={input} onChange={e=>setInput(e.target.value)} onKeyDown={handleAdd} placeholder="Dump distracting thoughts..." className="w-full bg-black/5 dark:bg-white/5 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 ring-brand/50 transition-all mb-4"/>
+                    <div className="flex-1 overflow-y-auto hide-scroll space-y-2">
+                        {items.length === 0 ? <div className="h-full flex flex-col items-center justify-center text-gray-400 text-xs text-center"><Icons.Coffee className="w-6 h-6 mb-2 opacity-50"/> Clear mind.</div> : 
+                         items.map(i => (
+                             <motion.div initial={{opacity:0, y:10}} animate={{opacity:1, y:0}} key={i.id} className="flex items-center justify-between p-3 rounded-xl bg-black/5 dark:bg-white/5 group text-sm">
+                                 <span className="truncate pr-2">{i.text}</span>
+                                 <button onClick={()=>remove(i.id)} className="opacity-0 group-hover:opacity-100 text-red-500 hover:bg-red-500/10 p-1.5 rounded-lg transition-all"><Icons.Trash2 className="w-4 h-4"/></button>
+                             </motion.div>
+                         ))
+                        }
+                    </div>
+                </div>
+            );
+        };
+
+        const HorizontalLibrary = ({ user }) => {
+            const fetchLibrary = async () => {
+                if(!user) return [];
+                const db = window.firebase.db;
+                const logsQ = query(collection(db, 'artifacts', "darnote-app", 'users', user.uid, 'error_logs'), orderBy('lastModified', 'desc'), limit(5));
+                const notesQ = query(collection(db, 'artifacts', "darnote-app", 'users', user.uid, 'notes'), orderBy('updatedAt', 'desc'), limit(5));
+                
+                const [lSnap, nSnap] = await Promise.all([getDocs(logsQ), getDocs(notesQ)]);
+                const items = [];
+                lSnap.forEach(d => items.push({ id: d.id, ...d.data(), _type: 'log', _date: d.data().lastModified }));
+                nSnap.forEach(d => items.push({ id: d.id, ...d.data(), _type: 'note', _date: d.data().updatedAt }));
+                
+                return items.sort((a,b) => new Date(b._date) - new Date(a._date)).slice(0, 8);
+            };
+
+            const { data: items, loading } = useSessionCache(user ? `lib_${user.uid}` : null, fetchLibrary, 5);
+
+            if(loading || !items) return <div className="h-32 flex items-center justify-center animate-pulse"><div className="w-8 h-8 rounded-full border-2 border-brand border-t-transparent animate-spin"/></div>;
+            if(items.length === 0) return null;
+
+            return (
+                <div className="w-full mt-6">
+                    <h3 className="text-sm font-bold mb-4 px-2 flex items-center gap-2"><Icons.Activity className="w-4 h-4 text-gray-400"/> Jump Back In</h3>
+                    <div className="flex gap-4 overflow-x-auto hide-scroll pb-4 px-2 snap-x">
+                        {items.map(item => (
+                            <a key={item.id} href={`${item._type === 'log' ? 'el' : 'note'}.html?${item._type}=${item.id}`} className="snap-start flex-shrink-0 w-[240px] glass-bento p-4 rounded-2xl hover:scale-[1.02] active:scale-95 transition-transform flex flex-col justify-between h-[110px] group">
+                                <div className="flex justify-between items-start mb-2">
+                                    <div className={`text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded ${item._type==='log' ? 'bg-red-500/10 text-red-500 dark:text-red-400' : 'bg-blue-500/10 text-blue-600 dark:text-blue-400'}`}>{item._type==='log' ? 'Error Log' : 'Note'}</div>
+                                    {item._type==='log' ? <Icons.Bug className="w-4 h-4 text-gray-400 group-hover:text-red-500 transition-colors"/> : <Icons.FileText className="w-4 h-4 text-gray-400 group-hover:text-blue-500 transition-colors"/>}
+                                </div>
+                                <div className="font-bold text-sm truncate">{item.title || 'Untitled'}</div>
+                                <div className="text-[10px] text-gray-500 truncate">{item.subject || 'General'}</div>
+                            </a>
+                        ))}
+                    </div>
+                </div>
+            );
+        };
+
+
+        const AIPlanner = ({ user, momentum }) => {
+            const [state, setState] = useState('input'); // input | loading | select | timeline
+            const [battery, setBattery] = useState(null); // high, low, burned
+            const [tags, setTags] = useState([]);
+            const [inputText, setInputText] = useState('');
+            const [generatedPlans, setGeneratedPlans] = useState(null);
+            const [activePlanKey, setActivePlanKey] = useState(null);
+            const [activePlan, setActivePlan] = useState([]);
+            const [greeting, setGreeting] = useState('');
+            
+            const isInsomnia = new Date().getHours() >= 23 || new Date().getHours() < 6;
+
+            useEffect(() => {
+                // Restore timeline from Firebase if exists today
+                const loadTodayPlan = async () => {
+                    if(!user) return;
+                    const todayStr = new Date().toISOString().split('T')[0];
+                    const docRef = window.firebase.doc(window.firebase.db, 'artifacts', "darnote-app", 'users', user.uid, 'daily_plans', todayStr);
+                    const snap = await window.firebase.getDoc(docRef);
+                    if (snap.exists()) {
+                        setActivePlan(snap.data().blocks);
+                        setGreeting("Welcome back to your timeline. Stay focused.");
+                        setState('timeline');
+                    }
+                };
+                loadTodayPlan();
+            }, [user]);
+
+            const handleGenerate = async () => {
+                if(!battery) { alert("Please do a quick battery check first!"); return; }
+                setState('loading');
+                const ctx = { momentum, energy: battery, tags, currentTime: new Date().toLocaleTimeString() };
+                const res = await generateAIPlan(inputText, ctx, isInsomnia);
+                setGreeting(res.greeting);
+                setGeneratedPlans(res.plans);
+                
+                if (battery === 'burned') { setActivePlanKey('gentle'); selectPlan('gentle', res.plans.gentle); }
+                else setState('select');
+            };
+
+            const selectPlan = async (key, blocks) => {
+                setActivePlanKey(key);
+                // Assign actual start/end times based on current time
+                let currDate = new Date();
+                const hydratedBlocks = blocks.map(b => {
+                    const sTime = currDate.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
+                    currDate = new Date(currDate.getTime() + b.durationMins * 60000);
+                    const eTime = currDate.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
+                    return { ...b, sTime, eTime };
+                });
+                
+                setActivePlan(hydratedBlocks);
+                setState('timeline');
+
+                if(user) {
+                    const todayStr = new Date().toISOString().split('T')[0];
+                    await window.firebase.setDoc(window.firebase.doc(window.firebase.db, 'artifacts', "darnote-app", 'users', user.uid, 'daily_plans', todayStr), { blocks: hydratedBlocks });
+                }
+            };
+
+            const handleRecalibrate = () => {
+                setState('input');
+                setInputText("I got off track. Need a fresh schedule for the rest of the night.");
+                setBattery('low');
+            };
+
+            const toggleTag = (tag) => setTags(prev => prev.includes(tag) ? prev.filter(t=>t!==tag) : [...prev, tag]);
+
+            return (
+                <div className="w-full h-full flex flex-col">
+                    <AnimatePresence mode="wait">
+                        {state === 'input' && (
+                            <motion.div key="input" initial={{opacity:0, y:20}} animate={{opacity:1, y:0}} exit={{opacity:0, y:-20}} className="flex-1 flex flex-col justify-center max-w-2xl mx-auto w-full px-4 py-8">
+                                <div className="text-center mb-8">
+                                    <div className="w-16 h-16 bg-brand/10 text-brand rounded-full flex items-center justify-center mx-auto mb-6 shadow-inner"><Icons.Bot className="w-8 h-8"/></div>
+                                    <h2 className="text-3xl font-bold mb-2 tracking-tight">{isInsomnia ? "Can't sleep? Let's protect tomorrow." : "What's on your plate?"}</h2>
+                                    <p className="text-gray-500 text-sm">Tell me what you need to do, and I'll build a frictionless schedule.</p>
+                                </div>
+                                
+                                <div className="glass-bento p-6 rounded-3xl space-y-6">
+                                    <div>
+                                        <div className="text-xs font-bold text-gray-500 uppercase tracking-widest mb-3">1. Battery Check</div>
+                                        <div className="flex gap-3">
+                                            {[{id:'high', e:'🔋', l:'High'}, {id:'low', e:'🪫', l:'Low'}, {id:'burned', e:'🫠', l:'Burned Out'}].map(b => (
+                                                <button key={b.id} onClick={()=>setBattery(b.id)} className={`flex-1 py-3 rounded-2xl flex flex-col items-center gap-1 transition-all border ${battery===b.id ? 'bg-brand/10 border-brand/50 text-brand font-bold' : 'bg-black/5 dark:bg-white/5 border-transparent text-gray-500 hover:bg-black/10 dark:hover:bg-white/10'}`}>
+                                                    <span className="text-2xl">{b.e}</span><span className="text-[10px] uppercase tracking-wider">{b.l}</span>
+                                                </button>
+                                            ))}
+                                        </div>
+                                    </div>
+
+                                    <div>
+                                        <div className="text-xs font-bold text-gray-500 uppercase tracking-widest mb-3 flex justify-between">
+                                            <span>2. Brain Dump</span>
+                                            <span className="opacity-50">Optional Tags</span>
+                                        </div>
+                                        <textarea value={inputText} onChange={e=>setInputText(e.target.value)} placeholder="e.g. Read history chapter, do 5 math errors..." className="w-full bg-black/5 dark:bg-white/5 rounded-2xl p-4 text-sm focus:outline-none focus:ring-2 ring-brand/50 resize-none h-24 transition-all mb-3"/>
+                                        <div className="flex flex-wrap gap-2">
+                                            {['🔥 Critical', '🧊 Chill', '🧠 Brain Heavy', '🧹 Mindless', '⏱️ Quick', '⏳ Long'].map(t => (
+                                                <button key={t} onClick={()=>toggleTag(t)} className={`px-3 py-1.5 rounded-full text-xs font-medium transition-colors border ${tags.includes(t) ? 'bg-brand text-white border-brand' : 'bg-transparent border-gray-300 dark:border-white/20 text-gray-600 dark:text-gray-300 hover:bg-black/5 dark:hover:bg-white/5'}`}>{t}</button>
+                                            ))}
+                                        </div>
+                                    </div>
+
+                                    <button onClick={handleGenerate} className="w-full py-4 bg-black text-white dark:bg-white dark:text-black rounded-2xl font-bold text-sm shadow-md hover:scale-[1.02] active:scale-95 transition-transform flex items-center justify-center gap-2"><Icons.Zap className="w-4 h-4"/> Generate Autopilot</button>
+                                </div>
+                            </motion.div>
+                        )}
+
+                        {state === 'loading' && (
+                            <motion.div key="loading" initial={{opacity:0}} animate={{opacity:1}} exit={{opacity:0}} className="flex-1 flex flex-col items-center justify-center">
+                                <div className="w-16 h-16 border-4 border-brand/20 border-t-brand rounded-full animate-spin mb-6"></div>
+                                <div className="text-sm font-bold text-gray-500 animate-pulse">Calculating optimal cognitive load...</div>
+                            </motion.div>
+                        )}
+
+                        {state === 'select' && generatedPlans && (
+                            <motion.div key="select" initial={{opacity:0, scale:0.95}} animate={{opacity:1, scale:1}} exit={{opacity:0, scale:0.95}} className="flex-1 flex flex-col justify-center max-w-4xl mx-auto w-full px-4 py-8">
+                                <div className="text-center mb-8 max-w-lg mx-auto">
+                                    <h2 className="text-2xl font-bold mb-4">{greeting}</h2>
+                                    <p className="text-gray-500 text-sm">Choose your pacing for this session.</p>
+                                </div>
+                                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                                    {[
+                                        {key: 'intense', title: 'Intense', emoji: '🔥', desc: 'Tight blocks. For high momentum.'},
+                                        {key: 'balanced', title: 'Balanced', emoji: '⚖️', desc: 'Standard Pomodoro pacing.'},
+                                        {key: 'gentle', title: 'Gentle', emoji: '☕', desc: 'Long breaks. Low energy mode.'}
+                                    ].map(opt => (
+                                        <button key={opt.key} onClick={()=>selectPlan(opt.key, generatedPlans[opt.key])} className="glass-bento p-6 rounded-3xl text-left hover:scale-[1.02] transition-transform group flex flex-col h-full border-2 border-transparent hover:border-brand/50">
+                                            <div className="text-4xl mb-4 group-hover:scale-110 transition-transform origin-left">{opt.emoji}</div>
+                                            <h3 className="font-bold text-lg mb-2">{opt.title}</h3>
+                                            <p className="text-sm text-gray-500 mb-6 flex-1">{opt.desc}</p>
+                                            <div className="text-xs font-bold text-brand uppercase tracking-wider flex items-center gap-1 group-hover:gap-2 transition-all">Select Plan <Icons.ArrowRight className="w-3 h-3"/></div>
+                                        </button>
+                                    ))}
+                                </div>
+                            </motion.div>
+                        )}
+
+                        {state === 'timeline' && (
+                            <motion.div key="timeline" initial={{opacity:0, y:20}} animate={{opacity:1, y:0}} className="flex-1 flex flex-col max-w-2xl mx-auto w-full pt-8 pb-32 px-4 relative">
+                                <div className="bg-brand/10 text-brand px-6 py-4 rounded-3xl mb-8 font-medium text-sm leading-relaxed border border-brand/20 shadow-sm">{greeting}</div>
+                                
+                                <div className="relative pl-6 border-l-2 border-appleLightBorder dark:border-white/10 space-y-8 ml-2">
+                                    {/* Current Time Indicator (Visual Simulation) */}
+                                    <div className="absolute left-[-5px] top-1/4 w-2 h-2 rounded-full bg-brand shadow-[0_0_10px_rgba(79,70,229,0.8)] z-10"></div>
+
+                                    {activePlan.map((block, i) => (
+                                        <motion.div layoutId={block.id} key={block.id} className="relative group">
+                                            <div className="absolute left-[-33px] top-4 w-4 h-4 rounded-full bg-appleLight dark:bg-appleDark border-2 border-appleLightBorder dark:border-white/20 group-hover:border-brand transition-colors z-0"></div>
+                                            <div className={`glass-bento p-5 rounded-3xl ${block.type==='break' ? 'bg-black/5 dark:bg-white/5 border-dashed border-gray-300 dark:border-white/20' : 'hover:shadow-md'}`}>
+                                                <div className="flex justify-between items-start mb-3">
+                                                    <div className="text-xs font-mono font-bold text-gray-400">{block.sTime} - {block.eTime}</div>
+                                                    <div className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded bg-black/5 dark:bg-white/10">{block.durationMins}m</div>
+                                                </div>
+                                                <div className={`font-bold text-lg mb-4 ${block.type==='break' ? 'text-gray-500' : ''}`}>{block.title}</div>
+                                                
+                                                {block.actionUrl && block.type !== 'break' && (
+                                                    <div className="flex gap-2">
+                                                        <a href={block.actionUrl} className="flex-1 text-center py-2.5 bg-brand text-white rounded-xl text-xs font-bold shadow-sm hover:bg-brandDarkSoft transition-colors">Start Session</a>
+                                                        <button onClick={()=>{ /* Ghost Timer trigger logic */ }} className="px-4 py-2.5 bg-black/5 dark:bg-white/10 rounded-xl text-xs font-bold hover:bg-black/10 dark:hover:bg-white/20 transition-colors">Just 5 Mins</button>
+                                                    </div>
+                                                )}
+                                            </div>
+                                        </motion.div>
+                                    ))}
+                                </div>
+
+                                <div className="mt-12 text-center">
+                                    <p className="text-[10px] text-gray-400 uppercase tracking-widest font-bold mb-6">Adjust as you need — This is just a reference</p>
+                                    <button onClick={handleRecalibrate} className="px-6 py-3 rounded-full bg-red-50 dark:bg-red-900/10 text-red-600 dark:text-red-400 text-sm font-bold hover:bg-red-100 dark:hover:bg-red-900/20 transition-colors flex items-center gap-2 mx-auto"><Icons.RefreshCw className="w-4 h-4"/> Recalibrate Schedule</button>
                                 </div>
                             </motion.div>
                         )}
@@ -347,226 +592,129 @@
             );
         };
 
-        // --- MAIN APP ---
+
         const App = () => {
-            const [fb, setFb] = useState(null);
             const [user, setUser] = useState(null);
-            const [profile, setProfile] = useState(null); 
-            const [loadingState, setLoadingState] = useState('init'); 
-            const [isDark, setIsDark] = useState(localStorage.getItem(THEME_KEY) !== 'light');
-            
-            const [feedItems, setFeedItems] = useState([]);
-            
+            const [theme, setTheme] = useState('dark');
+            const [momentum, setMomentum] = useState(50);
+            const [isAuthLoading, setIsAuthLoading] = useState(true);
+            const [showOnboarding, setShowOnboarding] = useState(false);
+
+            const isInsomnia = new Date().getHours() >= 23 || new Date().getHours() < 6;
+
             useEffect(() => {
-                const handleFb = () => setFb(window.firebaseEnv);
-                if (window.firebaseEnv) handleFb();
-                else window.addEventListener('firebaseReady', handleFb);
-                return () => window.removeEventListener('firebaseReady', handleFb);
+                const savedTheme = localStorage.getItem('darnote-theme') || 'dark';
+                setTheme(savedTheme);
+                if (isInsomnia) document.documentElement.classList.add('insomnia-mode');
+                
+                // Check if user has seen onboarding
+                if (!localStorage.getItem('darnote_onboarded_v1')) {
+                    setShowOnboarding(true);
+                }
             }, []);
 
             useEffect(() => {
-                if (!fb) return;
-                const unsub = fb.onAuthStateChanged(fb.auth, async (u) => {
-                    if (u) {
-                        setUser(u);
-                        const profSnap = await fb.getDoc(fb.doc(fb.db, 'artifacts', fb.appId, 'users', u.uid, 'settings', 'profile'));
-                        if (profSnap.exists() && profSnap.data().role) {
-                            setProfile(profSnap.data());
-                            setLoadingState('ready');
-                        } else setLoadingState('onboarding');
-                    } else {
-                        setUser(null);
-                        setProfile(null);
-                        setLoadingState('ready'); 
-                    }
-                });
-                return () => unsub();
-            }, [fb]);
+                if(theme === 'dark') document.documentElement.classList.add('dark');
+                else document.documentElement.classList.remove('dark');
+                localStorage.setItem('darnote-theme', theme);
+            }, [theme]);
 
             useEffect(() => {
-                if (!fb || loadingState !== 'ready') return;
-
-                const loadFeedData = async () => {
-                    let pLogs = [];
-                    let pDrops = [...SYSTEM_DROPS]; // Start with vibrant system mock data to guarantee a populated feed
-                    
+                const u = window.firebase.onAuthStateChanged(window.firebase.auth, async (user) => {
                     if (user) {
-                        try {
-                            const logsSnap = await fb.getDocs(fb.collection(fb.db, 'artifacts', fb.appId, 'users', user.uid, 'error_logs'));
-                            logsSnap.forEach(doc => pLogs.push({id: doc.id, type: 'personal', ...doc.data()}));
-                            pLogs.sort((a,b) => new Date(b.createdAt || 0) - new Date(a.createdAt || 0));
-                        } catch(e) { console.error(e); }
-                    }
+                        setUser(user);
+                        // Calculate Momentum (Mock logic for now, would pull from 'dashboard_todos' and 'error_logs')
+                        const mScore = Math.floor(Math.random() * 60) + 40; // Simulating 40-100 score
+                        setMomentum(mScore);
+                    } else { setUser(null); }
+                    setIsAuthLoading(false);
+                });
+                return () => u();
+            }, []);
 
-                    // Shuffle drops slightly for variety
-                    pDrops = pDrops.sort(() => Math.random() - 0.5);
+            if (isAuthLoading) return <div className="min-h-screen flex items-center justify-center bg-appleLight dark:bg-appleDark"><div className="w-8 h-8 border-2 border-brand border-t-transparent rounded-full animate-spin"></div></div>;
 
-                    // INTERLEAVE ALGORITHM (Ratio ~ 60% Public, 30% Personal, 10% Insight)
-                    const finalFeed = [];
-                    let pIdx = 0, pubIdx = 0;
-                    
-                    // We will build a feed of exactly 50 items if possible
-                    for(let i=0; i<50; i++) {
-                        // Inject Insight every 10 items (if user has logs)
-                        if (i > 0 && i % 10 === 0 && pLogs.length > 0) {
-                            finalFeed.push({ id: `insight_${i}`, type: 'insight', rawLogs: pLogs });
-                        } 
-                        // 30% chance for Personal Log
-                        else if (i % 3 === 0 && pIdx < pLogs.length) {
-                            finalFeed.push(pLogs[pIdx++]);
-                        } 
-                        // Default to Public Drop
-                        else if (pubIdx < pDrops.length) {
-                            finalFeed.push(pDrops[pubIdx++]);
-                            // If we run out of public drops, loop them for infinite feel
-                            if(pubIdx === pDrops.length) pubIdx = 0;
-                        } 
-                        // Fallback to personal if no public
-                        else if (pIdx < pLogs.length) {
-                            finalFeed.push(pLogs[pIdx++]);
-                        } else break;
-                    }
-
-                    // Welcome Prompt if completely empty
-                    if (finalFeed.length === 0) {
-                        finalFeed.push({
-                            id: 'welcome', type: 'public', author: 'System', 
-                            content: "Welcome to darNote Hub! Click the '+' button below to log your first academic mistake.", createdAt: Date.now()
-                        });
-                    }
-
-                    setFeedItems(finalFeed);
-                };
-
-                loadFeedData();
-            }, [fb, user, profile, loadingState]);
-
-            const handleInteraction = (post, action) => {
-                if(!user && action !== 'share') return alert("Please sign in to interact.");
-                if(action === 'master' && post.type === 'personal') {
-                    setFeedItems(prev => prev.map(p => p.id === post.id ? {...p, mastered: !p.mastered} : p));
-                    fb.updateDoc(fb.doc(fb.db, 'artifacts', fb.appId, 'users', user.uid, 'error_logs', post.id), { mastered: !post.mastered });
-                } else if(action === 'drill' && post.type === 'personal') {
-                    window.location.href = `el.html?log=${post.id}`;
-                } else if(action === 'master' && post.type === 'public') {
-                     // Optimistic fake like for public mock drops
-                    setFeedItems(prev => prev.map(p => p.id === post.id ? {...p, mastered: !p.mastered} : p));
-                }
-            };
-
-            const toggleTheme = () => { const n = !isDark; setIsDark(n); applyTheme(n); };
-            useEffect(() => { applyTheme(isDark); }, []);
-
-            // --- RENDER ---
-            if (!fb || loadingState === 'init') return (
-                <div className="h-screen w-full flex items-center justify-center bg-light-bg dark:bg-onyx">
-                    <div className="w-8 h-8 border-[3px] border-zinc-300 dark:border-zinc-800 border-t-brand rounded-full animate-spin"></div>
-                </div>
-            );
-
-            if (loadingState === 'onboarding') return (
-                <div className="h-screen w-full flex items-center justify-center bg-black text-white p-6">
-                    <motion.div initial={{scale:0.9, opacity:0}} animate={{scale:1, opacity:1}} className="max-w-sm w-full">
-                        <h2 className="text-3xl font-bold mb-2 tracking-tight">Welcome to darNote</h2>
-                        <p className="text-zinc-400 mb-8 text-[15px]">Personalize your experience. What's your current stage?</p>
-                        <div className="space-y-3">
-                            {['high_school', 'university', 'professional'].map(r => (
-                                <motion.button whileTap={{scale:0.96}} key={r} onClick={async () => {
-                                    const data = { role: r, curriculum: '_all', onboardedAt: Date.now() };
-                                    await fb.setDoc(fb.doc(fb.db, 'artifacts', fb.appId, 'users', user.uid, 'settings', 'profile'), data, {merge:true});
-                                    setProfile(data); setLoadingState('ready');
-                                }} className="w-full p-4 rounded-2xl bg-zinc-900 border border-zinc-800 hover:border-zinc-600 transition-colors text-left font-semibold capitalize flex justify-between items-center">
-                                    {r.replace('_', ' ')} <Icons.ChevronDown className="w-5 h-5 -rotate-90 text-zinc-500"/>
-                                </motion.button>
-                            ))}
-                        </div>
-                    </motion.div>
-                </div>
-            );
+            const greeting = isInsomnia ? "Late night?" : (new Date().getHours() < 12 ? "Good morning" : (new Date().getHours() < 17 ? "Good afternoon" : "Good evening"));
 
             return (
-                <div className="flex flex-col h-screen w-full overflow-hidden">
-                    {/* iOS-Style Glass Header */}
-                    <header className="h-[60px] flex items-center justify-between px-5 border-b border-black/5 dark:border-white/5 glass-nav z-40 relative flex-shrink-0">
-                        <div className="font-bold text-[22px] tracking-tight select-none flex items-center gap-2">
-                            dar<span className="text-brand">Note</span>
-                            {profile && <span className="hidden md:inline-flex px-2 py-0.5 rounded-md bg-black/5 dark:bg-white/10 text-[11px] uppercase tracking-wider font-bold text-zinc-500 ml-2">{profile.role.replace('_',' ')}</span>}
+                <div className="min-h-screen flex flex-col max-w-[1800px] mx-auto w-full bg-appleLight dark:bg-appleDark selection:bg-brand/30">
+                    
+                    <AnimatePresence>
+                        {showOnboarding && (
+                            <OnboardingTutorial onComplete={() => {
+                                localStorage.setItem('darnote_onboarded_v1', 'true');
+                                setShowOnboarding(false);
+                            }} />
+                        )}
+                    </AnimatePresence>
+
+                    {!user ? (
+                        <div className="flex-1 flex flex-col items-center justify-center p-4 relative overflow-hidden">
+                            {/* Floating controls for Login Screen */}
+                            <div className="absolute top-6 right-6 flex items-center gap-2 z-50">
+                                <button onClick={()=>setShowOnboarding(true)} className="p-2.5 rounded-full bg-black/5 dark:bg-white/10 hover:bg-black/10 dark:hover:bg-white/20 text-brand transition-colors" title="How to use">
+                                    <Icons.HelpCircle className="w-5 h-5"/>
+                                </button>
+                                <button onClick={()=>setTheme(theme==='dark'?'light':'dark')} className="p-2.5 rounded-full bg-black/5 dark:bg-white/10 hover:bg-black/10 dark:hover:bg-white/20 text-gray-500 transition-colors">
+                                    {theme==='dark' ? <Icons.Sun className="w-5 h-5"/> : <Icons.Moon className="w-5 h-5"/>}
+                                </button>
+                            </div>
+
+                            <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-brand/20 via-transparent to-transparent pointer-events-none"></div>
+                            <div className="glass-bento p-10 rounded-[40px] max-w-sm w-full text-center relative z-10 shadow-2xl">
+                                <img src="https://raw.githubusercontent.com/darren6251/darnote/refs/heads/main/darNote%20logo.png" className="w-16 h-16 mx-auto mb-6 rounded-2xl shadow-lg"/>
+                                <h1 className="text-3xl font-bold tracking-tight mb-2 text-black dark:text-white">darNote</h1>
+                                <p className="text-sm text-gray-500 dark:text-gray-400 mb-8 font-medium">The Command Center</p>
+                                <button onClick={()=>window.firebase.signInWithPopup(window.firebase.auth, new window.firebase.GoogleAuthProvider())} className="w-full bg-black text-white dark:bg-white dark:text-black py-4 rounded-2xl font-bold shadow-md hover:scale-[1.02] active:scale-95 transition-transform flex items-center justify-center gap-2 mb-3"><Icons.Google className="w-5 h-5"/> Continue with Google</button>
+                                <button onClick={()=>window.firebase.signInAnonymously(window.firebase.auth)} className="w-full bg-appleLightBorder/50 dark:bg-white/5 text-black dark:text-white py-4 rounded-2xl font-bold hover:bg-appleLightBorder dark:hover:bg-white/10 transition-colors">Guest Mode</button>
+                            </div>
                         </div>
-                        <div className="flex items-center gap-4">
-                            <motion.button whileTap={{scale:0.9}} onClick={toggleTheme} className="text-zinc-500 hover:text-zinc-900 dark:hover:text-white transition-colors">
-                                {isDark ? <Icons.Sun className="w-[22px] h-[22px]"/> : <Icons.Moon className="w-[22px] h-[22px]"/>}
-                            </motion.button>
-                            {user ? (
-                                <motion.div whileTap={{scale:0.9}} onClick={()=>fb.signOut(fb.auth)} className="w-8 h-8 rounded-full overflow-hidden border border-black/10 dark:border-white/10 cursor-pointer">
-                                    <img src={user.photoURL} alt="User" />
-                                </motion.div>
-                            ) : (
-                                <motion.button whileTap={{scale:0.95}} onClick={()=>fb.signInWithPopup(fb.auth, fb.provider)} className="px-4 py-1.5 bg-brand text-white rounded-full text-[14px] font-bold shadow-md hover:bg-[#0062CC] transition-colors">
-                                    Sign In
-                                </motion.button>
-                            )}
+                    ) : (
+                        <>
+                            {/* Top Bar - Flow State */}
+                            <header className="h-20 px-6 lg:px-10 flex justify-between items-center shrink-0 z-40 bg-transparent">
+                                <div className="flex items-center gap-4">
+                            <a href="el.html" className="px-4 py-2 rounded-full bg-red-50 dark:bg-red-900/10 text-red-600 dark:text-red-400 text-xs font-bold flex items-center gap-2 hover:bg-red-100 dark:hover:bg-red-900/20 transition-colors"><Icons.Bug className="w-4 h-4"/> Quick Log</a>
+                            <a href="note.html" className="px-4 py-2 rounded-full bg-blue-50 dark:bg-blue-900/10 text-blue-600 dark:text-blue-400 text-xs font-bold flex items-center gap-2 hover:bg-blue-100 dark:hover:bg-blue-900/20 transition-colors"><Icons.FileText className="w-4 h-4"/> New Note</a>
+                        </div>
+
+                        <div className="flex items-center gap-2">
+                            <button onClick={()=>setShowOnboarding(true)} className="p-2.5 rounded-full hover:bg-black/5 dark:hover:bg-white/10 text-brand transition-colors" title="How to use">
+                                <Icons.HelpCircle className="w-5 h-5"/>
+                            </button>
+                            <button onClick={()=>setTheme(theme==='dark'?'light':'dark')} className="p-2.5 rounded-full hover:bg-black/5 dark:hover:bg-white/10 text-gray-500 transition-colors">
+                                {theme==='dark' ? <Icons.Sun className="w-5 h-5"/> : <Icons.Moon className="w-5 h-5"/>}
+                            </button>
+                            {user.photoURL ? <img src={user.photoURL} className="w-9 h-9 rounded-full ml-2 border border-black/10 dark:border-white/10"/> : <div className="w-9 h-9 rounded-full bg-brand text-white flex items-center justify-center font-bold ml-2 text-sm">{user.displayName?.charAt(0) || 'U'}</div>}
+                            <button onClick={()=>window.firebase.signOut(window.firebase.auth)} className="p-2.5 rounded-full hover:bg-red-50 dark:hover:bg-red-900/10 text-gray-500 hover:text-red-500 transition-colors"><Icons.MoreVertical className="w-5 h-5"/></button>
                         </div>
                     </header>
 
-                    {/* Main Layout */}
-                    <div className="flex-1 flex overflow-hidden max-w-6xl mx-auto w-full">
+                    {/* Main Content Layout */}
+                    <main className="flex-1 flex flex-col lg:flex-row overflow-hidden pb-6">
                         
-                        {/* LEFT: THE FEED (Threads Style) */}
-                        <main className="flex-1 overflow-y-auto feed-scroll relative pb-24 md:pb-8">
-                            <div className="max-w-[600px] mx-auto w-full pt-2">
-                                {feedItems.length === 0 ? (
-                                    <div className="flex justify-center mt-20"><div className="w-6 h-6 border-[3px] border-zinc-300 dark:border-zinc-800 border-t-brand rounded-full animate-spin"></div></div>
-                                ) : (
-                                    feedItems.map((item, idx) => (
-                                        <FeedPost key={item.id} post={item} isLast={idx === feedItems.length - 1} onInteraction={handleInteraction} />
-                                    ))
-                                )}
-                            </div>
-                        </main>
-
-                        {/* RIGHT: DESKTOP SIDEBAR */}
-                        <aside className="hidden lg:flex flex-col w-[350px] border-l border-black/5 dark:border-white/5 p-5 overflow-y-auto feed-scroll">
-                            <div className="grid grid-cols-2 gap-3 mb-6">
-                                <motion.button whileHover={{scale:1.02}} whileTap={{scale:0.95}} onClick={()=>window.location.href='el.html'} className="p-4 bg-brand/10 text-brand rounded-[20px] flex flex-col items-center justify-center gap-2 text-[13px] font-bold">
-                                    <Icons.Activity className="w-6 h-6"/> Error Log
-                                </motion.button>
-                                <motion.button whileHover={{scale:1.02}} whileTap={{scale:0.95}} onClick={()=>window.location.href='note.html'} className="p-4 bg-zinc-100 dark:bg-[#121212] text-zinc-600 dark:text-zinc-300 rounded-[20px] flex flex-col items-center justify-center gap-2 text-[13px] font-bold">
-                                    <Icons.Check className="w-6 h-6"/> Notes
-                                </motion.button>
-                            </div>
-                            
-                            {user && (
-                                <SidebarAccordion title="Focus Session" icon={Icons.Timer} defaultOpen={true}>
-                                    <div className="text-center py-2 text-zinc-500 text-[13px]">Open original app to use advanced timers.</div>
-                                </SidebarAccordion>
-                            )}
-
-                            <div className="mt-auto pt-6 text-center text-[12px] text-zinc-500 font-medium">
-                                darNote System &copy; 2026<br/>The smartest way to build your reservoir.
-                            </div>
-                        </aside>
-                    </div>
-
-                    {/* MOBILE BOTTOM NAV (iOS Dock Style) */}
-                    <div className="flex lg:hidden fixed bottom-0 left-0 w-full glass-nav border-t border-black/5 dark:border-white/5 pb-safe z-50">
-                        <div className="flex justify-around items-center w-full px-2 h-[60px]">
-                            <motion.button whileTap={{scale:0.8}} className="p-3 text-zinc-900 dark:text-white flex flex-col items-center gap-1">
-                                <Icons.Home className="w-7 h-7"/>
-                            </motion.button>
-                            <motion.button whileTap={{scale:0.9}} onClick={()=>window.location.href='el.html'} className="bg-brand text-white p-3 rounded-full shadow-[0_8px_16px_rgba(0,122,255,0.3)] -mt-6">
-                                <Icons.Plus className="w-7 h-7"/>
-                            </motion.button>
-                            <motion.button whileTap={{scale:0.8}} onClick={()=>window.location.href='report.html'} className="p-3 text-zinc-400 hover:text-zinc-900 dark:hover:text-white flex flex-col items-center gap-1">
-                                <Icons.TrendingUp className="w-7 h-7"/>
-                            </motion.button>
+                        {/* Center Stage - The Planner */}
+                        <div className="flex-1 overflow-y-auto hide-scroll px-4 lg:px-10 lg:pr-6 h-[calc(100vh-80px)]">
+                            <AIPlanner user={user} momentum={momentum}/>
+                            <div className="lg:hidden block pb-10"><HorizontalLibrary user={user}/></div>
                         </div>
-                    </div>
+
+                        {/* Right Sidebar - Bento Widgets */}
+                        <div className="w-full lg:w-[380px] shrink-0 overflow-y-auto hide-scroll px-4 lg:px-10 lg:pl-0 h-[calc(100vh-80px)] space-y-6 pb-10 hidden lg:block">
+                            <FocusTimer />
+                            <ParkItInbox user={user} />
+                            <HorizontalLibrary user={user}/>
+                        </div>
+
+                    </main>
+                        </>
+                    )}
                 </div>
             );
         };
 
         const root = ReactDOM.createRoot(document.getElementById('root'));
-        root.render(<App />);
+        root.render(<ErrorBoundary><App /></ErrorBoundary>);
     </script>
 </body>
 </html>
