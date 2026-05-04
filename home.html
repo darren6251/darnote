@@ -2,645 +2,1085 @@
 <html lang="en" class="dark">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>darNote - Feed</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>darNote - Hub</title>
     <link rel="icon" type="image/png" href="https://raw.githubusercontent.com/darren6251/darnote/refs/heads/main/darNote%20logo.png">
-    
-    <!-- React & Tailwind -->
-    <script crossorigin src="https://unpkg.com/react@18/umd/react.development.js"></script>
-    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
-    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
     <script src="https://cdn.tailwindcss.com"></script>
-    <script src="https://unpkg.com/framer-motion@10.16.4/dist/framer-motion.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
-
     <script>
         tailwind.config = {
             darkMode: 'class',
             theme: {
                 extend: {
-                    colors: { 
-                        onyx: '#09090b',
-                        surface: '#18181b',
-                        border: '#27272a',
-                        brand: '#4f46e5'
-                    },
-                    fontFamily: { sans: ['Inter', 'sans-serif'] }
+                    colors: { brand: '#4f46e5' },
+                    fontFamily: { sans: ['Inter', 'sans-serif'], mono: ['JetBrains Mono', 'monospace'] }
                 }
             }
         }
     </script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
     <style>
-        body { @apply bg-onyx text-zinc-100; font-family: 'Inter', sans-serif; overflow: hidden; overscroll-behavior-y: none; }
-        ::-webkit-scrollbar { width: 4px; }
-        ::-webkit-scrollbar-thumb { @apply bg-zinc-700; border-radius: 4px; }
-        .thread-line { width: 2px; background-color: #27272a; flex-grow: 1; margin-top: 8px; margin-bottom: 4px; border-radius: 2px; }
-        .hide-scrollbar::-webkit-scrollbar { display: none; }
-        .hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+        :root {
+            --bg: #ffffff; --surface: #f4f4f5; --border: #e4e4e7;
+            --text: #09090b; --muted: #71717a; --brand: #4f46e5;
+        }
+        .dark {
+            --bg: #09090b; --surface: #18181b; --border: #27272a;
+            --text: #ffffff; --muted: #a1a1aa;
+        }
+        * { box-sizing: border-box; }
+        body {
+            background: var(--bg); color: var(--text);
+            font-family: 'Inter', sans-serif;
+            transition: background-color 0.3s, color 0.3s;
+            overflow: hidden; height: 100vh;
+        }
+        .thread-line { width: 2px; background: var(--border); flex-grow: 1; margin-top: 6px; margin-bottom: 2px; border-radius: 2px; min-height: 20px; }
+        .hide-scroll::-webkit-scrollbar { display: none; }
+        .hide-scroll { -ms-overflow-style: none; scrollbar-width: none; }
+        .thin-scroll::-webkit-scrollbar { width: 4px; }
+        .thin-scroll::-webkit-scrollbar-track { background: transparent; }
+        .thin-scroll::-webkit-scrollbar-thumb { background: var(--border); border-radius: 4px; }
+        .loader { width: 32px; height: 32px; border: 3px solid var(--border); border-top-color: var(--brand); border-radius: 50%; animation: spin 1s linear infinite; }
+        @keyframes spin { to { transform: rotate(360deg); } }
+        .logo-img { transition: filter 0.3s; }
+        .dark .logo-img { filter: invert(1); }
+        .btn-icon { padding: 0.5rem; border-radius: 6px; color: var(--muted); transition: all 0.2s; cursor: pointer; }
+        .btn-icon:hover { background: var(--surface); color: var(--text); }
+        .cal-day { height: 2rem; width: 2rem; display: flex; align-items: center; justify-content: center; border-radius: 6px; font-size: 0.75rem; cursor: pointer; transition: all 0.15s; color: var(--muted); }
+        .cal-day:hover { background: var(--surface); color: var(--text); }
+        .cal-day.today { background: var(--text); color: var(--bg); font-weight: 700; }
+        .feed-post { border-bottom: 1px solid var(--border); transition: background 0.15s; }
+        .feed-post:hover { background: rgba(128,128,128,0.04); }
+        .accordion-body { overflow: hidden; max-height: 0; transition: max-height 0.35s ease; }
+        .accordion-body.open { max-height: 700px; }
+        .accordion-icon { transition: transform 0.3s; }
+        .accordion-icon.rotated { transform: rotate(180deg); }
+        @keyframes fadeUp { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+        .fade-up { animation: fadeUp 0.4s ease forwards; opacity: 0; }
+        .markdown-body p { margin-bottom: 0.4rem; line-height: 1.6; }
+        .markdown-body strong { font-weight: 700; }
+        .markdown-body em { font-style: italic; }
+        .markdown-body code { background: rgba(128,128,128,0.15); padding: 0.1rem 0.3rem; border-radius: 3px; font-size: 0.82em; font-family: 'JetBrains Mono', monospace; }
+        .markdown-body ul { list-style: disc; padding-left: 1.2rem; margin-bottom: 0.4rem; }
+        .markdown-body li { margin-bottom: 0.2rem; }
+        .timer-preset-active { background: var(--text) !important; color: var(--bg) !important; }
+        input::placeholder { color: var(--muted); }
+        textarea::placeholder { color: var(--muted); }
+        select option { background: var(--bg); color: var(--text); }
     </style>
+</head>
+<body class="antialiased">
 
-    <!-- Platform Firebase Integration -->
+    <!-- ===== AUTH LOADING SCREEN ===== -->
+    <div id="authWrapper" class="fixed inset-0 z-50 flex flex-col items-center justify-center" style="background: var(--bg); transition: opacity 0.4s;">
+        <div class="loader mb-6"></div>
+        <p class="text-xs font-mono uppercase tracking-widest" style="color: var(--muted);">Initializing darNote</p>
+        <div id="loginUI" style="display:none;" class="mt-10 w-full max-w-sm px-6 text-center">
+            <img src="https://raw.githubusercontent.com/darren6251/darnote/refs/heads/main/darNote%20logo.png" class="h-14 w-auto mx-auto mb-6 logo-img" alt="darNote">
+            <h1 class="text-2xl font-bold mb-1">Welcome to darNote</h1>
+            <p class="text-sm mb-8" style="color: var(--muted);">Sign in to access your curriculum feed.</p>
+            <button id="googleSignInBtn" class="w-full py-3 rounded-xl font-semibold flex items-center justify-center gap-3 transition-all border mb-3 cursor-pointer" style="background: var(--surface); border-color: var(--border); color: var(--text);">
+                <svg class="w-5 h-5" viewBox="0 0 24 24"><path fill="currentColor" d="M21.35 11.1h-9.17v2.73h6.51c-.33 3.81-3.5 5.44-6.5 5.44C8.36 19.27 5 16.25 5 12c0-4.1 3.2-7.27 7.2-7.27c3.09 0 4.9 1.97 4.9 1.97L19 4.72S16.56 2 12.1 2C6.42 2 2.03 6.8 2.03 12c0 5.05 4.13 10 10.22 10c5.35 0 9.25-3.67 9.25-9.09c0-1.15-.15-1.81-.15-1.81Z"/></svg>
+                Continue with Google
+            </button>
+            <button id="guestBtn" class="w-full py-2.5 rounded-xl text-sm font-medium transition-all cursor-pointer" style="color: var(--muted);">Browse as Guest (Preview)</button>
+        </div>
+    </div>
+
+    <!-- ===== ONBOARDING MODAL ===== -->
+    <div id="onboardModal" style="display:none;" class="fixed inset-0 z-[80] flex items-center justify-center p-4" style="background: rgba(0,0,0,0.75); backdrop-filter: blur(8px);">
+        <div class="w-full max-w-md rounded-3xl border p-8 shadow-2xl" style="background: var(--surface); border-color: var(--border);">
+            <div class="w-16 h-16 rounded-full flex items-center justify-center mb-5 mx-auto" style="background: rgba(79,70,229,0.12);">
+                <i data-lucide="graduation-cap" class="w-8 h-8" style="color: var(--brand);"></i>
+            </div>
+            <h2 class="text-2xl font-bold text-center mb-1">Set Up Your Feed</h2>
+            <p class="text-sm text-center mb-6" style="color: var(--muted);">Tell us your curriculum so we can curate the right content for you.</p>
+            <div id="onboardErr" style="display:none;" class="text-xs p-3 rounded-lg mb-4 text-center" style="background: rgba(239,68,68,0.1); color: #ef4444; border: 1px solid rgba(239,68,68,0.2);"></div>
+            <div class="space-y-4">
+                <div>
+                    <label class="block text-[10px] font-bold uppercase tracking-widest mb-2" style="color: var(--muted);">1. Education Level</label>
+                    <select id="onboardLevel" class="w-full rounded-xl p-3 font-medium appearance-none cursor-pointer focus:outline-none" style="background: var(--bg); border: 1px solid var(--border); color: var(--text);">
+                        <option value="" disabled selected>Select your level...</option>
+                        <option>High School</option>
+                        <option>University</option>
+                        <option>Professional / Other</option>
+                    </select>
+                </div>
+                <div id="onboardCurrStep" style="display:none;">
+                    <label class="block text-[10px] font-bold uppercase tracking-widest mb-2" style="color: var(--muted);">2. Syllabus (Optional)</label>
+                    <select id="onboardCurr" class="w-full rounded-xl p-3 font-medium appearance-none cursor-pointer focus:outline-none" style="background: var(--bg); border: 1px solid var(--border); color: var(--text);">
+                        <option value="">General (show all for my level)</option>
+                    </select>
+                </div>
+                <button id="onboardSaveBtn" class="w-full py-3 rounded-xl font-bold transition-all mt-2 cursor-pointer" style="background: var(--text); color: var(--bg);">Curate My Feed</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ===== FOCUS MODE OVERLAY ===== -->
+    <div id="focusOverlay" style="display:none;" class="fixed inset-0 z-[100] flex-col items-center justify-center" style="background: #09090b;">
+        <button id="exitFocusBtn" class="absolute top-8 right-8 p-2 rounded-full transition-all cursor-pointer" style="color: #52525b;">
+            <i data-lucide="x" class="w-8 h-8"></i>
+        </button>
+        <div class="flex items-center gap-3 px-4 py-2 rounded-full border mb-16 text-xs font-mono uppercase tracking-widest" style="border-color: rgba(255,255,255,0.1); color: #52525b; background: rgba(255,255,255,0.03);">
+            <span class="w-2 h-2 rounded-full bg-red-500 animate-pulse"></span> Do Not Disturb
+        </div>
+        <div id="focusTimerDisplay" class="font-mono font-bold text-white leading-none tracking-tighter select-none tabular-nums" style="font-size: clamp(4rem, 18vw, 12rem);">25:00</div>
+        <div class="flex items-center gap-6 mt-16">
+            <button id="overlayStartBtn" class="w-24 h-24 bg-white text-black rounded-full flex items-center justify-center hover:scale-105 active:scale-95 transition-all cursor-pointer">
+                <i data-lucide="play" class="w-10 h-10 fill-current" style="margin-left: 4px;"></i>
+            </button>
+            <button id="overlayStopBtn" style="display:none;" class="w-24 h-24 rounded-full flex items-center justify-center transition-all cursor-pointer" style="border: 2px solid white; color: white; background: transparent;">
+                <i data-lucide="pause" class="w-10 h-10"></i>
+            </button>
+        </div>
+        <p class="mt-14 font-mono text-xs uppercase tracking-[0.3em] opacity-30 text-white">Stay Focused</p>
+    </div>
+
+    <!-- ===== COMPOSE MODAL ===== -->
+    <div id="composeModal" style="display:none;" class="fixed inset-0 z-[90] flex items-center justify-center p-4" style="background: rgba(0,0,0,0.6); backdrop-filter: blur(8px);">
+        <div class="w-full max-w-lg rounded-2xl border p-6 shadow-2xl" style="background: var(--surface); border-color: var(--border);">
+            <div class="flex justify-between items-center mb-4">
+                <h3 class="font-bold text-lg">Share to Feed</h3>
+                <button onclick="closeCompose()" class="btn-icon"><i data-lucide="x" class="w-5 h-5"></i></button>
+            </div>
+            <textarea id="composeText" rows="5" placeholder="Share a study tip, insight, or interesting fact with your curriculum community..." class="w-full rounded-xl p-3 text-sm resize-none focus:outline-none border" style="background: var(--bg); border-color: var(--border); color: var(--text);"></textarea>
+            <div class="flex justify-between items-center mt-3">
+                <span class="text-xs" style="color: var(--muted);">Posting to: <span id="composeTargetLabel" class="font-bold" style="color: var(--brand);">—</span></span>
+                <button id="composeSubmitBtn" onclick="submitPost()" class="px-5 py-2 rounded-lg font-bold text-sm transition-all cursor-pointer" style="background: var(--brand); color: white;">Post</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ===== MAIN APP ===== -->
+    <div id="appContent" style="display:none;" class="flex flex-col" style="height: 100vh;">
+
+        <!-- HEADER -->
+        <header class="sticky top-0 z-40 border-b flex items-center justify-between px-4 h-14 shrink-0" style="background: rgba(9,9,11,0.85); backdrop-filter: blur(12px); border-color: var(--border);">
+            <div class="flex items-center gap-3">
+                <img src="https://raw.githubusercontent.com/darren6251/darnote/refs/heads/main/darNote%20logo.png" class="h-7 w-auto logo-img cursor-pointer" alt="darNote" id="logoEl">
+                <span class="font-bold hidden sm:block">darNote</span>
+                <span id="currBadge" style="display:none;" class="text-[10px] font-bold px-2 py-0.5 rounded-full" style="background: rgba(79,70,229,0.15); color: var(--brand); border: 1px solid rgba(79,70,229,0.25);"></span>
+            </div>
+            <div class="flex items-center gap-1">
+                <button id="themeToggle" class="btn-icon">
+                    <i data-lucide="moon" class="w-5 h-5 hidden dark:block"></i>
+                    <i data-lucide="sun" class="w-5 h-5 dark:hidden block"></i>
+                </button>
+                <div class="flex items-center gap-2 ml-1">
+                    <div class="text-right hidden sm:block">
+                        <div id="hdrName" class="text-sm font-semibold leading-none mb-0.5">—</div>
+                        <div id="hdrRole" class="text-[10px] uppercase font-bold tracking-wider" style="color: var(--muted);">—</div>
+                    </div>
+                    <img id="hdrAvatar" src="" class="w-8 h-8 rounded-full object-cover border shrink-0" style="border-color: var(--border);" alt="">
+                    <button id="logoutBtn" class="btn-icon ml-1" style="color: #ef4444;" title="Sign out">
+                        <i data-lucide="log-out" class="w-4 h-4"></i>
+                    </button>
+                </div>
+            </div>
+        </header>
+
+        <!-- GUEST BANNER -->
+        <div id="guestBanner" style="display:none;" class="px-4 py-2.5 flex items-center justify-between border-b shrink-0" style="background: linear-gradient(90deg, rgba(79,70,229,0.12), rgba(139,92,246,0.12)); border-color: rgba(79,70,229,0.2);">
+            <span class="text-sm" style="color: #a5b4fc;">Viewing preview feed — sign in to track your personal errors &amp; progress.</span>
+            <button id="guestSignInBtn" class="text-xs font-bold px-3 py-1.5 rounded-lg cursor-pointer" style="background: rgba(79,70,229,0.25); color: #c7d2fe;">Sign In</button>
+        </div>
+
+        <!-- TWO COLUMN LAYOUT -->
+        <div class="flex flex-1 overflow-hidden">
+
+            <!-- LEFT: FEED (65%) -->
+            <main class="flex flex-col flex-1 lg:flex-none lg:w-[65%] h-full border-r overflow-hidden" style="border-color: var(--border);">
+                <!-- Feed sub-header -->
+                <div class="px-4 py-3 border-b flex items-center justify-between shrink-0" style="border-color: var(--border);">
+                    <div>
+                        <h1 class="font-bold text-base leading-none">Curriculum Feed</h1>
+                        <p id="feedSubtitle" class="text-[11px] mt-0.5" style="color: var(--muted);">Loading...</p>
+                    </div>
+                    <button id="composeBtn" class="flex items-center gap-1.5 text-xs font-bold px-3 py-2 rounded-lg transition-all cursor-pointer" style="background: var(--brand); color: white;">
+                        <i data-lucide="plus" class="w-3.5 h-3.5"></i> Post
+                    </button>
+                </div>
+                <!-- Feed scroll -->
+                <div id="feedList" class="flex-1 overflow-y-auto hide-scroll pb-20 lg:pb-4">
+                    <div class="flex flex-col items-center justify-center h-48 gap-4">
+                        <div class="loader"></div>
+                        <p class="text-xs font-bold uppercase tracking-widest" style="color: var(--brand);">Building Feed...</p>
+                    </div>
+                </div>
+            </main>
+
+            <!-- RIGHT: SIDEBAR (35%) — desktop only -->
+            <aside class="hidden lg:flex flex-col w-[35%] h-full overflow-y-auto thin-scroll p-4 gap-3 shrink-0" style="background: var(--surface);">
+
+                <!-- Stats card -->
+                <div id="statsCard" style="display:none;" class="rounded-2xl border p-4" style="background: var(--bg); border-color: var(--border);">
+                    <p class="text-[10px] font-bold uppercase tracking-widest mb-3" style="color: var(--muted);">Your Stats</p>
+                    <div class="grid grid-cols-3 gap-2 text-center">
+                        <div><div id="sNotes" class="text-2xl font-bold font-mono">—</div><div class="text-[9px] uppercase font-bold tracking-wider mt-0.5" style="color: var(--muted);">Notes</div></div>
+                        <div><div id="sErrors" class="text-2xl font-bold font-mono">—</div><div class="text-[9px] uppercase font-bold tracking-wider mt-0.5" style="color: var(--muted);">Errors</div></div>
+                        <div><div id="sMastery" class="text-2xl font-bold font-mono">—</div><div class="text-[9px] uppercase font-bold tracking-wider mt-0.5" style="color: var(--muted);">Mastery</div></div>
+                    </div>
+                </div>
+
+                <!-- Focus Timer accordion (open by default) -->
+                <div class="rounded-2xl border overflow-hidden shrink-0" style="background: var(--bg); border-color: var(--border);">
+                    <button class="w-full flex items-center justify-between p-4 font-bold text-sm cursor-pointer" onclick="toggleAcc(this)">
+                        <span class="flex items-center gap-2"><i data-lucide="timer" class="w-4 h-4" style="color: var(--brand);"></i> Focus Timer</span>
+                        <i data-lucide="chevron-down" class="w-4 h-4 accordion-icon rotated" style="color: var(--muted);"></i>
+                    </button>
+                    <div class="accordion-body open">
+                        <div class="px-4 pb-4 space-y-3">
+                            <div id="miniTimer" class="text-center text-4xl font-mono font-bold tabular-nums tracking-tighter">25:00</div>
+                            <div class="flex gap-1.5 justify-center flex-wrap">
+                                <button onclick="setDur(25)" data-mins="25" class="timer-preset timer-preset-active px-3 py-1 text-xs font-bold rounded border cursor-pointer transition-colors" style="border-color: var(--border);">25m</button>
+                                <button onclick="setDur(50)" data-mins="50" class="timer-preset px-3 py-1 text-xs font-bold rounded border cursor-pointer transition-colors" style="border-color: var(--border);">50m</button>
+                                <button onclick="setDur(60)" data-mins="60" class="timer-preset px-3 py-1 text-xs font-bold rounded border cursor-pointer transition-colors" style="border-color: var(--border);">1h</button>
+                                <button onclick="askCustomDur()" class="px-3 py-1 text-xs font-bold rounded border cursor-pointer transition-colors" style="border-color: var(--border);" title="Custom">···</button>
+                            </div>
+                            <div class="grid grid-cols-2 gap-2">
+                                <button id="timerStartBtn" onclick="startTimer()" class="py-2 rounded-lg font-bold text-sm transition-all cursor-pointer" style="background: var(--text); color: var(--bg);">Start</button>
+                                <button id="timerPauseBtn" style="display:none;" onclick="pauseTimer()" class="py-2 rounded-lg font-bold text-sm transition-all cursor-pointer border" style="border-color: var(--border); color: var(--text);">Pause</button>
+                                <button onclick="resetTimer()" class="py-2 rounded-lg font-bold text-sm transition-all cursor-pointer border" style="border-color: var(--border); color: var(--text);">Reset</button>
+                                <button onclick="enterFocus()" class="py-2 rounded-lg font-bold text-sm transition-all cursor-pointer border" style="border-color: var(--border); color: var(--text);" title="Fullscreen focus">⛶ Full</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Quick Tasks accordion -->
+                <div class="rounded-2xl border overflow-hidden shrink-0" style="background: var(--bg); border-color: var(--border);">
+                    <button class="w-full flex items-center justify-between p-4 font-bold text-sm cursor-pointer" onclick="toggleAcc(this)">
+                        <span class="flex items-center gap-2"><i data-lucide="check-square" class="w-4 h-4" style="color: var(--brand);"></i> Quick Tasks <span id="todoCountBadge" class="text-[9px] font-bold px-1.5 py-0.5 rounded ml-1" style="background: var(--surface); color: var(--muted);"></span></span>
+                        <i data-lucide="chevron-down" class="w-4 h-4 accordion-icon" style="color: var(--muted);"></i>
+                    </button>
+                    <div class="accordion-body">
+                        <div class="px-4 pb-4">
+                            <div id="todoGuestMsg" style="display:none;" class="text-xs text-center py-3" style="color: var(--muted);">Sign in to save tasks.</div>
+                            <div id="todoInputWrap">
+                                <div class="flex gap-2 mb-3">
+                                    <input id="todoInput" type="text" placeholder="Add a task..." class="flex-1 bg-transparent py-2 text-sm focus:outline-none border-b" style="border-color: var(--border);" onkeypress="if(event.key==='Enter')addTodo()">
+                                    <button onclick="addTodo()" class="cursor-pointer" style="color: var(--brand);"><i data-lucide="plus-circle" class="w-5 h-5"></i></button>
+                                </div>
+                                <div id="todoList" class="space-y-1 max-h-52 overflow-y-auto thin-scroll">
+                                    <p class="text-xs text-center py-3" style="color: var(--muted);">No tasks yet.</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Recent Notes accordion (open by default) -->
+                <div class="rounded-2xl border overflow-hidden shrink-0" style="background: var(--bg); border-color: var(--border);">
+                    <button class="w-full flex items-center justify-between p-4 font-bold text-sm cursor-pointer" onclick="toggleAcc(this)">
+                        <span class="flex items-center gap-2"><i data-lucide="file-text" class="w-4 h-4" style="color: var(--brand);"></i> Recent Notes</span>
+                        <i data-lucide="chevron-down" class="w-4 h-4 accordion-icon rotated" style="color: var(--muted);"></i>
+                    </button>
+                    <div class="accordion-body open">
+                        <div class="px-4 pb-4">
+                            <div id="recentNotes">
+                                <p class="text-xs text-center py-3" style="color: var(--muted);">Loading...</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Calendar accordion -->
+                <div class="rounded-2xl border overflow-hidden shrink-0" style="background: var(--bg); border-color: var(--border);">
+                    <button class="w-full flex items-center justify-between p-4 font-bold text-sm cursor-pointer" onclick="toggleAcc(this)">
+                        <span class="flex items-center gap-2"><i data-lucide="calendar" class="w-4 h-4" style="color: var(--brand);"></i> <span id="calLabel">Calendar</span></span>
+                        <i data-lucide="chevron-down" class="w-4 h-4 accordion-icon" style="color: var(--muted);"></i>
+                    </button>
+                    <div class="accordion-body">
+                        <div class="px-4 pb-4">
+                            <div class="flex justify-between items-center mb-2">
+                                <button onclick="shiftCal(-1)" class="btn-icon p-1"><i data-lucide="chevron-left" class="w-4 h-4"></i></button>
+                                <button onclick="shiftCal(1)" class="btn-icon p-1"><i data-lucide="chevron-right" class="w-4 h-4"></i></button>
+                            </div>
+                            <div class="grid grid-cols-7 text-center mb-1">
+                                <div class="text-[9px] font-bold" style="color: var(--muted);">S</div>
+                                <div class="text-[9px] font-bold" style="color: var(--muted);">M</div>
+                                <div class="text-[9px] font-bold" style="color: var(--muted);">T</div>
+                                <div class="text-[9px] font-bold" style="color: var(--muted);">W</div>
+                                <div class="text-[9px] font-bold" style="color: var(--muted);">T</div>
+                                <div class="text-[9px] font-bold" style="color: var(--muted);">F</div>
+                                <div class="text-[9px] font-bold" style="color: var(--muted);">S</div>
+                            </div>
+                            <div id="calGrid" class="grid grid-cols-7 gap-0.5 text-center"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Nav links -->
+                <div class="rounded-2xl border p-3 space-y-1 shrink-0" style="background: var(--bg); border-color: var(--border);">
+                    <a href="note.html" class="flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all hover:bg-surface">
+                        <i data-lucide="pen-tool" class="w-4 h-4 shrink-0" style="color: var(--brand);"></i> Write a Note
+                    </a>
+                    <a href="el.html" class="flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all hover:bg-surface">
+                        <i data-lucide="bug" class="w-4 h-4 shrink-0 text-red-500"></i> Log an Error
+                    </a>
+                    <a href="report copy.html" class="flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all hover:bg-surface">
+                        <i data-lucide="bar-chart-2" class="w-4 h-4 shrink-0 text-green-500"></i> Full Insight Report
+                    </a>
+                </div>
+
+                <div class="text-center pb-2">
+                    <p class="text-[10px]" style="color: var(--muted);">© 2026 darNote · <a href="mailto:darrenng@3-shot.com" style="color: var(--brand);">Contact</a></p>
+                </div>
+            </aside>
+        </div>
+
+        <!-- MOBILE BOTTOM NAV -->
+        <div class="lg:hidden fixed bottom-0 left-0 w-full border-t z-40 flex items-center justify-around px-2 py-2 shrink-0" style="background: rgba(9,9,11,0.92); backdrop-filter: blur(12px); border-color: var(--border);">
+            <button class="p-3 cursor-pointer" style="color: var(--brand);"><i data-lucide="home" class="w-6 h-6"></i></button>
+            <a href="note.html" class="p-3" style="color: var(--muted);"><i data-lucide="pen-tool" class="w-6 h-6"></i></a>
+            <a href="el.html" class="w-14 h-14 rounded-2xl flex items-center justify-center shadow-lg -mt-4" style="background: var(--text); color: var(--bg);">
+                <i data-lucide="plus" class="w-7 h-7"></i>
+            </a>
+            <a href="report copy.html" class="p-3" style="color: var(--muted);"><i data-lucide="bar-chart-2" class="w-6 h-6"></i></a>
+            <button onclick="enterFocus()" class="p-3 cursor-pointer" style="color: var(--muted);"><i data-lucide="timer" class="w-6 h-6"></i></button>
+        </div>
+    </div>
+
+    <!-- ===== FIREBASE + APP LOGIC ===== -->
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-app.js";
-        import { getAuth, signInWithCustomToken, signInAnonymously, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-auth.js";
-        import { getFirestore, collection, doc, setDoc, getDoc, getDocs, updateDoc, deleteDoc, addDoc, serverTimestamp, writeBatch, onSnapshot } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-firestore.js";
-        
-        try {
-            const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : { apiKey: "demo", projectId: "demo" };
-            const appId = typeof __app_id !== 'undefined' ? __app_id : 'darnote-app';
-            
-            const app = initializeApp(firebaseConfig);
-            const auth = getAuth(app);
-            const db = getFirestore(app);
-            
-            window.firebaseEnv = { app, auth, db, appId, signInWithCustomToken, signInAnonymously, onAuthStateChanged, signOut, collection, doc, setDoc, getDoc, getDocs, updateDoc, deleteDoc, addDoc, serverTimestamp, writeBatch, onSnapshot };
-            window.dispatchEvent(new Event('firebaseLoaded'));
-        } catch (e) { console.error("Firebase init failed:", e); }
-    </script>
-</head>
-<body>
-    <div id="root"></div>
-    <script type="text/babel">
-        const { useState, useEffect, useRef } = React;
-        const { motion, AnimatePresence } = window.Motion;
-        const GEMINI_PROXY_URL = "https://gemini-proxy-513372702506.us-central1.run.app/proxy";
+        import { getAuth, signInWithPopup, GoogleAuthProvider, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-auth.js";
+        import { getFirestore, collection, doc, getDoc, getDocs, setDoc, addDoc, updateDoc, deleteDoc, serverTimestamp, query, orderBy, limit, onSnapshot, writeBatch } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-firestore.js";
 
-        // Education Mapping
-        const EDUCATION_LEVELS = ["High School", "University", "Professional / Other"];
-        const SYLLABUS_MAP = {
-            "High School": ["HKDSE", "IB (International Baccalaureate)", "A-Level (ALE)", "AP (Advanced Placement)", "IGCSE", "General High School"],
-            "University": ["Pre-Med", "Engineering", "Computer Science", "Business & Finance", "Law", "General University"],
-            "Professional / Other": ["Language Learning", "IT Certifications", "Accounting (CPA/ACCA)", "General Studies"]
+        // ─── CONFIG ────────────────────────────────────────────────────────────
+        const FB_CFG = { apiKey: "AIzaSyAvPEac-03kE4oazvaq8K3T2gxLPsnZO20", authDomain: "darnote625.firebaseapp.com", projectId: "darnote625", storageBucket: "darnote625.firebasestorage.app", messagingSenderId: "16458322562", appId: "1:16458322562:web:8894d71f3e6c326eba1a9b" };
+        const AID = "darnote-app";
+        const GEMINI = "https://gemini-proxy-513372702506.us-central1.run.app/proxy";
+
+        const fbApp = initializeApp(FB_CFG);
+        const auth  = getAuth(fbApp);
+        const db    = getFirestore(fbApp);
+
+        // ─── SYLLABUS MAP ──────────────────────────────────────────────────────
+        const SYLLABUS = {
+            "High School":           ["HKDSE", "IB (International Baccalaureate)", "A-Level (ALE)", "AP (Advanced Placement)", "IGCSE", "General High School"],
+            "University":            ["Pre-Med", "Engineering", "Computer Science", "Business & Finance", "Law", "General University"],
+            "Professional / Other":  ["Language Learning", "IT Certifications", "Accounting (CPA/ACCA)", "General Studies"]
         };
 
-        // Icons
-        const Icons = {
-            Home: p => <svg {...p} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>,
-            Plus: p => <svg {...p} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M5 12h14"/><path d="M12 5v14"/></svg>,
-            Heart: p => <svg {...p} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7Z"/></svg>,
-            MessageCircle: p => <svg {...p} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="m3 21 1.9-5.7a8.5 8.5 0 1 1 3.8 3.8z"/></svg>,
-            Repeat: p => <svg {...p} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="m17 2 4 4-4 4"/><path d="M3 11v-1a4 4 0 0 1 4-4h14"/><path d="m7 22-4-4 4-4"/><path d="M21 13v1a4 4 0 0 1-4 4H3"/></svg>,
-            Bot: p => <svg {...p} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M12 8V4H8"/><rect width="16" height="12" x="4" y="8" rx="2"/><path d="M2 14h2"/><path d="M20 14h2"/><path d="M15 13v2"/><path d="M9 13v2"/></svg>,
-            Activity: p => <svg {...p} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>,
-            Timer: p => <svg {...p} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>,
-            CheckSquare: p => <svg {...p} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="9 11 12 14 22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>,
-            ChevronDown: p => <svg {...p} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="m6 9 6 6 6-6"/></svg>,
-            User: p => <svg {...p} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>,
-            FileText: p => <svg {...p} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><line x1="10" y1="9" x2="8" y2="9"/></svg>,
-            Bug: p => <svg {...p} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="m8 2 1.88 1.88"/><path d="M14.12 3.88 16 2"/><path d="M9 7.13v-1a3.003 3.003 0 1 1 6 0v1"/><path d="M12 20c-3.3 0-6-2.7-6-6v-3a4 4 0 0 1 4-4h4a4 4 0 0 1 4 4v3c0 3.3-2.7 6-6 6"/><path d="M12 20v-9"/><path d="M6.53 9C4.6 8.8 3 7.1 3 5"/><path d="M17.47 9c1.93-.2 3.53-1.9 3.53-3.9"/><path d="M6.53 15H3"/><path d="M21 15h-3.53"/><path d="M6.53 21C4.6 21.2 3 22.9 3 25"/><path d="M17.47 21c1.93.2 3.53 1.9 3.53 3.9"/></svg>,
-            Compass: p => <svg {...p} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="10"/><polygon points="16.24 7.76 14.12 14.12 7.76 16.24 9.88 9.88 16.24 7.76"/></svg>
-        };
+        // ─── STATE ─────────────────────────────────────────────────────────────
+        let CU = null;          // currentUser
+        let PROF = null;        // { role, curriculum }
+        let CURR_KEY = '';      // Firestore collection key
+        let timerIv = null;
+        let timerDur = 25 * 60;
+        let timerSec = timerDur;
+        let calMon = new Date();
+        let todoUnsub = null;
+        let notesUnsub = null;
 
-        // --- COMPONENTS ---
+        // ─── THEME ────────────────────────────────────────────────────────────
+        function initTheme() {
+            const t = localStorage.getItem('dn-theme');
+            if (t === 'light') document.documentElement.classList.remove('dark');
+            else document.documentElement.classList.add('dark');
+        }
+        initTheme();
+        document.getElementById('themeToggle').addEventListener('click', () => {
+            document.documentElement.classList.toggle('dark');
+            localStorage.setItem('dn-theme', document.documentElement.classList.contains('dark') ? 'dark' : 'light');
+        });
 
-        // 1. Apple Fitness Rings
-        const InsightRings = ({ stats }) => {
-            const p1 = Math.min(100, (stats?.mastered / (stats?.total || 1)) * 100 || 65);
-            const p2 = Math.min(100, (stats?.studyHours / 10) * 100 || 80);
-            const p3 = Math.min(100, (stats?.consistency / 7) * 100 || 40);
-            const r1 = 40, r2 = 30, r3 = 20;
-            const c1 = 2 * Math.PI * r1, c2 = 2 * Math.PI * r2, c3 = 2 * Math.PI * r3;
-            
-            return (
-                <div className="flex items-center gap-6 bg-surface border border-white/5 rounded-2xl p-5 mb-2">
-                    <div className="relative w-24 h-24 shrink-0">
-                        <svg className="w-full h-full" viewBox="0 0 100 100">
-                            <circle cx="50" cy="50" r={r1} fill="transparent" stroke="#3f1616" strokeWidth="8"/>
-                            <circle cx="50" cy="50" r={r2} fill="transparent" stroke="#12311e" strokeWidth="8"/>
-                            <circle cx="50" cy="50" r={r3} fill="transparent" stroke="#1e293b" strokeWidth="8"/>
-                            <circle cx="50" cy="50" r={r1} fill="transparent" stroke="#ef4444" strokeWidth="8" strokeDasharray={`${(p1/100)*c1} ${c1}`} strokeLinecap="round" transform="rotate(-90 50 50)" className="transition-all duration-1000"/>
-                            <circle cx="50" cy="50" r={r2} fill="transparent" stroke="#22c55e" strokeWidth="8" strokeDasharray={`${(p2/100)*c2} ${c2}`} strokeLinecap="round" transform="rotate(-90 50 50)" className="transition-all duration-1000 delay-100"/>
-                            <circle cx="50" cy="50" r={r3} fill="transparent" stroke="#3b82f6" strokeWidth="8" strokeDasharray={`${(p3/100)*c3} ${c3}`} strokeLinecap="round" transform="rotate(-90 50 50)" className="transition-all duration-1000 delay-200"/>
-                        </svg>
-                    </div>
-                    <div>
-                        <h4 className="font-bold text-white mb-2">Weekly Insight Drop</h4>
-                        <div className="space-y-1 text-xs font-medium">
-                            <div className="flex items-center gap-2"><div className="w-2 h-2 rounded-full bg-red-500"></div> <span className="text-zinc-400">Mastery:</span> <span className="text-white">{Math.round(p1)}%</span></div>
-                            <div className="flex items-center gap-2"><div className="w-2 h-2 rounded-full bg-green-500"></div> <span className="text-zinc-400">Study Goal:</span> <span className="text-white">{Math.round(p2)}%</span></div>
-                            <div className="flex items-center gap-2"><div className="w-2 h-2 rounded-full bg-blue-500"></div> <span className="text-zinc-400">Consistency:</span> <span className="text-white">{Math.round(p3)}%</span></div>
-                        </div>
-                    </div>
-                </div>
-            );
-        };
+        // ─── AUTH ──────────────────────────────────────────────────────────────
+        document.getElementById('googleSignInBtn').addEventListener('click', () =>
+            signInWithPopup(auth, new GoogleAuthProvider()).catch(e => alert(e.message))
+        );
+        document.getElementById('guestBtn').addEventListener('click', () => enterGuestMode());
+        document.getElementById('guestSignInBtn').addEventListener('click', () =>
+            signInWithPopup(auth, new GoogleAuthProvider()).catch(e => alert(e.message))
+        );
+        document.getElementById('logoutBtn').addEventListener('click', () => signOut(auth).then(() => location.reload()));
 
-        // 2. Thread Post Wrapper
-        const ThreadPost = ({ post, onMarkMastered }) => {
-            const isLore = post.type === 'lore';
-            const isInsight = post.type === 'insight';
-            const isError = post.type === 'error';
-            
-            let AvatarIcon = Icons.User;
-            let avatarBg = "bg-zinc-800";
-            let authorName = post.author || "Student";
-            
-            if (isLore) { AvatarIcon = Icons.Bot; avatarBg = "bg-brand/20 text-brand"; authorName = "System Lore"; }
-            if (isInsight) { AvatarIcon = Icons.Activity; avatarBg = "bg-emerald-500/20 text-emerald-500"; authorName = "darNote Analytics"; }
+        onAuthStateChanged(auth, async (user) => {
+            if (user) {
+                CU = user;
+                showApp();
+                setHeaderUser(user.displayName, user.photoURL, '');
+                await initUserSession(user);
+            } else {
+                CU = null;
+                document.getElementById('authWrapper').style.opacity = '1';
+                document.getElementById('authWrapper').style.display = 'flex';
+                document.getElementById('appContent').style.display = 'none';
+                document.querySelector('#authWrapper .loader').style.display = 'none';
+                document.getElementById('loginUI').style.display = 'block';
+            }
+        });
 
-            return (
-                <div className="flex px-4 pt-4 hover:bg-white/[0.02] transition-colors group border-b border-border/50">
-                    <div className="flex flex-col items-center mr-3 shrink-0">
-                        <div className={`w-10 h-10 rounded-full flex items-center justify-center shadow-md ${avatarBg}`}>
-                            {post.avatarUrl ? <img src={post.avatarUrl} className="w-full h-full rounded-full object-cover"/> : <AvatarIcon className="w-5 h-5"/>}
-                        </div>
-                        <div className="thread-line"></div>
-                    </div>
-                    
-                    <div className="flex-1 pb-4">
-                        <div className="flex justify-between items-start mb-1">
-                            <span className="font-bold text-sm text-zinc-100">{authorName} <span className="font-normal text-zinc-500 text-xs ml-1">{post.timeAgo || 'Recently'}</span></span>
-                            {isError && <span className="text-[10px] uppercase font-bold text-red-400 bg-red-400/10 px-2 py-0.5 rounded border border-red-400/20">Active Error</span>}
-                        </div>
+        function showApp() {
+            const aw = document.getElementById('authWrapper');
+            aw.style.opacity = '0';
+            setTimeout(() => { aw.style.display = 'none'; }, 450);
+            document.getElementById('appContent').style.display = 'flex';
+            document.getElementById('appContent').style.flexDirection = 'column';
+            document.getElementById('appContent').style.height = '100vh';
+        }
 
-                        {/* Content Area */}
-                        {isInsight ? (
-                            <InsightRings stats={post.stats} />
-                        ) : (
-                            <div className="text-sm text-zinc-300 leading-relaxed mb-3">
-                                {isError ? (
-                                    <div className="space-y-2 bg-white/5 border border-white/10 rounded-xl p-3 mt-1">
-                                        <div className="font-bold text-white text-[13px] uppercase tracking-wider text-zinc-500">{post.subject} • {post.topic}</div>
-                                        <div><span className="font-bold text-red-400">Mistake: </span>{post.questionText || "No question text provided."}</div>
-                                        {post.correctAnswer && <div><span className="font-bold text-emerald-400">Correction: </span>{post.correctAnswer}</div>}
-                                        {post.explanation && <div className="text-zinc-400 italic">"{post.explanation}"</div>}
-                                    </div>
-                                ) : (
-                                    <>
-                                        {post.title && <div className="font-bold text-white mb-1">{post.title}</div>}
-                                        <div className="markdown-body" dangerouslySetInnerHTML={{ __html: marked.parse(post.content || '') }}></div>
-                                    </>
-                                )}
-                            </div>
-                        )}
+        function setHeaderUser(name, avatar, role) {
+            document.getElementById('hdrName').textContent = name || 'User';
+            document.getElementById('hdrRole').textContent = role || '';
+            document.getElementById('hdrAvatar').src = avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(name||'U')}&background=6366f1&color=fff`;
+        }
 
-                        {/* Social Interaction Row */}
-                        <div className="flex items-center gap-6 text-zinc-500 mt-2">
-                            <button onClick={() => isError && onMarkMastered && onMarkMastered(post.id)} className={`flex items-center gap-2 group/btn ${post.mastered ? 'text-red-500' : 'hover:text-red-500'} transition-colors`}>
-                                <div className={`p-1.5 rounded-full ${post.mastered ? 'bg-red-500/10' : 'group-hover/btn:bg-red-500/10'} transition-colors`}><Icons.Heart className={`w-4 h-4 ${post.mastered ? 'fill-current' : ''}`}/></div>
-                                <span className="text-xs">{isError ? (post.mastered ? 'Mastered' : 'Master') : (post.likes || 0)}</span>
-                            </button>
-                            <button className="flex items-center gap-2 group/btn hover:text-brand transition-colors">
-                                <div className="p-1.5 rounded-full group-hover/btn:bg-brand/10 transition-colors"><Icons.MessageCircle className="w-4 h-4"/></div>
-                                <span className="text-xs text-zinc-500">{isLore ? 'Discuss' : 'Drill'}</span>
-                            </button>
-                            <button className="flex items-center gap-2 group/btn hover:text-green-500 transition-colors ml-auto">
-                                <div className="p-1.5 rounded-full group-hover/btn:bg-green-500/10 transition-colors"><Icons.Repeat className="w-4 h-4"/></div>
-                            </button>
-                        </div>
-                    </div>
-                </div>
-            );
-        };
+        async function initUserSession(user) {
+            try {
+                const pSnap = await getDoc(doc(db, 'artifacts', AID, 'users', user.uid, 'settings', 'profile'));
+                if (pSnap.exists() && pSnap.data().role) {
+                    PROF = pSnap.data();
+                    applyProfile(PROF);
+                    await buildFeed(user);
+                    loadSidebar(user);
+                    loadStats(user);
+                } else {
+                    openOnboarding();
+                }
+            } catch(e) {
+                console.error(e);
+                openOnboarding();
+            }
+        }
 
-        // 3. Sidebar Accordion Wrapper
-        const SidebarAccordion = ({ title, icon: Icon, defaultOpen = false, children }) => {
-            const [isOpen, setIsOpen] = useState(defaultOpen);
-            return (
-                <div className="border border-white/5 rounded-2xl bg-surface overflow-hidden mb-4 shadow-sm">
-                    <button onClick={() => setIsOpen(!isOpen)} className="w-full flex items-center justify-between p-4 bg-white/[0.02] hover:bg-white/[0.04] transition-colors">
-                        <div className="flex items-center gap-3 font-bold text-sm text-zinc-200"><Icon className="w-4 h-4 text-brand"/> {title}</div>
-                        <Icons.ChevronDown className={`w-4 h-4 text-zinc-500 transition-transform ${isOpen ? 'rotate-180' : ''}`}/>
-                    </button>
-                    <AnimatePresence>
-                        {isOpen && (
-                            <motion.div initial={{ height: 0 }} animate={{ height: 'auto' }} exit={{ height: 0 }} className="overflow-hidden">
-                                <div className="p-4 border-t border-white/5">{children}</div>
-                            </motion.div>
-                        )}
-                    </AnimatePresence>
-                </div>
-            );
-        };
+        function applyProfile(prof) {
+            const label = prof.curriculum || prof.role;
+            document.getElementById('hdrRole').textContent = label;
+            document.getElementById('composeTargetLabel').textContent = label;
+            const badge = document.getElementById('currBadge');
+            badge.textContent = label;
+            badge.style.display = 'inline-flex';
+            badge.style.background = 'rgba(79,70,229,0.15)';
+            badge.style.color = 'var(--brand)';
+            badge.style.border = '1px solid rgba(79,70,229,0.25)';
+            document.getElementById('feedSubtitle').textContent = label + ' · ' + (prof.role || '');
+        }
 
-        // 4. Focus Timer Widget
-        const FocusTimer = () => {
-            const [time, setTime] = useState(25 * 60);
-            const [isActive, setIsActive] = useState(false);
-            
-            useEffect(() => {
-                let interval = null;
-                if (isActive && time > 0) interval = setInterval(() => setTime(t => t - 1), 1000);
-                else if (time === 0) setIsActive(false);
-                return () => clearInterval(interval);
-            }, [isActive, time]);
+        // ─── ONBOARDING ───────────────────────────────────────────────────────
+        function openOnboarding() {
+            document.getElementById('onboardModal').style.display = 'flex';
+            lucide.createIcons();
+        }
 
-            const mins = Math.floor(time / 60).toString().padStart(2, '0');
-            const secs = (time % 60).toString().padStart(2, '0');
+        document.getElementById('onboardLevel').addEventListener('change', function() {
+            const lvl = this.value;
+            const sel = document.getElementById('onboardCurr');
+            sel.innerHTML = '<option value="">General (show all for my level)</option>';
+            (SYLLABUS[lvl] || []).forEach(c => {
+                const o = document.createElement('option');
+                o.value = c; o.textContent = c;
+                sel.appendChild(o);
+            });
+            document.getElementById('onboardCurrStep').style.display = 'block';
+        });
 
-            return (
-                <div className="flex flex-col items-center">
-                    <div className="text-4xl font-bold font-mono text-white mb-4 tracking-wider">{mins}:{secs}</div>
-                    <div className="flex gap-2 w-full">
-                        <button onClick={() => setIsActive(!isActive)} className={`flex-1 py-2 rounded-xl font-bold text-sm transition-colors ${isActive ? 'bg-zinc-800 text-white hover:bg-zinc-700' : 'bg-brand text-white hover:bg-brand/90'}`}>{isActive ? 'Pause' : 'Start Focus'}</button>
-                        <button onClick={() => { setIsActive(false); setTime(25 * 60); }} className="px-4 py-2 rounded-xl bg-zinc-800 text-zinc-400 hover:text-white transition-colors"><Icons.Repeat className="w-4 h-4"/></button>
-                    </div>
-                </div>
-            );
-        };
+        document.getElementById('onboardSaveBtn').addEventListener('click', async () => {
+            const lvl = document.getElementById('onboardLevel').value;
+            const curr = document.getElementById('onboardCurr').value;
+            if (!lvl) {
+                showOnboardErr('Please select your education level.');
+                return;
+            }
+            const profile = { role: lvl, curriculum: curr || lvl };
+            document.getElementById('onboardSaveBtn').textContent = 'Saving...';
+            try {
+                await setDoc(doc(db, 'artifacts', AID, 'users', CU.uid, 'settings', 'profile'), profile, { merge: true });
+                PROF = profile;
+                document.getElementById('onboardModal').style.display = 'none';
+                applyProfile(profile);
+                await buildFeed(CU);
+                loadSidebar(CU);
+                loadStats(CU);
+            } catch(e) {
+                showOnboardErr('Save failed. Please try again.');
+            }
+            document.getElementById('onboardSaveBtn').textContent = 'Curate My Feed';
+        });
 
-        // 5. Todo List Widget
-        const TodoList = ({ fbEnv, user }) => {
-            const [todos, setTodos] = useState([]);
-            const [input, setInput] = useState('');
+        function showOnboardErr(msg) {
+            const el = document.getElementById('onboardErr');
+            el.textContent = msg;
+            el.style.display = 'block';
+            el.style.background = 'rgba(239,68,68,0.1)';
+            el.style.color = '#ef4444';
+            el.style.border = '1px solid rgba(239,68,68,0.2)';
+            el.style.padding = '0.75rem';
+            el.style.borderRadius = '0.5rem';
+        }
 
-            useEffect(() => {
-                if (!user || user.isAnonymous || !fbEnv) return;
-                const unsub = fbEnv.onSnapshot(fbEnv.collection(fbEnv.db, 'artifacts', fbEnv.appId, 'users', user.uid, 'dashboard_todos'), (snap) => {
-                    setTodos(snap.docs.map(d => ({ id: d.id, ...d.data() })).sort((a,b) => b.createdAt - a.createdAt));
+        // ─── GUEST MODE ───────────────────────────────────────────────────────
+        function enterGuestMode() {
+            document.getElementById('authWrapper').style.display = 'none';
+            showApp();
+            document.getElementById('guestBanner').style.display = 'flex';
+            setHeaderUser('Guest', 'https://ui-avatars.com/api/?name=G&background=6366f1&color=fff', 'Preview');
+            document.getElementById('todoInputWrap').style.display = 'none';
+            document.getElementById('todoGuestMsg').style.display = 'block';
+            document.getElementById('statsCard').style.display = 'none';
+            const popular = ["HKDSE", "IB (International Baccalaureate)", "A-Level (ALE)", "General University"];
+            const pick = popular[Math.floor(Math.random() * popular.length)];
+            CURR_KEY = currKey(pick);
+            const badge = document.getElementById('currBadge');
+            badge.textContent = pick + ' (Preview)';
+            badge.style.display = 'inline-flex';
+            badge.style.background = 'rgba(79,70,229,0.15)';
+            badge.style.color = 'var(--brand)';
+            badge.style.border = '1px solid rgba(79,70,229,0.25)';
+            document.getElementById('feedSubtitle').textContent = pick + ' · Preview Feed';
+            document.getElementById('composeTargetLabel').textContent = pick;
+            document.getElementById('recentNotes').innerHTML = `<p class="text-xs text-center py-2" style="color:var(--muted);">Sign in to see your notes.</p>`;
+            buildGuestFeed(pick);
+        }
+
+        // ─── HELPERS ──────────────────────────────────────────────────────────
+        function currKey(name) { return 'curriculum_' + (name || '').replace(/[^a-zA-Z0-9]/g, '_'); }
+
+        function esc(s) { return (s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+
+        function md(text) {
+            if (typeof marked !== 'undefined') {
+                try { return marked.parse(text || ''); } catch(e) {}
+            }
+            return (text || '').replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>').replace(/\*(.*?)\*/g, '<em>$1</em>');
+        }
+
+        function ago(ts) {
+            if (!ts) return 'Lore';
+            const d = Date.now() - ts;
+            if (d < 60000) return 'just now';
+            if (d < 3600000) return `${Math.floor(d/60000)}m ago`;
+            if (d < 86400000) return `${Math.floor(d/3600000)}h ago`;
+            return `${Math.floor(d/86400000)}d ago`;
+        }
+
+        function liked(id) {
+            return JSON.parse(localStorage.getItem('dn_liked') || '[]').includes(id);
+        }
+
+        // ─── BUILD FEED (logged-in) ────────────────────────────────────────────
+        async function buildFeed(user) {
+            setFeedLoading(true);
+            const curriculum = PROF.curriculum || PROF.role;
+            CURR_KEY = currKey(curriculum);
+
+            try {
+                // 1. Personal error logs (unmastered, max 10)
+                const errSnap = await getDocs(collection(db, 'artifacts', AID, 'users', user.uid, 'error_logs'));
+                const errorPosts = errSnap.docs
+                    .map(d => ({ id: d.id, _t: 'error', ...d.data() }))
+                    .filter(e => !e.mastered)
+                    .slice(0, 10);
+
+                // 2. Real Insight Drop
+                const insight = await buildInsight(user);
+
+                // 3. Public curriculum lore
+                const pubRef = collection(db, 'artifacts', AID, 'public', 'data', CURR_KEY);
+                const pubSnap = await getDocs(pubRef);
+                let lore = pubSnap.docs.map(d => ({ id: d.id, _t: 'lore', ...d.data() }));
+
+                if (lore.length < 15) {
+                    const fresh = await genLore(pubRef, curriculum, lore.length);
+                    lore = [...lore, ...fresh];
+                }
+                lore.sort(() => Math.random() - 0.5);
+
+                // 4. Mix: insight → 2 lore → 1 error → repeat
+                const mixed = [insight];
+                let ei = 0, li = 0;
+                while (ei < errorPosts.length || li < lore.length) {
+                    if (li < lore.length) mixed.push(lore[li++]);
+                    if (li < lore.length) mixed.push(lore[li++]);
+                    if (ei < errorPosts.length) mixed.push(errorPosts[ei++]);
+                }
+                renderFeed(mixed, user);
+            } catch(e) {
+                console.error('Feed error:', e);
+                document.getElementById('feedList').innerHTML = `<div class="p-10 text-center text-sm" style="color:var(--muted);">Failed to load. <button onclick="location.reload()" style="color:var(--brand);">Retry</button></div>`;
+            }
+        }
+
+        // ─── BUILD GUEST FEED ─────────────────────────────────────────────────
+        async function buildGuestFeed(curriculum) {
+            setFeedLoading(true);
+            try {
+                const pubRef = collection(db, 'artifacts', AID, 'public', 'data', CURR_KEY);
+                const pubSnap = await getDocs(pubRef);
+                let lore = pubSnap.docs.map(d => ({ id: d.id, _t: 'lore', ...d.data() }));
+                if (lore.length < 10) {
+                    const fresh = await genLore(pubRef, curriculum, lore.length);
+                    lore = [...lore, ...fresh];
+                }
+                lore.sort(() => Math.random() - 0.5);
+                renderFeed(lore.slice(0, 30), null);
+            } catch(e) {
+                document.getElementById('feedList').innerHTML = `<div class="p-10 text-center text-sm" style="color:var(--muted);">Preview unavailable. <button onclick="location.reload()" style="color:var(--brand);">Retry</button></div>`;
+            }
+        }
+
+        function setFeedLoading(on) {
+            if (on) {
+                document.getElementById('feedList').innerHTML = `<div class="flex flex-col items-center justify-center h-48 gap-4"><div class="loader"></div><p class="text-xs font-bold uppercase tracking-widest" style="color:var(--brand);">Building Feed...</p></div>`;
+            }
+        }
+
+        // ─── INSIGHT DROP (real data) ──────────────────────────────────────────
+        async function buildInsight(user) {
+            try {
+                const [errSnap, notesSnap] = await Promise.all([
+                    getDocs(collection(db, 'artifacts', AID, 'users', user.uid, 'error_logs')),
+                    getDocs(collection(db, 'artifacts', AID, 'users', user.uid, 'notes'))
+                ]);
+                const total = errSnap.size;
+                const mastered = errSnap.docs.filter(d => d.data().mastered).length;
+                const notesCount = notesSnap.size;
+                const masteryPct = total > 0 ? Math.round((mastered / total) * 100) : 0;
+
+                // Subject breakdown
+                const subjectMap = {};
+                errSnap.docs.forEach(d => {
+                    const s = d.data().subject || 'General';
+                    subjectMap[s] = (subjectMap[s] || 0) + 1;
                 });
-                return () => unsub();
-            }, [user, fbEnv]);
+                const topSubject = Object.entries(subjectMap).sort((a,b) => b[1]-a[1])[0];
 
-            const addTodo = async () => {
-                if (!input.trim() || !user || user.isAnonymous) return;
-                try {
-                    await fbEnv.addDoc(fbEnv.collection(fbEnv.db, 'artifacts', fbEnv.appId, 'users', user.uid, 'dashboard_todos'), { text: input, completed: false, createdAt: Date.now() });
-                    setInput('');
-                } catch(e) {}
-            };
-            const toggle = async (id, current) => { if (user) await fbEnv.updateDoc(fbEnv.doc(fbEnv.db, 'artifacts', fbEnv.appId, 'users', user.uid, 'dashboard_todos', id), { completed: !current }); };
-            const deleteTodo = async (id) => { if (user) await fbEnv.deleteDoc(fbEnv.doc(fbEnv.db, 'artifacts', fbEnv.appId, 'users', user.uid, 'dashboard_todos', id)); };
+                // Simple streak via localStorage
+                const today = new Date().toDateString();
+                let streak = parseInt(localStorage.getItem('dn_streak') || '1');
+                const lastSeen = localStorage.getItem('dn_last');
+                if (lastSeen !== today) {
+                    const yesterday = new Date(Date.now() - 86400000).toDateString();
+                    streak = lastSeen === yesterday ? streak + 1 : 1;
+                    localStorage.setItem('dn_streak', streak);
+                    localStorage.setItem('dn_last', today);
+                }
 
-            if (!user || user.isAnonymous) return <div className="text-xs text-zinc-500 text-center">Sign in to save tasks.</div>;
+                return { id: 'insight', _t: 'insight', stats: { total, mastered, notesCount, masteryPct, streak, topSubject } };
+            } catch(e) {
+                return { id: 'insight', _t: 'insight', stats: { total: 0, mastered: 0, notesCount: 0, masteryPct: 0, streak: 1, topSubject: null } };
+            }
+        }
 
-            return (
-                <div>
-                    <div className="flex gap-2 mb-3">
-                        <input value={input} onChange={e=>setInput(e.target.value)} onKeyDown={e=>e.key==='Enter'&&addTodo()} placeholder="Quick task..." className="flex-1 bg-zinc-900 border border-white/10 rounded-lg px-3 py-1.5 text-sm text-white focus:outline-none focus:border-brand"/>
-                        <button onClick={addTodo} className="bg-zinc-800 text-white px-3 rounded-lg hover:bg-zinc-700"><Icons.Plus className="w-4 h-4"/></button>
-                    </div>
-                    <div className="space-y-2 max-h-48 overflow-y-auto hide-scrollbar">
-                        {todos.map(t => (
-                            <div key={t.id} className="flex items-start gap-2 group">
-                                <button onClick={() => toggle(t.id, t.completed)} className={`mt-0.5 w-4 h-4 rounded border flex items-center justify-center shrink-0 transition-colors ${t.completed ? 'bg-brand border-brand' : 'border-zinc-500'}`}>
-                                    {t.completed && <Icons.CheckSquare className="w-3 h-3 text-white"/>}
-                                </button>
-                                <span className={`text-sm flex-1 ${t.completed ? 'text-zinc-600 line-through' : 'text-zinc-300'}`}>{t.text}</span>
-                                <button onClick={() => deleteTodo(t.id)} className="opacity-0 group-hover:opacity-100 text-red-500 hover:text-red-400"><Icons.Trash className="w-3 h-3"/></button>
-                            </div>
-                        ))}
-                    </div>
+        // ─── GENERATE & SAVE LORE ─────────────────────────────────────────────
+        async function genLore(colRef, curriculum, existing) {
+            try {
+                const n = Math.max(10, 20 - existing);
+                const prompt = `You are an expert tutor for ${curriculum} students. Generate a JSON array of exactly ${n} short, engaging academic posts. Mix study tips, exam strategies, motivational quotes, subject trivia, and memory tricks. Each post must be practical and relevant to ${curriculum}.
+Format: [{"type":"lore","title":"Short catchy title","content":"1-3 sentences in markdown. Use **bold** for key terms.","likes":${Math.floor(Math.random()*60)+15}}]
+Return ONLY the JSON array. No extra text.`;
+                const res = await fetch(GEMINI, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] })
+                });
+                const data = await res.json();
+                const raw = data.candidates?.[0]?.content?.parts?.[0]?.text || '';
+                const s = raw.indexOf('['), e = raw.lastIndexOf(']');
+                if (s === -1 || e === -1) return [];
+                const posts = JSON.parse(raw.substring(s, e + 1));
+                const batch = writeBatch(db);
+                const saved = [];
+                posts.forEach(p => {
+                    const ref = doc(colRef);
+                    const pd = { ...p, _t: 'lore', createdAt: Date.now() };
+                    batch.set(ref, pd);
+                    saved.push({ id: ref.id, ...pd });
+                });
+                await batch.commit();
+                return saved;
+            } catch(e) {
+                console.warn('Lore gen failed:', e);
+                return [];
+            }
+        }
+
+        // ─── RENDER FEED ──────────────────────────────────────────────────────
+        function renderFeed(posts, user) {
+            const fl = document.getElementById('feedList');
+            fl.innerHTML = '';
+            if (!posts || posts.length === 0) {
+                fl.innerHTML = `<div class="p-16 text-center"><p class="text-lg font-bold mb-2">Feed is Empty</p><p class="text-sm" style="color:var(--muted);">No content yet. Be the first to post!</p></div>`;
+                return;
+            }
+            posts.forEach((post, i) => {
+                const el = document.createElement('div');
+                el.className = 'feed-post fade-up';
+                el.style.animationDelay = `${Math.min(i * 35, 500)}ms`;
+                if (post._t === 'insight') el.innerHTML = tplInsight(post);
+                else if (post._t === 'error') el.innerHTML = tplError(post);
+                else el.innerHTML = tplLore(post);
+
+                // Wire events
+                const masterBtn = el.querySelector('.js-master');
+                if (masterBtn) masterBtn.addEventListener('click', () => markMastered(post.id, user, el));
+                const likeBtn = el.querySelector('.js-like');
+                if (likeBtn) likeBtn.addEventListener('click', () => doLike(post.id, likeBtn));
+
+                fl.appendChild(el);
+            });
+            const endEl = document.createElement('div');
+            endEl.className = 'p-8 text-center text-xs font-bold uppercase tracking-widest flex items-center justify-center gap-2';
+            endEl.style.color = 'var(--muted)';
+            endEl.innerHTML = '<span style="width:6px;height:6px;border-radius:50%;display:inline-block;background:var(--border);"></span> End of Feed';
+            fl.appendChild(endEl);
+            lucide.createIcons();
+        }
+
+        // ─── POST TEMPLATES ───────────────────────────────────────────────────
+        function tplInsight(post) {
+            const { total, mastered, notesCount, masteryPct, streak, topSubject } = post.stats;
+            const R = [40, 30, 20];
+            const C = R.map(r => 2 * Math.PI * r);
+            const p1 = Math.min(100, masteryPct);
+            const p2 = Math.min(100, notesCount > 0 ? Math.min((notesCount / 20) * 100, 100) : 0);
+            const p3 = Math.min(100, (streak / 7) * 100);
+            const dash = (p, c) => `${(p/100)*c} ${c}`;
+            return `
+            <div class="flex px-4 pt-4 pb-2">
+              <div class="flex flex-col items-center mr-3 shrink-0">
+                <div class="w-10 h-10 rounded-full flex items-center justify-center" style="background:rgba(34,197,94,0.15); color:#22c55e;">
+                  <i data-lucide="activity" class="w-5 h-5"></i>
                 </div>
-            );
+                <div class="thread-line"></div>
+              </div>
+              <div class="flex-1 pb-4 min-w-0">
+                <div class="flex items-center gap-2 mb-3">
+                  <span class="font-bold text-sm">darNote Analytics</span>
+                  <span class="text-xs" style="color:var(--muted);">Weekly Drop</span>
+                </div>
+                <div class="flex items-center gap-5 rounded-2xl p-4 border" style="background:var(--surface); border-color:var(--border);">
+                  <svg class="w-24 h-24 shrink-0" viewBox="0 0 100 100">
+                    <circle cx="50" cy="50" r="${R[0]}" fill="none" stroke="#3f1616" stroke-width="8"/>
+                    <circle cx="50" cy="50" r="${R[1]}" fill="none" stroke="#12311e" stroke-width="8"/>
+                    <circle cx="50" cy="50" r="${R[2]}" fill="none" stroke="#1e293b" stroke-width="8"/>
+                    <circle cx="50" cy="50" r="${R[0]}" fill="none" stroke="#ef4444" stroke-width="8" stroke-dasharray="${dash(p1,C[0])}" stroke-linecap="round" transform="rotate(-90 50 50)"/>
+                    <circle cx="50" cy="50" r="${R[1]}" fill="none" stroke="#22c55e" stroke-width="8" stroke-dasharray="${dash(p2,C[1])}" stroke-linecap="round" transform="rotate(-90 50 50)"/>
+                    <circle cx="50" cy="50" r="${R[2]}" fill="none" stroke="#3b82f6" stroke-width="8" stroke-dasharray="${dash(p3,C[2])}" stroke-linecap="round" transform="rotate(-90 50 50)"/>
+                  </svg>
+                  <div class="min-w-0">
+                    <p class="font-bold text-sm mb-2">Your Progress Rings</p>
+                    <div class="space-y-1.5 text-xs">
+                      <div class="flex items-center gap-2"><span class="w-2 h-2 rounded-full bg-red-500 shrink-0"></span><span style="color:var(--muted)">Mastery</span><span class="font-bold">${masteryPct}%</span><span style="color:var(--muted)">(${mastered}/${total})</span></div>
+                      <div class="flex items-center gap-2"><span class="w-2 h-2 rounded-full bg-green-500 shrink-0"></span><span style="color:var(--muted)">Notes</span><span class="font-bold">${notesCount}</span></div>
+                      <div class="flex items-center gap-2"><span class="w-2 h-2 rounded-full bg-blue-500 shrink-0"></span><span style="color:var(--muted)">Streak</span><span class="font-bold">${streak}d</span></div>
+                      ${topSubject ? `<div class="flex items-center gap-2 mt-1"><span class="w-2 h-2 rounded-full shrink-0" style="background:var(--brand)"></span><span style="color:var(--muted)">Top issue</span><span class="font-bold truncate">${esc(topSubject[0])}</span></div>` : ''}
+                    </div>
+                    <a href="report copy.html" class="inline-block mt-3 text-xs font-bold" style="color:var(--brand);">Full Insight Report →</a>
+                  </div>
+                </div>
+              </div>
+            </div>`;
+        }
+
+        function tplError(post) {
+            return `
+            <div class="flex px-4 pt-4 pb-2">
+              <div class="flex flex-col items-center mr-3 shrink-0">
+                <div class="w-10 h-10 rounded-full flex items-center justify-center shrink-0" style="background:rgba(239,68,68,0.12);">
+                  <i data-lucide="alert-circle" class="w-5 h-5 text-red-500"></i>
+                </div>
+                <div class="thread-line"></div>
+              </div>
+              <div class="flex-1 pb-4 min-w-0">
+                <div class="flex justify-between items-start mb-2 gap-2">
+                  <div><span class="font-bold text-sm">Your Error Log</span><span class="text-xs ml-2" style="color:var(--muted);">Active</span></div>
+                  <span class="text-[10px] font-bold px-2 py-0.5 rounded shrink-0" style="background:rgba(239,68,68,0.1); color:#ef4444; border:1px solid rgba(239,68,68,0.2);">Unmastered</span>
+                </div>
+                <div class="rounded-xl p-3 border text-sm" style="background:rgba(255,255,255,0.025); border-color:var(--border);">
+                  ${(post.subject || post.topic) ? `<div class="text-[10px] font-bold uppercase tracking-wider mb-2" style="color:var(--muted);">${esc(post.subject || '')}${post.topic ? ' · ' + esc(post.topic) : ''}</div>` : ''}
+                  ${post.questionText ? `<div class="mb-1.5"><span class="font-bold" style="color:#f87171;">Mistake: </span><span style="color:var(--text)">${esc(post.questionText)}</span></div>` : '<div class="mb-1.5 italic" style="color:var(--muted);">No question text recorded.</div>'}
+                  ${post.correctAnswer ? `<div class="mb-1.5"><span class="font-bold" style="color:#4ade80;">Correction: </span><span style="color:var(--text)">${esc(post.correctAnswer)}</span></div>` : ''}
+                  ${post.explanation ? `<div class="text-xs italic mt-1" style="color:var(--muted);">"${esc(post.explanation)}"</div>` : ''}
+                </div>
+                <div class="flex items-center gap-5 mt-3 text-xs" style="color:var(--muted);">
+                  <button class="js-master flex items-center gap-1.5 transition-colors hover:text-red-500 cursor-pointer">
+                    <div class="p-1.5 rounded-full hover:bg-red-500/10 transition-colors"><i data-lucide="heart" class="w-4 h-4"></i></div>
+                    Mark Mastered
+                  </button>
+                  <a href="el.html?log=${esc(post.id)}" class="flex items-center gap-1.5 transition-colors hover:text-brand">
+                    <div class="p-1.5 rounded-full hover:bg-brand/10 transition-colors"><i data-lucide="external-link" class="w-4 h-4"></i></div>
+                    Open Full
+                  </a>
+                </div>
+              </div>
+            </div>`;
+        }
+
+        function tplLore(post) {
+            const isUser = !!post.postedByUid;
+            const author = esc(post.authorName || (isUser ? 'Community Member' : 'System Lore'));
+            const timeStr = ago(post.createdAt);
+            const isLiked = liked(post.id);
+            const likeCount = (post.likes || 0) + (isLiked ? 1 : 0);
+            const avatarEl = isUser && post.authorAvatar
+                ? `<img src="${esc(post.authorAvatar)}" class="w-full h-full rounded-full object-cover" alt="">`
+                : `<i data-lucide="${isUser ? 'user' : 'bot'}" class="w-5 h-5"></i>`;
+            const avatarBg = isUser ? 'rgba(79,70,229,0.15)' : 'rgba(161,161,170,0.1)';
+
+            return `
+            <div class="flex px-4 pt-4 pb-2">
+              <div class="flex flex-col items-center mr-3 shrink-0">
+                <div class="w-10 h-10 rounded-full flex items-center justify-center overflow-hidden shrink-0" style="background:${avatarBg}; color:var(--muted);">${avatarEl}</div>
+                <div class="thread-line"></div>
+              </div>
+              <div class="flex-1 pb-4 min-w-0">
+                <div class="flex items-center gap-2 mb-2 flex-wrap">
+                  <span class="font-bold text-sm">${author}</span>
+                  <span class="text-xs" style="color:var(--muted);">${timeStr}</span>
+                </div>
+                ${post.title ? `<div class="font-bold text-sm mb-1">${esc(post.title)}</div>` : ''}
+                <div class="text-sm leading-relaxed markdown-body" style="color:var(--muted);">${md(post.content || '')}</div>
+                <div class="flex items-center gap-5 mt-3 text-xs" style="color:var(--muted);">
+                  <button class="js-like flex items-center gap-1.5 transition-colors cursor-pointer ${isLiked ? 'text-red-500' : 'hover:text-red-500'}" data-id="${esc(post.id)}">
+                    <div class="p-1.5 rounded-full hover:bg-red-500/10 transition-colors"><i data-lucide="heart" class="w-4 h-4 ${isLiked ? 'fill-current' : ''}"></i></div>
+                    <span class="like-n">${likeCount}</span>
+                  </button>
+                  <button class="flex items-center gap-1.5 transition-colors hover:text-brand cursor-pointer">
+                    <div class="p-1.5 rounded-full hover:bg-brand/10 transition-colors"><i data-lucide="message-circle" class="w-4 h-4"></i></div>
+                    Discuss
+                  </button>
+                  <button class="flex items-center gap-1.5 transition-colors hover:text-green-500 cursor-pointer ml-auto">
+                    <div class="p-1.5 rounded-full hover:bg-green-500/10 transition-colors"><i data-lucide="repeat-2" class="w-4 h-4"></i></div>
+                  </button>
+                </div>
+              </div>
+            </div>`;
+        }
+
+        // ─── ACTIONS ──────────────────────────────────────────────────────────
+        async function markMastered(id, user, el) {
+            if (!user) return;
+            try {
+                await updateDoc(doc(db, 'artifacts', AID, 'users', user.uid, 'error_logs', id), { mastered: true });
+                el.style.transition = 'all 0.3s ease';
+                el.style.opacity = '0';
+                el.style.transform = 'translateX(16px)';
+                setTimeout(() => { el.remove(); loadStats(user); }, 300);
+            } catch(e) { console.error(e); }
+        }
+
+        function doLike(id, btn) {
+            const arr = JSON.parse(localStorage.getItem('dn_liked') || '[]');
+            const nEl = btn.querySelector('.like-n');
+            const hEl = btn.querySelector('[data-lucide="heart"]');
+            let n = parseInt(nEl?.textContent || '0');
+            if (arr.includes(id)) {
+                arr.splice(arr.indexOf(id), 1);
+                btn.style.color = '';
+                hEl?.classList.remove('fill-current');
+                n = Math.max(0, n - 1);
+            } else {
+                arr.push(id);
+                btn.style.color = '#ef4444';
+                hEl?.classList.add('fill-current');
+                n++;
+            }
+            localStorage.setItem('dn_liked', JSON.stringify(arr));
+            if (nEl) nEl.textContent = n;
+        }
+
+        // ─── COMPOSE ──────────────────────────────────────────────────────────
+        document.getElementById('composeBtn').addEventListener('click', () => {
+            if (!CU) { alert('Please sign in to post to the community feed.'); return; }
+            if (!PROF) { alert('Please complete your profile setup first.'); return; }
+            document.getElementById('composeModal').style.display = 'flex';
+        });
+        window.closeCompose = () => { document.getElementById('composeModal').style.display = 'none'; };
+        window.submitPost = async () => {
+            const text = document.getElementById('composeText').value.trim();
+            if (!text || !CU || !CURR_KEY) return;
+            const btn = document.getElementById('composeSubmitBtn');
+            btn.textContent = 'Posting...'; btn.disabled = true;
+            try {
+                await addDoc(collection(db, 'artifacts', AID, 'public', 'data', CURR_KEY), {
+                    _t: 'lore', type: 'lore', content: text, likes: 0,
+                    postedByUid: CU.uid,
+                    authorName: CU.displayName || 'Student',
+                    authorAvatar: CU.photoURL || '',
+                    createdAt: Date.now()
+                });
+                document.getElementById('composeText').value = '';
+                closeCompose();
+                if (CU) await buildFeed(CU);
+            } catch(e) { alert('Post failed. Please try again.'); }
+            btn.textContent = 'Post'; btn.disabled = false;
         };
 
-        // 6. Previews Widget
-        const PreviewsWidget = ({ fbEnv, user }) => {
-            const [notes, setNotes] = useState([]);
-            const [errors, setErrors] = useState([]);
+        // ─── SIDEBAR DATA ─────────────────────────────────────────────────────
+        function loadSidebar(user) {
+            // Stats card
+            document.getElementById('statsCard').style.display = 'block';
 
-            useEffect(() => {
-                if (!user || user.isAnonymous || !fbEnv) return;
-                const fetchPreviews = async () => {
-                    try {
-                        const nSnap = await fbEnv.getDocs(fbEnv.collection(fbEnv.db, 'artifacts', fbEnv.appId, 'users', user.uid, 'notes'));
-                        const nList = nSnap.docs.map(d => ({ id: d.id, ...d.data() })).sort((a,b) => (b.updatedAt||0) - (a.updatedAt||0)).slice(0, 2);
-                        setNotes(nList);
-
-                        const eSnap = await fbEnv.getDocs(fbEnv.collection(fbEnv.db, 'artifacts', fbEnv.appId, 'users', user.uid, 'error_logs'));
-                        const eList = eSnap.docs.map(d => ({ id: d.id, ...d.data() })).filter(e => !e.mastered).sort((a,b) => new Date(b.createdAt||0) - new Date(a.createdAt||0)).slice(0, 2);
-                        setErrors(eList);
-                    } catch(err) { console.error("Error fetching previews", err); }
-                };
-                fetchPreviews();
-            }, [user, fbEnv]);
-
-            if (!user || user.isAnonymous) return <div className="text-xs text-zinc-500 text-center">Sign in to view your personal content.</div>;
-
-            return (
-                <div className="space-y-4">
-                    <div>
-                        <div className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest mb-2 flex justify-between">Recent Notes <a href="note.html" className="text-brand hover:underline">View All</a></div>
-                        {notes.length === 0 ? <div className="text-xs text-zinc-600">No notes yet.</div> : notes.map(n => (
-                            <a key={n.id} href={`note.html?note=${n.id}`} className="block bg-zinc-900 border border-white/5 rounded-xl p-3 mb-2 hover:border-brand transition-colors">
-                                <div className="flex items-center gap-2 font-bold text-sm text-zinc-200 mb-1"><Icons.FileText className="w-3.5 h-3.5 text-blue-400"/> {n.title || 'Untitled Note'}</div>
-                                <div className="text-xs text-zinc-500 truncate">{n.subject || 'General'}</div>
-                            </a>
-                        ))}
-                    </div>
-                    <div className="border-t border-white/5 pt-2">
-                        <div className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest mb-2 flex justify-between">Active Errors <a href="el.html" className="text-brand hover:underline">View All</a></div>
-                        {errors.length === 0 ? <div className="text-xs text-zinc-600">No active errors!</div> : errors.map(e => (
-                            <a key={e.id} href={`el.html?log=${e.id}`} className="block bg-zinc-900 border border-white/5 rounded-xl p-3 mb-2 hover:border-red-500 transition-colors">
-                                <div className="flex items-center gap-2 font-bold text-sm text-zinc-200 mb-1"><Icons.Bug className="w-3.5 h-3.5 text-red-400"/> {e.questionText?.substring(0, 30) || 'Error Log'}...</div>
-                                <div className="text-xs text-zinc-500 truncate">{e.subject} • {e.topic}</div>
-                            </a>
-                        ))}
-                    </div>
-                </div>
-            );
-        };
-
-        // 7. Onboarding Modal (Multi-Step)
-        const OnboardingModal = ({ fbEnv, user, onComplete }) => {
-            const [level, setLevel] = useState('');
-            const [curr, setCurr] = useState('');
-            const [saving, setSaving] = useState(false);
-            const [errorMsg, setErrorMsg] = useState('');
-
-            const handleSave = async () => {
-                if (!level || !curr) {
-                    setErrorMsg("Please select both your level and syllabus.");
+            // Recent Notes (live)
+            if (notesUnsub) notesUnsub();
+            const nQ = query(collection(db, 'artifacts', AID, 'users', user.uid, 'notes'), orderBy('updatedAt', 'desc'), limit(5));
+            notesUnsub = onSnapshot(nQ, snap => {
+                const el = document.getElementById('recentNotes');
+                if (snap.empty) {
+                    el.innerHTML = `<p class="text-xs text-center py-2" style="color:var(--muted);">No notes yet. <a href="note.html" style="color:var(--brand);">Create one →</a></p>`;
                     return;
                 }
-                setSaving(true);
-                setErrorMsg('');
-                try {
-                    await fbEnv.setDoc(fbEnv.doc(fbEnv.db, 'artifacts', fbEnv.appId, 'users', user.uid, 'settings', 'profile'), { role: level, curriculum: curr }, { merge: true });
-                    onComplete({ role: level, curriculum: curr });
-                } catch(e) { 
-                    setErrorMsg("Failed to save profile. Please try again.");
+                el.innerHTML = snap.docs.map(d => {
+                    const n = d.data();
+                    return `<a href="note.html?note=${d.id}" class="flex items-center gap-2 px-2 py-2 rounded-lg text-xs font-medium transition-all block" style="color:var(--text);" onmouseover="this.style.background='var(--surface)'" onmouseout="this.style.background=''">
+                        <i data-lucide="file-text" class="w-3.5 h-3.5 shrink-0" style="color:var(--brand);"></i>
+                        <span class="truncate">${esc(n.title || 'Untitled')}</span>
+                    </a>`;
+                }).join('') + `<a href="note.html" class="block text-center text-xs font-bold mt-1" style="color:var(--brand);">View All →</a>`;
+                lucide.createIcons();
+            });
+
+            // Todos (live)
+            if (todoUnsub) todoUnsub();
+            const tQ = query(collection(db, 'artifacts', AID, 'users', user.uid, 'dashboard_todos'), orderBy('createdAt', 'desc'), limit(20));
+            todoUnsub = onSnapshot(tQ, snap => {
+                const el = document.getElementById('todoList');
+                if (snap.empty) {
+                    el.innerHTML = `<p class="text-xs text-center py-2" style="color:var(--muted);">No tasks yet.</p>`;
+                    document.getElementById('todoCountBadge').textContent = '';
+                    return;
                 }
-                setSaving(false);
-            };
+                let active = 0;
+                el.innerHTML = snap.docs.map(d => {
+                    const t = d.data();
+                    if (!t.completed) active++;
+                    return `<div class="flex items-center gap-2 group py-1.5">
+                        <button onclick="toggleTodo('${d.id}',${!t.completed})" class="w-4 h-4 rounded border flex items-center justify-center text-white text-[9px] shrink-0 transition-colors cursor-pointer" style="${t.completed ? 'background:var(--brand);border-color:var(--brand)' : 'border-color:var(--border)'};">${t.completed ? '✓' : ''}</button>
+                        <span class="text-sm flex-1 truncate ${t.completed ? 'line-through' : ''}" style="color:${t.completed ? 'var(--muted)' : 'var(--text)'};">${esc(t.text)}</span>
+                        <button onclick="delTodo('${d.id}')" class="opacity-0 group-hover:opacity-100 text-red-500 text-xs transition-opacity cursor-pointer">✕</button>
+                    </div>`;
+                }).join('');
+                document.getElementById('todoCountBadge').textContent = active > 0 ? `${active} active` : '';
+            });
+        }
 
-            return (
-                <div className="fixed inset-0 z-[100] bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
-                    <div className="bg-surface w-full max-w-md rounded-3xl border border-white/10 p-8 shadow-2xl">
-                        <div className="w-16 h-16 bg-brand/10 rounded-full flex items-center justify-center mb-6 mx-auto"><Icons.User className="w-8 h-8 text-brand"/></div>
-                        <h2 className="text-2xl font-bold text-white text-center mb-2">Welcome to your Hub</h2>
-                        <p className="text-sm text-zinc-400 text-center mb-6">Select your curriculum to join the right public feed.</p>
-                        
-                        {errorMsg && <div className="bg-red-500/10 border border-red-500/20 text-red-400 text-xs p-3 rounded-lg mb-4 text-center">{errorMsg}</div>}
+        function loadStats(user) {
+            Promise.all([
+                getDocs(collection(db, 'artifacts', AID, 'users', user.uid, 'notes')),
+                getDocs(collection(db, 'artifacts', AID, 'users', user.uid, 'error_logs'))
+            ]).then(([ns, es]) => {
+                document.getElementById('sNotes').textContent = ns.size;
+                const total = es.size;
+                const mastered = es.docs.filter(d => d.data().mastered).length;
+                document.getElementById('sErrors').textContent = total;
+                document.getElementById('sMastery').textContent = total > 0 ? Math.round(mastered/total*100) + '%' : '—';
+            });
+        }
 
-                        <div className="space-y-4">
-                            <div>
-                                <label className="block text-xs font-bold text-zinc-500 uppercase tracking-wider mb-2">1. Education Level</label>
-                                <select value={level} onChange={e => { setLevel(e.target.value); setCurr(''); }} className="w-full bg-zinc-900 border border-white/10 rounded-xl p-3 text-white focus:border-brand focus:outline-none appearance-none cursor-pointer">
-                                    <option value="" disabled>Select your level...</option>
-                                    {EDUCATION_LEVELS.map(l => <option key={l} value={l}>{l}</option>)}
-                                </select>
-                            </div>
-                            
-                            <AnimatePresence>
-                                {level && (
-                                    <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} className="overflow-hidden">
-                                        <label className="block text-xs font-bold text-zinc-500 uppercase tracking-wider mb-2 mt-4">2. Syllabus / Focus</label>
-                                        <select value={curr} onChange={e=>setCurr(e.target.value)} className="w-full bg-zinc-900 border border-white/10 rounded-xl p-3 text-white focus:border-brand focus:outline-none appearance-none cursor-pointer">
-                                            <option value="" disabled>Choose your path...</option>
-                                            {SYLLABUS_MAP[level].map(c => <option key={c} value={c}>{c}</option>)}
-                                        </select>
-                                    </motion.div>
-                                )}
-                            </AnimatePresence>
-
-                            <button onClick={handleSave} disabled={saving || !level || !curr} className="w-full bg-white text-black font-bold py-3 rounded-xl hover:bg-zinc-200 transition-colors mt-6 disabled:opacity-50">
-                                {saving ? 'Saving...' : 'Curate My Feed'}
-                            </button>
-                        </div>
-                    </div>
-                </div>
-            );
+        // ─── TODOS ────────────────────────────────────────────────────────────
+        window.toggleTodo = async (id, status) => {
+            if (!CU) return;
+            await updateDoc(doc(db, 'artifacts', AID, 'users', CU.uid, 'dashboard_todos', id), { completed: status }).catch(console.error);
+        };
+        window.delTodo = async (id) => {
+            if (!CU) return;
+            await deleteDoc(doc(db, 'artifacts', AID, 'users', CU.uid, 'dashboard_todos', id)).catch(console.error);
+        };
+        window.addTodo = async () => {
+            const inp = document.getElementById('todoInput');
+            const text = inp.value.trim();
+            if (!text || !CU) return;
+            await addDoc(collection(db, 'artifacts', AID, 'users', CU.uid, 'dashboard_todos'), { text, completed: false, createdAt: serverTimestamp() }).catch(console.error);
+            inp.value = '';
         };
 
-        // --- MAIN APP ---
-        const App = () => {
-            const [fbEnv, setFbEnv] = useState(null);
-            const [user, setUser] = useState(null);
-            const [profile, setProfile] = useState(null);
-            const [authLoading, setAuthLoading] = useState(true);
-            const [showOnboarding, setShowOnboarding] = useState(false);
-            const [feed, setFeed] = useState([]);
-            const [feedLoading, setFeedLoading] = useState(true);
+        // ─── TIMER ────────────────────────────────────────────────────────────
+        function fmtTimer(s) { return `${Math.floor(s/60).toString().padStart(2,'0')}:${(s%60).toString().padStart(2,'0')}`; }
+        function syncTimerDisplays() {
+            const t = fmtTimer(timerSec);
+            document.getElementById('miniTimer').textContent = t;
+            document.getElementById('focusTimerDisplay').textContent = t;
+        }
 
-            // 1. Setup Firebase & Auth
-            useEffect(() => {
-                const initFb = async () => {
-                    const env = window.firebaseEnv;
-                    if (!env) return;
-                    setFbEnv(env);
-                    try {
-                        if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
-                            await env.signInWithCustomToken(env.auth, __initial_auth_token);
-                        } else {
-                            await env.signInAnonymously(env.auth);
-                        }
-                    } catch(e) { console.error("Auth init failed", e); }
-                    
-                    env.onAuthStateChanged(env.auth, async (u) => {
-                        setUser(u);
-                        if (u) {
-                            if (!u.isAnonymous) {
-                                const pRef = env.doc(env.db, 'artifacts', env.appId, 'users', u.uid, 'settings', 'profile');
-                                const snap = await env.getDoc(pRef);
-                                if (snap.exists() && snap.data().curriculum) {
-                                    setProfile(snap.data());
-                                    setShowOnboarding(false);
-                                } else {
-                                    setShowOnboarding(true);
-                                }
-                            } else {
-                                // Anonymous Guest User
-                                setProfile(null);
-                                setShowOnboarding(false);
-                            }
-                        }
-                        setAuthLoading(false);
-                    });
-                };
-                
-                if (window.firebaseEnv) initFb();
-                else window.addEventListener('firebaseLoaded', initFb);
-                return () => window.removeEventListener('firebaseLoaded', initFb);
-            }, []);
+        window.setDur = (mins) => {
+            pauseTimer();
+            timerDur = mins * 60; timerSec = timerDur;
+            document.querySelectorAll('.timer-preset').forEach(b => {
+                const active = parseInt(b.dataset.mins) === mins;
+                b.style.background = active ? 'var(--text)' : '';
+                b.style.color = active ? 'var(--bg)' : '';
+            });
+            syncTimerDisplays();
+        };
+        window.askCustomDur = () => {
+            const v = prompt('Duration in minutes:', '90');
+            if (v && !isNaN(v) && +v > 0) window.setDur(parseInt(v));
+        };
+        window.startTimer = () => {
+            if (timerIv) return;
+            document.getElementById('timerStartBtn').style.display = 'none';
+            document.getElementById('timerPauseBtn').style.display = 'block';
+            document.getElementById('overlayStartBtn').style.display = 'none';
+            document.getElementById('overlayStopBtn').style.display = 'flex';
+            timerIv = setInterval(() => {
+                if (timerSec > 0) { timerSec--; syncTimerDisplays(); }
+                else {
+                    pauseTimer();
+                    new Audio('https://actions.google.com/sounds/v1/alarms/beep_short.ogg').play().catch(()=>{});
+                }
+            }, 1000);
+        };
+        window.pauseTimer = () => {
+            clearInterval(timerIv); timerIv = null;
+            document.getElementById('timerStartBtn').style.display = 'block';
+            document.getElementById('timerPauseBtn').style.display = 'none';
+            document.getElementById('overlayStartBtn').style.display = 'flex';
+            document.getElementById('overlayStopBtn').style.display = 'none';
+        };
+        window.resetTimer = () => { pauseTimer(); timerSec = timerDur; syncTimerDisplays(); };
 
-            // 2. The Mixer / Reservoir Logic
-            useEffect(() => {
-                if (authLoading || !fbEnv) return;
-                if (user && !user.isAnonymous && !profile && showOnboarding) return;
+        // ─── FOCUS OVERLAY ────────────────────────────────────────────────────
+        window.enterFocus = () => {
+            const ov = document.getElementById('focusOverlay');
+            ov.style.display = 'flex';
+            ov.style.flexDirection = 'column';
+            ov.style.alignItems = 'center';
+            ov.style.justifyContent = 'center';
+            ov.style.background = '#09090b';
+            lucide.createIcons();
+        };
+        document.getElementById('exitFocusBtn').addEventListener('click', () => {
+            document.getElementById('focusOverlay').style.display = 'none';
+        });
+        document.getElementById('overlayStartBtn').addEventListener('click', () => window.startTimer());
+        document.getElementById('overlayStopBtn').addEventListener('click', () => window.pauseTimer());
 
-                const buildFeed = async () => {
-                    setFeedLoading(true);
-                    let mixedFeed = [];
-                    let fetchCurrName = '';
-                    
-                    if (user && !user.isAnonymous && profile) {
-                        fetchCurrName = profile.curriculum;
-                    } else {
-                        // GUEST LOGIC: Randomly select a popular syllabus to preview
-                        const popular = ["HKDSE", "IB (International Baccalaureate)", "A-Level (ALE)", "General University"];
-                        fetchCurrName = popular[Math.floor(Math.random() * popular.length)];
-                    }
+        // ─── CALENDAR ─────────────────────────────────────────────────────────
+        window.shiftCal = (d) => { calMon.setMonth(calMon.getMonth() + d); renderCal(); };
+        function renderCal() {
+            const y = calMon.getFullYear(), m = calMon.getMonth();
+            const now = new Date();
+            document.getElementById('calLabel').textContent = calMon.toLocaleDateString('en-US', { month: 'short', year: 'numeric' });
+            const first = new Date(y, m, 1).getDay();
+            const days = new Date(y, m + 1, 0).getDate();
+            const grid = document.getElementById('calGrid');
+            grid.innerHTML = '';
+            for (let i = 0; i < first; i++) grid.appendChild(document.createElement('div'));
+            for (let i = 1; i <= days; i++) {
+                const el = document.createElement('div');
+                el.className = 'cal-day';
+                el.textContent = i;
+                if (y === now.getFullYear() && m === now.getMonth() && i === now.getDate()) el.classList.add('today');
+                grid.appendChild(el);
+            }
+        }
+        renderCal();
 
-                    const safeCurr = fetchCurrName.replace(/[^a-zA-Z0-9]/g, '_');
-                    const colName = `curriculum_${safeCurr}`;
-
-                    try {
-                        // A. Fetch Error Logs (if logged in)
-                        let errorLogs = [];
-                        if (user && !user.isAnonymous) {
-                            const errRef = fbEnv.collection(fbEnv.db, 'artifacts', fbEnv.appId, 'users', user.uid, 'error_logs');
-                            const errSnap = await fbEnv.getDocs(errRef); 
-                            errorLogs = errSnap.docs.map(d => ({ 
-                                id: d.id, type: 'error', author: 'Your Error Log', ...d.data(), timeAgo: 'Active'
-                            })).filter(l => !l.mastered).slice(0, 10);
-                        }
-
-                        // B. Fetch Public Drops (The Reservoir)
-                        const pubRef = fbEnv.collection(fbEnv.db, 'artifacts', fbEnv.appId, 'public', 'data', colName);
-                        const pubSnap = await fbEnv.getDocs(pubRef);
-                        let publicDrops = pubSnap.docs.map(d => ({ id: d.id, ...d.data(), timeAgo: 'Lore' }));
-
-                        // THE LOW WATERMARK TRIGGER & WAIT FOR RESULT
-                        if (publicDrops.length < 15) {
-                            const generatedDrops = await generateAndRefillReservoir(pubRef, fetchCurrName);
-                            if (generatedDrops.length > 0) {
-                                publicDrops = [...publicDrops, ...generatedDrops];
-                            } else if (publicDrops.length === 0) {
-                                // Ultimate Fallback if generation fails and DB is empty
-                                publicDrops = [
-                                    { id: 'g1', type: 'lore', content: `**Welcome to ${fetchCurrName} Feed!** Study hard and remember to log your errors.`, likes: 42, timeAgo: 'System' }
-                                ];
-                            }
-                        }
-
-                        // C. Generate 1 Insight Drop
-                        const insightDrop = { id: 'ins1', type: 'insight', stats: { mastered: 12, total: 20, studyHours: 8, consistency: 5 }, timeAgo: 'Weekly' };
-
-                        // D. Mix them randomly but evenly
-                        mixedFeed.push(insightDrop);
-                        let errIdx = 0, pubIdx = 0;
-                        while (errIdx < errorLogs.length || pubIdx < publicDrops.length) {
-                            if (pubIdx < publicDrops.length) mixedFeed.push(publicDrops[pubIdx++]);
-                            if (pubIdx < publicDrops.length) mixedFeed.push(publicDrops[pubIdx++]);
-                            if (errIdx < errorLogs.length) mixedFeed.push(errorLogs[errIdx++]);
-                        }
-
-                        // Attach the currently previewed syllabus to state for UI display
-                        setFeed({ posts: mixedFeed, activeSyllabus: fetchCurrName });
-                    } catch(e) { console.error("Feed error:", e); }
-                    setFeedLoading(false);
-                };
-
-                buildFeed();
-            }, [user, profile, authLoading, showOnboarding, fbEnv]);
-
-            const generateAndRefillReservoir = async (colRef, curriculum) => {
-                try {
-                    const prompt = `Generate a JSON array of 5 highly engaging, short academic trivia, study hacks, or motivational facts for a student studying ${curriculum}.
-                    Format strictly as: [{"type": "lore", "title": "Did you know?", "content": "markdown text", "likes": random_number_under_100}]`;
-                    
-                    const res = await fetch(GEMINI_PROXY_URL, {
-                        method: 'POST', headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] })
-                    });
-                    const data = await res.json();
-                    let text = data.candidates?.[0]?.content?.parts?.[0]?.text;
-                    if (!text) return [];
-                    
-                    const jsonStr = text.substring(text.indexOf('['), text.lastIndexOf(']') + 1);
-                    const newPosts = JSON.parse(jsonStr);
-                    
-                    const batch = window.firebaseEnv.writeBatch(window.firebaseEnv.db);
-                    const savedDrops = [];
-                    newPosts.forEach(post => {
-                        const newDocRef = window.firebaseEnv.doc(colRef);
-                        const postData = { ...post, createdAt: Date.now() };
-                        batch.set(newDocRef, postData);
-                        savedDrops.push({ id: newDocRef.id, ...postData, timeAgo: 'Just now' });
-                    });
-                    await batch.commit();
-                    return savedDrops; 
-                } catch(e) { console.warn("Background AI generation failed:", e); return []; }
-            };
-
-            const markMastered = async (logId) => {
-                if (!user || user.isAnonymous || !fbEnv) return;
-                try {
-                    await fbEnv.updateDoc(fbEnv.doc(fbEnv.db, 'artifacts', fbEnv.appId, 'users', user.uid, 'error_logs', logId), { mastered: true });
-                    setFeed(prev => ({...prev, posts: prev.posts.filter(p => p.id !== logId)}));
-                } catch(e) {}
-            };
-
-            if (authLoading) return <div className="h-screen flex items-center justify-center"><div className="w-8 h-8 border-4 border-brand border-t-transparent rounded-full animate-spin"></div></div>;
-
-            return (
-                <div className="flex h-screen w-full bg-onyx">
-                    {showOnboarding && <OnboardingModal fbEnv={fbEnv} user={user} onComplete={(p) => { setProfile(p); setShowOnboarding(false); }} />}
-                    
-                    {/* LEFT COLUMN: THE THREADS FEED (65%) */}
-                    <main className="flex-1 flex flex-col h-full border-r border-border max-w-4xl mx-auto lg:mx-0 lg:w-[65%] shrink-0">
-                        {/* Feed Header */}
-                        <header className="h-16 px-6 flex items-center justify-between border-b border-border/50 shrink-0 bg-onyx/80 backdrop-blur-md z-10 sticky top-0">
-                            <div className="flex items-center gap-3">
-                                <img src="https://raw.githubusercontent.com/darren6251/darnote/refs/heads/main/darNote%20logo.png" className="w-8 h-8 rounded-lg"/>
-                                <span className="font-bold text-lg text-white">Curriculum Feed</span>
-                            </div>
-                            <div className="flex items-center gap-4">
-                                <button className="text-xs font-bold text-brand bg-brand/10 px-3 py-1.5 rounded-full border border-brand/20 truncate max-w-[150px]">
-                                    {feed.activeSyllabus || 'Loading...'}
-                                </button>
-                            </div>
-                        </header>
-                        
-                        {/* Guest Banner */}
-                        {user && user.isAnonymous && (
-                            <div className="bg-gradient-to-r from-brand/20 to-purple-500/20 border-b border-brand/20 px-6 py-2.5 flex items-center justify-between z-10">
-                                <div className="flex items-center gap-2">
-                                    <Icons.Compass className="w-4 h-4 text-brand"/>
-                                    <span className="text-xs font-medium text-zinc-300">Viewing global preview feed. Sign in to track your personal errors.</span>
-                                </div>
-                            </div>
-                        )}
-
-                        {/* Scrolling Timeline */}
-                        <div className="flex-1 overflow-y-auto hide-scrollbar pb-24 md:pb-0 relative">
-                            {feedLoading ? (
-                                <div className="flex flex-col items-center justify-center h-48 text-zinc-500 space-y-4">
-                                    <div className="w-6 h-6 border-2 border-brand border-t-transparent rounded-full animate-spin"></div>
-                                    <div className="text-xs font-bold uppercase tracking-widest text-brand">Compiling Reservoir...</div>
-                                </div>
-                            ) : (
-                                <div className="pb-8">
-                                    {feed.posts?.map((post, idx) => (
-                                        <motion.div key={post.id + idx} initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: Math.min(idx * 0.05, 0.5) }}>
-                                            <ThreadPost post={post} onMarkMastered={markMastered} />
-                                        </motion.div>
-                                    ))}
-                                    <div className="p-8 text-center text-zinc-500 text-xs font-bold uppercase tracking-widest flex items-center justify-center gap-2">
-                                        <div className="w-2 h-2 bg-zinc-700 rounded-full animate-bounce"></div> End of Feed
-                                    </div>
-                                </div>
-                            )}
-                        </div>
-                    </main>
-
-                    {/* RIGHT COLUMN: REDDIT SIDEBAR (35% - Hidden on Mobile) */}
-                    <aside className="hidden lg:flex w-[35%] flex-col h-full bg-surface p-6 overflow-y-auto hide-scrollbar">
-                        <div className="mb-6 flex justify-between items-center">
-                            <div>
-                                <h3 className="font-bold text-lg text-white mb-1">Productivity Hub</h3>
-                                <p className="text-xs text-zinc-400">Tools to survive the doom scroll.</p>
-                            </div>
-                            {user && !user.isAnonymous && <button onClick={()=>fbEnv.signOut(fbEnv.auth)} className="text-zinc-500 hover:text-white transition-colors" title="Log out"><Icons.User className="w-5 h-5"/></button>}
-                        </div>
-
-                        <SidebarAccordion title="Focus Session" icon={Icons.Timer} defaultOpen={true}>
-                            <FocusTimer />
-                        </SidebarAccordion>
-
-                        <SidebarAccordion title="Your Previews" icon={Icons.Activity} defaultOpen={true}>
-                            <PreviewsWidget fbEnv={fbEnv} user={user} />
-                        </SidebarAccordion>
-
-                        <SidebarAccordion title="Action Items" icon={Icons.CheckSquare}>
-                            <TodoList fbEnv={fbEnv} user={user} />
-                        </SidebarAccordion>
-                    </aside>
-
-                    {/* MOBILE BOTTOM NAV */}
-                    <div className="flex lg:hidden fixed bottom-0 left-0 w-full bg-onyx/90 backdrop-blur-xl border-t border-border p-2 justify-around items-center pb-safe z-50">
-                        <button className="p-3 text-brand"><Icons.Home className="w-6 h-6"/></button>
-                        <button onClick={()=>window.location.href='el.html'} className="bg-white text-black p-3.5 rounded-xl shadow-[0_4px_20px_rgba(255,255,255,0.2)] -mt-6"><Icons.Plus className="w-6 h-6"/></button>
-                        <button onClick={()=>window.location.href='report.html'} className="p-3 text-zinc-500"><Icons.Activity className="w-6 h-6"/></button>
-                    </div>
-                </div>
-            );
+        // ─── ACCORDION ────────────────────────────────────────────────────────
+        window.toggleAcc = (btn) => {
+            const body = btn.nextElementSibling;
+            const icon = btn.querySelector('.accordion-icon');
+            body.classList.toggle('open');
+            if (icon) icon.classList.toggle('rotated', body.classList.contains('open'));
         };
 
-        const root = ReactDOM.createRoot(document.getElementById('root'));
-        root.render(<App />);
+        // ─── INIT ICONS ───────────────────────────────────────────────────────
+        lucide.createIcons();
     </script>
 </body>
 </html>
