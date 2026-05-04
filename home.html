@@ -67,7 +67,7 @@
         
         /* Time block hover expansion */
         .time-block-hover { transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1); }
-        .time-block-hover:hover { min-height: 120px !important; z-index: 40; box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.3); transform: scale(1.02); }
+        .time-block-hover:hover { min-height: 80px !important; z-index: 40; box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.3); transform: scale(1.02); }
     </style>
 </head>
 <body>
@@ -165,7 +165,7 @@
             1. Output STRICTLY VALID JSON. No markdown wrappers.
             2. For every block, provide an EXACT "startTime" and "endTime" in 24-hour "HH:MM" format (e.g., "14:30").
             3. Start the first block exactly at the Current System Time provided above.
-            4. Ensure all blocks are sequential and DO NOT overlap. The events have to be pratical so users won't get lost.
+            4. Ensure all blocks are sequential and DO NOT overlap. The events have to be pratical (or least catagory) so users won't get lost. Give enough gap times.
             5. ${isInsomnia ? "It is late at night. Provide a short wind-down schedule for tonight, and push heavy requested tasks to tomorrow afternoon." : "Schedule tasks flowing logically from the Current Time."}
 
             JSON SCHEMA:
@@ -470,7 +470,7 @@
         };
 
         const AIPlanner = ({ user, momentum }) => {
-            const [state, setState] = useState('input'); // input | loading | select | timeline
+            const [state, setState] = useState('input'); // input | loading | select | preview | timeline
             const [battery, setBattery] = useState(null); 
             const [tags, setTags] = useState([]);
             const [inputText, setInputText] = useState('');
@@ -482,8 +482,8 @@
             const isInsomnia = new Date().getHours() >= 23 || new Date().getHours() < 6;
             const timelineScrollRef = useRef(null);
 
-            // PIXEL CONSTANT (1 min = 3 pixels. 1 hour = 180px)
-            const PPM = 3; 
+            // PIXEL CONSTANT (1 min = 1.5 pixels. 1 hour = 90px) - THINNER/LESS DENSE
+            const PPM = 1.5; 
             const HOURS = Array.from({length: 24}, (_, i) => i);
 
             // Time Tracker hook
@@ -512,7 +512,7 @@
             }, [user]);
 
             useEffect(() => {
-                if (state === 'timeline' && timelineScrollRef.current) {
+                if ((state === 'timeline' || state === 'preview') && timelineScrollRef.current) {
                     const now = new Date();
                     const mins = now.getHours() * 60 + now.getMinutes();
                     // Scroll to current time, offset by ~100px so the red line isn't at the absolute top
@@ -530,20 +530,25 @@
                 setGeneratedPlans(res.plans);
                 
                 if (battery === 'burned' && res.plans.gentle && res.plans.gentle.length > 0) { 
-                    setActivePlanKey('gentle'); selectPlan('gentle', res.plans.gentle); 
+                    setActivePlanKey('gentle'); 
+                    setActivePlan(res.plans.gentle);
+                    setState('preview'); 
                 } else {
                     setState('select');
                 }
             };
 
-            const selectPlan = async (key, blocks) => {
+            const selectPlan = (key, blocks) => {
                 setActivePlanKey(key);
                 setActivePlan(blocks);
-                setState('timeline');
+                setState('preview');
+            };
 
+            const confirmPlan = async () => {
+                setState('timeline');
                 if(user) {
                     const todayStr = new Date().toISOString().split('T')[0];
-                    await window.firebase.setDoc(window.firebase.doc(window.firebase.db, 'artifacts', APP_ID, 'users', user.uid, 'daily_plans', todayStr), { blocks: blocks });
+                    await window.firebase.setDoc(window.firebase.doc(window.firebase.db, 'artifacts', APP_ID, 'users', user.uid, 'daily_plans', todayStr), { blocks: activePlan });
                 }
             };
 
@@ -619,29 +624,31 @@
                                             <div className="text-4xl mb-4 group-hover:scale-110 transition-transform origin-left">{opt.emoji}</div>
                                             <h3 className="font-bold text-lg mb-2">{opt.title}</h3>
                                             <p className="text-sm text-gray-500 mb-6 flex-1">{opt.desc}</p>
-                                            <div className="text-xs font-bold text-brand uppercase tracking-wider flex items-center gap-1 group-hover:gap-2 transition-all">Select Plan <Icons.ArrowRight className="w-3 h-3"/></div>
+                                            <div className="text-xs font-bold text-brand uppercase tracking-wider flex items-center gap-1 group-hover:gap-2 transition-all">Preview Plan <Icons.ArrowRight className="w-3 h-3"/></div>
                                         </button>
                                     ))}
                                 </div>
                             </motion.div>
                         )}
 
-                        {state === 'timeline' && (
+                        {(state === 'timeline' || state === 'preview') && (
                             <motion.div key="timeline" initial={{opacity:0}} animate={{opacity:1}} className="flex-1 flex flex-col w-full h-full relative">
                                 
                                 <div className="sticky top-0 z-50 bg-appleLight/90 dark:bg-appleDark/90 backdrop-blur-md pt-4 pb-2 px-2 border-b border-appleLightBorder dark:border-white/10 flex justify-between items-center">
                                     <div className="text-sm font-bold text-brand px-4 truncate">{greeting}</div>
-                                    <button onClick={handleRecalibrate} className="px-4 py-2 rounded-full bg-red-50 dark:bg-red-900/10 text-red-600 dark:text-red-400 text-xs font-bold hover:bg-red-100 dark:hover:bg-red-900/20 transition-colors flex items-center gap-2 shrink-0"><Icons.RefreshCw className="w-3 h-3"/> Recalibrate</button>
+                                    {state === 'timeline' && (
+                                        <button onClick={handleRecalibrate} className="px-4 py-2 rounded-full bg-red-50 dark:bg-red-900/10 text-red-600 dark:text-red-400 text-xs font-bold hover:bg-red-100 dark:hover:bg-red-900/20 transition-colors flex items-center gap-2 shrink-0"><Icons.RefreshCw className="w-3 h-3"/> Recalibrate</button>
+                                    )}
                                 </div>
 
                                 {/* Absolute Calendar Container */}
-                                <div className="flex-1 overflow-y-auto hide-scroll relative" ref={timelineScrollRef}>
+                                <div className="flex-1 overflow-y-auto hide-scroll relative pb-32" ref={timelineScrollRef}>
                                     <div className="relative w-full" style={{ height: `${24 * 60 * PPM}px` }}>
                                         
-                                        {/* Background Grid Lines (24 Hours) */}
+                                        {/* Background Grid Lines (24 Hours) - Faint */}
                                         {HOURS.map(h => (
-                                            <div key={h} className="absolute w-full border-t border-appleLightBorder dark:border-white/5 flex items-start" style={{ top: `${h * 60 * PPM}px` }}>
-                                                <span className="text-[10px] text-gray-400 font-mono w-14 text-right pr-3 pt-1">{h.toString().padStart(2,'0')}:00</span>
+                                            <div key={h} className="absolute w-full border-t border-appleLightBorder/50 dark:border-white/[0.03] flex items-start" style={{ top: `${h * 60 * PPM}px` }}>
+                                                <span className="text-[10px] text-gray-400/60 font-mono w-14 text-right pr-3 pt-1">{h.toString().padStart(2,'0')}:00</span>
                                             </div>
                                         ))}
 
@@ -662,7 +669,7 @@
                                             if (endMins <= startMins) endMins += 24 * 60; // handle midnight wrap logically
                                             
                                             const top = startMins * PPM;
-                                            const height = (endMins - startMins) * PPM;
+                                            const height = Math.max((endMins - startMins) * PPM, 40); // Minimum visual height
 
                                             return (
                                                 <div key={block.id} 
@@ -680,7 +687,7 @@
 
                                                     {/* Smart Hover Action Buttons - Reveal fully on hover if block is too small */}
                                                     {block.actionUrl && block.type !== 'break' && (
-                                                        <div className="mt-3 flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                                                        <div className="mt-2 flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
                                                             <a href={block.actionUrl} className="flex-1 text-center py-2 bg-brand text-white rounded-lg text-xs font-bold hover:bg-brandDarkSoft transition-colors">Start Session</a>
                                                             <button onClick={()=>{ alert('Click Ghost Timer button in sidebar!') }} className="px-3 py-2 bg-black/5 dark:bg-white/10 rounded-lg text-xs font-bold hover:bg-black/10 dark:hover:bg-white/20 transition-colors">5 Mins</button>
                                                         </div>
@@ -689,7 +696,27 @@
                                             )
                                         })}
                                     </div>
+                                    
+                                    {/* The Adjustment Disclaimer Text floating at bottom */}
+                                    {state === 'timeline' && (
+                                        <div className="sticky bottom-6 text-center px-4 pointer-events-none z-40 mt-10">
+                                            <div className="inline-block glass-bento px-4 py-2 rounded-full border border-appleLightBorder dark:border-white/10 shadow-lg bg-appleLightSurface/95 dark:bg-appleDarkSurface/95">
+                                                <p className="text-[10px] text-gray-500 uppercase tracking-widest font-bold">Adjust as you need — This is just a reference</p>
+                                            </div>
+                                        </div>
+                                    )}
                                 </div>
+
+                                {/* Preview Mode Floating Action Bar */}
+                                {state === 'preview' && (
+                                    <div className="absolute bottom-6 left-1/2 transform -translate-x-1/2 w-[90%] max-w-sm glass-bento bg-appleLightSurface dark:bg-appleDarkSurface p-3 rounded-2xl shadow-2xl border-brand/30 z-50 flex justify-between items-center">
+                                        <span className="text-xs font-bold text-gray-500 px-2 uppercase tracking-wider">Previewing Plan</span>
+                                        <div className="flex gap-2">
+                                            <button onClick={()=>setState('select')} className="px-4 py-2.5 rounded-xl bg-black/5 dark:bg-white/10 text-xs font-bold hover:bg-black/10 dark:hover:bg-white/20 transition-colors">Go Back</button>
+                                            <button onClick={confirmPlan} className="px-4 py-2.5 rounded-xl bg-brand text-white text-xs font-bold shadow-md hover:bg-brandDarkSoft transition-colors">Confirm</button>
+                                        </div>
+                                    </div>
+                                )}
                             </motion.div>
                         )}
                     </AnimatePresence>
