@@ -95,7 +95,9 @@
             Coffee: p=><svg {...p} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M18 8h1a4 4 0 0 1 0 8h-1"/><path d="M2 8h16v9a4 4 0 0 1-4 4H6a4 4 0 0 1-4-4V8z"/><line x1="6" y1="1" x2="6" y2="4"/><line x1="10" y1="1" x2="10" y2="4"/><line x1="14" y1="1" x2="14" y2="4"/></svg>,
             Activity: p=><svg {...p} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>,
             Google: p=><svg {...p} viewBox="0 0 24 24" fill="currentColor"><path d="M12 22C6.477 22 2 17.523 2 12S6.477 2 12 2s10 4.477 10 10-4.477 10-10 10zM12 11h9c.1 1.4.1 2.9-.4 4.3-1.1 3-4.1 5.3-7.6 5.6-5 .5-9.4-3.1-9.9-8.1C2.5 7.1 6 2.3 11 2c2.5-.1 4.9.9 6.7 2.6l-2.7 2.8c-1-.7-2.3-1.1-3.6-1-2.9.2-5.1 2.8-4.9 5.7.2 2.6 2.4 4.7 5 4.7 2 0 3.6-1.1 4.3-2.9H12v-3z"/></svg>,
-            HelpCircle: p=><svg {...p} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+            HelpCircle: p=><svg {...p} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>,
+            ChevronDown: p=><svg {...p} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="m6 9 6 6 6-6"/></svg>,
+            X: p=><svg {...p} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M18 6 6 18"/><path d="m6 6 18 18"/></svg>
         };
 
         // --- RIGOROUS ERROR BOUNDARY ---
@@ -160,14 +162,14 @@
             1. NEVER say "Based on your shadow profile" or "Based on your momentum". Use the context silently to adjust your tone.
             2. If Momentum is high (>70), be enthusiastic but schedule sufficient breaks so they don't burn out.
             3. If Momentum is low (<30) or Energy is "Burned Out", be extremely gentle. Validate their fatigue. Schedule tiny 15-minute blocks and long breaks. Focus only on 1 critical thing.
-            4. ${isInsomnia ? "It is past 11 PM. The user cannot sleep. Be soothing. DO NOT schedule heavy cognitive tasks now. Schedule light wind-down tasks for tonight, and push their heavy requests to TOMORROW afternoon, assuming they sleep until noon." : "Schedule tasks from now until 11:00 PM."}
+            4. ${isInsomnia ? "It is past 11 PM. The user cannot sleep. Be soothing. DO NOT schedule heavy cognitive tasks now. Schedule light wind-down tasks for tonight, and push their heavy requests to TOMORROW, explicitly labeling the times (e.g., 'Tomorrow 2:00 PM')." : "Schedule tasks from now until 11:00 PM. Use natural time labels."}
             5. Output STRICTLY VALID JSON. No markdown wrappers.
 
             JSON SCHEMA:
             {
                 "greeting": "Your empathetic, 2-sentence coaching message based on their input and hidden momentum.",
                 "plans": {
-                    "intense": [ { "id": "1", "title": "Task", "type": "heavy|light|break", "durationMins": 45, "actionUrl": "url_or_null" } ],
+                    "intense": [ { "id": "1", "title": "Task", "type": "heavy|light|break", "timeLabel": "e.g., Today 10:00 PM - 10:45 PM or Tomorrow 3:00 PM", "durationMins": 45, "actionUrl": "url_or_null" } ],
                     "balanced": [ ... ],
                     "gentle": [ ... ]
                 }
@@ -196,9 +198,9 @@
                 return {
                     greeting: "I couldn't quite connect to the mainframe, but here is a safe, balanced schedule to keep you moving.",
                     plans: {
-                        intense: [{ id: "f1", title: "Focus Block", type: "heavy", durationMins: 45, actionUrl: null }],
-                        balanced: [{ id: "f2", title: "Gentle Start", type: "light", durationMins: 25, actionUrl: null }],
-                        gentle: [{ id: "f3", title: "Bare Minimum", type: "light", durationMins: 15, actionUrl: null }]
+                        intense: [{ id: "f1", title: "Focus Block", type: "heavy", timeLabel: "Right Now", durationMins: 45, actionUrl: null }],
+                        balanced: [{ id: "f2", title: "Gentle Start", type: "light", timeLabel: "Soon", durationMins: 25, actionUrl: null }],
+                        gentle: [{ id: "f3", title: "Bare Minimum", type: "light", timeLabel: "Whenever you're ready", durationMins: 15, actionUrl: null }]
                     }
                 };
             }
@@ -376,16 +378,21 @@
         const HorizontalLibrary = ({ user }) => {
             const fetchLibrary = async () => {
                 if(!user) return [];
-                const db = window.firebase.db;
-                const logsQ = query(collection(db, 'artifacts', "darnote-app", 'users', user.uid, 'error_logs'), orderBy('lastModified', 'desc'), limit(5));
-                const notesQ = query(collection(db, 'artifacts', "darnote-app", 'users', user.uid, 'notes'), orderBy('updatedAt', 'desc'), limit(5));
-                
-                const [lSnap, nSnap] = await Promise.all([getDocs(logsQ), getDocs(notesQ)]);
-                const items = [];
-                lSnap.forEach(d => items.push({ id: d.id, ...d.data(), _type: 'log', _date: d.data().lastModified }));
-                nSnap.forEach(d => items.push({ id: d.id, ...d.data(), _type: 'note', _date: d.data().updatedAt }));
-                
-                return items.sort((a,b) => new Date(b._date) - new Date(a._date)).slice(0, 8);
+                try {
+                    const db = window.firebase.db;
+                    const logsQ = query(collection(db, 'artifacts', "darnote-app", 'users', user.uid, 'error_logs'), orderBy('lastModified', 'desc'), limit(5));
+                    const notesQ = query(collection(db, 'artifacts', "darnote-app", 'users', user.uid, 'notes'), orderBy('updatedAt', 'desc'), limit(5));
+                    
+                    const [lSnap, nSnap] = await Promise.all([getDocs(logsQ), getDocs(notesQ)]);
+                    const items = [];
+                    lSnap.forEach(d => items.push({ id: d.id, ...d.data(), _type: 'log', _date: d.data().lastModified }));
+                    nSnap.forEach(d => items.push({ id: d.id, ...d.data(), _type: 'note', _date: d.data().updatedAt }));
+                    
+                    return items.sort((a,b) => new Date(b._date) - new Date(a._date)).slice(0, 8);
+                } catch (e) {
+                    console.error("Library fetch failed:", e);
+                    return [];
+                }
             };
 
             const { data: items, loading } = useSessionCache(user ? `lib_${user.uid}` : null, fetchLibrary, 5);
@@ -412,6 +419,51 @@
             );
         };
 
+        const RecentDropdownMenu = ({ user, onClose }) => {
+            const fetchLibrary = async () => {
+                if(!user) return [];
+                try {
+                    const db = window.firebase.db;
+                    const logsQ = query(collection(db, 'artifacts', "darnote-app", 'users', user.uid, 'error_logs'), orderBy('lastModified', 'desc'), limit(5));
+                    const notesQ = query(collection(db, 'artifacts', "darnote-app", 'users', user.uid, 'notes'), orderBy('updatedAt', 'desc'), limit(5));
+                    
+                    const [lSnap, nSnap] = await Promise.all([getDocs(logsQ), getDocs(notesQ)]);
+                    const items = [];
+                    lSnap.forEach(d => items.push({ id: d.id, ...d.data(), _type: 'log', _date: d.data().lastModified }));
+                    nSnap.forEach(d => items.push({ id: d.id, ...d.data(), _type: 'note', _date: d.data().updatedAt }));
+                    
+                    return items.sort((a,b) => new Date(b._date) - new Date(a._date)).slice(0, 5);
+                } catch (e) {
+                    console.error("Library fetch failed:", e);
+                    return [];
+                }
+            };
+
+            const { data: items, loading } = useSessionCache(user ? `lib_menu_${user.uid}` : null, fetchLibrary, 5);
+
+            return (
+                <motion.div initial={{opacity:0, y:-10}} animate={{opacity:1, y:0}} className="absolute top-full left-0 mt-2 w-72 bg-white dark:bg-appleDarkSurface border border-appleLightBorder dark:border-white/10 rounded-2xl p-2 z-50 shadow-2xl flex flex-col">
+                    <div className="px-3 py-2 text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-1 flex justify-between items-center">
+                        Recent Files
+                    </div>
+                    {loading ? (
+                       <div className="p-6 flex justify-center"><div className="w-5 h-5 border-2 border-brand border-t-transparent rounded-full animate-spin"/></div>
+                    ) : items?.length > 0 ? (
+                        items.map(item => (
+                            <a key={item.id} href={`${item._type === 'log' ? 'el' : 'note'}.html?${item._type}=${item.id}`} className="flex flex-col px-3 py-2.5 hover:bg-black/5 dark:hover:bg-white/5 rounded-xl transition-colors">
+                                 <div className="flex items-center gap-2 mb-1">
+                                     {item._type === 'log' ? <Icons.Bug className="w-3.5 h-3.5 text-red-500"/> : <Icons.FileText className="w-3.5 h-3.5 text-blue-500"/>}
+                                     <span className="text-sm font-bold truncate text-black dark:text-white">{item.title || 'Untitled'}</span>
+                                 </div>
+                                 <span className="text-[10px] text-gray-500 font-bold ml-[22px]">{item.subject || 'General'}</span>
+                            </a>
+                        ))
+                    ) : (
+                        <div className="p-4 text-xs text-gray-500 text-center">No recent files found.</div>
+                    )}
+                </motion.div>
+            );
+        };
 
         const AIPlanner = ({ user, momentum }) => {
             const [state, setState] = useState('input'); // input | loading | select | timeline
@@ -455,21 +507,12 @@
 
             const selectPlan = async (key, blocks) => {
                 setActivePlanKey(key);
-                // Assign actual start/end times based on current time
-                let currDate = new Date();
-                const hydratedBlocks = blocks.map(b => {
-                    const sTime = currDate.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
-                    currDate = new Date(currDate.getTime() + b.durationMins * 60000);
-                    const eTime = currDate.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
-                    return { ...b, sTime, eTime };
-                });
-                
-                setActivePlan(hydratedBlocks);
+                setActivePlan(blocks);
                 setState('timeline');
 
                 if(user) {
                     const todayStr = new Date().toISOString().split('T')[0];
-                    await window.firebase.setDoc(window.firebase.doc(window.firebase.db, 'artifacts', "darnote-app", 'users', user.uid, 'daily_plans', todayStr), { blocks: hydratedBlocks });
+                    await window.firebase.setDoc(window.firebase.doc(window.firebase.db, 'artifacts', "darnote-app", 'users', user.uid, 'daily_plans', todayStr), { blocks: blocks });
                 }
             };
 
@@ -565,7 +608,7 @@
                                             <div className="absolute left-[-33px] top-4 w-4 h-4 rounded-full bg-appleLight dark:bg-appleDark border-2 border-appleLightBorder dark:border-white/20 group-hover:border-brand transition-colors z-0"></div>
                                             <div className={`glass-bento p-5 rounded-3xl ${block.type==='break' ? 'bg-black/5 dark:bg-white/5 border-dashed border-gray-300 dark:border-white/20' : 'hover:shadow-md'}`}>
                                                 <div className="flex justify-between items-start mb-3">
-                                                    <div className="text-xs font-mono font-bold text-gray-400">{block.sTime} - {block.eTime}</div>
+                                                    <div className="text-xs font-mono font-bold text-gray-500">{block.timeLabel}</div>
                                                     <div className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded bg-black/5 dark:bg-white/10">{block.durationMins}m</div>
                                                 </div>
                                                 <div className={`font-bold text-lg mb-4 ${block.type==='break' ? 'text-gray-500' : ''}`}>{block.title}</div>
@@ -599,6 +642,7 @@
             const [momentum, setMomentum] = useState(50);
             const [isAuthLoading, setIsAuthLoading] = useState(true);
             const [showOnboarding, setShowOnboarding] = useState(false);
+            const [showRecentMenu, setShowRecentMenu] = useState(false);
 
             const isInsomnia = new Date().getHours() >= 23 || new Date().getHours() < 6;
 
@@ -611,7 +655,7 @@
                 if (!localStorage.getItem('darnote_onboarded_v1')) {
                     setShowOnboarding(true);
                 }
-            }, []);
+            }, [isInsomnia]);
 
             useEffect(() => {
                 if(theme === 'dark') document.documentElement.classList.add('dark');
@@ -673,40 +717,54 @@
                         <>
                             {/* Top Bar - Flow State */}
                             <header className="h-20 px-6 lg:px-10 flex justify-between items-center shrink-0 z-40 bg-transparent">
-                                <div className="flex items-center gap-4">
-                            <a href="el.html" className="px-4 py-2 rounded-full bg-red-50 dark:bg-red-900/10 text-red-600 dark:text-red-400 text-xs font-bold flex items-center gap-2 hover:bg-red-100 dark:hover:bg-red-900/20 transition-colors"><Icons.Bug className="w-4 h-4"/> Quick Log</a>
-                            <a href="note.html" className="px-4 py-2 rounded-full bg-blue-50 dark:bg-blue-900/10 text-blue-600 dark:text-blue-400 text-xs font-bold flex items-center gap-2 hover:bg-blue-100 dark:hover:bg-blue-900/20 transition-colors"><Icons.FileText className="w-4 h-4"/> New Note</a>
-                        </div>
+                                <div className="relative z-50">
+                                    <button onClick={() => setShowRecentMenu(!showRecentMenu)} className="flex items-center gap-3 text-left hover:bg-black/5 dark:hover:bg-white/5 p-2 -ml-2 rounded-2xl transition-colors">
+                                        <img src="https://raw.githubusercontent.com/darren6251/darnote/refs/heads/main/darNote%20logo.png" className="w-10 h-10 rounded-xl shadow-sm"/>
+                                        <div>
+                                            <h1 className="text-xl font-bold tracking-tight leading-none">{greeting}, {user.displayName?.split(' ')[0] || 'User'}.</h1>
+                                            <p className="text-[10px] text-gray-500 uppercase tracking-widest font-bold mt-1 flex items-center gap-1">Ready to flow. <Icons.ChevronDown className={`w-3 h-3 transition-transform ${showRecentMenu ? 'rotate-180' : ''}`}/></p>
+                                        </div>
+                                    </button>
+                                    
+                                    {showRecentMenu && (
+                                        <>
+                                            <div className="fixed inset-0 z-40" onClick={() => setShowRecentMenu(false)}></div>
+                                            <RecentDropdownMenu user={user} onClose={() => setShowRecentMenu(false)} />
+                                        </>
+                                    )}
+                                </div>
 
-                        <div className="flex items-center gap-2">
-                            <button onClick={()=>setShowOnboarding(true)} className="p-2.5 rounded-full hover:bg-black/5 dark:hover:bg-white/10 text-brand transition-colors" title="How to use">
-                                <Icons.HelpCircle className="w-5 h-5"/>
-                            </button>
-                            <button onClick={()=>setTheme(theme==='dark'?'light':'dark')} className="p-2.5 rounded-full hover:bg-black/5 dark:hover:bg-white/10 text-gray-500 transition-colors">
-                                {theme==='dark' ? <Icons.Sun className="w-5 h-5"/> : <Icons.Moon className="w-5 h-5"/>}
-                            </button>
-                            {user.photoURL ? <img src={user.photoURL} className="w-9 h-9 rounded-full ml-2 border border-black/10 dark:border-white/10"/> : <div className="w-9 h-9 rounded-full bg-brand text-white flex items-center justify-center font-bold ml-2 text-sm">{user.displayName?.charAt(0) || 'U'}</div>}
-                            <button onClick={()=>window.firebase.signOut(window.firebase.auth)} className="p-2.5 rounded-full hover:bg-red-50 dark:hover:bg-red-900/10 text-gray-500 hover:text-red-500 transition-colors"><Icons.MoreVertical className="w-5 h-5"/></button>
-                        </div>
-                    </header>
+                                <div className="hidden md:flex items-center gap-3">
+                                    <a href="el.html" className="px-4 py-2 rounded-full bg-red-50 dark:bg-red-900/10 text-red-600 dark:text-red-400 text-xs font-bold flex items-center gap-2 hover:bg-red-100 dark:hover:bg-red-900/20 transition-colors"><Icons.Bug className="w-4 h-4"/> Quick Log</a>
+                                    <a href="note.html" className="px-4 py-2 rounded-full bg-blue-50 dark:bg-blue-900/10 text-blue-600 dark:text-blue-400 text-xs font-bold flex items-center gap-2 hover:bg-blue-100 dark:hover:bg-blue-900/20 transition-colors"><Icons.FileText className="w-4 h-4"/> New Note</a>
+                                </div>
 
-                    {/* Main Content Layout */}
-                    <main className="flex-1 flex flex-col lg:flex-row overflow-hidden pb-6">
-                        
-                        {/* Center Stage - The Planner */}
-                        <div className="flex-1 overflow-y-auto hide-scroll px-4 lg:px-10 lg:pr-6 h-[calc(100vh-80px)]">
-                            <AIPlanner user={user} momentum={momentum}/>
-                            <div className="lg:hidden block pb-10"><HorizontalLibrary user={user}/></div>
-                        </div>
+                                <div className="flex items-center gap-2">
+                                    <button onClick={()=>setShowOnboarding(true)} className="p-2.5 rounded-full hover:bg-black/5 dark:hover:bg-white/10 text-brand transition-colors" title="How to use">
+                                        <Icons.HelpCircle className="w-5 h-5"/>
+                                    </button>
+                                    <button onClick={()=>setTheme(theme==='dark'?'light':'dark')} className="p-2.5 rounded-full hover:bg-black/5 dark:hover:bg-white/10 text-gray-500 transition-colors">
+                                        {theme==='dark' ? <Icons.Sun className="w-5 h-5"/> : <Icons.Moon className="w-5 h-5"/>}
+                                    </button>
+                                    {user.photoURL ? <img src={user.photoURL} className="w-9 h-9 rounded-full ml-2 border border-black/10 dark:border-white/10"/> : <div className="w-9 h-9 rounded-full bg-brand text-white flex items-center justify-center font-bold ml-2 text-sm">{user.displayName?.charAt(0) || 'U'}</div>}
+                                    <button onClick={()=>window.firebase.signOut(window.firebase.auth)} className="p-2.5 rounded-full hover:bg-red-50 dark:hover:bg-red-900/10 text-gray-500 hover:text-red-500 transition-colors"><Icons.MoreVertical className="w-5 h-5"/></button>
+                                </div>
+                            </header>
 
-                        {/* Right Sidebar - Bento Widgets */}
-                        <div className="w-full lg:w-[380px] shrink-0 overflow-y-auto hide-scroll px-4 lg:px-10 lg:pl-0 h-[calc(100vh-80px)] space-y-6 pb-10 hidden lg:block">
-                            <FocusTimer />
-                            <ParkItInbox user={user} />
-                            <HorizontalLibrary user={user}/>
-                        </div>
+                            <main className="flex-1 flex flex-col lg:flex-row overflow-hidden pb-6">
+                                {/* Center Stage - The Planner */}
+                                <div className="flex-1 overflow-y-auto hide-scroll px-4 lg:px-10 lg:pr-6 h-[calc(100vh-80px)]">
+                                    <AIPlanner user={user} momentum={momentum}/>
+                                    <div className="lg:hidden block pb-10"><HorizontalLibrary user={user}/></div>
+                                </div>
 
-                    </main>
+                                {/* Right Sidebar - Bento Widgets */}
+                                <div className="w-full lg:w-[380px] shrink-0 overflow-y-auto hide-scroll px-4 lg:px-10 lg:pl-0 h-[calc(100vh-80px)] space-y-6 pb-10 hidden lg:block">
+                                    <FocusTimer />
+                                    <ParkItInbox user={user} />
+                                    <HorizontalLibrary user={user}/>
+                                </div>
+                            </main>
                         </>
                     )}
                 </div>
