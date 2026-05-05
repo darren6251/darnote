@@ -36,9 +36,11 @@
                     animation: {
                         'pulse-slow': 'pulse 3s cubic-bezier(0.4, 0, 0.6, 1) infinite',
                         'float': 'float 6s ease-in-out infinite',
+                        'fade-in': 'fadeIn 1.5s ease-out forwards'
                     },
                     keyframes: {
-                        float: { '0%, 100%': { transform: 'translateY(0)' }, '50%': { transform: 'translateY(-10px)' } }
+                        float: { '0%, 100%': { transform: 'translateY(0)' }, '50%': { transform: 'translateY(-10px)' } },
+                        fadeIn: { '0%': { opacity: '0' }, '100%': { opacity: '1' } }
                     }
                 }
             }
@@ -67,7 +69,7 @@
         
         /* Time block hover expansion */
         .time-block-hover { transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1); }
-        .time-block-hover:hover { min-height: 80px !important; z-index: 40; box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.3); transform: scale(1.02); }
+        .time-block-hover:hover { z-index: 40; box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.3); transform: scale(1.02); }
     </style>
 </head>
 <body>
@@ -100,18 +102,16 @@
             Activity: p=><svg {...p} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>,
             Google: p=><svg {...p} viewBox="0 0 24 24" fill="currentColor"><path d="M12 22C6.477 22 2 17.523 2 12S6.477 2 12 2s10 4.477 10 10-4.477 10-10 10zM12 11h9c.1 1.4.1 2.9-.4 4.3-1.1 3-4.1 5.3-7.6 5.6-5 .5-9.4-3.1-9.9-8.1C2.5 7.1 6 2.3 11 2c2.5-.1 4.9.9 6.7 2.6l-2.7 2.8c-1-.7-2.3-1.1-3.6-1-2.9.2-5.1 2.8-4.9 5.7.2 2.6 2.4 4.7 5 4.7 2 0 3.6-1.1 4.3-2.9H12v-3z"/></svg>,
             HelpCircle: p=><svg {...p} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>,
-            ChevronDown: p=><svg {...p} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="m6 9 6 6 6-6"/></svg>
+            ChevronDown: p=><svg {...p} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="m6 9 6 6 6-6"/></svg>,
+            Check: p=><svg {...p} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>,
+            Brain: p=><svg {...p} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M9.5 2A2.5 2.5 0 0 1 12 4.5v15a2.5 2.5 0 0 1-4.96.44 2.5 2.5 0 0 1-2.96-3.08 3 3 0 0 1-.34-5.58 2.5 2.5 0 0 1 1.32-4.24 2.5 2.5 0 0 1 1.98-3A2.5 2.5 0 0 1 9.5 2Z"/><path d="M14.5 2A2.5 2.5 0 0 0 12 4.5v15a2.5 2.5 0 0 0 4.96.44 2.5 2.5 0 0 0 2.96-3.08 3 3 0 0 0 .34-5.58 2.5 2.5 0 0 0-1.32-4.24 2.5 2.5 0 0 0-1.98-3A2.5 2.5 0 0 0 14.5 2Z"/></svg>
         };
 
         // --- RIGOROUS ERROR BOUNDARY ---
         class ErrorBoundary extends Component {
             constructor(props) { super(props); this.state = { hasError: false, error: null }; }
             static getDerivedStateFromError(error) { return { hasError: true, error }; }
-            clearCacheAndReload() {
-                sessionStorage.clear();
-                localStorage.clear();
-                window.location.reload();
-            }
+            clearCacheAndReload() { sessionStorage.clear(); localStorage.clear(); window.location.reload(); }
             render() {
                 if (this.state.hasError) {
                     return (
@@ -119,7 +119,7 @@
                             <div className="glass-bento p-8 rounded-3xl max-w-md w-full text-center space-y-4 shadow-xl">
                                 <div className="w-16 h-16 bg-red-100 dark:bg-red-900/30 rounded-full flex items-center justify-center mx-auto mb-4"><Icons.Bug className="w-8 h-8 text-red-500"/></div>
                                 <h2 className="text-2xl font-bold">System Overload</h2>
-                                <p className="text-sm text-gray-500 dark:text-gray-400">The cognitive buffer overflowed. A deep cache clear is recommended.</p>
+                                <p className="text-sm text-gray-500 dark:text-gray-400">The cognitive buffer overflowed.</p>
                                 <div className="p-4 bg-red-50 dark:bg-black/40 rounded-xl text-left text-xs font-mono text-red-600 dark:text-red-400 overflow-auto h-24">{this.state.error?.toString()}</div>
                                 <button onClick={this.clearCacheAndReload} className="w-full bg-black text-white dark:bg-white dark:text-black py-3 rounded-xl font-bold shadow-md hover:scale-105 transition-transform">Clear Cache & Reboot</button>
                             </div>
@@ -154,65 +154,93 @@
             return { data, loading };
         };
 
+        const getCategoryColor = (title, type) => {
+            const t = (title || "").toLowerCase();
+            if (type === 'break') return '#9ca3af'; // Gray for breaks
+            if (t.match(/math|calc|algebra|geom/)) return '#06b6d4'; // Neon Blue
+            if (t.match(/sci|bio|chem|phys/)) return '#22c55e'; // Green
+            if (t.match(/read|lit|history|essay|write/)) return '#eab308'; // Yellow
+            return '#4f46e5'; // Brand Indigo fallback
+        };
+
+        const getMins = (timeStr) => {
+            if(!timeStr) return 0;
+            const [h,m] = timeStr.split(':').map(Number);
+            return h * 60 + m;
+        };
+        const toTimeStr = (mins) => {
+            const h = Math.floor(mins / 60) % 24;
+            const m = mins % 60;
+            return `${h.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}`;
+        };
+
         const generateAIPlan = async (promptText, context, isInsomnia) => {
-            const proxyUrl = "https://gemini-proxy-513372702506.us-central1.run.app/proxy";
+            const proxyUrl = "https://deepseek-proxy-166884560507.us-central1.run.app/api/deepseek";
             
             const systemPrompt = `You are an empathetic, highly intelligent AI productivity coach for someone who struggles with procrastination.
             Energy Level: ${context.energy}.
             Current System Time: ${context.currentTime} (Use this EXACT time as the starting point for your schedule).
             
             CRITICAL RULES:
-            1. Output STRICTLY VALID JSON. No markdown wrappers.
+            1. Output STRICTLY VALID JSON at the very end of your response.
             2. For every block, provide an EXACT "startTime" and "endTime" in 24-hour "HH:MM" format (e.g., "14:30").
             3. Start the first block exactly at the Current System Time provided above.
-            4. Ensure all blocks are sequential and DO NOT overlap. The events have to be pratical (or least catagory) so users won't get lost. Give enough gap times.
-            5. ${isInsomnia ? "It is late at night. Provide a short wind-down schedule for tonight, and push heavy requested tasks to tomorrow afternoon." : "Schedule tasks flowing logically from the Current Time."}
+            4. Ensure all blocks are sequential and DO NOT overlap. Give enough gap times.
+            5. ${isInsomnia ? "It is late at night. Provide a short wind-down schedule for tonight, and push heavy tasks to tomorrow." : "Schedule tasks flowing logically from the Current Time."}
 
             JSON SCHEMA:
             {
-                "greeting": "Your empathetic, 2-sentence coaching message based on their input.",
+                "greeting": "Your empathetic, 2-sentence coaching message.",
                 "plans": {
                     "intense": [ { "id": "1", "title": "Task", "type": "heavy|light|break", "startTime": "14:00", "endTime": "14:45", "actionUrl": "url_or_null" } ],
                     "balanced": [ ... ],
                     "gentle": [ ... ]
                 }
             }
-            
-            If they mention Biology/Math/Error logs, set actionUrl to "el.html?subject=SubjectName". If writing/notes, set to "note.html".
             `;
 
             try {
+                // Send standard OpenAI format payload to DeepSeek proxy
                 const response = await fetch(proxyUrl, {
                     method: 'POST', headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
-                        contents: [{ parts: [{ text: `${systemPrompt}\n\nUser Input: ${promptText}\nTags: ${context.tags.join(', ')}` }] }]
+                        messages: [
+                            { role: "system", content: systemPrompt },
+                            { role: "user", content: `User Input: ${promptText}\nTags: ${context.tags.join(', ')}` }
+                        ]
                     })
                 });
                 const data = await response.json();
-                let text = data.candidates?.[0]?.content?.parts?.[0]?.text;
-                if(!text) throw new Error("Empty AI response");
                 
-                text = text.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim();
-                return JSON.parse(text);
+                // DeepSeek usually puts responses in choices[0].message.content
+                let rawText = data.choices?.[0]?.message?.content || data.candidates?.[0]?.content?.parts?.[0]?.text;
+                if(!rawText) throw new Error("Empty AI response");
+
+                // Parse DeepSeek's <think> tags out of the response
+                let thinkText = "";
+                let jsonText = rawText;
+                const thinkMatch = rawText.match(/<think>([\s\S]*?)<\/think>/);
+                if (thinkMatch) {
+                    thinkText = thinkMatch[1].trim();
+                    jsonText = rawText.replace(/<think>([\s\S]*?)<\/think>/, '').trim();
+                }
+
+                // Clean markdown wrappers
+                jsonText = jsonText.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim();
+                const parsed = JSON.parse(jsonText);
+                return { parsed, thinkText };
+
             } catch (error) {
                 console.error("AI Gen Error:", error);
-                // Fallback safe JSON calculating from now
                 const now = new Date();
                 const m1 = new Date(now.getTime() + 45*60000);
                 const m2 = new Date(m1.getTime() + 15*60000);
-                const m3 = new Date(m2.getTime() + 30*60000);
-                const toHHMM = (d) => d.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' });
-
                 return {
-                    greeting: "I couldn't connect to the mainframe. Here is a generic local schedule.",
-                    plans: {
-                        balanced: [
-                            { id: "f1", title: "Focus Block", type: "heavy", startTime: toHHMM(now), endTime: toHHMM(m1), actionUrl: null },
-                            { id: "f2", title: "Break", type: "break", startTime: toHHMM(m1), endTime: toHHMM(m2), actionUrl: null },
-                            { id: "f3", title: "Wrap Up", type: "light", startTime: toHHMM(m2), endTime: toHHMM(m3), actionUrl: null }
-                        ],
-                        intense: [], gentle: [] // Omitted for brevity in fallback
-                    }
+                    parsed: {
+                        greeting: "I couldn't connect to DeepSeek. Here is a generic local schedule.",
+                        plans: { balanced: [{ id: "f1", title: "Focus Block", type: "heavy", startTime: toTimeStr(getMins(now.toLocaleTimeString('en-GB'))), endTime: toTimeStr(getMins(m1.toLocaleTimeString('en-GB'))), actionUrl: null }], intense: [], gentle: [] }
+                    },
+                    thinkText: "Error connecting to AI. Using fallback logic."
                 };
             }
         };
@@ -223,31 +251,11 @@
             const [page, setPage] = useState(0);
             
             const slides = [
-                {
-                    icon: <Icons.Target className="w-16 h-16 text-brand drop-shadow-md" />,
-                    title: "Welcome to Command Center",
-                    desc: "Your distraction-free Bento Box. We designed this to work with your brain, not against it."
-                },
-                {
-                    icon: <Icons.Bot className="w-16 h-16 text-indigo-500 drop-shadow-md" />,
-                    title: "AI Autopilot Planner",
-                    desc: "Type what's on your plate. The AI reads your energy and builds a flexible, guilt-free timeline for the day."
-                },
-                {
-                    icon: <Icons.Timer className="w-16 h-16 text-orange-500 drop-shadow-md" />,
-                    title: "The Ghost Timer",
-                    desc: "Paralyzed? Click 'Just 5 Mins'. When it ends, it silently counts up as bonus time to keep your momentum going."
-                },
-                {
-                    icon: <Icons.Inbox className="w-16 h-16 text-green-500 drop-shadow-md" />,
-                    title: "Park It Inbox",
-                    desc: "Random distraction popping up? Dump it in 'Park It'. We'll save it for tomorrow so you stay focused now."
-                },
-                {
-                    icon: <Icons.Moon className="w-16 h-16 text-blue-400 drop-shadow-md" />,
-                    title: "Insomnia Protocol",
-                    desc: "Working past 11 PM? The app shifts to dark mode and prioritizes light tasks to protect your sleep schedule."
-                }
+                { icon: <Icons.Target className="w-16 h-16 text-brand" />, title: "Welcome to Command Center", desc: "Your distraction-free Bento Box." },
+                { icon: <Icons.Bot className="w-16 h-16 text-indigo-500" />, title: "AI Autopilot Planner", desc: "Type your tasks. DeepSeek AI reads your energy and builds a flexible timeline." },
+                { icon: <Icons.Brain className="w-16 h-16 text-pink-500" />, title: "Transparent AI", desc: "View the AI's <think> tags to understand exactly why it scheduled things the way it did." },
+                { icon: <Icons.RefreshCw className="w-16 h-16 text-green-500" />, title: "The Domino Effect", desc: "Need more time? Edit a block, and the app automatically pushes the rest of your day down guilt-free." },
+                { icon: <Icons.Moon className="w-16 h-16 text-blue-400" />, title: "Permission to Rest", desc: "Check off your final task and the app shuts down, giving you explicit permission to sleep." }
             ];
 
             const next = () => { if (page < slides.length - 1) setPage(p => p + 1); else onComplete(); };
@@ -262,10 +270,8 @@
                             className="flex-1 flex flex-col items-center justify-center p-10 text-center cursor-grab active:cursor-grabbing"
                             key={page} initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} transition={{ duration: 0.3 }}
                         >
-                            <div className="w-32 h-32 rounded-full bg-appleLight dark:bg-black/20 flex items-center justify-center mb-8 shadow-inner">
-                                {slides[page].icon}
-                            </div>
-                            <h2 className="text-2xl font-bold tracking-tight mb-4 text-black dark:text-white">{slides[page].title}</h2>
+                            <div className="w-32 h-32 rounded-full bg-appleLight dark:bg-black/20 flex items-center justify-center mb-8 shadow-inner">{slides[page].icon}</div>
+                            <h2 className="text-2xl font-bold tracking-tight mb-4">{slides[page].title}</h2>
                             <p className="text-gray-600 dark:text-gray-300 leading-relaxed text-sm">{slides[page].desc}</p>
                         </motion.div>
                         <div className="p-8 pt-0 flex flex-col items-center gap-6">
@@ -274,7 +280,7 @@
                                     <div key={i} className={`h-2 rounded-full transition-all duration-300 ${i === page ? 'w-6 bg-brand' : 'w-2 bg-gray-300 dark:bg-white/20'}`} />
                                 ))}
                             </div>
-                            <button onClick={next} className="w-full bg-black text-white dark:bg-white dark:text-black py-4 rounded-2xl font-bold shadow-md hover:scale-[1.02] active:scale-95 transition-transform">
+                            <button onClick={next} className="w-full bg-black text-white dark:bg-white dark:text-black py-4 rounded-2xl font-bold shadow-md transition-transform active:scale-95">
                                 {page === slides.length - 1 ? "Let's Flow" : "Continue"}
                             </button>
                         </div>
@@ -294,11 +300,7 @@
                     timerRef.current = setInterval(() => {
                         setTimeLeft(prev => {
                             if (prev > 0) return prev - 1;
-                            if (!isGhost) {
-                                new Audio('https://actions.google.com/sounds/v1/alarms/beep_short.ogg').play().catch(()=>{});
-                                setIsGhost(true);
-                                return 1; 
-                            }
+                            if (!isGhost) { setIsGhost(true); return 1; }
                             return prev + 1; 
                         });
                     }, 1000);
@@ -308,29 +310,25 @@
 
             const toggle = () => setIsActive(!isActive);
             const reset = (mins) => { setIsActive(false); setIsGhost(false); setTimeLeft(mins * 60); };
-
             const mins = Math.floor(timeLeft / 60);
             const secs = timeLeft % 60;
             const timeStr = `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
 
             return (
-                <div className="glass-bento p-6 rounded-3xl flex flex-col items-center justify-center relative overflow-hidden group">
+                <div className="glass-bento p-6 rounded-3xl flex flex-col items-center justify-center relative overflow-hidden group shrink-0">
                     {isGhost && <div className="absolute inset-0 bg-brand/5 animate-pulse-slow pointer-events-none"></div>}
                     <div className="flex w-full justify-between items-center mb-4 relative z-10">
                         <span className="text-xs font-bold text-gray-500 uppercase tracking-widest flex items-center gap-2"><Icons.Timer className="w-4 h-4"/> {isGhost ? 'Bonus Time' : 'Focus'}</span>
                         <div className="flex gap-1">
-                            <button onClick={()=>reset(5)} className="px-2 py-1 rounded bg-black/5 dark:bg-white/5 hover:bg-black/10 dark:hover:bg-white/10 text-[10px] font-bold transition-colors">5m</button>
-                            <button onClick={()=>reset(25)} className="px-2 py-1 rounded bg-black/5 dark:bg-white/5 hover:bg-black/10 dark:hover:bg-white/10 text-[10px] font-bold transition-colors">25m</button>
+                            <button onClick={()=>reset(5)} className="px-2 py-1 rounded bg-black/5 dark:bg-white/5 hover:bg-black/10 text-[10px] font-bold transition-colors">5m</button>
+                            <button onClick={()=>reset(25)} className="px-2 py-1 rounded bg-black/5 dark:bg-white/5 hover:bg-black/10 text-[10px] font-bold transition-colors">25m</button>
                         </div>
                     </div>
-                    
                     <div className={`text-5xl font-mono font-bold tracking-tighter mb-6 transition-colors ${isGhost ? 'text-brand' : ''}`}>{isGhost && '+'}{timeStr}</div>
-                    
                     <div className="flex gap-4 w-full relative z-10">
-                        <button onClick={toggle} className={`flex-1 py-3 rounded-2xl flex items-center justify-center gap-2 font-bold shadow-sm transition-all active:scale-95 ${isActive ? 'bg-black/5 dark:bg-white/10 text-black dark:text-white' : 'bg-black text-white dark:bg-white dark:text-black'}`}>
+                        <button onClick={toggle} className={`flex-1 py-3 rounded-2xl flex items-center justify-center gap-2 font-bold transition-all active:scale-95 ${isActive ? 'bg-black/5 dark:bg-white/10 text-black dark:text-white' : 'bg-black text-white dark:bg-white dark:text-black'}`}>
                             {isActive ? <><Icons.Pause className="w-5 h-5"/> Pause</> : <><Icons.Play className="w-5 h-5 ml-1"/> Start</>}
                         </button>
-                        <button onClick={()=>reset(25)} className="p-3 rounded-2xl bg-black/5 dark:bg-white/5 hover:bg-black/10 dark:hover:bg-white/10 transition-all text-black dark:text-white"><Icons.RefreshCw className="w-5 h-5"/></button>
                     </div>
                 </div>
             );
@@ -354,7 +352,6 @@
                     setInput('');
                 }
             };
-
             const remove = (id) => {
                 const newItems = items.filter(i => i.id !== id);
                 setItems(newItems);
@@ -362,7 +359,7 @@
             };
 
             return (
-                <div className="glass-bento p-5 rounded-3xl flex flex-col h-[280px]">
+                <div className="glass-bento p-5 rounded-3xl flex flex-col h-[280px] shrink-0">
                     <div className="flex items-center gap-2 mb-4 text-xs font-bold text-gray-500 uppercase tracking-widest"><Icons.Inbox className="w-4 h-4"/> Park It</div>
                     <input value={input} onChange={e=>setInput(e.target.value)} onKeyDown={handleAdd} placeholder="Dump distracting thoughts..." className="w-full bg-black/5 dark:bg-white/5 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 ring-brand/50 transition-all mb-4"/>
                     <div className="flex-1 overflow-y-auto hide-scroll space-y-2">
@@ -393,26 +390,21 @@
                     nSnap.forEach(d => items.push({ id: d.id, ...d.data(), _type: 'note', _date: d.data().updatedAt }));
                     
                     return items.sort((a,b) => new Date(b._date) - new Date(a._date)).slice(0, 8);
-                } catch (e) {
-                    console.error("Library fetch failed:", e);
-                    return [];
-                }
+                } catch (e) { return []; }
             };
 
             const { data: items, loading } = useSessionCache(user ? `lib_${user.uid}` : null, fetchLibrary, 5);
-
-            if(loading || !items) return <div className="h-32 flex items-center justify-center animate-pulse"><div className="w-8 h-8 rounded-full border-2 border-brand border-t-transparent animate-spin"></div></div>;
-            if(items.length === 0) return null;
+            if(loading || !items || items.length === 0) return null;
 
             return (
-                <div className="w-full mt-6">
+                <div className="w-full shrink-0">
                     <h3 className="text-sm font-bold mb-4 px-2 flex items-center gap-2"><Icons.Activity className="w-4 h-4 text-gray-400"/> Jump Back In</h3>
                     <div className="flex gap-4 overflow-x-auto hide-scroll pb-4 px-2 snap-x">
                         {items.map(item => (
                             <a key={item.id} href={`${item._type === 'log' ? 'el' : 'note'}.html?${item._type}=${item.id}`} className="snap-start flex-shrink-0 w-[240px] glass-bento p-4 rounded-2xl hover:scale-[1.02] active:scale-95 transition-transform flex flex-col justify-between h-[110px] group">
                                 <div className="flex justify-between items-start mb-2">
-                                    <div className={`text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded ${item._type==='log' ? 'bg-red-500/10 text-red-500 dark:text-red-400' : 'bg-blue-500/10 text-blue-600 dark:text-blue-400'}`}>{item._type==='log' ? 'Error Log' : 'Note'}</div>
-                                    {item._type==='log' ? <Icons.Bug className="w-4 h-4 text-gray-400 group-hover:text-red-500 transition-colors"/> : <Icons.FileText className="w-4 h-4 text-gray-400 group-hover:text-blue-500 transition-colors"/>}
+                                    <div className={`text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded ${item._type==='log' ? 'bg-red-500/10 text-red-500' : 'bg-blue-500/10 text-blue-600'}`}>{item._type==='log' ? 'Error Log' : 'Note'}</div>
+                                    {item._type==='log' ? <Icons.Bug className="w-4 h-4 text-gray-400 group-hover:text-red-500"/> : <Icons.FileText className="w-4 h-4 text-gray-400 group-hover:text-blue-500"/>}
                                 </div>
                                 <div className="font-bold text-sm truncate">{item.title || 'Untitled'}</div>
                                 <div className="text-[10px] text-gray-500 truncate">{item.subject || 'General'}</div>
@@ -423,51 +415,6 @@
             );
         };
 
-        const RecentDropdownMenu = ({ user, onClose }) => {
-            const fetchLibrary = async () => {
-                if(!user) return [];
-                try {
-                    const db = window.firebase.db;
-                    const logsQ = query(collection(db, 'artifacts', APP_ID, 'users', user.uid, 'error_logs'), orderBy('lastModified', 'desc'), limit(5));
-                    const notesQ = query(collection(db, 'artifacts', APP_ID, 'users', user.uid, 'notes'), orderBy('updatedAt', 'desc'), limit(5));
-                    
-                    const [lSnap, nSnap] = await Promise.all([getDocs(logsQ), getDocs(notesQ)]);
-                    const items = [];
-                    lSnap.forEach(d => items.push({ id: d.id, ...d.data(), _type: 'log', _date: d.data().lastModified }));
-                    nSnap.forEach(d => items.push({ id: d.id, ...d.data(), _type: 'note', _date: d.data().updatedAt }));
-                    
-                    return items.sort((a,b) => new Date(b._date) - new Date(a._date)).slice(0, 5);
-                } catch (e) {
-                    console.error("Library fetch failed:", e);
-                    return [];
-                }
-            };
-
-            const { data: items, loading } = useSessionCache(user ? `lib_menu_${user.uid}` : null, fetchLibrary, 5);
-
-            return (
-                <motion.div initial={{opacity:0, y:-10}} animate={{opacity:1, y:0}} className="absolute top-full left-0 mt-2 w-72 bg-white dark:bg-appleDarkSurface border border-appleLightBorder dark:border-white/10 rounded-2xl p-2 z-50 shadow-2xl flex flex-col">
-                    <div className="px-3 py-2 text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-1 flex justify-between items-center">
-                        Recent Files
-                    </div>
-                    {loading ? (
-                       <div className="p-6 flex justify-center"><div className="w-5 h-5 border-2 border-brand border-t-transparent rounded-full animate-spin"></div></div>
-                    ) : items?.length > 0 ? (
-                        items.map(item => (
-                            <a key={item.id} href={`${item._type === 'log' ? 'el' : 'note'}.html?${item._type}=${item.id}`} className="flex flex-col px-3 py-2.5 hover:bg-black/5 dark:hover:bg-white/5 rounded-xl transition-colors">
-                                 <div className="flex items-center gap-2 mb-1">
-                                     {item._type === 'log' ? <Icons.Bug className="w-3.5 h-3.5 text-red-500"/> : <Icons.FileText className="w-3.5 h-3.5 text-blue-500"/>}
-                                     <span className="text-sm font-bold truncate text-black dark:text-white">{item.title || 'Untitled'}</span>
-                                 </div>
-                                 <span className="text-[10px] text-gray-500 font-bold ml-[22px]">{item.subject || 'General'}</span>
-                            </a>
-                        ))
-                    ) : (
-                        <div className="p-4 text-xs text-gray-500 text-center">No recent files found.</div>
-                    )}
-                </motion.div>
-            );
-        };
 
         const AIPlanner = ({ user, momentum }) => {
             const [state, setState] = useState('input'); // input | loading | select | preview | timeline
@@ -475,18 +422,22 @@
             const [tags, setTags] = useState([]);
             const [inputText, setInputText] = useState('');
             const [generatedPlans, setGeneratedPlans] = useState(null);
+            const [deepSeekLogic, setDeepSeekLogic] = useState("");
+            const [showLogic, setShowLogic] = useState(false);
+            
             const [activePlanKey, setActivePlanKey] = useState(null);
             const [activePlan, setActivePlan] = useState([]);
             const [greeting, setGreeting] = useState('');
+
+            // Edit Engine State
+            const [editingBlock, setEditingBlock] = useState(null);
+            const [editState, setEditState] = useState({ start: '', end: '', pushDown: true });
             
             const isInsomnia = new Date().getHours() >= 23 || new Date().getHours() < 6;
             const timelineScrollRef = useRef(null);
 
-            // PIXEL CONSTANT (1 min = 1.5 pixels. 1 hour = 90px) - THINNER/LESS DENSE
             const PPM = 1.5; 
-            const HOURS = Array.from({length: 24}, (_, i) => i);
 
-            // Time Tracker hook
             const [currentTimeMins, setCurrentTimeMins] = useState(new Date().getHours() * 60 + new Date().getMinutes());
             useEffect(() => {
                 const interval = setInterval(() => {
@@ -496,6 +447,7 @@
                 return () => clearInterval(interval);
             }, []);
 
+            // Save and load logic
             useEffect(() => {
                 const loadTodayPlan = async () => {
                     if(!user) return;
@@ -511,27 +463,27 @@
                 loadTodayPlan();
             }, [user]);
 
-            useEffect(() => {
-                if ((state === 'timeline' || state === 'preview') && timelineScrollRef.current) {
-                    const now = new Date();
-                    const mins = now.getHours() * 60 + now.getMinutes();
-                    // Scroll to current time, offset by ~100px so the red line isn't at the absolute top
-                    timelineScrollRef.current.scrollTop = (mins * PPM) - 100;
-                }
-            }, [state]);
+            const savePlanToFirebase = async (blocks) => {
+                if(!user) return;
+                const todayStr = new Date().toISOString().split('T')[0];
+                await window.firebase.setDoc(window.firebase.doc(window.firebase.db, 'artifacts', APP_ID, 'users', user.uid, 'daily_plans', todayStr), { blocks });
+            };
 
             const handleGenerate = async () => {
                 if(!battery) { alert("Please do a quick battery check first!"); return; }
                 setState('loading');
                 const nowTimeStr = new Date().toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' });
                 const ctx = { momentum, energy: battery, tags, currentTime: nowTimeStr };
-                const res = await generateAIPlan(inputText, ctx, isInsomnia);
-                setGreeting(res.greeting);
-                setGeneratedPlans(res.plans);
                 
-                if (battery === 'burned' && res.plans.gentle && res.plans.gentle.length > 0) { 
+                const { parsed, thinkText } = await generateAIPlan(inputText, ctx, isInsomnia);
+                
+                setGreeting(parsed.greeting);
+                setGeneratedPlans(parsed.plans);
+                setDeepSeekLogic(thinkText);
+                
+                if (battery === 'burned' && parsed.plans.gentle && parsed.plans.gentle.length > 0) { 
                     setActivePlanKey('gentle'); 
-                    setActivePlan(res.plans.gentle);
+                    setActivePlan(parsed.plans.gentle);
                     setState('preview'); 
                 } else {
                     setState('select');
@@ -540,25 +492,84 @@
 
             const selectPlan = (key, blocks) => {
                 setActivePlanKey(key);
-                setActivePlan(blocks);
+                setActivePlan(blocks.map(b => ({...b, completed: false})));
                 setState('preview');
             };
 
             const confirmPlan = async () => {
                 setState('timeline');
-                if(user) {
-                    const todayStr = new Date().toISOString().split('T')[0];
-                    await window.firebase.setDoc(window.firebase.doc(window.firebase.db, 'artifacts', APP_ID, 'users', user.uid, 'daily_plans', todayStr), { blocks: activePlan });
+                savePlanToFirebase(activePlan);
+            };
+
+            // Domino Effect Edit System
+            const saveEdit = () => {
+                if(!editingBlock) return;
+                
+                const oldEndMins = getMins(editingBlock.endTime);
+                const newEndMins = getMins(editState.end);
+                const diff = newEndMins - oldEndMins;
+
+                const newPlan = activePlan.map(b => {
+                    if (b.id === editingBlock.id) return {...b, startTime: editState.start, endTime: editState.end};
+                    
+                    if (editState.pushDown && diff !== 0 && getMins(b.startTime) >= oldEndMins) {
+                        const newStartMins = getMins(b.startTime) + diff;
+                        const newEndMins2 = getMins(b.endTime) + diff;
+                        return { ...b, startTime: toTimeStr(newStartMins), endTime: toTimeStr(newEndMins2) };
+                    }
+                    return b;
+                });
+                
+                setActivePlan(newPlan);
+                setEditingBlock(null);
+                savePlanToFirebase(newPlan);
+            };
+
+            const toggleComplete = (id) => {
+                const newPlan = activePlan.map(b => b.id === id ? {...b, completed: !b.completed} : b);
+                setActivePlan(newPlan);
+                savePlanToFirebase(newPlan);
+            };
+
+            // Touch and Hold logic for Mobile Edits
+            let pressTimer = null;
+            const startPress = (e, block) => { pressTimer = setTimeout(() => openEditModal(block), 600); };
+            const endPress = () => { clearTimeout(pressTimer); };
+            
+            const openEditModal = (block) => {
+                if (block.completed) return; // Don't edit completed blocks
+                setEditingBlock(block);
+                setEditState({ start: block.startTime, end: block.endTime, pushDown: true });
+            };
+
+            // Zero-Scroll Dynamic Crop Logic
+            let renderStartHour = 0;
+            let renderEndHour = 24;
+            
+            if ((state === 'timeline' || state === 'preview') && activePlan.length > 0) {
+                const allMins = activePlan.flatMap(b => [getMins(b.startTime), getMins(b.endTime)]);
+                renderStartHour = Math.max(0, Math.floor(Math.min(...allMins) / 60) - 1);
+                // Ensure the current time is visible if within reasonable bounds
+                const currentHour = Math.floor(currentTimeMins / 60);
+                if (currentHour < renderStartHour && currentHour >= renderStartHour - 3) renderStartHour = currentHour - 1;
+                
+                renderEndHour = Math.min(24, Math.ceil(Math.max(...allMins) / 60) + 1);
+            }
+            
+            const RENDER_HOURS = [];
+            for(let i=renderStartHour; i<=renderEndHour; i++) RENDER_HOURS.push(i);
+
+            useEffect(() => {
+                if ((state === 'timeline' || state === 'preview') && timelineScrollRef.current) {
+                    // Scroll to current time inside the dynamically cropped container
+                    const relativeMins = currentTimeMins - (renderStartHour * 60);
+                    timelineScrollRef.current.scrollTop = Math.max(0, (relativeMins * PPM) - 100);
                 }
-            };
+            }, [state, renderStartHour, currentTimeMins]);
 
-            const handleRecalibrate = () => {
-                setState('input');
-                setInputText("I got off track. Need a fresh schedule starting right now.");
-                setBattery('low');
-            };
-
-            const toggleTag = (tag) => setTags(prev => prev.includes(tag) ? prev.filter(t=>t!==tag) : [...prev, tag]);
+            // Gamification: Clock Out check
+            const nonBreakTasks = activePlan.filter(b => b.type !== 'break');
+            const isAllCompleted = state === 'timeline' && nonBreakTasks.length > 0 && nonBreakTasks.every(b => b.completed);
 
             return (
                 <div className="w-full h-full flex flex-col relative pb-10 lg:pb-0">
@@ -568,35 +579,29 @@
                                 <div className="text-center mb-8">
                                     <div className="w-16 h-16 bg-brand/10 text-brand rounded-full flex items-center justify-center mx-auto mb-6 shadow-inner"><Icons.Bot className="w-8 h-8"/></div>
                                     <h2 className="text-3xl font-bold mb-2 tracking-tight">{isInsomnia ? "Can't sleep? Let's protect tomorrow." : "What's on your plate?"}</h2>
-                                    <p className="text-gray-500 text-sm">Tell me what you need to do, and I'll build a frictionless schedule.</p>
+                                    <p className="text-gray-500 text-sm">Tell me what you need to do, and DeepSeek will build a frictionless timeline.</p>
                                 </div>
                                 
                                 <div className="glass-bento p-6 rounded-3xl space-y-6">
                                     <div>
                                         <div className="text-xs font-bold text-gray-500 uppercase tracking-widest mb-3">1. Battery Check</div>
                                         <div className="flex gap-3">
-                                            {[{id:'high', e:'🔋', l:'High'}, {id:'low', e:'🪫', l:'Low'}, {id:'burned', e:'🫠', l:'Burned Out'}].map(b => (
-                                                <button key={b.id} onClick={()=>setBattery(b.id)} className={`flex-1 py-3 rounded-2xl flex flex-col items-center gap-1 transition-all border ${battery===b.id ? 'bg-brand/10 border-brand/50 text-brand font-bold' : 'bg-black/5 dark:bg-white/5 border-transparent text-gray-500 hover:bg-black/10 dark:hover:bg-white/10'}`}>
+                                            {[{id:'high', e:'🔋', l:'High'}, {id:'low', e:'🪫', l:'Low'}, {id:'burned', e:'🫠', l:'Burned'}].map(b => (
+                                                <button key={b.id} onClick={()=>setBattery(b.id)} className={`flex-1 py-3 rounded-2xl flex flex-col items-center gap-1 transition-all border ${battery===b.id ? 'bg-brand/10 border-brand/50 text-brand font-bold' : 'bg-black/5 dark:bg-white/5 border-transparent text-gray-500 hover:bg-black/10'}`}>
                                                     <span className="text-2xl">{b.e}</span><span className="text-[10px] uppercase tracking-wider">{b.l}</span>
                                                 </button>
                                             ))}
                                         </div>
                                     </div>
-
                                     <div>
-                                        <div className="text-xs font-bold text-gray-500 uppercase tracking-widest mb-3 flex justify-between">
-                                            <span>2. Brain Dump</span>
-                                            <span className="opacity-50">Optional Tags</span>
-                                        </div>
-                                        <textarea value={inputText} onChange={e=>setInputText(e.target.value)} placeholder="e.g. Read history chapter, do 5 math errors..." className="w-full bg-black/5 dark:bg-white/5 rounded-2xl p-4 text-sm focus:outline-none focus:ring-2 ring-brand/50 resize-none h-24 transition-all mb-3"/>
+                                        <textarea value={inputText} onChange={e=>setInputText(e.target.value)} placeholder="e.g. Do 5 math errors, read bio ch 4..." className="w-full bg-black/5 dark:bg-white/5 rounded-2xl p-4 text-sm focus:outline-none focus:ring-2 ring-brand/50 resize-none h-24 transition-all mb-3"/>
                                         <div className="flex flex-wrap gap-2">
-                                            {['🔥 Critical', '🧊 Chill', '🧠 Brain Heavy', '🧹 Mindless', '⏱️ Quick', '⏳ Long'].map(t => (
-                                                <button key={t} onClick={()=>toggleTag(t)} className={`px-3 py-1.5 rounded-full text-xs font-medium transition-colors border ${tags.includes(t) ? 'bg-brand text-white border-brand' : 'bg-transparent border-gray-300 dark:border-white/20 text-gray-600 dark:text-gray-300 hover:bg-black/5 dark:hover:bg-white/5'}`}>{t}</button>
+                                            {['🔥 Critical', '🧠 Brain Heavy', '🧹 Mindless', '⏱️ Quick'].map(t => (
+                                                <button key={t} onClick={()=>{setTags(p=>p.includes(t)?p.filter(x=>x!==t):[...p, t])}} className={`px-3 py-1.5 rounded-full text-xs font-medium transition-colors border ${tags.includes(t) ? 'bg-brand text-white border-brand' : 'bg-transparent border-gray-300 dark:border-white/20 text-gray-600 hover:bg-black/5'}`}>{t}</button>
                                             ))}
                                         </div>
                                     </div>
-
-                                    <button onClick={handleGenerate} className="w-full py-4 bg-black text-white dark:bg-white dark:text-black rounded-2xl font-bold text-sm shadow-md hover:scale-[1.02] active:scale-95 transition-transform flex items-center justify-center gap-2"><Icons.Zap className="w-4 h-4"/> Generate Autopilot</button>
+                                    <button onClick={handleGenerate} className="w-full py-4 bg-black text-white dark:bg-white dark:text-black rounded-2xl font-bold text-sm shadow-md hover:scale-[1.02] active:scale-95 transition-transform flex items-center justify-center gap-2"><Icons.Brain className="w-4 h-4"/> Think & Generate</button>
                                 </div>
                             </motion.div>
                         )}
@@ -604,19 +609,39 @@
                         {state === 'loading' && (
                             <motion.div key="loading" initial={{opacity:0}} animate={{opacity:1}} exit={{opacity:0}} className="flex-1 flex flex-col items-center justify-center">
                                 <div className="w-16 h-16 border-4 border-brand/20 border-t-brand rounded-full animate-spin mb-6"></div>
-                                <div className="text-sm font-bold text-gray-500 animate-pulse">Calculating absolute cognitive load...</div>
+                                <div className="text-sm font-bold text-gray-500 animate-pulse">DeepSeek is analyzing cognitive load...</div>
                             </motion.div>
                         )}
 
                         {state === 'select' && generatedPlans && (
-                            <motion.div key="select" initial={{opacity:0, scale:0.95}} animate={{opacity:1, scale:1}} exit={{opacity:0, scale:0.95}} className="flex-1 flex flex-col justify-center max-w-4xl mx-auto w-full px-4 py-8">
-                                <div className="text-center mb-8 max-w-lg mx-auto">
-                                    <h2 className="text-2xl font-bold mb-4">{greeting}</h2>
+                            <motion.div key="select" initial={{opacity:0, scale:0.95}} animate={{opacity:1, scale:1}} exit={{opacity:0, scale:0.95}} className="flex-1 flex flex-col overflow-hidden max-w-4xl mx-auto w-full px-4 py-8">
+                                <div className="text-center mb-6 shrink-0">
+                                    <h2 className="text-2xl font-bold mb-2">{greeting}</h2>
                                     <p className="text-gray-500 text-sm">Choose your pacing for this session.</p>
                                 </div>
-                                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+
+                                {/* DeepSeek Brain Accordion */}
+                                {deepSeekLogic && (
+                                    <div className="mb-6 shrink-0 border border-appleLightBorder dark:border-white/10 rounded-2xl overflow-hidden glass-bento mx-auto max-w-2xl w-full">
+                                        <button onClick={()=>setShowLogic(!showLogic)} className="w-full flex items-center justify-between p-4 bg-black/5 dark:bg-white/5 hover:bg-black/10 transition-colors">
+                                            <div className="flex items-center gap-2 font-bold text-sm"><Icons.Brain className="w-4 h-4 text-brand"/> View DeepSeek's Logic</div>
+                                            <Icons.ChevronDown className={`w-4 h-4 transition-transform ${showLogic ? 'rotate-180' : ''}`}/>
+                                        </button>
+                                        <AnimatePresence>
+                                            {showLogic && (
+                                                <motion.div initial={{height:0}} animate={{height:"auto"}} exit={{height:0}} className="overflow-hidden">
+                                                    <div className="p-4 text-xs font-mono text-gray-600 dark:text-gray-400 whitespace-pre-wrap border-t border-appleLightBorder dark:border-white/10 leading-relaxed bg-black/5 dark:bg-black/20">
+                                                        {deepSeekLogic}
+                                                    </div>
+                                                </motion.div>
+                                            )}
+                                        </AnimatePresence>
+                                    </div>
+                                )}
+
+                                <div className="grid grid-cols-1 md:grid-cols-3 gap-6 flex-1 overflow-y-auto hide-scroll pb-10">
                                     {[
-                                        {key: 'intense', title: 'Intense', emoji: '🔥', desc: 'Tight blocks. For high momentum.'},
+                                        {key: 'intense', title: 'Intense', emoji: '🔥', desc: 'Tight blocks. High momentum.'},
                                         {key: 'balanced', title: 'Balanced', emoji: '⚖️', desc: 'Standard Pomodoro pacing.'},
                                         {key: 'gentle', title: 'Gentle', emoji: '☕', desc: 'Long breaks. Low energy mode.'}
                                     ].map(opt => (
@@ -634,89 +659,147 @@
                         {(state === 'timeline' || state === 'preview') && (
                             <motion.div key="timeline" initial={{opacity:0}} animate={{opacity:1}} className="flex-1 flex flex-col w-full h-full relative">
                                 
-                                <div className="sticky top-0 z-50 bg-appleLight/90 dark:bg-appleDark/90 backdrop-blur-md pt-4 pb-2 px-2 border-b border-appleLightBorder dark:border-white/10 flex justify-between items-center">
+                                <div className="sticky top-0 z-40 bg-appleLight/90 dark:bg-appleDark/90 backdrop-blur-md pt-4 pb-2 px-2 border-b border-appleLightBorder dark:border-white/10 flex justify-between items-center shrink-0">
                                     <div className="text-sm font-bold text-brand px-4 truncate">{greeting}</div>
                                     {state === 'timeline' && (
-                                        <button onClick={handleRecalibrate} className="px-4 py-2 rounded-full bg-red-50 dark:bg-red-900/10 text-red-600 dark:text-red-400 text-xs font-bold hover:bg-red-100 dark:hover:bg-red-900/20 transition-colors flex items-center gap-2 shrink-0"><Icons.RefreshCw className="w-3 h-3"/> Recalibrate</button>
+                                        <button onClick={()=>{ setState('input'); setInputText("Need a fresh schedule starting right now."); }} className="px-4 py-2 rounded-full bg-red-50 dark:bg-red-900/10 text-red-600 dark:text-red-400 text-xs font-bold hover:bg-red-100 transition-colors flex items-center gap-2 shrink-0"><Icons.RefreshCw className="w-3 h-3"/> Recalibrate</button>
                                     )}
                                 </div>
 
-                                {/* Absolute Calendar Container */}
                                 <div className="flex-1 overflow-y-auto hide-scroll relative pb-32" ref={timelineScrollRef}>
-                                    <div className="relative w-full" style={{ height: `${24 * 60 * PPM}px` }}>
+                                    {/* Dynamically Sized Container */}
+                                    <div className="relative w-full" style={{ height: `${(renderEndHour - renderStartHour) * 60 * PPM}px` }}>
                                         
-                                        {/* Background Grid Lines (24 Hours) - Faint */}
-                                        {HOURS.map(h => (
-                                            <div key={h} className="absolute w-full border-t border-appleLightBorder/50 dark:border-white/[0.03] flex items-start" style={{ top: `${h * 60 * PPM}px` }}>
+                                        {/* Background Grid Lines (Cropped Hours) */}
+                                        {RENDER_HOURS.map(h => (
+                                            <div key={h} className="absolute w-full border-t border-appleLightBorder/50 dark:border-white/[0.03] flex items-start" style={{ top: `${(h - renderStartHour) * 60 * PPM}px` }}>
                                                 <span className="text-[10px] text-gray-400/60 font-mono w-14 text-right pr-3 pt-1">{h.toString().padStart(2,'0')}:00</span>
                                             </div>
                                         ))}
 
                                         {/* Live Current Time Line */}
-                                        <div className="absolute w-full border-t-[1.5px] border-red-500 z-30 pointer-events-none transition-all duration-1000" style={{ top: `${currentTimeMins * PPM}px` }}>
-                                            <div className="absolute left-[45px] w-2.5 h-2.5 rounded-full bg-red-500 -mt-[5.5px] shadow-[0_0_10px_rgba(239,68,68,0.8)]"></div>
-                                        </div>
+                                        {(Math.floor(currentTimeMins / 60) >= renderStartHour && Math.floor(currentTimeMins / 60) <= renderEndHour) && (
+                                            <div className="absolute w-full border-t-[1.5px] border-red-500 z-30 pointer-events-none transition-all duration-1000" style={{ top: `${(currentTimeMins - renderStartHour * 60) * PPM}px` }}>
+                                                <div className="absolute left-[45px] w-2.5 h-2.5 rounded-full bg-red-500 -mt-[5.5px] shadow-[0_0_10px_rgba(239,68,68,0.8)]"></div>
+                                            </div>
+                                        )}
 
                                         {/* Absolute Blocks */}
                                         {activePlan.map((block) => {
                                             if(!block.startTime || !block.endTime) return null;
                                             
-                                            const [sh, sm] = block.startTime.split(':').map(Number);
-                                            const [eh, em] = block.endTime.split(':').map(Number);
+                                            let startMins = getMins(block.startTime);
+                                            let endMins = getMins(block.endTime);
+                                            if (endMins <= startMins) endMins += 24 * 60; // Midnight wrap
                                             
-                                            let startMins = (sh * 60) + sm;
-                                            let endMins = (eh * 60) + em;
-                                            if (endMins <= startMins) endMins += 24 * 60; // handle midnight wrap logically
-                                            
-                                            const top = startMins * PPM;
-                                            const height = Math.max((endMins - startMins) * PPM, 40); // Minimum visual height
+                                            // Relative position in dynamic grid
+                                            const relativeStartMins = startMins - (renderStartHour * 60);
+                                            const top = relativeStartMins * PPM;
+                                            const height = Math.max((endMins - startMins) * PPM, 45); // min visual height
+
+                                            const isBreak = block.type === 'break';
+                                            const color = getCategoryColor(block.title, block.type);
+                                            const completed = block.completed;
 
                                             return (
                                                 <div key={block.id} 
-                                                     className={`absolute right-4 left-[60px] rounded-2xl p-4 overflow-hidden border group time-block-hover flex flex-col justify-between
-                                                     ${block.type==='break' ? 'bg-black/5 dark:bg-white/5 border-dashed border-gray-300 dark:border-white/20 z-10' : 'glass-bento border-appleLightBorder dark:border-white/10 z-20 cursor-pointer'}`}
-                                                     style={{ top: `${top}px`, height: `${height}px` }}>
+                                                     onContextMenu={(e) => { e.preventDefault(); if(state==='timeline') openEditModal(block); }}
+                                                     onTouchStart={(e) => { if(state==='timeline') startPress(e, block); }}
+                                                     onTouchEnd={endPress}
+                                                     className={`absolute right-4 left-[60px] rounded-2xl p-4 overflow-hidden border group time-block-hover flex flex-col justify-between transition-all
+                                                     ${isBreak ? 'bg-black/5 dark:bg-white/5 border-dashed border-gray-300 dark:border-white/20 z-10' : 'glass-bento border-appleLightBorder dark:border-white/10 z-20 cursor-pointer'}
+                                                     ${completed ? 'opacity-50 grayscale' : ''}`}
+                                                     style={{ top: `${top}px`, height: `${height}px`, borderLeftColor: isBreak ? '' : color, borderLeftWidth: isBreak ? '' : '6px' }}>
                                                     
-                                                    <div>
-                                                        <div className="flex justify-between items-start mb-1">
-                                                            <div className="text-[10px] font-mono font-bold text-gray-500">{block.startTime} - {block.endTime}</div>
-                                                            <div className="text-[10px] font-bold text-brand bg-brand/10 px-2 py-0.5 rounded">{endMins - startMins}m</div>
+                                                    <div className="flex items-start gap-3 w-full">
+                                                        {state === 'timeline' && !isBreak && (
+                                                            <button onClick={(e) => { e.stopPropagation(); toggleComplete(block.id); }} className={`mt-0.5 w-5 h-5 rounded-full border-2 flex items-center justify-center shrink-0 transition-colors ${completed ? 'bg-brand border-brand text-white' : 'border-gray-400 hover:border-brand text-transparent'}`}>
+                                                                <Icons.Check className="w-3 h-3" />
+                                                            </button>
+                                                        )}
+                                                        <div className="flex-1 min-w-0">
+                                                            <div className="flex justify-between items-start mb-1">
+                                                                <div className={`text-[10px] font-mono font-bold ${completed ? 'line-through text-gray-500' : 'text-gray-500'}`}>{block.startTime} - {block.endTime}</div>
+                                                                <div className="text-[10px] font-bold text-gray-500 bg-black/5 dark:bg-white/5 px-2 py-0.5 rounded">{endMins - startMins}m</div>
+                                                            </div>
+                                                            <div className={`font-bold text-sm leading-tight truncate ${isBreak || completed ? 'text-gray-500' : ''}`}>{block.title}</div>
                                                         </div>
-                                                        <div className={`font-bold text-sm leading-tight ${block.type==='break' ? 'text-gray-500' : ''}`}>{block.title}</div>
                                                     </div>
-
-                                                    {/* Smart Hover Action Buttons - Reveal fully on hover if block is too small */}
-                                                    {block.actionUrl && block.type !== 'break' && (
-                                                        <div className="mt-2 flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                                                            <a href={block.actionUrl} className="flex-1 text-center py-2 bg-brand text-white rounded-lg text-xs font-bold hover:bg-brandDarkSoft transition-colors">Start Session</a>
-                                                            <button onClick={()=>{ alert('Click Ghost Timer button in sidebar!') }} className="px-3 py-2 bg-black/5 dark:bg-white/10 rounded-lg text-xs font-bold hover:bg-black/10 dark:hover:bg-white/20 transition-colors">5 Mins</button>
-                                                        </div>
-                                                    )}
                                                 </div>
                                             )
                                         })}
                                     </div>
                                     
-                                    {/* The Adjustment Disclaimer Text floating at bottom */}
                                     {state === 'timeline' && (
                                         <div className="sticky bottom-6 text-center px-4 pointer-events-none z-40 mt-10">
                                             <div className="inline-block glass-bento px-4 py-2 rounded-full border border-appleLightBorder dark:border-white/10 shadow-lg bg-appleLightSurface/95 dark:bg-appleDarkSurface/95">
-                                                <p className="text-[10px] text-gray-500 uppercase tracking-widest font-bold">Adjust as you need — This is just a reference</p>
+                                                <p className="text-[10px] text-gray-500 uppercase tracking-widest font-bold">Right-Click / Long-Press blocks to edit</p>
                                             </div>
                                         </div>
                                     )}
                                 </div>
 
-                                {/* Preview Mode Floating Action Bar */}
+                                {/* Preview Footer */}
                                 {state === 'preview' && (
                                     <div className="absolute bottom-6 left-1/2 transform -translate-x-1/2 w-[90%] max-w-sm glass-bento bg-appleLightSurface dark:bg-appleDarkSurface p-3 rounded-2xl shadow-2xl border-brand/30 z-50 flex justify-between items-center">
-                                        <span className="text-xs font-bold text-gray-500 px-2 uppercase tracking-wider">Previewing Plan</span>
+                                        <span className="text-xs font-bold text-gray-500 px-2 uppercase tracking-wider">Preview Plan</span>
                                         <div className="flex gap-2">
-                                            <button onClick={()=>setState('select')} className="px-4 py-2.5 rounded-xl bg-black/5 dark:bg-white/10 text-xs font-bold hover:bg-black/10 dark:hover:bg-white/20 transition-colors">Go Back</button>
+                                            <button onClick={()=>setState('select')} className="px-4 py-2.5 rounded-xl bg-black/5 text-xs font-bold hover:bg-black/10 transition-colors">Back</button>
                                             <button onClick={confirmPlan} className="px-4 py-2.5 rounded-xl bg-brand text-white text-xs font-bold shadow-md hover:bg-brandDarkSoft transition-colors">Confirm</button>
                                         </div>
                                     </div>
                                 )}
+                            </motion.div>
+                        )}
+                    </AnimatePresence>
+
+                    {/* Edit Modal / Domino Engine */}
+                    <AnimatePresence>
+                        {editingBlock && (
+                            <motion.div initial={{opacity:0}} animate={{opacity:1}} exit={{opacity:0}} className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
+                                <motion.div initial={{scale:0.95}} animate={{scale:1}} exit={{scale:0.95}} className="glass-bento bg-appleLightSurface dark:bg-appleDarkSurface p-6 rounded-3xl w-full max-w-sm shadow-2xl">
+                                    <h3 className="font-bold text-lg mb-4">Adjust Time Block</h3>
+                                    <div className="text-sm text-gray-500 font-bold mb-4 border-l-4 pl-3" style={{ borderLeftColor: getCategoryColor(editingBlock.title, editingBlock.type) }}>{editingBlock.title}</div>
+                                    
+                                    <div className="flex gap-4 mb-6">
+                                        <div className="flex-1">
+                                            <label className="text-[10px] font-bold text-gray-500 uppercase tracking-widest block mb-1">Start</label>
+                                            <input type="time" value={editState.start} onChange={e=>setEditState({...editState, start: e.target.value})} className="w-full bg-black/5 dark:bg-white/5 rounded-xl p-3 font-mono font-bold focus:outline-none focus:ring-2 ring-brand/50"/>
+                                        </div>
+                                        <div className="flex-1">
+                                            <label className="text-[10px] font-bold text-gray-500 uppercase tracking-widest block mb-1">End</label>
+                                            <input type="time" value={editState.end} onChange={e=>setEditState({...editState, end: e.target.value})} className="w-full bg-black/5 dark:bg-white/5 rounded-xl p-3 font-mono font-bold focus:outline-none focus:ring-2 ring-brand/50"/>
+                                        </div>
+                                    </div>
+
+                                    <label className="flex items-center gap-3 mb-6 p-3 rounded-xl bg-brand/5 border border-brand/20 cursor-pointer group hover:bg-brand/10 transition-colors">
+                                        <input type="checkbox" checked={editState.pushDown} onChange={e=>setEditState({...editState, pushDown: e.target.checked})} className="w-4 h-4 rounded text-brand accent-brand"/>
+                                        <div className="flex-1">
+                                            <div className="text-sm font-bold text-brand">Domino Shift later tasks</div>
+                                            <div className="text-[10px] text-gray-500">Auto-pushes subsequent blocks down so they don't overlap.</div>
+                                        </div>
+                                    </label>
+
+                                    <div className="flex gap-3">
+                                        <button onClick={()=>setEditingBlock(null)} className="flex-1 py-3 rounded-xl font-bold bg-black/5 dark:bg-white/10 hover:bg-black/10 transition-colors">Cancel</button>
+                                        <button onClick={saveEdit} className="flex-1 py-3 rounded-xl font-bold bg-brand text-white shadow-md hover:bg-brandDarkSoft transition-colors">Update</button>
+                                    </div>
+                                </motion.div>
+                            </motion.div>
+                        )}
+                    </AnimatePresence>
+
+                    {/* Cinematic Clock Out Screen */}
+                    <AnimatePresence>
+                        {isAllCompleted && (
+                            <motion.div initial={{opacity:0}} animate={{opacity:1}} className="fixed inset-0 z-[200] bg-black text-white flex flex-col items-center justify-center p-6 text-center overflow-hidden">
+                                <motion.div initial={{scale:0.9, opacity:0}} animate={{scale:1, opacity:1}} transition={{delay: 0.5, duration: 1.5}} className="max-w-md space-y-6 relative z-10">
+                                    <Icons.Moon className="w-20 h-20 text-white/50 mx-auto drop-shadow-[0_0_30px_rgba(255,255,255,0.3)]"/>
+                                    <h1 className="text-4xl font-bold tracking-tighter">You are done.</h1>
+                                    <p className="text-lg text-gray-400 leading-relaxed">The system is clear. You have worked hard enough. You have explicit permission to log off, rest, and sleep guilt-free.</p>
+                                    <button onClick={()=>setState('input')} className="mt-8 px-6 py-3 rounded-full border border-white/20 text-xs font-bold uppercase tracking-widest hover:bg-white/10 transition-colors">Boot New Day</button>
+                                </motion.div>
+                                <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,_var(--tw-gradient-stops))] from-white/5 via-transparent to-transparent opacity-50"></div>
                             </motion.div>
                         )}
                     </AnimatePresence>
@@ -731,7 +814,6 @@
             const [momentum, setMomentum] = useState(50);
             const [isAuthLoading, setIsAuthLoading] = useState(true);
             const [showOnboarding, setShowOnboarding] = useState(false);
-            const [showRecentMenu, setShowRecentMenu] = useState(false);
 
             const isInsomnia = new Date().getHours() >= 23 || new Date().getHours() < 6;
 
@@ -739,10 +821,7 @@
                 const savedTheme = localStorage.getItem('darnote-theme') || 'dark';
                 setTheme(savedTheme);
                 if (isInsomnia) document.documentElement.classList.add('insomnia-mode');
-                
-                if (!localStorage.getItem('darnote_onboarded_v1')) {
-                    setShowOnboarding(true);
-                }
+                if (!localStorage.getItem('darnote_onboarded_v2')) setShowOnboarding(true);
             }, [isInsomnia]);
 
             useEffect(() => {
@@ -753,100 +832,57 @@
 
             useEffect(() => {
                 const u = window.firebase.onAuthStateChanged(window.firebase.auth, async (user) => {
-                    if (user) {
-                        setUser(user);
-                        const mScore = Math.floor(Math.random() * 60) + 40; 
-                        setMomentum(mScore);
-                    } else { setUser(null); }
+                    if (user) { setUser(user); setMomentum(Math.floor(Math.random() * 60) + 40); } 
+                    else { setUser(null); }
                     setIsAuthLoading(false);
                 });
                 return () => u();
             }, []);
 
             if (isAuthLoading) return <div className="min-h-screen flex items-center justify-center bg-appleLight dark:bg-appleDark"><div className="w-8 h-8 border-2 border-brand border-t-transparent rounded-full animate-spin"></div></div>;
-
             const greeting = isInsomnia ? "Late night?" : (new Date().getHours() < 12 ? "Good morning" : (new Date().getHours() < 17 ? "Good afternoon" : "Good evening"));
 
             return (
                 <div className="min-h-screen flex flex-col max-w-[1800px] mx-auto w-full bg-appleLight dark:bg-appleDark selection:bg-brand/30">
-                    
                     <AnimatePresence>
-                        {showOnboarding && (
-                            <OnboardingTutorial onComplete={() => {
-                                localStorage.setItem('darnote_onboarded_v1', 'true');
-                                setShowOnboarding(false);
-                            }} />
-                        )}
+                        {showOnboarding && <OnboardingTutorial onComplete={() => { localStorage.setItem('darnote_onboarded_v2', 'true'); setShowOnboarding(false); }} />}
                     </AnimatePresence>
 
                     {!user ? (
                         <div className="flex-1 flex flex-col items-center justify-center p-4 relative overflow-hidden">
-                            <div className="absolute top-6 right-6 flex items-center gap-2 z-50">
-                                <button onClick={()=>setShowOnboarding(true)} className="p-2.5 rounded-full bg-black/5 dark:bg-white/10 hover:bg-black/10 dark:hover:bg-white/20 text-brand transition-colors" title="How to use">
-                                    <Icons.HelpCircle className="w-5 h-5"/>
-                                </button>
-                                <button onClick={()=>setTheme(theme==='dark'?'light':'dark')} className="p-2.5 rounded-full bg-black/5 dark:bg-white/10 hover:bg-black/10 dark:hover:bg-white/20 text-gray-500 transition-colors">
-                                    {theme==='dark' ? <Icons.Sun className="w-5 h-5"/> : <Icons.Moon className="w-5 h-5"/>}
-                                </button>
-                            </div>
-
                             <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-brand/20 via-transparent to-transparent pointer-events-none"></div>
                             <div className="glass-bento p-10 rounded-[40px] max-w-sm w-full text-center relative z-10 shadow-2xl">
                                 <img src="https://raw.githubusercontent.com/darren6251/darnote/refs/heads/main/darNote%20logo.png" className="w-16 h-16 mx-auto mb-6 rounded-2xl shadow-lg"/>
-                                <h1 className="text-3xl font-bold tracking-tight mb-2 text-black dark:text-white">darNote</h1>
-                                <p className="text-sm text-gray-500 dark:text-gray-400 mb-8 font-medium">The Command Center</p>
+                                <h1 className="text-3xl font-bold tracking-tight mb-2">darNote</h1>
+                                <p className="text-sm text-gray-500 mb-8 font-medium">The Command Center</p>
                                 <button onClick={()=>window.firebase.signInWithPopup(window.firebase.auth, new window.firebase.GoogleAuthProvider())} className="w-full bg-black text-white dark:bg-white dark:text-black py-4 rounded-2xl font-bold shadow-md hover:scale-[1.02] active:scale-95 transition-transform flex items-center justify-center gap-2 mb-3"><Icons.Google className="w-5 h-5"/> Continue with Google</button>
                                 <button onClick={()=>window.firebase.signInAnonymously(window.firebase.auth)} className="w-full bg-appleLightBorder/50 dark:bg-white/5 text-black dark:text-white py-4 rounded-2xl font-bold hover:bg-appleLightBorder dark:hover:bg-white/10 transition-colors">Guest Mode</button>
                             </div>
                         </div>
                     ) : (
                         <>
-                            {/* Top Bar - Flow State */}
                             <header className="h-20 px-6 lg:px-10 flex justify-between items-center shrink-0 z-40 bg-transparent">
-                                <div className="relative z-50">
-                                    <button onClick={() => setShowRecentMenu(!showRecentMenu)} className="flex items-center gap-3 text-left hover:bg-black/5 dark:hover:bg-white/5 p-2 -ml-2 rounded-2xl transition-colors">
-                                        <img src="https://raw.githubusercontent.com/darren6251/darnote/refs/heads/main/darNote%20logo.png" className="w-10 h-10 rounded-xl shadow-sm"/>
-                                        <div>
-                                            <h1 className="text-xl font-bold tracking-tight leading-none">{greeting}, {user.displayName?.split(' ')[0] || 'User'}.</h1>
-                                            <p className="text-[10px] text-gray-500 uppercase tracking-widest font-bold mt-1 flex items-center gap-1">Ready to flow. <Icons.ChevronDown className={`w-3 h-3 transition-transform ${showRecentMenu ? 'rotate-180' : ''}`}/></p>
-                                        </div>
-                                    </button>
-                                    
-                                    {showRecentMenu && (
-                                        <>
-                                            <div className="fixed inset-0 z-40" onClick={() => setShowRecentMenu(false)}></div>
-                                            <RecentDropdownMenu user={user} onClose={() => setShowRecentMenu(false)} />
-                                        </>
-                                    )}
+                                <div className="flex items-center gap-3">
+                                    <img src="https://raw.githubusercontent.com/darren6251/darnote/refs/heads/main/darNote%20logo.png" className="w-10 h-10 rounded-xl shadow-sm"/>
+                                    <div>
+                                        <h1 className="text-xl font-bold tracking-tight leading-none">{greeting}, {user.displayName?.split(' ')[0] || 'User'}.</h1>
+                                        <p className="text-[10px] text-gray-500 uppercase tracking-widest font-bold mt-1">Ready to flow.</p>
+                                    </div>
                                 </div>
-
-                                <div className="hidden md:flex items-center gap-3">
-                                    <a href="el.html" className="px-4 py-2 rounded-full bg-red-50 dark:bg-red-900/10 text-red-600 dark:text-red-400 text-xs font-bold flex items-center gap-2 hover:bg-red-100 dark:hover:bg-red-900/20 transition-colors"><Icons.Bug className="w-4 h-4"/> Quick Log</a>
-                                    <a href="note.html" className="px-4 py-2 rounded-full bg-blue-50 dark:bg-blue-900/10 text-blue-600 dark:text-blue-400 text-xs font-bold flex items-center gap-2 hover:bg-blue-100 dark:hover:bg-blue-900/20 transition-colors"><Icons.FileText className="w-4 h-4"/> New Note</a>
-                                </div>
-
                                 <div className="flex items-center gap-2">
-                                    <button onClick={()=>setShowOnboarding(true)} className="p-2.5 rounded-full hover:bg-black/5 dark:hover:bg-white/10 text-brand transition-colors" title="How to use">
-                                        <Icons.HelpCircle className="w-5 h-5"/>
-                                    </button>
-                                    <button onClick={()=>setTheme(theme==='dark'?'light':'dark')} className="p-2.5 rounded-full hover:bg-black/5 dark:hover:bg-white/10 text-gray-500 transition-colors">
-                                        {theme==='dark' ? <Icons.Sun className="w-5 h-5"/> : <Icons.Moon className="w-5 h-5"/>}
-                                    </button>
-                                    {user.photoURL ? <img src={user.photoURL} className="w-9 h-9 rounded-full ml-2 border border-black/10 dark:border-white/10"/> : <div className="w-9 h-9 rounded-full bg-brand text-white flex items-center justify-center font-bold ml-2 text-sm">{user.displayName?.charAt(0) || 'U'}</div>}
+                                    <button onClick={()=>setShowOnboarding(true)} className="p-2.5 rounded-full hover:bg-black/5 dark:hover:bg-white/10 text-brand transition-colors"><Icons.HelpCircle className="w-5 h-5"/></button>
+                                    <button onClick={()=>setTheme(theme==='dark'?'light':'dark')} className="p-2.5 rounded-full hover:bg-black/5 dark:hover:bg-white/10 text-gray-500 transition-colors">{theme==='dark' ? <Icons.Sun className="w-5 h-5"/> : <Icons.Moon className="w-5 h-5"/>}</button>
                                     <button onClick={()=>window.firebase.signOut(window.firebase.auth)} className="p-2.5 rounded-full hover:bg-red-50 dark:hover:bg-red-900/10 text-gray-500 hover:text-red-500 transition-colors"><Icons.MoreVertical className="w-5 h-5"/></button>
                                 </div>
                             </header>
 
                             <main className="flex-1 flex flex-col lg:flex-row overflow-hidden pb-6">
-                                {/* Center Stage - The Planner */}
                                 <div className="flex-1 overflow-hidden px-4 lg:px-10 lg:pr-6 h-[calc(100vh-80px)]">
-                                    <div className="h-full glass-bento rounded-[2.5rem] overflow-hidden flex flex-col shadow-sm border border-appleLightBorder dark:border-white/10">
+                                    <div className="h-full glass-bento rounded-[2.5rem] overflow-hidden flex flex-col shadow-sm border border-appleLightBorder dark:border-white/10 relative">
                                         <AIPlanner user={user} momentum={momentum}/>
                                     </div>
                                     <div className="lg:hidden block pb-10 mt-4"><HorizontalLibrary user={user}/></div>
                                 </div>
-
-                                {/* Right Sidebar - Bento Widgets */}
                                 <div className="w-full lg:w-[380px] shrink-0 overflow-y-auto hide-scroll px-4 lg:px-10 lg:pl-0 h-[calc(100vh-80px)] space-y-6 pb-10 hidden lg:block">
                                     <FocusTimer />
                                     <ParkItInbox user={user} />
