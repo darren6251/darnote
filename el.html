@@ -257,7 +257,7 @@
                     </div>
                     <input type="file" multiple ref={fileInputRef} style={{display:'none'}} onChange={(e) => handleFiles(e.target.files)} accept="image/*,application/pdf" />
                 </div>
-                <div className={`w-full min-h-[140px] bg-[#f8fafc] dark:bg-dark border-2 border-dashed rounded-xl p-4 transition-all cursor-pointer ${isDragging ? 'border-primary bg-primary/5' : 'border-gray/30 hover:border-primary/50'}`} onClick={async () => { if(imageList.length === 0 && await ensureAuth()) fileInputRef.current.click(); }} onDragOver={(e) => { e.preventDefault(); setIsDragging(true); }} onDragLeave={() => setIsDragging(false)} onDrop={async (e) => { e.preventDefault(); setIsDragging(false); if(await ensureAuth()) handleFiles(e.dataTransfer.files); }} onPaste={async (e) => { if(!(await ensureAuth())) return; const files = e.clipboardData.files; if (files && files.length > 0) { handleFiles(files); } else { const text = e.clipboardData.getData('text'); if (text && (text.startsWith('http') || text.startsWith('data:'))) onUpdate(text, 'add-url'); } }} tabIndex="0">
+                <div className={`w-full min-h-[140px] bg-[#f8fafc] dark:bg-dark border-2 border-dashed rounded-xl p-4 transition-all cursor-pointer ${isDragging ? 'border-primary bg-primary/5' : 'border-gray/30 hover:border-primary/50'}`} onClick={async () => { if(imageList.length === 0 && await ensureAuth()) fileInputRef.current.click(); }} onDragOver={(e) => { e.preventDefault(); setIsDragging(true); }} onDragLeave={() => setIsDragging(false)} onDrop={async (e) => { e.preventDefault(); setIsDragging(false); const droppedFiles = e.dataTransfer.files ? [...e.dataTransfer.files] : []; if(droppedFiles.length > 0 && await ensureAuth()) handleFiles(droppedFiles); }} onPaste={async (e) => { const pastedFiles = e.clipboardData.files ? [...e.clipboardData.files] : []; const pastedText = e.clipboardData.getData('text'); if(!(await ensureAuth())) return; if (pastedFiles.length > 0) { handleFiles(pastedFiles); } else if (pastedText && (pastedText.startsWith('http') || pastedText.startsWith('data:'))) { onUpdate(pastedText, 'add-url'); } }} tabIndex="0">
                     {imageList.length === 0 ? (
                         <div className="h-28 flex flex-col items-center justify-center pointer-events-none">
                             {isUploading ? <div className="w-8 h-8 border-4 border-primary/30 border-t-primary rounded-full animate-spin mb-3"/> : <div className="w-10 h-10 bg-white dark:bg-surface-dark rounded-full shadow-sm flex items-center justify-center mb-3"><Icons.Image className="w-5 h-5 text-gray"/></div>}
@@ -283,7 +283,6 @@
             </div>
         );
     };
-
     const cleanLatex=(t)=>t.replace(/\$\$/g,'\n').replace(/\$/g,'').replace(/\\text\{([^}]+)\}/g,'$1').replace(/\\times/g,'×').replace(/\\approx/g,'≈').replace(/\\le/g,'≤').replace(/\\ge/g,'≥').replace(/\\rightarrow/g,'→').replace(/\\cdot/g,'·').replace(/\\frac\{([^}]+)\}\{([^}]+)\}/g,'($1/$2)').replace(/\\/g,'');
 
     const AIChat = ({ activeLog, onClose, user, messages, setMessages }) => {
